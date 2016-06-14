@@ -93,4 +93,5 @@ We have mentioned in the scope we will provide flexibility on input data types, 
 
  * [README on features of the new image pipeline](README_features.md)
  * [README on testing practices](README_testing.md)
+ * [README on NASA contacts and example datasets](README_nasa_projects.md)
 
