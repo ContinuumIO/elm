@@ -89,6 +89,8 @@ Research how dask / xarray / numba can be used for nonlinear dimensionality redu
 
 We have mentioned in the scope we will provide flexibility on input data types, such as images or mosaics, but we did not say anything about output data format, such as classification map images.  The flexible API mentioned at the start of Milestone II should also consider a variety of output options, such as saving images of classification maps, loading /saving cached predictor models, mapping bands of images to colors of output images, etc.
 
+Another idea not mentioned in scope: as part of the flexible API for images/mosaics, we will have to address the problem of taking metadata like spatial / temporal bounds of an image from a filename as well as metadata about the bands.  There are cases where different bands are in different files or even folders and we may want to allow formation of machine learning input matrices based on bands from several sources (e.g. visible bands from one data set and infrared from another).
+
 # See also
 
  * [README on features of the new image pipeline](README_features.md)
