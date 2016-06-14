@@ -85,12 +85,18 @@ Milestone III Task 3: Final Report on Phase I
 
 Research how dask / xarray / numba can be used for nonlinear dimensionality reduction and spectral unmixing.  Begin by looking at [pysptools Pixel Purity Index and other methods](http://pysptools.sourceforge.net/_modules/pysptools/eea/eea.html#PPI) which work with in-memory numpy arrays.
 
-## Peter Additional Notes May 2016
+## Potential Changes to the Scope or Approach to Completing Scope
 
 We have mentioned in the scope we will provide flexibility on input data types, such as images or mosaics, but we did not say anything about output data format, such as classification map images.  The flexible API mentioned at the start of Milestone II should also consider a variety of output options, such as saving images of classification maps, loading /saving cached predictor models, mapping bands of images to colors of output images, etc.
 
 Another idea not mentioned in scope: as part of the flexible API for images/mosaics, we will have to address the problem of taking metadata like spatial / temporal bounds of an image from a filename as well as metadata about the bands.  There are cases where different bands are in different files or even folders and we may want to allow formation of machine learning input matrices based on bands from several sources (e.g. visible bands from one data set and infrared from another).
 
+#### Notes from Matt Rocklin
+ * We may have a much more computationally efficient and valuable parallel machine learning through ensemble approaches (many model fits) rather than parallel incremental learning.  An example would be separate solutions of a classification algorithm, then some model averaging logic above those separate solutions.  See [scikit-learn ensemble docs](http://scikit-learn.org/stable/modules/ensemble.html) for ideas.  This is potentially faster for very large data than training a single classifier incrementally.
+ * For our testing data, we may consider just leaving it on an EBS volume that can be symlinked when needed, e.g. to a CI test box.
+ * For putting n-d arrays on HDFS or S3 we should consider using [zarr](http://zarr.readthedocs.io/en/latest/) (zarr is under active development and subject to changes, but it is developed in loose collaboration with us)
+ * In some cases, when creating an image mosaic object in our to-be-created flexible API, the spatial / temporal / band-related metadata will come from filenames and foldernames in some cases, but more often from metadata contained within the files (e.g. a GeoTiff file contains this information in the file, not the filename generally).
+ * We should go over the tutorials on [dask delayed](http://dask.pydata.org/en/latest/delayed.html) which is dask for cases that are not clearly array or dataframe problems.
 # See also
 
  * [README on features of the new image pipeline](README_features.md)
