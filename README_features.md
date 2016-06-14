@@ -49,7 +49,7 @@ The pipeline API should allow the following optional steps:
 
 ### Pipeline Classifier/Regressors
 
-The image pipeline should support these classifiers with `partial_fit` methods
+The image pipeline should support [these classifiers with `partial_fit` methods](http://scikit-learn.org/stable/modules/scaling_strategies.html)
 
  * sklearn.naive_bayes.MultinomialNB
  * sklearn.naive_bayes.BernoulliNB
@@ -77,4 +77,5 @@ and k-means:
    * Areal extent of each class, perhaps in combination with some other classification or mask like geographic boundaries,
    * Differencing several classification maps in time
  * Reporting on model skill / error
+ * Other ideas?
 
