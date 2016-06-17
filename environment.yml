@@ -1,0 +1,21 @@
+name: iamlp
+dependencies:
+ - bokeh
+ - dask
+ - distributed
+ - gdal
+ - jupyter
+ - matplotlib
+ - netcdf4
+ - networkx
+ - numba
+ - numpy
+ - pandas
+ - requests
+ - scikit-image
+ - scikit-learn
+ - scipy
+ - tblib
+ - yaml
+pip:
+   - deap
