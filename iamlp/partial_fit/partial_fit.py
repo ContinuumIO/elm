@@ -21,6 +21,6 @@ def partial_fit(model,
     for idx, sample in enumerate(gen):
         df, band_metas, filemetas = sample
         model.partial_fit(df.values)
-    return model
+    return model, df
 
 

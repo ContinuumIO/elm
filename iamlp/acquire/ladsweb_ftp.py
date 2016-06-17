@@ -1,3 +1,4 @@
+from argparse import ArgumentParser
 import calendar
 import datetime
 import ftplib
@@ -6,14 +7,12 @@ import random
 import time
 
 from iamlp.settings import DOWNLOAD_DIR
-from iamlp.cli import add_local_dataset_options
+from iamlp.cli import add_local_dataset_options, DEFAULT_DATASET, DEFAULT_DATA_GROUP_NUM
 TOP_DIR = '/allData/{}/{}'
 CACHE_DIR = os.path.join(os.path.expanduser('~'), '.downloaded_args')
 
 LADSWEB_FTP = "ladsweb.nascom.nasa.gov"
 
-DEFAULT_DATA_GROUP_NUM = 3001
-DEFAULT_DATASET = 'NPP_DSRF1KD_L2GD'
 def cache_file_name(*args):
     if not os.path.exists(CACHE_DIR):
         os.mkdir(CACHE_DIR)
@@ -29,6 +28,7 @@ def login():
 def download(yr, day, ftp=None,
              product_name=DEFAULT_DATASET,
              product_number=DEFAULT_DATA_GROUP_NUM):
+    product_number = str(product_number)
     day = '{:03d}'.format(day)
     top = TOP_DIR.format(product_number, product_name)
     cache_file = cache_file_name(product_number, product_name, yr, day)
@@ -57,12 +57,15 @@ def download(yr, day, ftp=None,
     return ftp
 
 def main():
-
-    args = add_local_dataset_options().parse_args()
+    parser = ArgumentParser(description="Download util for {}".format(LADSWEB_FTP))
+    args = add_local_dataset_options(parser).parse_args()
     today = datetime.datetime.utcnow()
     current_julian_day = sum(calendar.monthrange(today.year, x)[0] for x in range(1, today.month))
     current_julian_day += today.day - 1
     ftp = None
+    args.years = args.years or [2016]
+    args.data_days = args.data_days or list(range(1, 366))
+    print("Running with args {}".format(args))
     for yr in args.years:
         for day in args.data_days:
             ftp = download(yr, day,

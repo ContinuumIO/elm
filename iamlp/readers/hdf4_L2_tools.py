@@ -12,6 +12,7 @@ def load_hdf4(f):
 
 directions = ('North', 'South', 'East', 'West')
 def get_subdataset_bounds(meta):
+    from iamlp.selection.geo_selection import SpatialBounds
     bounds = SpatialBounds(*tuple(float(meta['{}BoundingCoord'.format(word)])
                                   for word in directions))
     time = meta['StartTime']

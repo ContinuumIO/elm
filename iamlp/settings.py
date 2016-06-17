@@ -1,4 +1,7 @@
+import os
+
 from dask import delayed
+
 if os.environ.get('SERIAL_EVAL'):
     delayed = lambda func: func
     SERIAL_EVAL = True

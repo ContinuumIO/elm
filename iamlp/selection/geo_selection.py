@@ -3,7 +3,7 @@ from collections import namedtuple
 from numba import njit
 import numpy as np
 
-from settings import delayed
+from iamlp.settings import delayed
 
 SpatialBounds = namedtuple('SpatialBounds', 'north south east west')
 

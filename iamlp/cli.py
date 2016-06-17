@@ -1,5 +1,14 @@
 from argparse import ArgumentParser
 
+DEFAULT_DATA_GROUP_NUM = 3001
+DEFAULT_DATASET = 'NPP_DSRF1KD_L2GD'
+
+DEFAULT_BATCH = 4000000
+DEFAULT_N_CLUSTERS = 8
+DEFAULT_N_ENSEMBLES = 5
+DEFAULT_N_SAMPLES_EACH_FIT = 3
+DEFAULT_FILES_PER_SAMPLE = 4
+
 def add_local_dataset_options(parser):
     parser.add_argument('--product_number',
                         type=int,

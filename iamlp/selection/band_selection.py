@@ -1,7 +1,13 @@
+from collections import OrderedDict
+
+from gdalconst import GA_ReadOnly
 import gdal
+import pandas as pd
 import re
 
-from settings import delayed
+from iamlp.settings import delayed
+from iamlp.readers.hdf4_L2_tools import load_hdf4, get_subdataset_bounds
+
 def match_meta(meta, band_spec):
     search_key, search_value, name = band_spec
     for mkey in meta:
@@ -25,24 +31,29 @@ def get_bands(handle, ds, *band_specs):
         if found_bands == len(band_specs):
             break
 
-def _select_band_from_file_base(filename,
+def _select_from_file_base(filename,
                          band_specs,
                          include_polys=None,
                          filter_on_metadata=None,
                          filter_on_filename=None,
                          filename_search=None,
                          data_filter=None,
-                         dry_run=False):
+                         dry_run=False,
+                         file_loader=load_hdf4,
+                         get_subdataset_bounds=get_subdataset_bounds):
+    from iamlp.selection.geo_selection import _filter_band_data
+    from iamlp.selection.filename_selection import _filter_on_filename
+
     keep_file = _filter_on_filename(filename,
                                     search=filename_search,
                                     func=filter_on_filename)
     if not keep_file:
-        return
+        return False
     handle, ds, filemeta = load_hdf4(filename)
     if filter_on_metadata is not None:
         keep_file = filter_on_metadata(filename, filemeta, ds, handle=handle)
         if not keep_file:
-            return
+            return False
     if dry_run:
         return True
     idxes = None
@@ -84,5 +95,5 @@ def _select_band_from_file_base(filename,
 
 
 @delayed
-def select_band_from_file(*args, **kwargs):
-    return _select_band_from_file_base(*args, **kwargs)
+def select_from_file(*args, **kwargs):
+    return _select_from_file_base(*args, **kwargs)
