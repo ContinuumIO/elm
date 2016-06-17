@@ -17,10 +17,10 @@ def random_image_selection(included_files, band_specs,
     return (df, band_meta, filemeta, filename)
 
 @delayed
-def random_image_selection_gen(filenames_gen, n_samples_to_partial_fit, n_per_file,
+def random_image_selection_gen(filenames_gen, n_samples_each_fit, n_per_file,
                    files_per_sample, band_specs, **kwargs):
     included_files = get_included_files(filenames_gen, band_specs, **kwargs)
-    for sample_idx in range(n_samples_to_partial_fit):
+    for sample_idx in range(n_samples_each_fit):
         dfs = []
         band_metas = []
         filemetas = []

@@ -53,7 +53,7 @@ def main():
                                 filenames_gen,
                                 args.band_specs,
                                 n_ensemble=args.n_ensembles,
-                                n_samples_to_partial_fit=3,
+                                n_samples_each_fit=args.n_samples_each_fit,
                                 n_per_file=args.batch_size // args.files_per_sample,
                                 files_per_sample=args.files_per_sample,
                                 **selection_kwargs)
