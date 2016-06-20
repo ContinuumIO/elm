@@ -1,0 +1,1 @@
+from iamlp.partial_fit.partial_fit import partial_fit
