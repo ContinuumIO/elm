@@ -16,20 +16,33 @@ def _kmeans_add_within_class_var(model, df):
     model.class_pcents_ = model.class_counts_ / np.sum(model.class_counts_) * 100.
 
 
-@delayed
+@delayed(pure=True)
+def partial_fit_once(models, new_models, no_shuffle, partial_fit_kwargs):
+    if models is not None:
+        models = models[:no_shuffle] + new_models[no_shuffle:]
+    else:
+        models = new_models
+    return [partial_fit(model, **partial_fit_kwargs) for model in models]
+
+
+@delayed(pure=True)
 def kmeans_ensemble(init_models,
                     output_tag,
                     n_generations=2,
-                    **selection_kwargs):
+                    no_shuffle=1,
+                    partial_fit_kwargs=None):
     models = None
+    partial_fit_kwargs = partial_fit_kwargs or {}
     for generation in range(n_generations):
-        models = init_models(models)
-        if hasattr(models[0], 'compute'):
-            models = [m.compute() for m in models]
+        new_models = init_models(models)
+        models = partial_fit_once(models,
+                                  new_models,
+                                  no_shuffle,
+                                  partial_fit_kwargs)
         if generation < n_generations - 1:
             models = kmeans_model_averaging([m[0] for m in models])
         else:
             models = [m[0] for m in models]
-            models.sort(key=lambda x:x.inertia_)
-
+            delayed(models.sort)(key=lambda x:x.inertia_)
     return models
+

@@ -52,26 +52,26 @@ def main():
     print('Running with args: {}'.format(args))
     NO_SHUFFLE = 1
     def init_models(models=None):
-        new_models = [example_init_func(n_clusters=args.n_clusters, batch_size=args.batch_size)
-                      for _ in range(args.n_models)]
-        if models is not None:
-            models = models[:NO_SHUFFLE] + new_models[NO_SHUFFLE:]
-        else:
-            models = new_models
-        return [partial_fit(model,
-                          included_filenames,
-                          args.band_specs,
-                          n_samples_each_fit=args.n_samples_each_fit,
-                          n_per_file=args.n_per_file,
-                          files_per_sample=args.files_per_sample,
-                          post_fit_func=_kmeans_add_within_class_var,
-                          **selection_kwargs) for model in models]
-    models = kmeans_ensemble(   init_models,
-                                args.output_tag,
-                                n_generations=args.n_generations,
-                                **selection_kwargs)
-
-
+        return [example_init_func(n_clusters=args.n_clusters,
+                                  batch_size=args.batch_size)
+                for _ in range(args.n_models)]
+    partial_fit_kwargs = {
+        'included_filenames': included_filenames,
+        'n_samples_each_fit': args.n_samples_each_fit,
+        'n_per_file': args.n_per_file,
+        'files_per_sample': args.files_per_sample,
+        'post_fit_func': _kmeans_add_within_class_var,
+        'selection_kwargs': selection_kwargs,
+        'band_specs': args.band_specs,
+    }
+    ensemble_kwargs = {
+        'no_shuffle': args.no_shuffle,
+        'n_generations': args.n_generations,
+        'partial_fit_kwargs': partial_fit_kwargs,
+    }
+    models = kmeans_ensemble(init_models,
+                             args.output_tag,
+                             **ensemble_kwargs)
     if hasattr(models, 'compute'):
         models = models.compute()
     for model_idx, model in enumerate(models):

@@ -1,9 +1,14 @@
 import os
 
-from dask import delayed
+from dask import delayed as delayed
+from toolz import curry
 
 if os.environ.get('SERIAL_EVAL'):
-    delayed = lambda func: func
+    @curry
+    def delayed(func, **k):
+        def new_func(*args, **kwargs):
+            return func(*args, **kwargs)
+        return new_func
     SERIAL_EVAL = True
 else:
     SERIAL_EVAL = False

@@ -1,14 +1,19 @@
+
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
 
+from iamlp.settings import delayed
+
 toolbox = base.Toolbox()
 
 
+@delayed
 def distance(c1, c2):
     resids = (c1 - c2)
     return np.sqrt(np.sum(resids ** 2))
 
+@delayed
 def get_distance_matrix(centroids):
 
     distance_matrix = np.empty((centroids.shape[0], centroids.shape[0]), dtype=np.float64)
@@ -18,6 +23,7 @@ def get_distance_matrix(centroids):
     distance_matrix[np.diag_indices_from(distance_matrix)] = 0.
     return distance_matrix
 
+@delayed
 def pareto_front(objectives, take=1, weights=None):
     if weights is None:
         weights = (-1,) * objectives.shape[1]
@@ -29,13 +35,16 @@ def pareto_front(objectives, take=1, weights=None):
     objectives = [creator.Individual(tuple(objectives[idx, :])) for idx in range(objectives.shape[0])]
     return np.array(selNSGA2(objectives, take))
 
+@delayed(pure=True)
 def kmeans_model_averaging(models, no_shuffle=1, require_pcent=2):
-    models.sort(key=lambda x:x.inertia_)
+    inertia = [(m.inertia_, idx) for idx, m in enumerate(models)]
+    inertia.sort(key=lambda x:x[0])
+    best_idxes = [i[1] for i in inertia[no_shuffle]]
     centroids = np.concatenate([model.cluster_centers_ for model in models])
     class_counts = np.concatenate([model.class_counts_ for model in models])
     within_class_var = np.concatenate([model.within_class_var_ for model in models])
     distance_matrix = get_distance_matrix(centroids)
-    models_improved = models[:no_shuffle]
+    models_improved = [models[idx] for idx in best_idxes]
     centroid_idxes = list(range(centroids.shape[0]))
     for idx in range(no_shuffle, len(models)):
         model = models[idx]

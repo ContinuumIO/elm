@@ -36,4 +36,5 @@ def add_ensemble_partial_fit_args(parser=None):
     parser.add_argument('--files-per-sample', type=int, default=DEFAULT_FILES_PER_SAMPLE)
     parser.add_argument('--band-specs-json', type=str,help="Band specs from json file")
     parser.add_argument('--n-models', type=int, help="Number of models to initialize")
+    parser.add_argument('--no-shuffle', type=int)
     return parser
