@@ -3,7 +3,7 @@ from gdalconst import GA_ReadOnly
 
 from iamlp.settings import delayed
 
-@delayed
+
 def load_hdf4(f):
     handle = gdal.Open(f, GA_ReadOnly)
     ds = handle.GetSubDatasets()

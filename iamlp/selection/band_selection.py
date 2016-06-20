@@ -94,6 +94,6 @@ def _select_from_file_base(filename,
     return (joined_df, band_meta, filemeta)
 
 
-@delayed
+
 def select_from_file(*args, **kwargs):
     return _select_from_file_base(*args, **kwargs)

@@ -1,4 +1,6 @@
+
 from argparse import ArgumentParser
+import datetime
 import os
 from sklearn.cluster import MiniBatchKMeans
 
@@ -15,7 +17,9 @@ from iamlp.cli import (add_local_dataset_options,
                        add_ensemble_partial_fit_args)
 
 from iamlp.ensemble.kmeans import kmeans_ensemble
-
+from iamlp.writers.serialize import serialize
+from iamlp.partial_fit import partial_fit
+from iamlp.ensemble.kmeans import _kmeans_add_within_class_var
 def example_init_func(batch_size=1000000, n_clusters=8):
     return MiniBatchKMeans(n_clusters=n_clusters,
                            batch_size=batch_size,
@@ -27,6 +31,7 @@ def cli():
     return add_local_dataset_options(add_ensemble_partial_fit_args(parser))
 
 def main():
+    started = datetime.datetime.now()
     args = cli().parse_args()
     args.years = args.years or [2016]
     args.data_days = args.data_days or list(range(1, 70))
@@ -39,28 +44,42 @@ def main():
     else:
         args.band_specs = [('long_name', 'Band {} '.format(idx), 'band_{}'.format(idx))
                      for idx in (1, 2, 3, 4, 5, 7, 8, 10, 11)]
-    def filenames_gen():
-        yield from get_all_filenames_for_product(args.product_number,
+    included_filenames = tuple(get_all_filenames_for_product(args.product_number,
                                                  args.product_name,
-                                                 pattern='*.hdf')
+                                                 pattern='*.hdf'))
     selection_kwargs = {}
-    models = [example_init_func(n_clusters=args.n_clusters,
-                                batch_size=args.batch_size)
-              for _ in range(args.n_ensembles)]
+    args.n_per_file = args.batch_size // args.files_per_sample
     print('Running with args: {}'.format(args))
-    models = kmeans_ensemble(   models,
+    NO_SHUFFLE = 1
+    def init_models(models=None):
+        new_models = [example_init_func(n_clusters=args.n_clusters, batch_size=args.batch_size)
+                      for _ in range(args.n_models)]
+        if models is not None:
+            models = models[:NO_SHUFFLE] + new_models[NO_SHUFFLE:]
+        else:
+            models = new_models
+        return [partial_fit(model,
+                          included_filenames,
+                          args.band_specs,
+                          n_samples_each_fit=args.n_samples_each_fit,
+                          n_per_file=args.n_per_file,
+                          files_per_sample=args.files_per_sample,
+                          post_fit_func=_kmeans_add_within_class_var,
+                          **selection_kwargs) for model in models]
+    models = kmeans_ensemble(   init_models,
                                 args.output_tag,
-                                filenames_gen,
-                                args.band_specs,
-                                n_ensemble=args.n_ensembles,
-                                n_samples_each_fit=args.n_samples_each_fit,
-                                n_per_file=args.batch_size // args.files_per_sample,
-                                files_per_sample=args.files_per_sample,
+                                n_generations=args.n_generations,
                                 **selection_kwargs)
 
-    if SERIAL_EVAL:
-        return models
-    return models.compute()
+
+    if hasattr(models, 'compute'):
+        models = models.compute()
+    for model_idx, model in enumerate(models):
+        serialize(args.output_tag + '_{}'.format(model_idx), model)
+    ended = datetime.datetime.now()
+    print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
+    return models
+
 
 if __name__ == "__main__":
     models = main()

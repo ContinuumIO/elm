@@ -31,8 +31,9 @@ def add_local_dataset_options(parser):
 def add_ensemble_partial_fit_args(parser=None):
     parser.add_argument('--batch-size', type=int, default=DEFAULT_BATCH)
     parser.add_argument('--n-clusters', type=int, default=DEFAULT_N_CLUSTERS)
-    parser.add_argument('--n-ensembles', type=int, default=DEFAULT_N_ENSEMBLES)
+    parser.add_argument('--n-generations', type=int, default=DEFAULT_N_ENSEMBLES)
     parser.add_argument('--n-samples-each-fit', type=int,default=DEFAULT_N_SAMPLES_EACH_FIT)
     parser.add_argument('--files-per-sample', type=int, default=DEFAULT_FILES_PER_SAMPLE)
     parser.add_argument('--band-specs-json', type=str,help="Band specs from json file")
+    parser.add_argument('--n-models', type=int, help="Number of models to initialize")
     return parser

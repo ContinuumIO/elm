@@ -40,7 +40,7 @@ def points_in_poly(unique_x, unique_y, include_polys_array):
                     points.append((idx, x, y))
     return np.array(points, dtype=np.float64)
 
-@delayed
+
 def _filter_band_data(handle, subhandle, time,
                     include_polys, data_filter,
                     band_meta, bounds,
@@ -48,8 +48,10 @@ def _filter_band_data(handle, subhandle, time,
     data = subhandle.ReadAsArray()
     subhandle = None
     if idxes is None:
-        lons = np.linspace(bounds.east, bounds.west, data.shape[0])
-        lats = np.linspace(bounds.south, bounds.north, data.shape[1])
+        lon1, lon2 = sorted((bounds.east, bounds.west))
+        lons = np.linspace(lon1, lon2, data.shape[0])
+        lat1, lat2 = sorted((bounds.south, bounds.north))
+        lats = np.linspace(lat1, lat2, data.shape[1])
         if include_polys is not None:
             sizes = [poly.shape[0] for poly in include_polys]
 

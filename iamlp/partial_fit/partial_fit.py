@@ -1,26 +1,29 @@
 import numpy as np
 
-from iamlp.samplers import random_image_selection_gen
+from iamlp.samplers import random_images_selection
 from iamlp.settings import delayed
 
 @delayed
 def partial_fit(model,
-              filenames_gen,
+              included_files,
               band_specs,
               n_samples_each_fit=100,
               n_per_file=100000,
               files_per_sample=10,
-              data_gen=None,
+              data_func=None,
+              post_fit_func=None,
               **selection_kwargs):
-    if data_gen is None:
-        args = (filenames_gen, n_samples_each_fit,
+    if data_func is None:
+        args = (included_files, n_samples_each_fit,
                 n_per_file, files_per_sample, band_specs)
-        gen = random_image_selection_gen(*args, **selection_kwargs)
+        sample = lambda: random_images_selection(*args, **selection_kwargs)
     else:
-        gen = data_gen()
-    for idx, sample in enumerate(gen):
-        df, band_metas, filemetas = sample
+        sample = lambda: data_func()
+    for idx in range(n_samples_each_fit):
+        df, band_metas, filemetas = sample()
         model.partial_fit(df.values)
-    return model, df
+        if post_fit_func is not None:
+            post_fit_func(model, df)
+    return (model, df)
 
 
