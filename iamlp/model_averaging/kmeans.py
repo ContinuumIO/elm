@@ -35,11 +35,11 @@ def pareto_front(objectives, take=1, weights=None):
     objectives = [creator.Individual(tuple(objectives[idx, :])) for idx in range(objectives.shape[0])]
     return np.array(selNSGA2(objectives, take))
 
-@delayed(pure=True)
+@delayed
 def kmeans_model_averaging(models, no_shuffle=1, require_pcent=2):
     inertia = [(m.inertia_, idx) for idx, m in enumerate(models)]
-    inertia.sort(key=lambda x:x[0])
-    best_idxes = [i[1] for i in inertia[no_shuffle]]
+    delayed(inertia.sort)(key=lambda x:x[0])
+    best_idxes = [i[1] for i in inertia[:no_shuffle]]
     centroids = np.concatenate([model.cluster_centers_ for model in models])
     class_counts = np.concatenate([model.class_counts_ for model in models])
     within_class_var = np.concatenate([model.within_class_var_ for model in models])

@@ -1,20 +1,21 @@
 import numpy as np
 
-from iamlp.settings import delayed
+from iamlp.settings import delayed, SERIAL_EVAL
 from iamlp.partial_fit import partial_fit
 from iamlp.model_averaging.kmeans import kmeans_model_averaging
 
-
+@delayed
 def _kmeans_add_within_class_var(model, df):
+    n_clusters = model.n_clusters
     var = (model.cluster_centers_[model.labels_] - df.values) ** 2
-    model.within_class_var_ = np.zeros(model.cluster_centers_.shape[0], dtype=np.float64)
-    for idx in range(np.max(model.labels_)):
-        model.within_class_var_[idx] = np.sum(var[model.labels_ == idx])
-    bc = np.bincount(model.labels_)
+    model.within_class_var_ = np.zeros(n_clusters, dtype=np.float64)
+    for idx in range(n_clusters):
+        model.within_class_var_[idx] = delayed(np.sum)(var[model.labels_ == idx])
+    bc = delayed(np.bincount)(model.labels_)
     model.class_counts_ = np.zeros(model.cluster_centers_.shape[0])
     model.class_counts_[:bc.size] = bc
     model.class_pcents_ = model.class_counts_ / np.sum(model.class_counts_) * 100.
-
+    return model
 
 @delayed(pure=True)
 def partial_fit_once(models, new_models, no_shuffle, partial_fit_kwargs):
@@ -25,7 +26,7 @@ def partial_fit_once(models, new_models, no_shuffle, partial_fit_kwargs):
     return [partial_fit(model, **partial_fit_kwargs) for model in models]
 
 
-@delayed(pure=True)
+@delayed
 def kmeans_ensemble(init_models,
                     output_tag,
                     n_generations=2,
@@ -39,10 +40,9 @@ def kmeans_ensemble(init_models,
                                   new_models,
                                   no_shuffle,
                                   partial_fit_kwargs)
+        if not SERIAL_EVAL:
+            models = models.compute()
         if generation < n_generations - 1:
-            models = kmeans_model_averaging([m[0] for m in models])
-        else:
-            models = [m[0] for m in models]
-            delayed(models.sort)(key=lambda x:x.inertia_)
+            models = kmeans_model_averaging(models)
     return models
 

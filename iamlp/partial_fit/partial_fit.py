@@ -14,7 +14,6 @@ def partial_fit(model,
                 included_filenames=None,
                 selection_kwargs=None):
     selection_kwargs = selection_kwargs or {}
-    post_fit_func_delayed = delayed(post_fit_func)
     if data_func is None:
         args = (included_filenames, n_samples_each_fit,
                 n_per_file, files_per_sample, band_specs)
@@ -24,10 +23,9 @@ def partial_fit(model,
         sample = lambda: data_func()
     for idx in range(n_samples_each_fit):
         samp = sample()
-        delayed(model.partial_fit)(samp.df.values)
+        model = delayed(model.partial_fit)(samp.df.values)
         if post_fit_func is not None:
-            post_fit_func_delayed(model, samp.df)
-        model.df = samp.df
+            model = post_fit_func(model, samp.df)
     return model
 
 

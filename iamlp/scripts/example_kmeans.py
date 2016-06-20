@@ -30,6 +30,7 @@ def cli():
     parser.add_argument('output_tag')
     return add_local_dataset_options(add_ensemble_partial_fit_args(parser))
 
+
 def main():
     started = datetime.datetime.now()
     args = cli().parse_args()
@@ -72,10 +73,12 @@ def main():
     models = kmeans_ensemble(init_models,
                              args.output_tag,
                              **ensemble_kwargs)
-    if hasattr(models, 'compute'):
+    if not SERIAL_EVAL:
+        print('Call compute')
         models = models.compute()
-    for model_idx, model in enumerate(models):
-        serialize(args.output_tag + '_{}'.format(model_idx), model)
+        print('Called compute')
+    #for model_idx, model in enumerate(models):
+     #   serialize(args.output_tag + '_{}'.format(model_idx), model)
     ended = datetime.datetime.now()
     print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
     return models
