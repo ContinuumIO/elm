@@ -97,9 +97,22 @@ Another idea not mentioned in scope: as part of the flexible API for images/mosa
  * For putting n-d arrays on HDFS or S3 we should consider using [zarr](http://zarr.readthedocs.io/en/latest/) (zarr is under active development and subject to changes, but it is developed in loose collaboration with us)
  * In some cases, when creating an image mosaic object in our to-be-created flexible API, the spatial / temporal / band-related metadata will come from filenames and foldernames in some cases, but more often from metadata contained within the files (e.g. a GeoTiff file contains this information in the file, not the filename generally).
  * We should go over the tutorials on [dask delayed](http://dask.pydata.org/en/latest/delayed.html) which is dask for cases that are not clearly array or dataframe problems.
+
+# Contribution Guidelines
+ * Make a feature branch and PR in this repo (no forking)
+ * Make [py.test tests in the package subdirectory(ies)](README_testing.md) you are modifying
+ * Mark the PR with the tag WIP or ready for review, and mention the issue number that it is fixing
+ * Use branch names like: `psteinberg/config-cli-cleanup` (person's name/what-it-does)
+ * When something is ready for review, also mention it in flowdock
+ * If there are reviewer comments to address on a PR, move the PR out of ready for review column and make into WIP status
+ * Wait for at least one `LGTM` comment before merge of feature branch into master
+ * Update the [waffle board](https://waffle.io/ContinuumIO/nasasbir) or use the tagging system in github
+
 # See also
 
  * [README on features of the new image pipeline](README_features.md)
  * [README on testing practices](README_testing.md)
  * [README on NASA contacts and example datasets](README_nasa_projects.md)
+ 
+
 
