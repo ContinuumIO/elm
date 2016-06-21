@@ -1,0 +1,127 @@
+
+#
+readers: {
+  hdf4-eos: {
+     load: {module: iamlp.readers.hdf4_L2_tools, callable: load_hdf4},
+     bounds: {module: iamlp.readers.hdf4_L2_tools, callable: get_subdataset_bounds}
+   }
+  }
+downloads:
+ default_downloader: {
+    module: iamlp.acquire.ladsweb_ftp,
+    callable: main
+    }
+  }
+
+data_sources: {
+ NPP_DSRF1KD_L2GD: {
+    product_number: 3001,
+    product_name: NPP_DSRF1KD_L2GD,
+    reader: hdf4-eos,
+    file_pattern: "*.hdf",
+    name: ,
+    years: [2016],
+    data_days: all,
+    download: default_downloader
+    band_specs:
+      - [long_name, 'Band 1 ', band_1]
+      - [long_name, 'Band 2 ', band_2]
+      - [long_name, 'Band 3 ', band_3]
+      - [long_name, 'Band 4 ', band_4]
+      - [long_name, 'Band 5 ', band_5]
+      - [long_name, 'Band 7 ', band_7]
+      - [long_name, 'Band 8 ', band_8]
+      - [long_name, 'Band 10 ', band_10]
+      - [long_name, 'Band 11 ', band_11]
+    }
+}
+file_generators: {
+  default_file_gen: {
+    module: iamlp.readers.local_file_iterators,
+    callable: get_all_filenames_for_product,
+  }
+}
+file_lists: {}
+samplers: {
+  NPP_DSRF1KD_L2GD: {
+    module: iamlp.samplers,
+    callable: random_images_selection,
+    n_rows_per_sample: 100000,
+    files_per_sample: 4,
+    file_generator: default_file_gen,
+  }
+}
+polys: {}
+prefilters: {
+  NPP_DSRF1KD_L2GD: {
+    data_filter: {},
+    metadata_filter: {},
+    filename_filter: {},
+    geo_filters: {
+      include_polys: [],
+      exclude_polys: [],
+    },
+  }
+}
+resamplers: {
+
+}
+aggregations: {
+
+}
+masks: {
+
+}
+add_features: {
+
+}
+
+train: {
+  kmeans: {
+    n_batches_per_partial_fit: 3,
+    n_generations: 3,
+    model_selector: {module: iamlp.model_averaging.kmeans,
+                     callable: kmeans_model_averaging},
+    model_init_kwargs: {
+    },
+    model_init: {
+      module: sklearn.cluster,
+      callable: MiniBatchKMeans
+    },
+    ensemble_size: 4,
+    saved_ensemble_size: 1,
+    no_shuffle: 1,
+    sampler: NPP_DSRF1KD_L2GD,
+    ml_features: all,
+    output_tag: kmeans_1,
+    data_source: NPP_DSRF1KD_L2GD
+  }
+}
+predict: {
+  kmeans_1: {
+    from_output_tag: kmeans_1,
+    file_generator: default_file_gen,
+    poly_summarize: [],
+  }
+}
+change_detection: {
+  time_series: []
+}
+pipeline:
+  - {required_data_sources: [NPP_DSRF1KD_L2GD]
+    }
+  - {train: kmeans_1,
+     on_each_image:
+      - {prefilters: NPP_DSRF1KD_L2GD}
+    }
+  - {predict: kmeans_1,
+     on_each_image:
+      - {prefilters: NPP_DSRF1KD_L2GD}
+    }
+
+# Config options that can be overriden by environment var:
+NUM_THREADS: Null # os.cpu_count() if not given
+NUM_PROCESSES: Null  # os.cpu_count() if not given
+DASK_EXECUTOR: SERIAL
+DASK_SCHEDULER: ""
+LADSWEB_LOCAL_CACHE: Null

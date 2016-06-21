@@ -1,0 +1,23 @@
+int_fields_specs:
+ - {
+  name: NUM_THREADS,
+  required: False
+}
+ - {
+  name: NUM_PROCESSES,
+  required: False
+}
+str_fields_specs:
+ - {name: DASK_EXECUTOR,
+    default: SERIAL,
+    required: False,
+    choices:
+     - DISTRIBUTED
+     - SERIAL
+     - THREAD_POOL
+     - PROCESS_POOL
+   }
+ - {name: DASK_SCHEDULER,
+   }
+ - {name: LADSWEB_LOCAL_CACHE,
+    required: True}

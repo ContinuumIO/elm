@@ -56,9 +56,14 @@ def download(yr, day, ftp=None,
 
     return ftp
 
-def main():
+def main(args=None, parse_this_str=None):
     parser = ArgumentParser(description="Download util for {}".format(LADSWEB_FTP))
-    args = add_local_dataset_options(parser).parse_args()
+    parser = add_local_dataset_options(parser)
+    if args is None:
+        if not parse_this_str:
+            args = parser.parse_args()
+        else:
+            args = parser.parse_args(parse_this_str)
     today = datetime.datetime.utcnow()
     current_julian_day = sum(calendar.monthrange(today.year, x)[0] for x in range(1, today.month))
     current_julian_day += today.day - 1
