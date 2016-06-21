@@ -4,9 +4,9 @@ import datetime
 from functools import partial
 import os
 from sklearn.cluster import MiniBatchKMeans
+from dask.diagnostics import ProgressBar
 
-
-from iamlp.settings import DOWNLOAD_DIR, delayed, SERIAL_EVAL
+from iamlp.settings import DOWNLOAD_DIR, delayed, SERIAL_EVAL, DASK_EXECUTOR
 from iamlp.selection.filename_selection import _filter_on_filename
 from iamlp.readers.hdf4_L2_tools import load_hdf4
 from iamlp.readers.local_file_iterators import (get_filenames_for_day,
@@ -71,21 +71,27 @@ def main():
         'partial_fit_kwargs': partial_fit_kwargs,
     }
     with executor_context() as (executor, get_func):
-        models = ensemble(init_models,
-                         args.output_tag,
-                         partial(kmeans_model_averaging,
-                                 args.n_clusters,
-                                 {'n_clusters': args.n_clusters,}),
-                         **ensemble_kwargs)
-        if not SERIAL_EVAL:
-            #print('keys', [tuple(m.dask.keys()) for m in models])
-            m = models.compute(get=get_func)
-            print('m', m)
-            models = [m.compute(get=get_func) for m in models.compute(get=get_func)]
-        for model_idx, model in enumerate(models):
-            serialize(args.output_tag + '_{}'.format(model_idx), model)
-        ended = datetime.datetime.now()
-        print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
+        with ProgressBar() as progress:
+            ensemble_kwargs['get_func'] = get_func
+            models = ensemble(init_models,
+                             args.output_tag,
+                             partial(kmeans_model_averaging,
+                                     args.n_clusters,
+                                     {'n_clusters': args.n_clusters,}),
+                             **ensemble_kwargs)
+            if DASK_EXECUTOR == 'DISTRIBUTED':
+                get = get_func
+            else:
+                get = None
+                #print('keys', [tuple(m.dask.keys()) for m in models])
+            if not SERIAL_EVAL:
+                m = models.compute(get=get_func)
+                print('m', m)
+                models = [m.compute(get=get_func) for m in models.compute(get=get_func)]
+            for model_idx, model in enumerate(models):
+                serialize(args.output_tag + '_{}'.format(model_idx), model)
+            ended = datetime.datetime.now()
+            print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
         return models
 
 

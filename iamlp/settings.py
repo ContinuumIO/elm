@@ -12,14 +12,13 @@ EXE_TYPES = ('SERIAL', 'THREAD_POOL',
              'PROCESS_POOL', 'DISTRIBUTED')
 
 DOWNLOAD_DIR = os.environ.get('DOWNLOAD_DIR', '.')
-DASK_EXECUTOR = os.environ.get('DASK_EXECUTOR', 'PROCESS_POOL')
+DASK_EXECUTOR = os.environ.get('DASK_EXECUTOR', 'DISTRIBUTED')
 DASK_SCHEDULER = os.environ.get('DASK_SCHEDULER', '127.0.0.1:8786')
 DASK_PROCESSES = int(os.environ.get('DASK_PROCESSES', os.cpu_count()))
 DASK_THREADS = int(os.environ.get('DASK_THREADS', os.cpu_count()))
 SERIAL_EVAL = DASK_EXECUTOR == 'SERIAL'
 @contextlib.contextmanager
 def executor_context():
-    print(DASK_EXECUTOR)
     try:
         if DASK_EXECUTOR == 'DISTRIBUTED':
             from distributed import Executor
@@ -28,7 +27,7 @@ def executor_context():
         elif DASK_EXECUTOR == 'PROCESS_POOL':
             executor = Pool(DASK_PROCESSES)
         elif DASK_EXECUTOR == 'THREAD_POOL':
-            executor = THREAD_POOL(DASK_THREADS)
+            executor = ThreadPool(DASK_THREADS)
         else:
             assert DASK_EXECUTOR == 'SERIAL'
             executor = None

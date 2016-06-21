@@ -21,7 +21,8 @@ def ensemble(init_models,
             model_averaging,
             n_generations=2,
             no_shuffle=1,
-            partial_fit_kwargs=None):
+            partial_fit_kwargs=None,
+            get_func=None):
     models = None
     partial_fit_kwargs = partial_fit_kwargs or {}
     for generation in range(n_generations):
@@ -34,5 +35,7 @@ def ensemble(init_models,
             models = models.compute()
         if generation < n_generations - 1:
             models = model_averaging(models)
+        if not SERIAL_EVAL:
+            models = [m.compute(get=get_func) for m in models.compute(get=get_func)]
     return models
 
