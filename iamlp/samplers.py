@@ -6,7 +6,7 @@ from iamlp.settings import delayed
 from iamlp.selection.filename_selection import get_included_filenames
 from iamlp.selection.band_selection import select_from_file
 
-Sample = namedtuple('Sample', 'df band_meta filemeta filenames')
+Sample = namedtuple('Sample', 'df band_meta filemeta filename')
 
 @delayed(pure=True)
 def random_image_selection(included_filenames, band_specs,
@@ -26,12 +26,12 @@ def random_images_selection(included_filenames, n_samples_each_fit, n_per_file,
     for file_idx in range(files_per_sample):
         sample = random_image_selection(included_filenames, band_specs,
                                     n_rows=n_per_file, **kwargs)
-        df, band_meta, filemeta, filename = sample
-        dfs.append(df)
-        band_metas.append(band_meta)
-        filemetas.append(filemeta)
-        filenames.append(filename)
-    return Sample(pd.concat(dfs, keys=filenames),
+        df, band_meta, filemeta, filename = sample[0], sample[1], sample[2], sample[3]
+        dfs.append(sample.df)
+        band_metas.append(sample.band_meta)
+        filemetas.append(sample.filemeta)
+        filenames.append(sample.filename)
+    return Sample(delayed(pd.concat)(dfs, keys=filenames),
         band_metas,
         filemetas,
         filenames)

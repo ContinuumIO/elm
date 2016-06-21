@@ -1,5 +1,6 @@
 name: iamlp
 dependencies:
+ - python=3.5
  - bokeh
  - dask
  - distributed
@@ -17,5 +18,6 @@ dependencies:
  - scipy
  - tblib
  - yaml
-pip:
+ - pip:
    - deap
+   - graphviz

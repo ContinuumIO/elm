@@ -1,6 +1,7 @@
 
 from argparse import ArgumentParser
 import datetime
+from functools import partial
 import os
 from sklearn.cluster import MiniBatchKMeans
 
@@ -16,10 +17,12 @@ from iamlp.selection.geo_selection import (point_in_poly,
 from iamlp.cli import (add_local_dataset_options,
                        add_ensemble_partial_fit_args)
 
-from iamlp.ensemble.kmeans import kmeans_ensemble
+from iamlp.ensemble.ensemble_base import ensemble
 from iamlp.writers.serialize import serialize
 from iamlp.partial_fit import partial_fit
-from iamlp.ensemble.kmeans import _kmeans_add_within_class_var
+from iamlp.model_averaging.kmeans import (_kmeans_add_within_class_var,
+                                          kmeans_model_averaging)
+from iamlp.settings import executor_context
 def example_init_func(batch_size=1000000, n_clusters=8):
     return MiniBatchKMeans(n_clusters=n_clusters,
                            batch_size=batch_size,
@@ -36,9 +39,6 @@ def main():
     args = cli().parse_args()
     args.years = args.years or [2016]
     args.data_days = args.data_days or list(range(1, 70))
-    if not SERIAL_EVAL:
-        from distributed import Executor
-        executor = Executor('127.0.0.1:8786')
     if args.band_specs_json:
         with open(args.band_specs_json) as f:
             args.band_specs = json.load(f)
@@ -61,7 +61,7 @@ def main():
         'n_samples_each_fit': args.n_samples_each_fit,
         'n_per_file': args.n_per_file,
         'files_per_sample': args.files_per_sample,
-        'post_fit_func': _kmeans_add_within_class_var,
+        'post_fit_func': partial(_kmeans_add_within_class_var, args.n_clusters),
         'selection_kwargs': selection_kwargs,
         'band_specs': args.band_specs,
     }
@@ -70,18 +70,23 @@ def main():
         'n_generations': args.n_generations,
         'partial_fit_kwargs': partial_fit_kwargs,
     }
-    models = kmeans_ensemble(init_models,
-                             args.output_tag,
-                             **ensemble_kwargs)
-    if not SERIAL_EVAL:
-        print('Call compute')
-        models = models.compute()
-        print('Called compute')
-    #for model_idx, model in enumerate(models):
-     #   serialize(args.output_tag + '_{}'.format(model_idx), model)
-    ended = datetime.datetime.now()
-    print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
-    return models
+    with executor_context() as (executor, get_func):
+        models = ensemble(init_models,
+                         args.output_tag,
+                         partial(kmeans_model_averaging,
+                                 args.n_clusters,
+                                 {'n_clusters': args.n_clusters,}),
+                         **ensemble_kwargs)
+        if not SERIAL_EVAL:
+            #print('keys', [tuple(m.dask.keys()) for m in models])
+            m = models.compute(get=get_func)
+            print('m', m)
+            models = [m.compute(get=get_func) for m in models.compute(get=get_func)]
+        for model_idx, model in enumerate(models):
+            serialize(args.output_tag + '_{}'.format(model_idx), model)
+        ended = datetime.datetime.now()
+        print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
+        return models
 
 
 if __name__ == "__main__":

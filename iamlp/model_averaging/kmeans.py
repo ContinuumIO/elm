@@ -1,12 +1,36 @@
+import array
+from collections import namedtuple
+
 
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
-
+import pandas as pd
+from sklearn.cluster import MiniBatchKMeans
 from iamlp.settings import delayed
 
 toolbox = base.Toolbox()
 
+KmeansVar = namedtuple('KmeansVar',['model', 'df', 'within_class_var', 'class_counts'])
+
+
+@delayed
+def _kmeans_add_within_class_var(n_clusters, model, df):
+    var = delayed(model.cluster_centers_[model.labels_].__sub__)(df.values)
+    var = delayed(var.__pow__)(2.0)
+    var = delayed(np.sum)(var, axis=1)
+    within_class_var = delayed(np.zeros)(n_clusters, dtype=np.float64)
+    df2 = delayed(pd.DataFrame)({'var': var, 'label': model.labels_})
+    g = delayed(df2.groupby)('label')
+    agg = delayed(g.sum)()
+    for idx in range(n_clusters):
+        #a[a.index.__eq__(2)]
+        sel = delayed(agg.__getitem__)(delayed(agg.index.__eq__)(idx))
+        delayed(agg.apply)(lambda x: within_class_var[x.index] ==x.values[0])
+    bc = delayed(np.bincount)(model.labels_)
+    class_counts = delayed(np.zeros)(model.cluster_centers_.shape[0])
+    delayed(class_counts.__setitem__)(slice(0, bc.size), bc)
+    return KmeansVar(model, df, within_class_var, class_counts)
 
 @delayed
 def distance(c1, c2):
@@ -24,56 +48,65 @@ def get_distance_matrix(centroids):
     return distance_matrix
 
 @delayed
-def pareto_front(objectives, take=1, weights=None):
-    if weights is None:
-        weights = (-1,) * objectives.shape[1]
-    creator.create("FitnessMin", base.Fitness, weights=weights)
-    creator.create('Individual', tuple, fitness=creator.FitnessMin)
-    #toolbox.register("attr_float", uniform, BOUND_LOW, BOUND_UP, NDIM)
-    #toolbox.register('individual', tools.initIterate, creator.Individual, toolbox.attr_float)
-    toolbox.register('evaluate', lambda x:tuple(xi for xi in x))
-    objectives = [creator.Individual(tuple(objectives[idx, :])) for idx in range(objectives.shape[0])]
-    return np.array(selNSGA2(objectives, take))
+def pareto_front(objectives, centroids, take, weights):
+    creator.create("FitnessMulti", base.Fitness, weights=weights)
+    creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMulti)
+    toolbox.register('evaluate', lambda x: x)
+    objectives = [creator.Individual(objectives[idx, :]) for idx in range(objectives.shape[0])]
+    objectives2 = []
+    for (idx, (obj, cen)) in enumerate(zip(objectives, centroids)):
+        obj.idx = idx
+        obj.cen = cen
+        obj.fitness.values = toolbox.evaluate(obj)
+    sel = selNSGA2(objectives, take)
+    return tuple((item.cen, item.idx) for item in sel)
+
+def _rand_int_exclude(exclude, start, end, step):
+    choices = np.arange(start, end, step)
+    probs = np.ones(choices.size)
+    for e in exclude:
+        probs[e] = 0
+    probs /= probs.sum()
+    return int(np.random.choice(choices, p=probs))
 
 @delayed
-def kmeans_model_averaging(models, no_shuffle=1, require_pcent=2):
-    inertia = [(m.inertia_, idx) for idx, m in enumerate(models)]
-    delayed(inertia.sort)(key=lambda x:x[0])
+def kmeans_model_averaging(n_clusters, new_model_kwargs, models, no_shuffle=1):
+    inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
+    delayed(inertia.sort)()
     best_idxes = [i[1] for i in inertia[:no_shuffle]]
-    centroids = np.concatenate([model.cluster_centers_ for model in models])
-    class_counts = np.concatenate([model.class_counts_ for model in models])
-    within_class_var = np.concatenate([model.within_class_var_ for model in models])
+    centroids = delayed(np.concatenate)([m.model.cluster_centers_ for m in models])
+    class_counts = delayed(np.concatenate)([m.class_counts for m in models])
+    within_class_var = delayed(np.concatenate)([m.within_class_var for m in models])
     distance_matrix = get_distance_matrix(centroids)
-    models_improved = [models[idx] for idx in best_idxes]
-    centroid_idxes = list(range(centroids.shape[0]))
+    new_models = [models[idx].model for idx in best_idxes]
+    centroid_idxes = delayed(lambda x: list(range(x)))(centroids.shape[0])
+    num_rows = n_clusters * len(models)
     for idx in range(no_shuffle, len(models)):
-        model = models[idx]
+        model_stats = models[idx]
         new_centroids = []
-        while len(new_centroids) < model.cluster_centers_.shape[0]:
-            cen_choice = int(np.random.randint(0, model.cluster_centers_.shape[0], 1))
-            cen = model.cluster_centers_[cen_choice]
+        exclude = set()
+        for idx in range(n_clusters // 2 + 1):
+            cen_choice = delayed(_rand_int_exclude)(exclude, 0, num_rows, 1)
+            delayed(exclude.add)(cen_choice)
+            cen = model_stats.model.cluster_centers_[cen_choice % n_clusters]
             new_centroids.append(cen)
-            position = idx * model.cluster_centers_.shape[0] + cen_choice
-            distance_col = distance_matrix[position, :]
+            distance_col = distance_matrix[cen_choice, :]
             objectives = np.column_stack((distance_col,
                                           within_class_var,
                                           class_counts))
-            pfront = pareto_front(objectives,
-                                  take=len(new_centroids) + 1,
-                                  weights=(-1, -1, 1))
-            for row_idx in range(pfront.shape[0]):
-                row = pfront[row_idx, :]
-                if row[0] == 0.:
-                    continue
-                position = np.where(np.all(row == objectives))[0]
-                cen = centroids[position, :]
-                if not any(np.all(c == cen) for c in new_centroids):
-                    new_centroids.append(cen)
-                    break
-        model.cluster_centers_ = np.array(new_centroids)
-        model.cluster_centers_ = model.cluster_centers_[:model.cluster_centers_.shape[0], :]
-        delattr(model, 'inertia_')
-        delattr(model, 'counts_')
-        delattr(model, 'labels_')
-        models_improved.append(model)
-    return models_improved
+            best = pareto_front(objectives,
+                                centroids,
+                                  take=1,
+                                  weights=(1, -1, 1))[0]
+            row = best[0]
+            position = best[1]
+            delayed(exclude.add)(position)
+            new_centroids.append(delayed(np.array)(row))
+        cluster_centers_ = delayed(np.row_stack)(new_centroids)
+        cluster_centers_ = delayed(cluster_centers_.__getitem__)((slice(0, n_clusters),
+                                                                 slice(None,None)))
+        kw = new_model_kwargs.copy()
+        kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
+        model = delayed(MiniBatchKMeans)(**kw)
+        new_models.append(model)
+    return new_models

@@ -1,7 +1,7 @@
 import numpy as np
 
 from iamlp.samplers import random_images_selection
-from iamlp.settings import delayed
+from iamlp.settings import delayed, SERIAL_EVAL
 
 @delayed
 def partial_fit(model,
@@ -21,11 +21,16 @@ def partial_fit(model,
         sample = lambda: random_images_selection(*args, **selection_kwargs)
     else:
         sample = lambda: data_func()
+
     for idx in range(n_samples_each_fit):
         samp = sample()
+        if not SERIAL_EVAL:
+            samp = samp.compute()  #TODO: should .compute be here?
         model = delayed(model.partial_fit)(samp.df.values)
-        if post_fit_func is not None:
-            model = post_fit_func(model, samp.df)
+
+    if post_fit_func is not None:
+
+        return post_fit_func(model, samp.df)
     return model
 
 
