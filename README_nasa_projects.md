@@ -25,3 +25,11 @@ arrays = []
 for dataset in datasets:
     arrays.append(gdal.Open(dataset[0]).ReadAsArray())
 ```
+ * Many datasets, such as VIIRS, can be downloaded via Anonymous ftp from [ladsweb](https://ladsweb.nascom.nasa.gov/data/). Example:
+```bash
+ftp
+open ladsweb.nascom.nasa.gov
+# Enter Anonymous for user and nothing for password
+get README
+```
+The README for ladsweb ftp, retrieved in the snippet above, shows the directory layout of the FTP - it is saved [here in the repo](README_ladsweb.txt)
