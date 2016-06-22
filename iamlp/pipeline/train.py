@@ -4,7 +4,7 @@ from functools import partial
 from iamlp.pipeline.sample_util import all_sample_ops
 from iamlp.model_selectors.util import get_args_kwargs_defaults
 from iamlp.config import import_callable
-from iamlp.ensemble import ensemble
+from iamlp.pipeline.ensemble import ensemble
 def no_selector(models, *args, **kwargs):
     return models
 
