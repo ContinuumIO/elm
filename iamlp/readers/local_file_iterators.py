@@ -1,7 +1,7 @@
 import glob
 import os
 
-from iamlp.settings import LADSWEB_LOCAL_CACHE, delayed
+from iamlp.config import LADSWEB_LOCAL_CACHE, delayed
 
 def VIIRS_L2_PATTERN(product_number, product_name, yr, data_day):
     return os.path.join(LADSWEB_LOCAL_CACHE, str(product_number), product_name, str(yr),

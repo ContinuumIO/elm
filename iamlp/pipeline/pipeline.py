@@ -11,7 +11,7 @@ def on_step(*args):
     elif 'download_data_sources' in step:
         return download_data_sources_step(*args)
     else:
-        raise NotImplemented
+        raise NotImplemented('Put other operations like "change_detection" here')
 
 def pipeline(config, executor):
 

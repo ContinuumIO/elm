@@ -5,7 +5,7 @@ import os
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Pool
 
-from dask import delayed as delayed as dask_delayed
+from dask import delayed as dask_delayed
 from toolz import curry
 
 SERIAL_EVAL = None # reset by iamlp.config.load_config.ConfigParser

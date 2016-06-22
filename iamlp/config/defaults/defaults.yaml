@@ -1,17 +1,14 @@
 
-#
+
 readers: {
   hdf4-eos: {
-     load: {module: iamlp.readers.hdf4_L2_tools, callable: load_hdf4},
-     bounds: {module: iamlp.readers.hdf4_L2_tools, callable: get_subdataset_bounds}
+     load: "iamlp.readers.hdf4_L2_tools:load_hdf4",
+     bounds: "iamlp.readers.hdf4_L2_tools:get_subdataset_bounds"
    }
   }
-downloads:
- default_downloader: {
-    module: iamlp.acquire.ladsweb_ftp,
-    callable: main
-    }
-  }
+downloads: {
+ default_downloader: "iamlp.acquire.ladsweb_ftp:main"
+}
 
 data_sources: {
  NPP_DSRF1KD_L2GD: {
@@ -22,49 +19,41 @@ data_sources: {
     years: [2016],
     data_days: all,
     download: default_downloader,
-    band_specs:
-      - [long_name, 'Band 1 ', band_1]
-      - [long_name, 'Band 2 ', band_2]
-      - [long_name, 'Band 3 ', band_3]
-      - [long_name, 'Band 4 ', band_4]
-      - [long_name, 'Band 5 ', band_5]
-      - [long_name, 'Band 7 ', band_7]
-      - [long_name, 'Band 8 ', band_8]
-      - [long_name, 'Band 10 ', band_10]
-      - [long_name, 'Band 11 ', band_11]
+    band_specs: [
+     [long_name, 'Band 1 ', band_1],
+     [long_name, 'Band 2 ', band_2],
+     [long_name, 'Band 3 ', band_3],
+     [long_name, 'Band 4 ', band_4],
+     [long_name, 'Band 5 ', band_5],
+     [long_name, 'Band 7 ', band_7],
+     [long_name, 'Band 8 ', band_8],
+     [long_name, 'Band 10 ', band_10],
+     [long_name, 'Band 11 ', band_11],
+     ]
     }
 }
 file_generators: {
-  default_file_gen: {
-    module: iamlp.readers.local_file_iterators,
-    callable: get_all_filenames_for_product,
-  }
+  default_file_gen: "iamlp.readers.local_file_iterators:get_all_filenames_for_product",
 }
 file_lists: {}
 samplers: {
   NPP_DSRF1KD_L2GD: {
-    module: iamlp.samplers,
-    callable: random_images_selection,
+    callable: "iamlp.samplers:random_images_selection",
     n_rows_per_sample: 100000,
     files_per_sample: 4,
     file_generator: default_file_gen,
-    selection_kwargs: {} # TODO is this needed?  It's not checked now.
-                         # is the need for this handled in
-                         # prefilters, resampling, etc?
+    selection_kwargs: {
+      data_filter: {},
+      metadata_filter: {},
+      filename_filter: {},
+      geo_filters: {
+        include_polys: [],
+        exclude_polys: [],
+      },
+    }
   }
 }
 polys: {}
-prefilters: {
-  NPP_DSRF1KD_L2GD: {
-    data_filter: {},
-    metadata_filter: {},
-    filename_filter: {},
-    geo_filters: {
-      include_polys: [],
-      exclude_polys: [],
-    },
-  }
-}
 resamplers: {
 
 }
@@ -75,25 +64,17 @@ masks: {
 
 }
 add_features: {
-
+  # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "iamlp.preproc.add_features:ndvi",
 }
 
 train: {
   kmeans: {
+    partial_fit_func: "iamlp.partial_fit:partial_fit",
+    model_selector_func: "iamlp.model_selectors.kmeans:kmeans_model_averaging",
+    model_init_func: "sklearn.cluster:MiniBatchKMeans",
+    post_fit_func: "iamlp.model_selectors.kmeans:kmeans_add_within_class_var",
     partial_fit_kwargs: {
       n_batches: 3
-    },
-    model_selector: {
-      module: iamlp.model_averaging.kmeans,
-      callable: kmeans_model_averaging
-    },
-    model_init: {
-      module: sklearn.cluster,
-      callable: MiniBatchKMeans
-    },
-    post_fit_func: {
-      module: iamlp.model_averaging.kmeans,
-      callable: kmeans_add_within_class_var
     },
     model_init_kwargs: {
     },
@@ -122,20 +103,14 @@ change_detection: {
   time_series: []
 }
 pipeline:
-  - {download_data_sources: [NPP_DSRF1KD_L2GD]
-    }
-  - {train: kmeans_1,
-     on_each_sample:
-      - {prefilters: NPP_DSRF1KD_L2GD}
-    }
-  - {predict: kmeans_1,
-     on_each_sample:
-      - {prefilters: NPP_DSRF1KD_L2GD}
-    }
+  - {download_data_sources: [NPP_DSRF1KD_L2GD]}
+  - {train: kmeans_1}
+  - {predict: kmeans_1}
+
 
 # Config options that can be overriden by environment variables:
 DASK_THREADS: Null # os.cpu_count() if not given
 DASK_PROCESSES: Null  # os.cpu_count() if not given
 DASK_EXECUTOR: SERIAL
-DASK_SCHEDULER: ""
+DASK_SCHEDULER: Null
 LADSWEB_LOCAL_CACHE: Null

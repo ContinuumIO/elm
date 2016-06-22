@@ -6,7 +6,7 @@ import os
 import random
 import time
 
-from iamlp.settings import LADSWEB_LOCAL_CACHE
+from iamlp.config import LADSWEB_LOCAL_CACHE
 from iamlp.cli import add_local_dataset_options, DEFAULT_DATASET, DEFAULT_DATA_GROUP_NUM
 TOP_DIR = '/allData/{}/{}'
 CACHE_DIR = os.path.join(os.path.expanduser('~'), '.downloaded_args')

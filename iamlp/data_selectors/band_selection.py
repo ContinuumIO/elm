@@ -5,7 +5,7 @@ import gdal
 import pandas as pd
 import re
 
-from iamlp.settings import delayed
+from iamlp.config import delayed
 from iamlp.readers.hdf4_L2_tools import load_hdf4, get_subdataset_bounds
 
 def match_meta(meta, band_spec):

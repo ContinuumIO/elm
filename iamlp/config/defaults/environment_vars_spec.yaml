@@ -1,21 +1,21 @@
 int_fields_specs:
  - {
-  name: DASK_THREADS,
-  required: False
-}
+    name: DASK_THREADS,
+    required: False
+  }
  - {
   name: DASK_PROCESSES,
   required: False
-}
+  }
 str_fields_specs:
  - {name: DASK_EXECUTOR,
     default: SERIAL,
     required: False,
-    choices:
-     - DISTRIBUTED
-     - SERIAL
-     - THREAD_POOL
-     - PROCESS_POOL
+    choices: [
+    DISTRIBUTED,
+    SERIAL,
+    THREAD_POOL,
+    PROCESS_POOL]
    }
  - {name: DASK_SCHEDULER,
    }

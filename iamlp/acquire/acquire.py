@@ -1,5 +1,5 @@
 from argparse import Namespace
-from iamlp.settings import delayed
+from iamlp.config import delayed
 
 def get_loader(config, name):
     return config.readers[name]['load'][1]

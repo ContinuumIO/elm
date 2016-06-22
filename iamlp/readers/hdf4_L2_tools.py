@@ -1,7 +1,7 @@
 import gdal
 from gdalconst import GA_ReadOnly
 
-from iamlp.settings import delayed
+from iamlp.config import delayed
 
 
 def load_hdf4(f):

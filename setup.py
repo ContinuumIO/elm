@@ -13,17 +13,21 @@ setup(name='iamlp',
       description='Image Analysis Machine Learning Pipeline',
       packages=['iamlp',
                 'iamlp.acquire',
-                'iamlp.readers',
-                'iamlp.writers',
-                'iamlp.scripts',
-                'iamlp.selection',
+                'iamlp.config',
+                'iamlp.data_selectors',
+                'iamlp.ensemble',
+                'iamlp.model_selectors',
                 'iamlp.partial_fit',
-                'iamlp.model_averaging',
-                'iamlp.ensemble'],
+                'iamlp.pipeline',
+                'iamlp.preproc',
+                'iamlp.readers',
+                'iamlp.scripts',
+                'iamlp.writers',
+                ],
       data_files=[],
       entry_points={
         'console_scripts': [
             'iamlp-download-ladsweb = iamlp.acquire.ladsweb_ftp:main',
-            'iamlp-kmeans-example = iamlp.scripts.example_kmeans:main'
+            'iamlp-main = iamlp.scripts.main:main'
 
         ]},)

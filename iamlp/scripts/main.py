@@ -5,8 +5,7 @@ import os
 
 from dask.diagnostics import ProgressBar
 
-from iamlp.config.cli import (add_local_dataset_options,
-                              add_ensemble_partial_fit_args)
+from iamlp.config.cli import add_config_file_argument
 from iamlp.config import DEFAULTS, ConfigParser, executor_context, delayed
 from iamlp.writers.serialize import serialize
 from iamlp.pipeline import pipeline
@@ -16,7 +15,7 @@ def cli(args=None, parse_this_str=None):
     if args:
         return args
     parser = ArgumentParser(description="Pipeline classifier / predictor using ensemble and partial_fit methods")
-    parser = add_ensemble_partial_fit_args(parser)
+    parser = add_config_file_argument(parser)
     if parse_this_str:
         return parser.parse_args(parse_this_str)
     return parser.parse_args()
