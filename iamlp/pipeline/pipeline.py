@@ -4,6 +4,7 @@ from iamlp.pipeline.predict import predict_step
 from iamlp.pipeline.download_data_sources import download_data_sources_step
 
 def on_step(*args):
+    step = args[1]
     if 'train' in step:
         return train_step(*args)
     elif 'predict' in step:
@@ -15,5 +16,5 @@ def on_step(*args):
 
 def pipeline(config, executor):
 
-    for step in config['pipeline']:
+    for step in config.pipeline:
         ret_val = on_step(config, step, executor)

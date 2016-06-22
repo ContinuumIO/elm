@@ -34,24 +34,25 @@ def get_bands(handle, ds, *band_specs):
 def _select_from_file_base(filename,
                          band_specs,
                          include_polys=None,
-                         filter_on_metadata=None,
-                         filter_on_filename=None,
+                         metadata_filter=None,
+                         filename_filter=None,
                          filename_search=None,
                          data_filter=None,
                          dry_run=False,
                          file_loader=load_hdf4,
-                         get_subdataset_bounds=get_subdataset_bounds):
-    from iamlp.selection.geo_selection import _filter_band_data
-    from iamlp.selection.filename_selection import _filter_on_filename
+                         get_subdataset_bounds=get_subdataset_bounds,
+                         **kwargs):
+    from iamlp.data_selectors.geo_selectors import _filter_band_data
+    from iamlp.data_selectors.filename_selectors import _filename_filter
 
-    keep_file = _filter_on_filename(filename,
+    keep_file = _filename_filter(filename,
                                     search=filename_search,
-                                    func=filter_on_filename)
+                                    func=filename_filter)
     if not keep_file:
         return False
     handle, ds, filemeta = load_hdf4(filename)
-    if filter_on_metadata is not None:
-        keep_file = filter_on_metadata(filename, filemeta, ds, handle=handle)
+    if metadata_filter is not None:
+        keep_file = metadata_filter(filename, filemeta, ds, handle=handle)
         if not keep_file:
             return False
     if dry_run:

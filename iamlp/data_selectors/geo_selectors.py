@@ -52,7 +52,7 @@ def _filter_band_data(handle, subhandle, time,
         lons = np.linspace(lon1, lon2, data.shape[0])
         lat1, lat2 = sorted((bounds.south, bounds.north))
         lats = np.linspace(lat1, lat2, data.shape[1])
-        if include_polys is not None:
+        if include_polys:
             sizes = [poly.shape[0] for poly in include_polys]
 
             include_polys_array = np.ones((sum(sizes) + len(sizes), 2),

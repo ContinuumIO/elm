@@ -1,4 +1,5 @@
 import copy
+import os
 
 import yaml
 
@@ -55,7 +56,7 @@ class ConfigParser(object):
         import iamlp.config.dask_settings as iamlp_dask_settings
         for k, v in parse_env_vars().items():
             if v:
-                self.config[k] = v
+                vars(self)[k] = v
         for str_var in ENVIRONMENT_VARS_SPEC['str_fields_specs']:
             choices = str_var.get('choices', [])
             val = self.config.get(str_var['name'])
@@ -68,6 +69,7 @@ class ConfigParser(object):
             k = int_var['name']
             val = self.config.get(k)
             setattr(iamlp_dask_settings, k, val)
+        iamlp_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
 
     def _validate_custom_callable(self, func_or_not, required, context):
         return import_callable_from_string(func_or_not, required=required, context=context)
@@ -94,7 +96,7 @@ class ConfigParser(object):
             self._validate_custom_callable(v, True, 'downloads:{}'.format(k))
 
     def _validate_band_specs(self, band_specs, name):
-        if not band_specs or isinstance(band_specs, list):
+        if not band_specs or not isinstance(band_specs, list):
             raise IAMLPConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
         for band_spec in band_specs:
@@ -152,9 +154,10 @@ class ConfigParser(object):
             raise IAMLPConfigError('In {} expected {} to be an int'.format(context, val))
 
     def _validate_one_sampler(self, sampler, name):
+        defaults = tuple(DEFAULTS['samplers'].values())[0]
         self._validate_custom_callable(sampler.get('callable'), True, 'samplers:{}'.format(name))
-        sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', DEFAULTS['n_rows_per_sample'])
-        sampler['files_per_sample'] = sampler.get('files_per_sample', DEFAULTS['files_per_sample'])
+        sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
+        sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
         self._validate_positive_int(sampler['n_rows_per_sample'], name)
         self._validate_positive_int(sampler['files_per_sample'], name)
         file_gen = sampler.get('file_generator')
@@ -173,7 +176,7 @@ class ConfigParser(object):
 
     def _validate_samplers(self):
         self.samplers = self.config.get('samplers', {}) or {}
-        if not self.samplers or isinstance(self.samplers, dict):
+        if not self.samplers or not isinstance(self.samplers, dict):
             raise IAMLPConfigError('Invalid "samplers" config entry {} '
                                    '(expected dict)'.format(self.samplers))
         for name, sampler in self.samplers.items():
@@ -295,9 +298,15 @@ class ConfigParser(object):
         # TODO fill this in
         return True
 
-    def _validate_pipeline_require(self, step):
+    def _validate_pipeline_download_data_sources(self, step):
         # TODO make sure that the dataset can be downloaded or exists locally
         download_data_sources = step.get('download_data_sources', [])
+        return True
+
+    def _validate_pipeline_on_each_sample(self, on_each_sample, predict_or_train, options):
+        # TODO validate operations such as resampling and aggregation
+        # after a sample is taken
+
         return True
 
     def _validate_pipeline_train(self, step):
@@ -306,7 +315,7 @@ class ConfigParser(object):
             raise IAMLPConfigError('Pipeline refers to an undefined "train"'
                                    ' key: {}'.format(repr(train)))
         on_each_sample = step.get('on_each_sample', []) or []
-        self._validate_on_each_sample(on_each_sample, 'train', self.train[train])
+        self._validate_pipeline_on_each_sample(on_each_sample, 'train', self.train[train])
 
     def _validate_pipeline_predict(self, step):
         predict = step.get('predict')
@@ -314,10 +323,10 @@ class ConfigParser(object):
             raise IAMLPConfigError('Pipeline refers to an undefined "predict"'
                                    ' key: {}'.format(repr(predict)))
         on_each_sample = step.get('on_each_sample', []) or []
-        self._validate_on_each_sample(on_each_sample, 'predict', self.predict[predict])
+        self._validate_pipeline_on_each_sample(on_each_sample, 'predict', self.predict[predict])
 
     def _validate_pipeline(self):
-        pipeline = self.config.get('pipeline', []) or []
+        self.pipeline = pipeline = self.config.get('pipeline', []) or []
         if not pipeline or not isinstance(pipeline, (tuple, list)):
             raise IAMLPConfigError('Expected a "pipeline" list of action '
                                    'dicts in config but found '

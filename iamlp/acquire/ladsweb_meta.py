@@ -28,6 +28,6 @@ def validate_ladsweb_data_source(data_source_dict, context):
     years = data_source_dict.get('years')
     data_days = data_source_dict.get('data_days')
     validate_product_number(product_number, context)
-    validate_ladsweb_data_source(product_number, product_name, context)
+    validate_product_name(product_number, product_name, context)
     validate_time(product_number, product_name, years, data_days)
     return True

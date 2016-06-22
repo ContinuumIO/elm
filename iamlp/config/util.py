@@ -29,7 +29,7 @@ class IAMLPConfigError(ValueError):
 
 
 def import_callable_from_string(func_or_not, required=True, context=''):
-    context = ' -  e' + context if context else 'E'
+    context = context + ' -  e' if context else 'E'
     if func_or_not and (not isinstance(func_or_not, str) or func_or_not.count(':') != 1):
         raise IAMLPConfigError('{}xpected {} to be an module:callable '
                                'if given, e.g. {}'.format(context, repr(func_or_not), EXAMPLE_CALLABLE))
@@ -40,12 +40,14 @@ def import_callable_from_string(func_or_not, required=True, context=''):
                                'e.g. {} but got {}'.format(context, EXAMPLE_CALLABLE, repr(func_or_not)))
     module, func = func_or_not.split(':')
     try:
-        mod = __import__(module)
+        mod = __import__(module, globals(), locals(), [func], 0)
     except Exception as e:
         tb = traceback.format_exc()
         raise IAMLPConfigError('{}xpected module {} to be '
                                'imported but failed:\n{}'.format(context,func_or_not, tb))
     func = getattr(mod, func, None)
     if not callable(func):
-        raise IAMLPConfigError('xpected {} to be callable - it was imported but it is not callable'.format(context, some_dict['callable']))
+        raise IAMLPConfigError('{}xpected {} to be callable - '
+                               'it was imported but it is not '
+                               'callable'.format(context, func_or_not))
     return func

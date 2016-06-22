@@ -1,6 +1,6 @@
 from iamlp.config import import_callable_from_string
 
-def run_sample_pipeline(action_data):
+def run_sample_pipeline(action_data, **on_each_sample_kwargs):
     samp = action_data[0]
     sampler_func_str, sampler_args, sampler_kwargs = samp[0], samp[1], samp[2]
     sampler_func = import_callable_from_string(sampler_func_str, True, sampler_func_str)
@@ -20,14 +20,17 @@ def all_sample_ops(train_or_predict_dict, config, step):
         args that pwere partialed into no_args_sampler
         kwargs that were partialed into no_args_sampler'''
     d = train_or_predict_dict
-    sampler = config.samplers[d['sampler']]
+    sampler_name = d['sampler']
+    sampler = config.samplers[sampler_name]
     sampler_func = sampler['callable']
     data_source = config.data_sources[d['data_source']]
     file_key = sampler.get('file_generator', sampler.get('file_list'))
     file_generator = config.file_generators[file_key]
+    file_generator = import_callable_from_string(file_generator, True, file_generator)
+    data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
     included_filenames = tuple(file_generator(data_source))
     n_per_file = sampler['n_rows_per_sample'] // sampler['files_per_sample']
-    sampler_args = (sampler_name, sampler_dict, data_sources,)
+    sampler_args = (sampler_name, sampler, config.data_sources,)
     sampler_kwargs = {'included_filenames': included_filenames,
                       'n_per_file': n_per_file,
                       }
@@ -48,7 +51,7 @@ def all_sample_ops(train_or_predict_dict, config, step):
         on_each_sample_kwargs = step.get('on_each_sample_kwargs') or {}
         actions = make_on_each_sample_func(config, step, **on_each_sample_kwargs)
         action_data.extend(actions)
-    return tuple(action_data), sampler, data_source, included_filenames
+    return tuple(action_data), sampler, sampler_args, data_source, included_filenames
 
 def make_on_each_sample_func(config, step, **on_each_sample_kwargs):
     # TODO: assemble steps such as resampling, aggregation

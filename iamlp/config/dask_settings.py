@@ -12,7 +12,7 @@ SERIAL_EVAL = None # reset by iamlp.config.load_config.ConfigParser
 
 
 @contextlib.contextmanager
-def executor_context(dask_executor, scheduler_url):
+def executor_context(dask_executor, dask_scheduler):
     if dask_executor == 'DISTRIBUTED':
         from distributed import Executor
         executor = Executor(dask_scheduler)
@@ -35,7 +35,7 @@ def executor_context(dask_executor, scheduler_url):
 @curry
 def delayed(func, **dec_kwargs):
     def new_func(*args, **kwargs):
-        if SERIAL_EVAL: # SERIAL_EVAL is set in the globals()
+        if not SERIAL_EVAL: # SERIAL_EVAL is set in the globals()
                         # of this module when iamlp.config.load_config.ConfigParser
                         # is called
             return dask_delayed(func, **dec_kwargs)(*args, **kwargs)

@@ -11,8 +11,8 @@ def process_int_env_var(env_var_name, default='0', required=False):
         val = bool(int(val))
     except Exception as e:
         if required:
-            raise IAMLPConfigError('Expected {} to be parsed '
-                                   'as int (env var {})'.format(val, env_var_name))
+            raise IAMLPConfigError('Expected env var {} to be parsed '
+                                   'as int (got {})'.format(env_var_name, val))
         val = bool(val)
     return val
 
@@ -20,13 +20,15 @@ def process_str_env_var(env_var_name, default='', required=False, choices=None):
     val =  os.environ.get(env_var_name, default)
     if choices:
         if not val in choices:
-            raise IAMLPConfigError('Expected {} to be '
+            raise IAMLPConfigError('Expected env var {} to be '
                                    'in choices {} '
-                                   '(env var {}'
-                                   ')'.format(val, choices, env_var_name))
+                                   '(go {}'
+                                   ')'.format(env_var_name, choices, val))
     if required and not val:
         raise IAMLPConfigError('Expected env var {} to be '
                                'defined'.format(env_var_name))
+    elif not val:
+        val = default
     return val
 
 def parse_env_vars():
@@ -35,12 +37,12 @@ def parse_env_vars():
     relevant_env = {}
     for item in int_fields_specs:
         val = process_int_env_var(item['name'],
-                                  default=item.get('default', '0'),
+                                  default=item.get('default', None),
                                   required=item.get('required', False))
         relevant_env[item['name']] = val
     for item in str_fields_specs:
         val = process_str_env_var(item['name'],
-                                  default=item.get('default', '0'),
+                                  default=item.get('default', None),
                                   required=item.get('required', False),
                                   choices=item.get('choices', []))
         relevant_env[item['name']] = val

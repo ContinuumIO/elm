@@ -18,6 +18,10 @@ str_fields_specs:
     PROCESS_POOL]
    }
  - {name: DASK_SCHEDULER,
+    required: True
    }
  - {name: LADSWEB_LOCAL_CACHE,
+    required: True}
+ - {name: HASHED_ARGS_CACHE,
+    default: ~/.iamlp_hashed_args,
     required: True}

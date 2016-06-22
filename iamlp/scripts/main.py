@@ -25,12 +25,13 @@ def main(args=None, parse_this_str=None):
     started = datetime.datetime.now()
     args = cli(args=args, parse_this_str=parse_this_str)
     config = ConfigParser(args.config)
-    with executor_context() as (executor, get_func):
-        with ProgressBar() as progress:
-            pipeline(config, executor)
-            ended = datetime.datetime.now()
-            print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
-        return models
+    dask_executor = config.DASK_EXECUTOR
+    dask_scheduler = config.DASK_SCHEDULER
+    with executor_context(dask_executor, dask_scheduler) as executor:
+        pipeline(config, executor)
+        ended = datetime.datetime.now()
+        print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
+    return models
 
 
 if __name__ == "__main__":

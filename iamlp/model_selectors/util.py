@@ -2,7 +2,7 @@ import inspect
 
 def get_args_kwargs_defaults(func):
     '''Get the default kwargs spec of a function '''
-    sig = inspect.signature(sc.MiniBatchKMeans)
+    sig = inspect.signature(func)
     params = sig.parameters
     kwargs = {}
     args = []

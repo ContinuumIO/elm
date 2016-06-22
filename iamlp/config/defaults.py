@@ -9,5 +9,3 @@ DEFAULTS = read_from_egg(
                 os.path.join(YAML_DIR, 'defaults.yaml')
                 )
 
-
-

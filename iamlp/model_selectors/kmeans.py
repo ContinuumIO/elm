@@ -17,31 +17,27 @@ KmeansVar = namedtuple('KmeansVar',
                         'within_class_var',
                         'class_counts'])
 
-
-@delayed
 def kmeans_add_within_class_var(n_clusters, model, df):
-    var = delayed(model.cluster_centers_[model.labels_].__sub__)(df.values)
-    var = delayed(var.__pow__)(2.0)
-    var = delayed(np.sum)(var, axis=1)
-    within_class_var = delayed(np.zeros)(n_clusters, dtype=np.float64)
-    df2 = delayed(pd.DataFrame)({'var': var, 'label': model.labels_})
-    g = delayed(df2.groupby)('label')
-    agg = delayed(g.sum)()
+    var = np.sum((model.cluster_centers_[model.labels_] - df.values) ** 2, axis=1)
+    within_class_var = np.zeros(n_clusters, dtype=np.float64)
+    df2 = pd.DataFrame({'var': var, 'label': model.labels_})
+    g = df2.groupby('label')
+    agg = g.sum()
     for idx in range(n_clusters):
         #a[a.index.__eq__(2)]
-        sel = delayed(agg.__getitem__)(delayed(agg.index.__eq__)(idx))
-        delayed(agg.apply)(lambda x: within_class_var[x.index] ==x.values[0])
-    bc = delayed(np.bincount)(model.labels_)
-    class_counts = delayed(np.zeros)(model.cluster_centers_.shape[0])
-    delayed(class_counts.__setitem__)(slice(0, bc.size), bc)
+        sel = agg.loc[idx]
+        agg.apply(lambda x: within_class_var[x.index] ==x.values[0])
+    bc = np.bincount(model.labels_)
+    class_counts = np.zeros(model.cluster_centers_.shape[0])
+    class_counts[:bc.size] =  bc
     return KmeansVar(model, df, within_class_var, class_counts)
 
-@delayed
+
 def distance(c1, c2):
     resids = (c1 - c2)
     return np.sqrt(np.sum(resids ** 2))
 
-@delayed
+
 def get_distance_matrix(centroids):
 
     distance_matrix = np.empty((centroids.shape[0], centroids.shape[0]), dtype=np.float64)
@@ -51,7 +47,7 @@ def get_distance_matrix(centroids):
     distance_matrix[np.diag_indices_from(distance_matrix)] = 0.
     return distance_matrix
 
-@delayed
+
 def pareto_front(objectives, centroids, take, weights):
     creator.create("FitnessMulti", base.Fitness, weights=weights)
     creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMulti)
@@ -75,28 +71,28 @@ def _rand_int_exclude(exclude, start, end, step):
 
 
 
-@delayed
+
 def kmeans_model_averaging(models, **kwargs):
     no_shuffle = kwargs['no_shuffle']
-    init_model_func = kwargs['init_model_func']
+    model_init_func = kwargs['model_init_func']
     n_clusters = kwargs['model_init_kwargs']['n_clusters']
     inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
-    delayed(inertia.sort)()
+    inertia.sort()
     best_idxes = [i[1] for i in inertia[:no_shuffle]]
-    centroids = delayed(np.concatenate)([m.model.cluster_centers_ for m in models])
-    class_counts = delayed(np.concatenate)([m.class_counts for m in models])
-    within_class_var = delayed(np.concatenate)([m.within_class_var for m in models])
+    centroids = np.concatenate([m.model.cluster_centers_ for m in models])
+    class_counts = np.concatenate([m.class_counts for m in models])
+    within_class_var = np.concatenate([m.within_class_var for m in models])
     distance_matrix = get_distance_matrix(centroids)
     new_models = [models[idx].model for idx in best_idxes]
-    centroid_idxes = delayed(lambda x: list(range(x)))(centroids.shape[0])
+    centroid_idxes = list(range(centroids.shape[0]))
     num_rows = n_clusters * len(models)
     for idx in range(no_shuffle, len(models)):
         model_stats = models[idx]
         new_centroids = []
         exclude = set()
         for idx in range(n_clusters // 2 + 1):
-            cen_choice = delayed(_rand_int_exclude)(exclude, 0, num_rows, 1)
-            delayed(exclude.add)(cen_choice)
+            cen_choice = _rand_int_exclude(exclude, 0, num_rows, 1)
+            exclude.add(cen_choice)
             cen = model_stats.model.cluster_centers_[cen_choice % n_clusters]
             new_centroids.append(cen)
             distance_col = distance_matrix[cen_choice, :]
@@ -109,13 +105,12 @@ def kmeans_model_averaging(models, **kwargs):
                                   weights=(1, -1, 1))[0]
             row = best[0]
             position = best[1]
-            delayed(exclude.add)(position)
-            new_centroids.append(delayed(np.array)(row))
-        cluster_centers_ = delayed(np.row_stack)(new_centroids)
-        cluster_centers_ = delayed(cluster_centers_.__getitem__)((slice(0, n_clusters),
-                                                                 slice(None,None)))
+            exclude.add(position)
+            new_centroids.append(np.array(row))
+        cluster_centers_ = np.row_stack(new_centroids)
+        cluster_centers_ = cluster_centers[:n_clusters,:]
         kw = new_model_kwargs.copy()
         kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
-        model = delayed(init_model_func)(**kw)
+        model = model_init_func(**kw)
         new_models.append(model)
     return new_models
