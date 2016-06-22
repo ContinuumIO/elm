@@ -67,11 +67,11 @@ add_features: {
 
 train: {
   kmeans: {
-    partial_fit_func: "iamlp.pipeline.partial_fit:partial_fit",
+    fit_func: "iamlp.pipeline.partial_fit:partial_fit",
     model_selector_func: "iamlp.model_selectors.kmeans:kmeans_model_averaging",
     model_init_func: "sklearn.cluster:MiniBatchKMeans",
     post_fit_func: "iamlp.model_selectors.kmeans:kmeans_add_within_class_var",
-    partial_fit_kwargs: {
+    fit_kwargs: {
       n_batches: 2
     },
     model_init_kwargs: {

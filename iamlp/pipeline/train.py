@@ -20,8 +20,8 @@ def train_step(config, step, executor):
         model_init_kwargs['batch_size'] = sampler['n_rows_per_sample']
     post_fit_func = train_dict.get('post_fit_func', None)
     partial_fit_args = (action_data,)
-    partial_fit_kwargs = train_dict['partial_fit_kwargs']
-    partial_fit_kwargs = {
+    fit_kwargs = train_dict['fit_kwargs']
+    fit_kwargs = {
         'post_fit_func': post_fit_func,
         'selection_kwargs': sampler.get('selection_kwargs') or {},
     }
@@ -34,15 +34,15 @@ def train_step(config, step, executor):
     model_selector_func = train_dict.get('model_selector_func') or None
     if not model_selector_func:
         model_selector_func = 'iamlp.pipeline.train:no_selector'
-    partial_fit_func = import_callable(train_dict['partial_fit_func'],
+    fit_func = import_callable(train_dict['fit_func'],
                                                    True,
-                                                   train_dict['partial_fit_func'])
+                                                   train_dict['fit_func'])
     models = ensemble(executor,
              model_init_func,
              model_init_kwargs,
-             partial_fit_func,
+             fit_func,
              partial_fit_args,
-             partial_fit_kwargs,
+             fit_kwargs,
              model_selector_func,
              model_selector_kwargs,
              **ensemble_kwargs)

@@ -239,7 +239,7 @@ class ConfigParser(object):
         training_funcs = (('model_selector_func', False),
                                ('model_init_func', True),
                                ('post_fit_func', False),
-                               ('partial_fit_func', True),
+                               ('fit_func', True),
                                )
         for f, required in training_funcs:
             self._validate_custom_callable(t[f], required,
@@ -253,10 +253,10 @@ class ConfigParser(object):
         for f in ('no_shuffle', 'n_generations'):
             self._validate_positive_int(ensemble_kwargs.get(f), f)
 
-        partial_fit_kwargs = t.get('partial_fit_kwargs', {}) or {}
-        if not isinstance(partial_fit_kwargs, dict):
-            raise IAMLPConfigError('Expected "partial_fit_kwargs" in train:{} '
-                                   'to be a dict but got {}'.format(name, partial_fit_kwargs))
+        fit_kwargs = t.get('fit_kwargs', {}) or {}
+        if not isinstance(fit_kwargs, dict):
+            raise IAMLPConfigError('Expected "fit_kwargs" in train:{} '
+                                   'to be a dict but got {}'.format(name, fit_kwargs))
         if not isinstance(t['model_init_kwargs'], dict):
             raise IAMLPConfigError('Expected train:{}\'s '
                                    'model_init_kwargs to be a '
