@@ -122,7 +122,7 @@ change_detection: {
   time_series: []
 }
 pipeline:
-  - {required_data_sources: [NPP_DSRF1KD_L2GD]
+  - {download_data_sources: [NPP_DSRF1KD_L2GD]
     }
   - {train: kmeans_1,
      on_each_sample:

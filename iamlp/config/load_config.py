@@ -12,7 +12,7 @@ def file_generator_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
 
-PIPELINE_ACTIONS = ('required_data_sources',
+PIPELINE_ACTIONS = ('download_data_sources',
                     'train',
                     'predict',
                     'change_detection')
@@ -308,7 +308,7 @@ class ConfigParser(object):
 
     def _validate_pipeline_require(self, step):
         # TODO make sure that the dataset can be downloaded or exists locally
-        required_data_sources = step.get('required_data_sources', [])
+        download_data_sources = step.get('download_data_sources', [])
         return True
 
     def _validate_pipeline_train(self, step):
