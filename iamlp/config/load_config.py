@@ -7,7 +7,9 @@ from iamlp.config.defaults import DEFAULTS
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
+from iamlp.model_selectors.util import get_args_kwargs_defaults
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
+
 
 
 def file_generator_from_list(some_list, *args, **kwargs):
@@ -237,13 +239,18 @@ class ConfigParser(object):
 
     def _validate_one_train_entry(self, name, t):
         training_funcs = (('model_selector_func', False),
-                               ('model_init_func', True),
-                               ('post_fit_func', False),
-                               ('fit_func', True),
-                               )
+                           ('model_init_func', True),
+                           ('post_fit_func', False),
+                           ('fit_func', True),
+                           )
+
+        has_partial_fit = False
         for f, required in training_funcs:
-            self._validate_custom_callable(t[f], required,
+            func = self._validate_custom_callable(t[f], required,
                                            'train:{} - {}'.format(name, f))
+            if f == 'model_init_func':
+                model_init_func = func
+                has_partial_fit = hasattr(model_init_func, 'partial_fit')
         t['model_init_kwargs'] = t.get('model_init_kwargs', {}) or {}
         ensemble_kwargs = t.get('ensemble_kwargs', {}) or {}
         if not isinstance(ensemble_kwargs, dict):
@@ -257,6 +264,11 @@ class ConfigParser(object):
         if not isinstance(fit_kwargs, dict):
             raise IAMLPConfigError('Expected "fit_kwargs" in train:{} '
                                    'to be a dict but got {}'.format(name, fit_kwargs))
+        t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
+        if fit_kwargs['n_batches'] > 1 and not has_partial_fit:
+            raise IAMLPConfigError('With fit_kwargs - n_batches {} '
+                                   '(>1) the model must have a '
+                                   '"partial_fit" method.'.format(fit_kwargs['n_batches']))
         if not isinstance(t['model_init_kwargs'], dict):
             raise IAMLPConfigError('Expected train:{}\'s '
                                    'model_init_kwargs to be a '
