@@ -6,7 +6,7 @@ from iamlp.pipeline.sample_util import (make_no_args_sampler_func,
 def no_selector(models, *args, **kwargs):
     return models
 
-def train_step(config, step):
+def train_step(config, step, executor):
     SERIAL_EVAL = config['SERIAL_EVAL']
     train_dict = config.train[step['train']]
     out = make_no_args_sampler_func(train_dict, config)
