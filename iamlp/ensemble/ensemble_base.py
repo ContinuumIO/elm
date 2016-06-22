@@ -2,39 +2,23 @@ from collections import namedtuple
 import numpy as np
 
 from iamlp.settings import delayed, SERIAL_EVAL
-from iamlp.partial_fit import partial_fit
-from iamlp.model_averaging.kmeans import kmeans_model_averaging
-
-
-@delayed(pure=True)
-def partial_fit_once(models, new_models, no_shuffle, partial_fit_kwargs):
-    if models is not None:
-        models = models[:no_shuffle] + new_models[no_shuffle:]
-    else:
-        models = new_models
-    return [partial_fit(model, **partial_fit_kwargs) for model in models]
 
 
 @delayed
 def ensemble(init_models,
-            output_tag,
-            model_averaging,
-            n_generations=2,
-            no_shuffle=1,
-            partial_fit_kwargs=None,
-            get_func=None):
+            fit_function,
+            model_selector,
+            **ensemble_kwargs):
     models = None
-    partial_fit_kwargs = partial_fit_kwargs or {}
+    n_generations = ensemble_kwargs['n_generations']
+    models = init_models(models=models)
     for generation in range(n_generations):
-        new_models = init_models(models)
-        models = partial_fit_once(models,
-                                  new_models,
-                                  no_shuffle,
-                                  partial_fit_kwargs)
+        models = [fit_function(model) for model in models]
         if not SERIAL_EVAL:
-            models = models.compute()
+            models = models.compute()  #TODO is this the right place for .compute?
+                                       # Need to pass in an executor?
         if generation < n_generations - 1:
-            models = model_averaging(models)
+            models = model_averaging(models, generation=generation)
         if not SERIAL_EVAL:
             models = [m.compute(get=get_func) for m in models.compute(get=get_func)]
     return models

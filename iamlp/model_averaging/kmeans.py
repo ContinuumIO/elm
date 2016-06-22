@@ -1,6 +1,6 @@
 import array
 from collections import namedtuple
-
+import inspect
 
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
@@ -8,14 +8,14 @@ import numpy as np
 import pandas as pd
 from sklearn.cluster import MiniBatchKMeans
 from iamlp.settings import delayed
-
+from iamlp.model_averaging.util import get_args_kwargs_defaults
 toolbox = base.Toolbox()
 
 KmeansVar = namedtuple('KmeansVar',['model', 'df', 'within_class_var', 'class_counts'])
 
 
 @delayed
-def _kmeans_add_within_class_var(n_clusters, model, df):
+def kmeans_add_within_class_var(n_clusters, model, df):
     var = delayed(model.cluster_centers_[model.labels_].__sub__)(df.values)
     var = delayed(var.__pow__)(2.0)
     var = delayed(np.sum)(var, axis=1)
@@ -69,8 +69,13 @@ def _rand_int_exclude(exclude, start, end, step):
     probs /= probs.sum()
     return int(np.random.choice(choices, p=probs))
 
+
+
 @delayed
-def kmeans_model_averaging(n_clusters, new_model_kwargs, models, no_shuffle=1):
+def kmeans_model_averaging(models, **kwargs):
+    no_shuffle = kwargs['no_shuffle']
+    init_model_func = kwargs['init_model_func']
+    n_clusters = kwargs['model_init_kwargs']['n_clusters']
     inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
     delayed(inertia.sort)()
     best_idxes = [i[1] for i in inertia[:no_shuffle]]
@@ -107,6 +112,6 @@ def kmeans_model_averaging(n_clusters, new_model_kwargs, models, no_shuffle=1):
                                                                  slice(None,None)))
         kw = new_model_kwargs.copy()
         kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
-        model = delayed(MiniBatchKMeans)(**kw)
+        model = delayed(init_model_func)(**kw)
         new_models.append(model)
     return new_models

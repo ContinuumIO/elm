@@ -3,21 +3,15 @@ import copy
 import yaml
 
 from iamlp.config.defaults import DEFAULTS
-import iamlp.config.env as ENV
+from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import IAMLPConfigError
-from iamlp.acquire.lads_web_meta import validate_ladsweb_datasource
+from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
+import iamlp.config.dask_settings as iamlp_dask_settings
 
-VALIDATED_FIELDS =
 def file_generator_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
-TRAINING_INT_FIELDS = [
-    'n_batches_per_partial_fit',
-    'n_generations',
-    'ensemble_size',
-    'saved_ensemble_size',
-    'no_shuffle'
-]
+
 PIPELINE_ACTIONS = ('required_data_sources',
                     'train',
                     'predict',
@@ -58,7 +52,21 @@ class ConfigParser(object):
         self.validate()
 
     def _update_for_env(self):
-        self.config.update(ENV)
+        for k, v in parse_env_vars().items():
+            if v:
+                self.config[k] = v
+        for str_var in ENVIRONMENT_VARS_SPEC['str_fields_specs']:
+            choices = str_var.get('choices', [])
+            val = self.config.get(str_var['name'])
+            if choices and val not in choices:
+                raise IAMLPConfigError('Expected config key or env '
+                                       'var {} to be in '
+                                       '{} but got {}'.format(k, choices, val))
+            setattr(iamlp_dask_settings, k, val)
+        for int_var in ENVIRONMENT_VARS_SPEC['int_fields_specs']:
+            k = int_var['name']
+            val = self.config.get(k)
+            setattr(iamlp_dask_settings, k, val)
 
     def _validate_custom_callable(self, some_dict, label):
         err_msg = 'In {}: {} expected keys of "module" and "callable"'
@@ -118,7 +126,7 @@ class ConfigParser(object):
     def _validate_one_data_source(self, name, ds):
         if not name or not isinstance(name, str):
             raise IAMLPConfigError('Expected a "name" key in {}'.format(d))
-        validate_ladsweb_datasource(ds, name)
+        validate_ladsweb_data_source(ds, name)
         reader = ds.get('reader')
         if not reader in self.readers:
             raise IAMLPConfigError('Data source config dict {} '
@@ -241,12 +249,22 @@ class ConfigParser(object):
             raise NotImplementedError('implement add_features logic')
 
     def _validate_one_train_entry(self, name, t):
-        for f in TRAINING_INT_FIELDS:
-            self._validate_positive_int(t.get(f), f)
-        training_mod_fields = ('model_selector', 'model_init')
+        training_mod_fields = ('model_selector', 'model_init', 'post_fit_func')
         for f in training_mod_fields:
             t[f]['module'], t[f]['callable'] = self._validate_custom_callable(t[f], f)
         t['model_init_kwargs'] = t.get('model_init_kwargs', {}) or {}
+        ensemble_kwargs = t.get('ensemble_kwargs', {}) or {}
+        if not isinstance(ensemble_kwargs, dict):
+            raise IAMLPConfigError('Expected train:{} to have '
+                                   '"ensemble_kwargs" as a '
+                                   'dict. Got {}'.format(name, ensemble_kwargs))
+        for f in ('no_shuffle', 'n_generations'):
+            self._validate_positive_int(ensemble_kwargs.get(f), f)
+
+        partial_fit_kwargs = t.get('partial_fit_kwargs', {}) or {}
+        if not isinstance(partial_fit_kwargs, dict):
+            raise IAMLPConfigError('Expected "partial_fit_kwargs" in train:{} '
+                                   'to be a dict but got {}'.format(name, partial_fit_kwargs))
         if not isinstance(t['model_init_kwargs'], dict):
             raise IAMLPConfigError('Expected train:{}\'s '
                                    'model_init_kwargs to be a '
@@ -268,9 +286,10 @@ class ConfigParser(object):
             raise IAMLPConfigError('Expected an "output_tag" key with string '
                                    'value in "train": {}'.format(name))
         band_specs = self.data_sources[data_source]['band_specs']
-        band_names = [x[-1] for x in band_specs]
-        ml_features = t.get('ml_features', []) or []
+        t['band_names'] = [x[-1] for x in band_specs]
         # validating ml_features may be tough, TODO?
+        t['ml_features'] = t.get('ml_features', []) or []
+        self.config['train'][name] = self.train[name] = t
 
 
     def _validate_train(self):
@@ -297,16 +316,16 @@ class ConfigParser(object):
         if not train in self.train:
             raise IAMLPConfigError('Pipeline refers to an undefined "train"'
                                    ' key: {}'.format(repr(train)))
-        on_each_image = step.get('on_each_image', []) or []
-        self._validate_on_each_image(on_each_image, 'train', self.train[train])
+        on_each_sample = step.get('on_each_sample', []) or []
+        self._validate_on_each_sample(on_each_sample, 'train', self.train[train])
 
     def _validate_pipeline_predict(self, step):
         predict = step.get('predict')
         if not predict in self.predict:
             raise IAMLPConfigError('Pipeline refers to an undefined "predict"'
                                    ' key: {}'.format(repr(predict)))
-        on_each_image = step.get('on_each_image', []) or []
-        self._validate_on_each_image(on_each_image, 'predict', self.predict[predict])
+        on_each_sample = step.get('on_each_sample', []) or []
+        self._validate_on_each_sample(on_each_sample, 'predict', self.predict[predict])
 
     def _validate_pipeline(self):
         pipeline = self.config.get('pipeline', []) or []

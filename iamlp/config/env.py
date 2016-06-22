@@ -29,7 +29,7 @@ def process_str_env_var(env_var_name, default='', required=False, choices=None):
                                'defined'.format(env_var_name))
     return val
 
-def set_env():
+def parse_env_vars():
     int_fields_specs = ENVIRONMENT_VARS_SPEC['int_fields_specs']
     str_fields_specs = ENVIRONMENT_VARS_SPEC['str_fields_specs']
     relevant_env = {}
@@ -44,10 +44,9 @@ def set_env():
                                   required=item.get('required', False),
                                   choices=item.get('choices', []))
         relevant_env[item['name']] = val
-    for f in ('NUM_PROCESSES', 'NUM_THREADS'):
+    for f in ('DASK_PROCESSES', 'DASK_THREADS'):
         if not relevant_env.get(f):
             relevant_env[f] = os.cpu_count()
     return relevant_env
 
-ENV = set_env()
 __all__ = ['ENV']

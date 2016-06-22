@@ -20,6 +20,7 @@ def add_local_dataset_options(parser):
                         help='Integer data day(s) to include')
     return parser
 
-def add_ensemble_partial_fit_args(parser=None):
+def add_config_file_argument(parser=None):
     parser.add_argument('--config', type=str, help="Path to yaml config")
     return parser
+

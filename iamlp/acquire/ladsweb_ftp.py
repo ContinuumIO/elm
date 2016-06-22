@@ -6,7 +6,7 @@ import os
 import random
 import time
 
-from iamlp.settings import DOWNLOAD_DIR
+from iamlp.settings import LADSWEB_LOCAL_CACHE
 from iamlp.cli import add_local_dataset_options, DEFAULT_DATASET, DEFAULT_DATA_GROUP_NUM
 TOP_DIR = '/allData/{}/{}'
 CACHE_DIR = os.path.join(os.path.expanduser('~'), '.downloaded_args')
@@ -34,7 +34,7 @@ def download(yr, day, ftp=None,
     cache_file = cache_file_name(product_number, product_name, yr, day)
     if os.path.exists(cache_file):
         return
-    basedir = os.path.join(DOWNLOAD_DIR, product_number, product_name, str(yr), day)
+    basedir = os.path.join(LADSWEB_LOCAL_CACHE, product_number, product_name, str(yr), day)
     if not os.path.exists(basedir):
         os.makedirs(basedir)
     ftp = ftp or login()

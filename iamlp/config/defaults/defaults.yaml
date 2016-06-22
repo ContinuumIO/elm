@@ -19,10 +19,9 @@ data_sources: {
     product_name: NPP_DSRF1KD_L2GD,
     reader: hdf4-eos,
     file_pattern: "*.hdf",
-    name: ,
     years: [2016],
     data_days: all,
-    download: default_downloader
+    download: default_downloader,
     band_specs:
       - [long_name, 'Band 1 ', band_1]
       - [long_name, 'Band 2 ', band_2]
@@ -49,6 +48,9 @@ samplers: {
     n_rows_per_sample: 100000,
     files_per_sample: 4,
     file_generator: default_file_gen,
+    selection_kwargs: {} # TODO is this needed?  It's not checked now.
+                         # is the need for this handled in
+                         # prefilters, resampling, etc?
   }
 }
 polys: {}
@@ -78,19 +80,31 @@ add_features: {
 
 train: {
   kmeans: {
-    n_batches_per_partial_fit: 3,
-    n_generations: 3,
-    model_selector: {module: iamlp.model_averaging.kmeans,
-                     callable: kmeans_model_averaging},
-    model_init_kwargs: {
+    partial_fit_kwargs: {
+      n_batches: 3
+    },
+    model_selector: {
+      module: iamlp.model_averaging.kmeans,
+      callable: kmeans_model_averaging
     },
     model_init: {
       module: sklearn.cluster,
       callable: MiniBatchKMeans
     },
-    ensemble_size: 4,
-    saved_ensemble_size: 1,
-    no_shuffle: 1,
+    post_fit_func: {
+      module: iamlp.model_averaging.kmeans,
+      callable: kmeans_add_within_class_var
+    },
+    model_init_kwargs: {
+    },
+    model_selector_kwargs: {  # TODO this needs to be validated
+      no_shuffle: 1,
+    },
+    ensemble_kwargs: {
+      ensemble_size: 4,
+      saved_ensemble_size: 1,
+      n_generations: 3,
+    },
     sampler: NPP_DSRF1KD_L2GD,
     ml_features: all,
     output_tag: kmeans_1,
@@ -111,17 +125,17 @@ pipeline:
   - {required_data_sources: [NPP_DSRF1KD_L2GD]
     }
   - {train: kmeans_1,
-     on_each_image:
+     on_each_sample:
       - {prefilters: NPP_DSRF1KD_L2GD}
     }
   - {predict: kmeans_1,
-     on_each_image:
+     on_each_sample:
       - {prefilters: NPP_DSRF1KD_L2GD}
     }
 
-# Config options that can be overriden by environment var:
-NUM_THREADS: Null # os.cpu_count() if not given
-NUM_PROCESSES: Null  # os.cpu_count() if not given
+# Config options that can be overriden by environment variables:
+DASK_THREADS: Null # os.cpu_count() if not given
+DASK_PROCESSES: Null  # os.cpu_count() if not given
 DASK_EXECUTOR: SERIAL
 DASK_SCHEDULER: ""
 LADSWEB_LOCAL_CACHE: Null

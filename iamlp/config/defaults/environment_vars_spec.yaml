@@ -1,10 +1,10 @@
 int_fields_specs:
  - {
-  name: NUM_THREADS,
+  name: DASK_THREADS,
   required: False
 }
  - {
-  name: NUM_PROCESSES,
+  name: DASK_PROCESSES,
   required: False
 }
 str_fields_specs:

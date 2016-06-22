@@ -1,36 +1,30 @@
+import copy
 import numpy as np
 
 from iamlp.samplers import random_images_selection
-from iamlp.settings import delayed, SERIAL_EVAL
+from iamlp.config.settings import delayed, SERIAL_EVAL
 
 @delayed
 def partial_fit(model,
-                band_specs=None,
-                n_samples_each_fit=100,
-                n_per_file=100000,
-                files_per_sample=10,
-                data_func=None,
+                sampler_func=None,
+                on_each_sample=None,
+                n_batches=3,
                 post_fit_func=None,
-                included_filenames=None,
                 selection_kwargs=None):
     selection_kwargs = selection_kwargs or {}
-    if data_func is None:
-        args = (included_filenames, n_samples_each_fit,
-                n_per_file, files_per_sample, band_specs)
-        assert included_filenames
-        sample = lambda: random_images_selection(*args, **selection_kwargs)
-    else:
-        sample = lambda: data_func()
-
-    for idx in range(n_samples_each_fit):
-        samp = sample()
+    selection_kwargs = copy.deepcopy(selection_kwargs)
+    for idx in range(n_batches):
+        kwargs = selection_kwargs or {}
+        kwargs['iteration'] = idx
+        sample = sampler_func(**kwargs)
+        sample = on_each_sample(sample)
         if not SERIAL_EVAL:
-            samp = samp.compute()  #TODO: should .compute be here?
-        model = delayed(model.partial_fit)(samp.df.values)
-
+            sample = sample.compute()  #TODO: should .compute be here?
+                                       # if so, the get= argument
+                                       # needs to be given.
+        model = delayed(model.partial_fit)(sample.df.values)
     if post_fit_func is not None:
-
-        return post_fit_func(model, samp.df)
+        return post_fit_func(model, sample.df)
     return model
 
 
