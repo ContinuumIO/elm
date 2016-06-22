@@ -6,7 +6,7 @@ import yaml
 from iamlp.config.defaults import DEFAULTS
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
-                               import_callable_from_string)
+                               import_callable)
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
 
 
@@ -72,7 +72,7 @@ class ConfigParser(object):
         iamlp_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
 
     def _validate_custom_callable(self, func_or_not, required, context):
-        return import_callable_from_string(func_or_not, required=required, context=context)
+        return import_callable(func_or_not, required=required, context=context)
 
     def _validate_readers(self):
         err_msg = "Expected a readers dictionary in config"

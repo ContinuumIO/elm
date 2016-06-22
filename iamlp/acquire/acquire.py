@@ -1,5 +1,5 @@
 from argparse import Namespace
-from iamlp.config import delayed, import_callable_from_string
+from iamlp.config import delayed, import_callable
 
 def get_loader(config, name):
     return config.readers[name]['load'][1]
@@ -9,7 +9,7 @@ def get_bounds_func(config, name):
 
 def get_download(config, name):
     func = config.downloads[name]
-    return import_callable_from_string(func, True, func)
+    return import_callable(func, True, func)
 
 def args_from_spec(ds):
     return Namespace(product_number=ds['product_number'],

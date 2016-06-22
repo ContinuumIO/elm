@@ -3,7 +3,7 @@ from functools import partial
 
 from iamlp.pipeline.sample_util import all_sample_ops
 from iamlp.model_selectors.util import get_args_kwargs_defaults
-from iamlp.config import import_callable_from_string
+from iamlp.config import import_callable
 from iamlp.ensemble import ensemble
 def no_selector(models, *args, **kwargs):
     return models
@@ -13,12 +13,12 @@ def train_step(config, step, executor):
     train_dict = config.train[step['train']]
     sample_meta = all_sample_ops(train_dict, config, step)
     action_data, sampler, sampler_args, data_source, included_filenames = sample_meta
-    model_init_func = import_callable_from_string(train_dict['model_init_func'])
+    model_init_func = import_callable(train_dict['model_init_func'])
     _, model_init_kwargs = get_args_kwargs_defaults(model_init_func)
     model_init_kwargs.update(train_dict['model_init_kwargs'])
     if 'batch_size' in model_init_kwargs:
         model_init_kwargs['batch_size'] = sampler['n_rows_per_sample']
-    post_fit_func = sampler.get('post_fit_func', None)
+    post_fit_func = train_dict.get('post_fit_func', None)
     partial_fit_args = (action_data,)
     partial_fit_kwargs = train_dict['partial_fit_kwargs']
     partial_fit_kwargs = {
@@ -32,12 +32,9 @@ def train_step(config, step, executor):
         'model_init_kwargs': model_init_kwargs,
     })
     model_selector_func = train_dict.get('model_selector_func') or None
-    if model_selector_func is not None:
-        model_selector_kwargs = copy.deepcopy(train_dict['model_selector_kwargs'])
-        model_selector_kwargs['model_init_kwargs'] = model_init_kwargs
-    else:
-        model_selector_func_partial = 'iamlp.pipeline.train:no_selector'
-    partial_fit_func = import_callable_from_string(train_dict['partial_fit_func'],
+    if not model_selector_func:
+        model_selector_func = 'iamlp.pipeline.train:no_selector'
+    partial_fit_func = import_callable(train_dict['partial_fit_func'],
                                                    True,
                                                    train_dict['partial_fit_func'])
     models = ensemble(executor,

@@ -28,7 +28,7 @@ class IAMLPConfigError(ValueError):
     pass
 
 
-def import_callable_from_string(func_or_not, required=True, context=''):
+def import_callable(func_or_not, required=True, context=''):
     context = context + ' -  e' if context else 'E'
     if func_or_not and (not isinstance(func_or_not, str) or func_or_not.count(':') != 1):
         raise IAMLPConfigError('{}xpected {} to be an module:callable '

@@ -1,14 +1,14 @@
-from iamlp.config import import_callable_from_string
+from iamlp.config import import_callable
 
 def run_sample_pipeline(action_data, **on_each_sample_kwargs):
     samp = action_data[0]
     sampler_func_str, sampler_args, sampler_kwargs = samp[0], samp[1], samp[2]
-    sampler_func = import_callable_from_string(sampler_func_str, True, sampler_func_str)
+    sampler_func = import_callable(sampler_func_str, True, sampler_func_str)
     sample = sampler_func(*sampler_args, **sampler_kwargs)
     if len(action_data) > 1:
         for action in action_data[1:]:
             func_str, args, kwargs = action
-            func = import_callable_from_string(func_str, True, func_str)
+            func = import_callable(func_str, True, func_str)
             sample = func(sample, *args, **kwargs)
     return sample
 
@@ -26,13 +26,11 @@ def all_sample_ops(train_or_predict_dict, config, step):
     data_source = config.data_sources[d['data_source']]
     file_key = sampler.get('file_generator', sampler.get('file_list'))
     file_generator = config.file_generators[file_key]
-    file_generator = import_callable_from_string(file_generator, True, file_generator)
+    file_generator = import_callable(file_generator, True, file_generator)
     data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
     included_filenames = tuple(file_generator(data_source))
-    n_per_file = sampler['n_rows_per_sample'] // sampler['files_per_sample']
     sampler_args = (sampler_name, sampler, config.data_sources,)
     sampler_kwargs = {'included_filenames': included_filenames,
-                      'n_per_file': n_per_file,
                       }
     selection_kwargs = sampler.get('selection_kwargs') or {}
     selection_kwargs.update({

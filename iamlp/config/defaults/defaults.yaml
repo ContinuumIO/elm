@@ -37,8 +37,8 @@ file_lists: {}
 samplers: {
   NPP_DSRF1KD_L2GD: {
     callable: "iamlp.samplers:random_images_selection",
-    n_rows_per_sample: 100000,
-    files_per_sample: 4,
+    n_rows_per_sample: Null,
+    files_per_sample: 1,
     file_generator: default_file_gen,
     selection_kwargs: {
       data_filter: {},
@@ -72,17 +72,18 @@ train: {
     model_init_func: "sklearn.cluster:MiniBatchKMeans",
     post_fit_func: "iamlp.model_selectors.kmeans:kmeans_add_within_class_var",
     partial_fit_kwargs: {
-      n_batches: 3
+      n_batches: 2
     },
     model_init_kwargs: {
+      compute_labels: True
     },
     model_selector_kwargs: {  # TODO this needs to be validated
       no_shuffle: 1,
     },
     ensemble_kwargs: {
-      ensemble_size: 4,
+      ensemble_size: 2,
       saved_ensemble_size: 1,
-      n_generations: 3,
+      n_generations: 2,
     },
     sampler: NPP_DSRF1KD_L2GD,
     ml_features: all,

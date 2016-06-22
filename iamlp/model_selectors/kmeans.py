@@ -1,5 +1,6 @@
 import array
 from collections import namedtuple
+import copy
 import inspect
 
 from deap import creator, base, tools
@@ -17,16 +18,19 @@ KmeansVar = namedtuple('KmeansVar',
                         'within_class_var',
                         'class_counts'])
 
-def kmeans_add_within_class_var(n_clusters, model, df):
+def kmeans_add_within_class_var(model, df):
+    n_clusters = model.cluster_centers_.shape[0]
     var = np.sum((model.cluster_centers_[model.labels_] - df.values) ** 2, axis=1)
     within_class_var = np.zeros(n_clusters, dtype=np.float64)
     df2 = pd.DataFrame({'var': var, 'label': model.labels_})
     g = df2.groupby('label')
     agg = g.sum()
     for idx in range(n_clusters):
-        #a[a.index.__eq__(2)]
-        sel = agg.loc[idx]
-        agg.apply(lambda x: within_class_var[x.index] ==x.values[0])
+        if idx in agg.index:
+            sel = agg.loc[idx]
+            within_class_var[idx] = sel.values[0]
+        else:
+            within_class_var[idx] = 0.
     bc = np.bincount(model.labels_)
     class_counts = np.zeros(model.cluster_centers_.shape[0])
     class_counts[:bc.size] =  bc
@@ -69,13 +73,11 @@ def _rand_int_exclude(exclude, start, end, step):
     probs /= probs.sum()
     return int(np.random.choice(choices, p=probs))
 
-
-
-
 def kmeans_model_averaging(models, **kwargs):
     no_shuffle = kwargs['no_shuffle']
     model_init_func = kwargs['model_init_func']
-    n_clusters = kwargs['model_init_kwargs']['n_clusters']
+    model_init_kwargs = kwargs['model_init_kwargs']
+    n_clusters = model_init_kwargs['n_clusters']
     inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
     inertia.sort()
     best_idxes = [i[1] for i in inertia[:no_shuffle]]
@@ -108,8 +110,8 @@ def kmeans_model_averaging(models, **kwargs):
             exclude.add(position)
             new_centroids.append(np.array(row))
         cluster_centers_ = np.row_stack(new_centroids)
-        cluster_centers_ = cluster_centers[:n_clusters,:]
-        kw = new_model_kwargs.copy()
+        cluster_centers_ = cluster_centers_[:n_clusters,:]
+        kw = copy.deepcopy(model_init_kwargs)
         kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
         model = model_init_func(**kw)
         new_models.append(model)

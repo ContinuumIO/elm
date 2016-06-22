@@ -4,7 +4,7 @@ from functools import partial
 import inspect
 import numpy as np
 
-from iamlp.config import delayed
+from iamlp.config import delayed, import_callable
 from concurrent.futures import as_completed
 
 def wait_for_futures(futures, executor=None):
@@ -59,6 +59,7 @@ def ensemble(executor,
         if generation < n_generations - 1:
             kwargs = copy.deepcopy(model_selector_kwargs)
             kwargs['generation'] = generation
+            model_selector_func = import_callable(model_selector_func, True, model_selector_func)
             models = get_results(submit_func(model_selector_func, models, **kwargs))
     return models
 
