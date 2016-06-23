@@ -3,13 +3,13 @@ import os
 
 import yaml
 
-from iamlp.config.defaults import DEFAULTS
+from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
 from iamlp.model_selectors.util import get_args_kwargs_defaults
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
-
+from iamlp.config.defaults import
 
 
 def file_generator_from_list(some_list, *args, **kwargs):
@@ -26,23 +26,7 @@ class ConfigParser(object):
     # in which the keys of the config
     # are validated. (the _validate_* private
     # methods are order sensitive.)
-    config_keys = [('readers',  dict),
-                   ('downloads', dict),
-                    ('data_sources', dict),
-                    ('file_generators', dict),
-                    ('file_lists', dict),
-                    ('samplers', dict),
-                    ('polys', dict),
-                    ('resamplers', dict),
-                    ('aggregations', dict),
-                    ('masks', dict),
-                    ('add_features', dict),
-                    ('train', dict),
-                    ('predict', dict),
-                    ('pipeline', list),
-        ]
-
-
+    config_keys = CONFIG_KEYS
     def __init__(self, config_file_name):
         if not os.path.exists(config_file_name):
             raise IAMLPConfigError('config_file_name {} does not '

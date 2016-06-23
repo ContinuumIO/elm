@@ -9,3 +9,21 @@ DEFAULTS = read_from_egg(
                 os.path.join(YAML_DIR, 'defaults.yaml')
                 )
 
+CONFIG_KEYS = [('readers',  dict),
+               ('downloads', dict),
+                ('data_sources', dict),
+                ('file_generators', dict),
+                ('file_lists', dict),
+                ('samplers', dict),
+                ('polys', dict),
+                ('resamplers', dict),
+                ('aggregations', dict),
+                ('masks', dict),
+                ('add_features', dict),
+                ('train', dict),
+                ('predict', dict),
+                ('pipeline', list),
+            ]
+for key in CONFIG_KEYS:
+    globals()['DEFAULT_{}'.format(key.upper())] = DEFAULTS[key]
+del key
