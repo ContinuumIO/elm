@@ -33,7 +33,7 @@ def add_config_file_argument(parser=None):
     return parser
 
 def add_sample_ladsweb_options(parser):
-    parser.add_argument('--year', default=2015, type=int)
+    parser.add_argument('--year', default=None, type=int)
     parser.add_argument('--data_day', default=1, type=int)
     parser.add_argument('-n', '--n-file-samples', default=1, help="How many files of each product")
     return parser
