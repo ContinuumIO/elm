@@ -63,7 +63,6 @@ def get_sample_of_ladsweb_products(year=2015, data_day=1,
             continue
         product_dict = {}
         prod_dir = os.path.join(TOP_DIR, str(p))
-        number_to_name[str(p)] = []
         ftp.cwd(prod_dir)
         product_names = []
         ftp.retrlines('NLST', product_names)
