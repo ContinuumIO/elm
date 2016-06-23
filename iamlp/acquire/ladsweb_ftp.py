@@ -6,17 +6,17 @@ import os
 import random
 import time
 
-from iamlp.settings import DOWNLOAD_DIR
-from iamlp.cli import add_local_dataset_options, DEFAULT_DATASET, DEFAULT_DATA_GROUP_NUM
+from iamlp.config import ConfigParser
+from iamlp.config.cli import (add_local_dataset_options, add_config_file_argument)
 TOP_DIR = '/allData/{}/{}'
-CACHE_DIR = os.path.join(os.path.expanduser('~'), '.downloaded_args')
 
 LADSWEB_FTP = "ladsweb.nascom.nasa.gov"
 
-def cache_file_name(*args):
-    if not os.path.exists(CACHE_DIR):
-        os.mkdir(CACHE_DIR)
-    return os.path.join(CACHE_DIR, '_'.join(map(str, args)))
+def cache_file_name(hashed_args_dir, *args):
+    hash_dir = os.path.expanduser(hashed_args_dir)
+    if not os.path.exists(hash_dir):
+        os.mkdir(hash_dir)
+    return os.path.join(hash_dir, '_'.join(map(str, args)))
 
 def login():
     print("Login to ftp", end=" ")
@@ -25,16 +25,20 @@ def login():
     print('ok')
     return ftp
 
-def download(yr, day, ftp=None,
-             product_name=DEFAULT_DATASET,
-             product_number=DEFAULT_DATA_GROUP_NUM):
+def download(yr, day, config,
+             product_name,
+             product_number,
+             ftp=None,):
+
+    LADSWEB_LOCAL_CACHE = config.LADSWEB_LOCAL_CACHE
+    HASHED_ARGS_CACHE = config.HASHED_ARGS_CACHE
     product_number = str(product_number)
     day = '{:03d}'.format(day)
     top = TOP_DIR.format(product_number, product_name)
-    cache_file = cache_file_name(product_number, product_name, yr, day)
+    cache_file = cache_file_name(HASHED_ARGS_CACHE, product_number, product_name, yr, day)
     if os.path.exists(cache_file):
         return
-    basedir = os.path.join(DOWNLOAD_DIR, product_number, product_name, str(yr), day)
+    basedir = os.path.join(LADSWEB_LOCAL_CACHE, product_number, product_name, str(yr), day)
     if not os.path.exists(basedir):
         os.makedirs(basedir)
     ftp = ftp or login()
@@ -56,22 +60,33 @@ def download(yr, day, ftp=None,
 
     return ftp
 
-def main():
+def main(args=None, parse_this_str=None, config=None):
     parser = ArgumentParser(description="Download util for {}".format(LADSWEB_FTP))
-    args = add_local_dataset_options(parser).parse_args()
+    parser = add_local_dataset_options(parser)
+    if config is None:
+        parser = add_config_file_argument(parser)
+    if args is None:
+        if not parse_this_str:
+            args = parser.parse_args()
+        else:
+            args = parser.parse_args(parse_this_str)
+    if config is None:
+        config = ConfigParser(args.config)
     today = datetime.datetime.utcnow()
     current_julian_day = sum(calendar.monthrange(today.year, x)[0] for x in range(1, today.month))
     current_julian_day += today.day - 1
     ftp = None
     args.years = args.years or [2016]
     args.data_days = args.data_days or list(range(1, 366))
+    if args.data_days in ('all', ['all']):
+        args.data_days = list(range(1, 366))
     print("Running with args {}".format(args))
     for yr in args.years:
         for day in args.data_days:
-            ftp = download(yr, day,
-                           ftp=ftp,
-                           product_name=args.product_name,
-                           product_number=args.product_number)
+            ftp = download(yr, day, config,
+                           args.product_name,
+                           args.product_number,
+                           ftp=ftp)
 
 if __name__ ==  '__main__':
     main()
