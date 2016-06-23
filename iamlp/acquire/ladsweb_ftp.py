@@ -44,9 +44,11 @@ def get_sample_of_ladsweb_products(year=2015, data_day=1,
     print('Logged into ftp')
     examples_dir = os.path.join(LADSWEB_LOCAL_CACHE, 'examples')
     def write_results(meta_file, results):
+        d = os.path.dirname(meta_file)
+        if not os.path.exists(d):
+            os.makedirs(d)
         with open(meta_file, 'w') as f:
-            f.write(yaml.dump(results))
-    print('ls the product_numbers')
+            f.write(json.dump(results))
     product_numbers = []
     meta_file = product_meta_file(examples_dir, 'unique_product_numbers')
     ftp.cwd(TOP_DIR)
@@ -106,6 +108,9 @@ def get_sample_main(args=None):
 
 def _try_download(local_f, remote_f, ftp):
     fhandle = None
+    d = os.path.dirname(local_f)
+    if not os.path.exists(d):
+        os.makedirs(d)
     try:
         fhandle = open(local_f, 'wb')
         ftp.retrbinary('RETR ' + remote_f, fhandle.write)
