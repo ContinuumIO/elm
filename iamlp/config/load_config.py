@@ -309,18 +309,25 @@ class ConfigParser(object):
     def _validate_change_detection(self):
         self.change_detection = self.config.get('change_detection', {}) or {}
         # TODO fill this in
+        self._validate_type(self.change_detection, 'change_detection', dict)
         return True
 
     def _validate_pipeline_download_data_sources(self, step):
         # TODO make sure that the dataset can be downloaded or exists locally
-        download_data_sources = step.get('download_data_sources', [])
-        return True
+        download_data_sources = step.get('download_data_sources', []) or []
 
-    def _validate_pipeline_on_each_sample(self, on_each_sample, predict_or_train, options):
+        if isinstance(download_data_sources, str):
+            download_data_sources = [download_data_sources]
+        self._validate_type(download_data_sources, 'download_data_sources', (list, tuple))
+        download_data_sources = download_data_sources
+        step['download_data_sources'] = download_data_sources
+        return step
+
+    def _validate_pipeline_on_each_sample(self, on_each_sample, predict_or_train, options, step):
         # TODO validate operations such as resampling and aggregation
         # after a sample is taken
 
-        return True
+        return step
 
     def _validate_pipeline_train(self, step):
         train = step.get('train')
@@ -328,7 +335,11 @@ class ConfigParser(object):
             raise IAMLPConfigError('Pipeline refers to an undefined "train"'
                                    ' key: {}'.format(repr(train)))
         on_each_sample = step.get('on_each_sample', []) or []
-        self._validate_pipeline_on_each_sample(on_each_sample, 'train', self.train[train])
+        step = self._validate_pipeline_on_each_sample(on_each_sample, 'train',
+                                                      self.train[train], step)
+        step['on_each_sample'] = on_each_sample
+        step['train'] = train
+        return step
 
     def _validate_pipeline_predict(self, step):
         predict = step.get('predict')
@@ -336,7 +347,10 @@ class ConfigParser(object):
             raise IAMLPConfigError('Pipeline refers to an undefined "predict"'
                                    ' key: {}'.format(repr(predict)))
         on_each_sample = step.get('on_each_sample', []) or []
-        self._validate_pipeline_on_each_sample(on_each_sample, 'predict', self.predict[predict])
+        step = self._validate_pipeline_on_each_sample(on_each_sample, 'predict', self.predict[predict], step)
+        step['on_each_sample'] = on_each_sample
+        step['predict'] = predict
+        return step
 
     def _validate_pipeline(self):
         self.pipeline = pipeline = self.config.get('pipeline', []) or []
@@ -344,7 +358,7 @@ class ConfigParser(object):
             raise IAMLPConfigError('Expected a "pipeline" list of action '
                                    'dicts in config but found '
                                    '"pipeline": {}'.format(repr(pipeline)))
-        for action in pipeline:
+        for idx, action in enumerate(pipeline):
             if not action or not isinstance(action, dict):
                 raise IAMLPConfigError('Expected each item in "pipeline" to '
                                        'be a dict but found {}'.format(action))
@@ -353,7 +367,7 @@ class ConfigParser(object):
                 if key in action:
                     cnt += 1
                     func = getattr(self, '_validate_pipeline_{}'.format(key))
-                    func(action)
+                    self.pipeline[idx] = func(action)
             if cnt != 1:
                 raise IAMLPConfigError('In each action dictionary of the '
                                        '"pipeline" list, expected exactly one '

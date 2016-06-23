@@ -26,6 +26,7 @@ setup(name='iamlp',
       entry_points={
         'console_scripts': [
             'iamlp-download-ladsweb = iamlp.acquire.ladsweb_ftp:main',
-            'iamlp-main = iamlp.scripts.main:main'
+            'iamlp-main = iamlp.scripts.main:main',
+            'iamlp-collect-ladsweb-metadata = iamlp.acquire.ladsweb_ftp:get_sample_main',
 
         ]},)
