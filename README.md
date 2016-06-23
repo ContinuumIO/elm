@@ -1,5 +1,30 @@
 # NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pipeline
 
+## Using the Code
+
+To use this code:
+
+Install:
+
+```
+python setup.py develop
+```
+Tests of config loader:
+```
+py.test
+```
+
+Download a data set:
+```
+DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-download-ladsweb --config iamlp/config/defaults/defaults.yaml
+```
+(replacing the yaml if not using the default VIIRS Level 2 dataset)
+
+Run the default pipeline yaml:
+```
+DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-main --config iamlp/config/defaults/defaults.yaml
+```
+
 Phase I - Techniques for
 * Data mining
 * Fusion
