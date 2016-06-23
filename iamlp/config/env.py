@@ -41,9 +41,13 @@ def parse_env_vars():
                                   required=item.get('required', False))
         relevant_env[item['name']] = val
     for item in str_fields_specs:
+        if item['name'] == 'DASK_SCHEDULER':
+            required = relevant_env['DASK_EXECUTOR'] != 'SERIAL'
+        else:
+            required = item.get('required', False)
         val = process_str_env_var(item['name'],
                                   default=item.get('default', None),
-                                  required=item.get('required', False),
+                                  required=required,
                                   choices=item.get('choices', []))
         relevant_env[item['name']] = val
     for f in ('DASK_PROCESSES', 'DASK_THREADS'):
