@@ -12,6 +12,7 @@ dependencies:
  - numba
  - numpy
  - pandas
+ - pytest
  - requests
  - scikit-image
  - scikit-learn

@@ -24,6 +24,8 @@ CONFIG_KEYS = [('readers',  dict),
                 ('predict', dict),
                 ('pipeline', list),
             ]
-for key in CONFIG_KEYS:
-    globals()['DEFAULT_{}'.format(key[0].upper())] = DEFAULTS[key[0]]
-del key
+DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]
+DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
+DEFAULT_PREDICT = tuple(DEFAULTS['predict'].values())[0]
+DEFAULT_SAMPLER = tuple(DEFAULTS['samplers'].values())[0]
+DEFAULT_READER = tuple(DEFAULTS['readers'].values())[0]

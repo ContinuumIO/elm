@@ -41,9 +41,9 @@ samplers: {
     files_per_sample: 1,
     file_generator: default_file_gen,
     selection_kwargs: {
-      data_filter: {},
-      metadata_filter: {},
-      filename_filter: {},
+      data_filter: Null,
+      metadata_filter: Null,
+      filename_filter: Null,
       geo_filters: {
         include_polys: [],
         exclude_polys: [],

@@ -3,7 +3,7 @@ import os
 
 import yaml
 
-from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS
+from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS, DEFAULT_TRAIN
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
@@ -27,6 +27,7 @@ class ConfigParser(object):
     # are validated. (the _validate_* private
     # methods are order sensitive.)
     config_keys = CONFIG_KEYS
+    all_words = ('all', ['all'],)
     def __init__(self, config_file_name):
         if not os.path.exists(config_file_name):
             raise IAMLPConfigError('config_file_name {} does not '
@@ -58,15 +59,22 @@ class ConfigParser(object):
         iamlp_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
 
     def _validate_custom_callable(self, func_or_not, required, context):
+        if func_or_not or (not func_or_not and required):
+            if not isinstance(func_or_not, str):
+                raise IAMLPConfigError('In {} expected {} to be a '
+                                       'string'.format(func_or_not, context))
         return import_callable(func_or_not, required=required, context=context)
 
     def _validate_readers(self):
-        err_msg = "Expected a readers dictionary in config"
+        err_msg = "Expected a 'readers' dictionary in config"
         self.readers = readers = self.config.get('readers')
-
         if not readers or not isinstance(readers, dict):
             raise IAMLPConfigError(err_msg)
-        for k,v in readers.items():
+        for k, v in readers.items():
+            if not v or not isinstance(v, dict):
+                raise IAMLPConfigError('In readers:{} expected {} to be '
+                                       'a dict'.format(k, v))
+
             load = v.get('load')
             bounds = v.get('bounds')
             self._validate_custom_callable(load, True, 'readers:{} load'.format(k))
@@ -75,6 +83,9 @@ class ConfigParser(object):
 
     def _validate_downloads(self):
         self.downloads = self.config.get('downloads', {}) or {}
+        if self.downloads and not isinstance(self.downloads, dict):
+            raise IAMLPConfigError('Expected downloads to be a dict but '
+                                   'got {}'.format(self.downloads))
         if not self.downloads:
             # TODO raise error if the files don'talready exist
             return
@@ -106,7 +117,7 @@ class ConfigParser(object):
         if not download in self.downloads:
             raise IAMLPConfigError('data_source {} refers to a '
                                    '"download" {} not defined in "downloads"'
-                                   ' section'.format(data_source, download))
+                                   ' section'.format(ds, download))
         self._validate_band_specs(ds.get('band_specs'), name)
 
     def _validate_data_sources(self):
@@ -141,6 +152,9 @@ class ConfigParser(object):
 
     def _validate_one_sampler(self, sampler, name):
         defaults = tuple(DEFAULTS['samplers'].values())[0]
+        if not sampler or not isinstance(sampler, dict):
+            raise IAMLPConfigError('In samplers:{} dict '
+                                   'but found {}'.format(name, sampler))
         self._validate_custom_callable(sampler.get('callable'), True, 'samplers:{}'.format(name))
         sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
         sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
@@ -182,6 +196,10 @@ class ConfigParser(object):
         selection_kwargs = sampler.get('selection_kwargs')
         if not selection_kwargs:
             return
+        if not isinstance(selection_kwargs, dict):
+            raise IAMLPConfigError('In sampler:{} expected '
+                                   '"selection_kwargs" to be '
+                                   'a dict'.format(selection_kwargs))
         selection_kwargs['geo_filter'] = selection_kwargs.get('geo_filter', {}) or {}
         for poly_field in ('include_polys', 'exclude_polys'):
             pf = selection_kwargs['geo_filter'].get(poly_field, []) or []
@@ -221,7 +239,14 @@ class ConfigParser(object):
         if self.add_features:
             raise NotImplementedError('implement add_features logic')
 
+    def _validate_type(self, k, name, typ):
+        if k and not isinstance(k, typ):
+            raise IAMLPConfigError('In {} expected a {} but '
+                                   'found {}'.format(name, typ, k))
     def _validate_one_train_entry(self, name, t):
+        if not isinstance(t, dict):
+            raise IAMLPConfigError('In train:{} expected a dict '
+                                   'but found {}'.format(name, t))
         training_funcs = (('model_selector_func', False),
                            ('model_init_func', True),
                            ('post_fit_func', False),
@@ -235,28 +260,20 @@ class ConfigParser(object):
             if f == 'model_init_func':
                 model_init_func = func
                 has_partial_fit = hasattr(model_init_func, 'partial_fit')
-        t['model_init_kwargs'] = t.get('model_init_kwargs', {}) or {}
-        ensemble_kwargs = t.get('ensemble_kwargs', {}) or {}
-        if not isinstance(ensemble_kwargs, dict):
-            raise IAMLPConfigError('Expected train:{} to have '
-                                   '"ensemble_kwargs" as a '
-                                   'dict. Got {}'.format(name, ensemble_kwargs))
-        for f in ('no_shuffle', 'n_generations'):
-            self._validate_positive_int(ensemble_kwargs.get(f), f)
+        kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
+        for k in kwargs_fields:
+            self._validate_type(t[k], 'train:{}'.format(k), dict)
+
+        for f in ('saved_ensemble_size', 'n_generations', 'ensemble_size'):
+            self._validate_positive_int(t['ensemble_kwargs'].get(f), f)
 
         fit_kwargs = t.get('fit_kwargs', {}) or {}
-        if not isinstance(fit_kwargs, dict):
-            raise IAMLPConfigError('Expected "fit_kwargs" in train:{} '
-                                   'to be a dict but got {}'.format(name, fit_kwargs))
         t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
+        self._validate_type(fit_kwargs['n_batches'], 'fit_kwargs:n_batches', int)
         if fit_kwargs['n_batches'] > 1 and not has_partial_fit:
             raise IAMLPConfigError('With fit_kwargs - n_batches {} '
                                    '(>1) the model must have a '
                                    '"partial_fit" method.'.format(fit_kwargs['n_batches']))
-        if not isinstance(t['model_init_kwargs'], dict):
-            raise IAMLPConfigError('Expected train:{}\'s '
-                                   'model_init_kwargs to be a '
-                                   'dict but got {}'.format(name, t['model_init_kwargs']))
         sampler = t.get('sampler', '')
         if not sampler in self.samplers:
             raise IAMLPConfigError('train dict at key {} refers '
@@ -270,13 +287,13 @@ class ConfigParser(object):
                                    'not defined in '
                                    '"data_sources"'.format(name, repr(data_source)))
         output_tag = t.get('output_tag')
-        if not output_tag or not isinstance(output_tag, str):
-            raise IAMLPConfigError('Expected an "output_tag" key with string '
-                                   'value in "train": {}'.format(name))
+        self._validate_type(output_tag, 'train:output_tag', str)
         band_specs = self.data_sources[data_source]['band_specs']
         t['band_names'] = [x[-1] for x in band_specs]
         # validating ml_features may be tough, TODO?
         t['ml_features'] = t.get('ml_features', []) or []
+        if t['ml_features'] not in self.all_words:
+            self._validate_type(t['ml_features'], 'train:{}'.format(name), (list, tuple))
         self.config['train'][name] = self.train[name] = t
 
 
@@ -328,6 +345,9 @@ class ConfigParser(object):
                                    'dicts in config but found '
                                    '"pipeline": {}'.format(repr(pipeline)))
         for action in pipeline:
+            if not action or not isinstance(action, dict):
+                raise IAMLPConfigError('Expected each item in "pipeline" to '
+                                       'be a dict but found {}'.format(action))
             cnt = 0
             for key in PIPELINE_ACTIONS:
                 if key in action:
