@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 import calendar
 import datetime
 import ftplib
+import json
 import os
 import random
 import time
@@ -48,7 +49,7 @@ def get_sample_of_ladsweb_products(year=2015, data_day=1,
         if not os.path.exists(d):
             os.makedirs(d)
         with open(meta_file, 'w') as f:
-            f.write(json.dump(results))
+            f.write(json.dumps(results))
     product_numbers = []
     meta_file = product_meta_file(examples_dir, 'unique_product_numbers')
     ftp.cwd(TOP_DIR)
