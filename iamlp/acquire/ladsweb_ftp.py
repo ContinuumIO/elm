@@ -65,14 +65,14 @@ def get_sample_of_ladsweb_products(year=2015, data_day=1,
         prod_dir = os.path.join(TOP_DIR, str(p))
         ftp.cwd(prod_dir)
         product_names = []
-        ftp.retrlines('NLST', product_names)
+        ftp.retrlines('NLST', product_names.append)
         product_dict['product_names'] = product_names
         for idx, d in enumerate(product_names):
             prod_name_dir = os.path.join(prod_dir, name)
             years = []
             product_dict[name] = {}
             ftp.cwd(prod_name_dir)
-            ftp.retrlines('NLST', years)
+            ftp.retrlines('NLST', years.append)
             product_dict[name]['years'] = years
             if str(year) in years:
                 data_day_dir = os.path.join(prod_name_dir, str(year),
@@ -80,7 +80,7 @@ def get_sample_of_ladsweb_products(year=2015, data_day=1,
 
                 file_ls = []
                 ftp.cwd(data_day_dir)
-                ftp.retrlines('NLST', file_ls)
+                ftp.retrlines('NLST', file_ls.append)
                 product_dict[name]['example_ls'] = file_ls
                 product_dict[name]['example_ls_year'] = year
                 product_dict[name]['example_ls_data_day'] = data_day
