@@ -9,7 +9,7 @@ from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
 from iamlp.model_selectors.util import get_args_kwargs_defaults
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
-from iamlp.config.defaults import
+
 
 
 def file_generator_from_list(some_list, *args, **kwargs):

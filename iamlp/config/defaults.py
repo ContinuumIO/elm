@@ -25,5 +25,5 @@ CONFIG_KEYS = [('readers',  dict),
                 ('pipeline', list),
             ]
 for key in CONFIG_KEYS:
-    globals()['DEFAULT_{}'.format(key.upper())] = DEFAULTS[key]
+    globals()['DEFAULT_{}'.format(key[0].upper())] = DEFAULTS[key[0]]
 del key
