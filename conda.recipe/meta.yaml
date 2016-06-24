@@ -3,13 +3,11 @@ package:
   name: iamlp
   version: 0.0.0
 
-source:
-  git_rev: 0.0.0
-  git_url: https://github.com/ContinuumIO/nasasbir
-
 build:
   number: 0
   pin_depends: record
+  noarch_python: True
+
 
 requirements:
   build:
