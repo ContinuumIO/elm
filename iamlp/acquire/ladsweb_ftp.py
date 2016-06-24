@@ -138,11 +138,13 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
             product_dict[name]['years'] = years
             if str(year) in years or not year:
                 if not year:
-                    year = [year for year in years if '19' in year or '20' in year]
-                    if not year:
+                    yr = [year for year in years if '19' in year or '20' in year]
+                    if not yr:
                         continue
-                    year = year[0]
-                yr_dir = os.path.join(prod_name_dir, str(year))
+                    yr = yr[0]
+                else:
+                    yr = str(year)
+                yr_dir = os.path.join(prod_name_dir, yr)
                 ftp.cwd(yr_dir)
                 yr_dir_ls = []
                 ftp.retrlines('NLST', yr_dir_ls.append)
@@ -181,7 +183,7 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
                     for ext in exts:
                         example = [f for f in file_ls if f.endswith(ext)][0]
                         one_file = os.path.join(next_dir, example)
-                        local_f = os.path.join(examples_dir, str(p), name, str(year),
+                        local_f = os.path.join(examples_dir, str(p), name, yr,
                                                os.path.basename(next_dir), example)
                         product_dict[name]['examples'][ext] = example
                         if not _try_download(local_f, one_file, ftp, skip_on_fail=True):
