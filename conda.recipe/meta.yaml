@@ -1,0 +1,42 @@
+
+package:
+  name: iamlp
+  version: 0.0.0
+
+source:
+  git_rev: 0.0.0
+  git_url: https://github.com/ContinuumIO/nasasbir
+
+build:
+  number: 0
+  pin_depends: record
+
+requirements:
+  build:
+    - python
+    - setuptools
+  run:
+    - python # [py35]
+    - bokeh
+    - dask
+    - distributed
+    - gdal
+    - h5py
+    - jupyter
+    - matplotlib
+    - netcdf4
+    - networkx
+    - numba
+    - numpy
+    - pandas
+    - pytest
+    - requests
+    - scikit-image
+    - scikit-learn
+    - scipy
+    - tblib
+    - yaml
+
+about:
+  home: http://github.com/ContinuumIO/nasasbir
+  license: MIT
