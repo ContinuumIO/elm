@@ -16,7 +16,7 @@ data_sources: {
   product_name: NPP_DSRF1KD_L2GD,
   reader: hdf4-eos,
   file_pattern: "*.hdf",
-  years: [2016],
+  years: [2015],
   data_days: all,
   download: default_downloader,
   band_specs: [[long_name, "Band 1 ", band_1],
@@ -102,6 +102,7 @@ change_detection: {
   time_series: []
 }
 pipeline:
+  - {download_data_sources: NPP_DSRF1KD_L2GD}
   - {train: kmeans}
   - {predict: kmeans}
 
