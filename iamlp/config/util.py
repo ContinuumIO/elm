@@ -10,18 +10,19 @@ EXAMPLE_CALLABLE = 'iamlp.preproc:resampling'
 def read_from_egg(tfile, file_type='yaml'):
     template_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), tfile)
     if not os.path.exists(template_path):
-        path_in_egg = os.path.join("vst", tfile)
-        buf = resource_stream(Requirement.parse("vst"), path_in_egg)
+        path_in_egg = os.path.join("iamlp", tfile)
+        buf = resource_stream(Requirement.parse("iamlp"), path_in_egg)
         _bytes = buf.read()
         contents = str(_bytes)
     else:
         with open(template_path, 'r') as f:
-            if file_type == 'yaml':
-                return yaml.load(f.read())
-            elif file_type == 'json':
-                return json.load(f)
-            else:
-                f.read()
+            contents = f.read()
+    if file_type == 'yaml':
+        return yaml.load(contents)
+    elif file_type == 'json':
+        return json.loads(contents)
+    else:
+        return contents
 
 
 class IAMLPConfigError(ValueError):
