@@ -142,6 +142,7 @@ Another idea not mentioned in scope: as part of the flexible API for images/mosa
  * [README on features of the new image pipeline](README_features.md)
  * [README on testing practices](README_testing.md)
  * [README on NASA contacts and example datasets](README_nasa_projects.md)
+ * [README on configuration of the image pipeline](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.md)
  
 
 
