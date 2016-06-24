@@ -24,7 +24,11 @@ Run the default pipeline yaml:
 ```
 DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-main --config iamlp/config/defaults/defaults.yaml
 ```
+## Config File Format
 
+It is easiest to copy the default config referenced above in snippets, and then follow [these instructions on editing the config](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.md).
+
+## About the NASA SBIR S5.03 Project
 Phase I - Techniques for
 * Data mining
 * Fusion
