@@ -36,8 +36,10 @@ def login():
     return ftp
 
 def product_meta_file(LADSWEB_LOCAL_CACHE, product_number):
-    return os.path.join(LADSWEB_LOCAL_CACHE,
-                        'product_meta_{}.json'.format(product_number))
+    d = os.path.join(LADSWEB_LOCAL_CACHE, 'meta')
+    if not os.path.exists(d):
+        os.mkdir(d)
+    return os.path.join(d, 'product_meta_{}.json'.format(product_number))
 
 def _ftp_is_file(ftp, path):
     current = ftp.pwd()
@@ -52,18 +54,26 @@ def ftp_to_local_path(ftp_path, base_dir):
     return ftp_path.replace(TOP_DIR, base_dir)
 
 
-def ftp_walk(root, ftp, LADSWEB_LOCAL_CACHE, depth=0, max_depth=3, has_yielded=False):
+def ftp_walk(root, ftp, LADSWEB_LOCAL_CACHE, break_depth, at_each_level, depth=0, max_depth=3, has_yielded=False):
     ls = []
     keys = []
     if _ftp_is_file(ftp, root):
         yield root.split('/')
     elif depth <= max_depth:
-        for item in ftp_ls(ftp, dirname=root):
-            for item2 in ftp_walk(os.path.join(root, item), ftp,
-                                  LADSWEB_LOCAL_CACHE,
+        for idx1, item in enumerate(ftp_ls(ftp, dirname=root)):
+            for idx2, item2 in enumerate(ftp_walk(os.path.join(root, item), ftp,
+                                  LADSWEB_LOCAL_CACHE, break_depth, at_each_level,
                                   depth=depth + 1,
-                                  max_depth=max_depth, has_yielded=has_yielded):
+                                  max_depth=max_depth, has_yielded=has_yielded)):
                 yield item2
+                if depth > break_depth:
+                    break
+                if idx2 > at_each_level:
+                    break
+            if depth > break_depth:
+                break
+            if idx1 > at_each_level:
+                break
     else:
         return
 
@@ -135,7 +145,10 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
             print('Product name {} ({} out of {})'.format(name, nidx, len(product_names)))
             prod_name_dir = os.path.join(prod_dir, name)
             counts_dict = {}
-            for file_parts in ftp_walk(prod_name_dir, ftp, LADSWEB_LOCAL_CACHE,
+            cache_file = cache_file_name('product_meta', str(p), name)
+            if not ignore_downloaded and os.path.exists(cache_file):
+                continue
+            for file_parts in ftp_walk(prod_name_dir, ftp, LADSWEB_LOCAL_CACHE, 1, 1,
                                        max_depth=4, has_yielded=False):
                 _update_counts_dict(counts_dict, file_parts)
                 print(file_parts)
@@ -146,11 +159,12 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
                                         skip_on_fail=True,
                                         ignore_downloaded=ignore_downloaded):
                         counts_dict['failed_on_download'] = remote_f
-                    else:
-                        sample_files += 1
+                    sample_files += 1
                 else:
                     # Note: Could not break here to count all files
                     break
+            with open(cache_file, 'w') as f:
+                f.write('download {}'.format(datetime.datetime.now().isoformat()))
             write_results(meta_file, counts_dict)
 
 def get_sample_main(args=None):
