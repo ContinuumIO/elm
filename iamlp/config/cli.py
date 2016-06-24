@@ -34,6 +34,7 @@ def add_config_file_argument(parser=None):
 
 def add_sample_ladsweb_options(parser):
     parser.add_argument('--year', default=None, type=int)
-    parser.add_argument('--data_day', default=1, type=int)
-    parser.add_argument('-n', '--n-file-samples', default=1, help="How many files of each product")
+    parser.add_argument('--data_day', default=None, type=int)
+    parser.add_argument('-n', '--n-file-samples', default=1, type=int,help="How many files of each product")
+    parser.add_argument('-i', '--ignore-downloaded', action='store_true', help="-i will try to download even if local file already exists")
     return parser
