@@ -22,7 +22,11 @@ setup(name='iamlp',
                 'iamlp.scripts',
                 'iamlp.writers',
                 ],
-      data_files=[],
+      data_files=[('iamlp.acquire',
+                   glob.glob(os.path.join('iamlp', 'acquire', 'metadata', '*'))),
+                  ('iamlp.config',
+                   glob.glob(os.path.join('iamlp', 'config', 'defaults', '*.yaml')))
+                 ],
       entry_points={
         'console_scripts': [
             'iamlp-download-ladsweb = iamlp.acquire.ladsweb_ftp:main',

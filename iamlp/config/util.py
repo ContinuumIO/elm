@@ -21,7 +21,7 @@ def read_from_egg(tfile, file_type='yaml'):
             elif file_type == 'json':
                 return json.load(f)
             else:
-                raise ValueError("file_type must be 'yaml' or 'json'.  Got {}".format(file_type))
+                f.read()
 
 
 class IAMLPConfigError(ValueError):
