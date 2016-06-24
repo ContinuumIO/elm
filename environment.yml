@@ -5,6 +5,7 @@ dependencies:
  - dask
  - distributed
  - gdal
+ - h5py
  - jupyter
  - matplotlib
  - netcdf4

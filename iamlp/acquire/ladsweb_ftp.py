@@ -5,6 +5,7 @@ import ftplib
 import json
 import os
 import pandas as pd
+import shutil
 import sys
 import random
 import time
@@ -14,8 +15,10 @@ from iamlp.config import ConfigParser
 from iamlp.config.cli import (add_local_dataset_options,
                               add_config_file_argument,
                               add_sample_ladsweb_options)
-TOP_DIR = '/allData/'
-PRODUCT_FORMAT = TOP_DIR + '{}/{}'
+from iamlp.config.env import parse_env_vars
+
+TOP_DIR = '/allData'
+PRODUCT_FORMAT = TOP_DIR + '/{}/{}'
 
 LADSWEB_FTP = "ladsweb.nascom.nasa.gov"
 
@@ -32,70 +35,69 @@ def login():
     print('ok')
     return ftp
 
-def product_meta_file(examples_dir, product_number):
-    return os.path.join(examples_dir,
+def product_meta_file(LADSWEB_LOCAL_CACHE, product_number):
+    return os.path.join(LADSWEB_LOCAL_CACHE,
                         'product_meta_{}.json'.format(product_number))
 
 def _ftp_is_file(ftp, path):
+    current = ftp.pwd()
     try:
         ftp.cwd(path)
         return False
     except:
+        ftp.cwd(current)
         return True
-def ftp_to_local_path(ftp_path, LADSWEB_LOCAL_CACHE):
-    return os.path.join(LADSWEB_LOCAL_CACHE, ftp_path.replace(TOP_DIR, ''))
 
-has_seen = set()
-def ftp_walk(root, ftp, LADSWEB_LOCAL_CACHE, depth=0, max_depth=3):
-    global has_seen
-    global stop
+def ftp_to_local_path(ftp_path, base_dir):
+    return ftp_path.replace(TOP_DIR, base_dir)
+
+
+def ftp_walk(root, ftp, LADSWEB_LOCAL_CACHE, depth=0, max_depth=3, has_yielded=False):
     ls = []
     keys = []
     if _ftp_is_file(ftp, root):
-        yield ('file', root, ftp_to_local_path(root, LADSWEB_LOCAL_CACHE))
-    elif depth <= max_depth - 1:
-        ftp.cwd(root)
-        ftp.retrlines('NLST', ls.append)
-        for item in ls:
-            for item2 in ftp_walk(os.path.join(root, item), ftp, LADSWEB_LOCAL_CACHE,
-                                depth=depth + 1, max_depth=max_depth):
+        yield root.split('/')
+    elif depth <= max_depth:
+        for item in ftp_ls(ftp, dirname=root):
+            for item2 in ftp_walk(os.path.join(root, item), ftp,
+                                  LADSWEB_LOCAL_CACHE,
+                                  depth=depth + 1,
+                                  max_depth=max_depth, has_yielded=has_yielded):
                 yield item2
+    else:
+        return
 
+def ftp_ls(ftp, dirname=None):
+    ls = []
+    if dirname:
+        current = ftp.pwd()
+        ftp.cwd(dirname)
+    ftp.retrlines('NLST', ls.append)
+    if dirname:
+        ftp.cwd(current)
+    return ls
 
-
-def get_sample_of_ladsweb_products(year=2015, data_day=1,
-                         n_file_samples=1, ftp=None):
-    from iamlp.config.env import parse_env_vars
-    env = parse_env_vars()
-    if not 'LADSWEB_LOCAL_CACHE' in env:
-        raise ValueError('Define the LADSWEB_LOCAL_CACHE env var to a download location')
-    LADSWEB_LOCAL_CACHE = env['LADSWEB_LOCAL_CACHE']
-    if ftp is None:
-        ftp = login()
-    print('Logged into ftp')
-    examples_dir = os.path.join(LADSWEB_LOCAL_CACHE, 'examples')
-    ls_recursive = []
-    def write_results(meta_file, results):
-        d = os.path.dirname(meta_file)
-        if not os.path.exists(d):
-            os.makedirs(d)
-        with open(meta_file, 'w') as f:
-            f.write(json.dumps(results))
-    col1, col2, col3 = [], [], []
-    for item in ftp_walk(TOP_DIR, ftp, LADSWEB_LOCAL_CACHE, max_depth=5):
-        is_file, remote_f, local_f = item
-        col1.append(is_file)
-        col2.append(remote_f)
-        col3.append(local_f)
-        ls_recursive.append(list(item))
-    df = pd.DataFrame({'file_or_dir': col1,
-                       'remote_file': col2,
-                       'local_f': col3})
-    df.to_csv(product_meta_file(examples_dir, 'ls_recursive'), index=False)
+def _update_counts_dict(counts_dict, file_parts):
+    file_parts = file_parts[3:]
+    def inc(d, key):
+        if not key in d:
+            d[key] = 0
+        d[key] += 1
+    d = counts_dict
+    if len(file_parts) < 2:
+        return
+    for f in file_parts[:-2]:
+        if not f in d or isinstance(d[f], int):
+            d[f] = {}
+        d = d[f]
+    f = file_parts[-2]
+    if not f in d or not isinstance(d[f], int):
+        d[f] = 0
+    d[f] += 1
 
 def get_sample_of_ladsweb_products(year=None, data_day=None,
-                                   n_file_samples=1, ftp=None):
-    from iamlp.config.env import parse_env_vars
+                                   n_file_samples=1, ftp=None,
+                                   ignore_downloaded=False):
     env = parse_env_vars()
     if not 'LADSWEB_LOCAL_CACHE' in env:
         raise ValueError('Define the LADSWEB_LOCAL_CACHE env var to a download location')
@@ -103,7 +105,6 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
     if ftp is None:
         ftp = login()
     print('Logged into ftp')
-    examples_dir = os.path.join(LADSWEB_LOCAL_CACHE, 'examples')
     def write_results(meta_file, results):
         d = os.path.dirname(meta_file)
         if not os.path.exists(d):
@@ -111,104 +112,47 @@ def get_sample_of_ladsweb_products(year=None, data_day=None,
         with open(meta_file, 'w') as f:
             f.write(json.dumps(results))
     product_numbers = []
-    meta_file = product_meta_file(examples_dir, 'unique_product_numbers')
+    meta_file = product_meta_file(LADSWEB_LOCAL_CACHE, 'unique_product_numbers')
     ftp.cwd(TOP_DIR)
-    ftp.retrlines('NLST', product_numbers.append)
+    product_numbers = ftp_ls(ftp)
     print('There are {} product numbers'.format(len(product_numbers)))
     write_results(meta_file, product_numbers)
-    data_day_str = '{:03d}'.format(data_day)
+    data_day_str = '{:03d}'.format(data_day) if data_day else None
 
     for pidx, p in enumerate(product_numbers):
-        meta_file = product_meta_file(examples_dir, str(p))
-        if os.path.exists(meta_file):
-            print('Skip product {} - already downloaded'.format(p))
-            continue
+        print('Product number {} ({} out of {})'.format(p, pidx, len(product_numbers)))
         product_dict = {}
         prod_dir = os.path.join(TOP_DIR, str(p))
         ftp.cwd(prod_dir)
-        product_names = []
-        ftp.retrlines('NLST', product_names.append)
+        product_names = ftp_ls(ftp)
         product_dict['product_names'] = product_names
         for nidx, name in enumerate(product_names):
+            sample_files = 0
+            meta_file = product_meta_file(LADSWEB_LOCAL_CACHE,
+                                          '{}_{}'.format(p, name))
+            if os.path.exists(meta_file) and not ignore_downloaded:
+                continue
+            print('Product name {} ({} out of {})'.format(name, nidx, len(product_names)))
             prod_name_dir = os.path.join(prod_dir, name)
-            years = []
-            product_dict[name] = {}
-            ftp.cwd(prod_name_dir)
-            ftp.retrlines('NLST', years.append)
-            product_dict[name]['years'] = years
-            if str(year) in years or not year:
-                if not year:
-                    yr = [year for year in years if '19' in year or '20' in year]
-                    if not yr:
-                        continue
-                    yr = yr[0]
+            counts_dict = {}
+            for file_parts in ftp_walk(prod_name_dir, ftp, LADSWEB_LOCAL_CACHE,
+                                       max_depth=4, has_yielded=False):
+                _update_counts_dict(counts_dict, file_parts)
+                print(file_parts)
+                if sample_files < n_file_samples:
+                    remote_f = '/'.join(file_parts)
+                    local_f  = ftp_to_local_path(remote_f, LADSWEB_LOCAL_CACHE)
+                    if not _try_download(local_f, remote_f, ftp,
+                                        skip_on_fail=True,
+                                        ignore_downloaded=ignore_downloaded):
+                        counts_dict['failed_on_download'] = remote_f
+                    else:
+                        sample_files += 1
                 else:
-                    yr = str(year)
-                yr_dir = os.path.join(prod_name_dir, yr)
-                ftp.cwd(yr_dir)
-                yr_dir_ls = []
-                ftp.retrlines('NLST', yr_dir_ls.append)
-                product_dict[name]['yr_dir_ls'] = yr_dir_ls
-                is_data_days = True
-                for item in yr_dir_ls:
-                    try:
-                        int_item = int(item)
-                        if not (int_item >=1 and int_item <=365):
-                            is_data_days = False
-                            break
-                    except Exception as e:
-                        is_data_days = False
-                        break
+                    # Note: Could not break here to count all files
+                    break
+            write_results(meta_file, counts_dict)
 
-                if is_data_days and data_day_str in yr_dir_ls:
-                    next_dir = os.path.join(yr_dir, data_day_str)
-                elif yr_dir_ls:
-                    next_dir = os.path.join(yr_dir, yr_dir_ls[0])
-                else:
-                    print('Nothing in ', yr_dir)
-                    continue
-                file_ls = []
-                ftp.cwd(next_dir)
-                ftp.retrlines('NLST', file_ls.append)
-                product_dict[name]['example_ls'] = file_ls
-                product_dict[name]['example_ls_year'] = year
-                if is_data_days:
-                    product_dict[name]['example_ls_data_day'] = data_day
-                else:
-                    product_dict[name]['ls_not_data_day'] = yr_dir_ls
-                exts = (f.split('.') for f in file_ls)
-                exts = {f[-1] for f in exts if len(f) > 1}
-                product_dict[name]['examples'] = {}
-                if exts:
-                    for ext in exts:
-                        example = [f for f in file_ls if f.endswith(ext)][0]
-                        one_file = os.path.join(next_dir, example)
-                        local_f = os.path.join(examples_dir, str(p), name, yr,
-                                               os.path.basename(next_dir), example)
-                        product_dict[name]['examples'][ext] = example
-                        if not _try_download(local_f, one_file, ftp, skip_on_fail=True):
-                            print('Could not retrbinary on {} - maybe it is a dir'.format(one_file))
-                            product_dict[name]['failed_on_retr'] = one_file
-                            try:
-                                ftp.cwd(one_file)
-                                last_ls = []
-                                ftp.retrlines('NLST', last_ls.append)
-                                product_dict[name]['failed_on_retr_ls'] = last_ls
-                            except Exception as e:
-                                print('Failed on last_ls with ', repr(e))
-
-                else:
-                    product_dict[name]['examples']['no-extensions'] = file_ls
-                    print('file_ls', file_ls)
-
-                print('Product {} {} has {} file types'.format(p, name, exts))
-            else:
-                product_dict[name]['not_years'] = years
-                print('not_years', years)
-        pcent = pidx / len(product_numbers) * 100
-        write_results(meta_file, product_dict)
-        print('Done with {} out of {} product_numbers'.format(pidx, len(product_numbers)))
-        print('{}% complete'.format(pcent))
 def get_sample_main(args=None):
     if args is None:
         parser = ArgumentParser(description='Collect metadata on each product on ladsweb')
@@ -219,11 +163,16 @@ def get_sample_main(args=None):
                                    data_day=args.data_day,
                                    n_file_samples=args.n_file_samples)
 
-def _try_download(local_f, remote_f, ftp, skip_on_fail=False):
+def _try_download(local_f, remote_f, ftp, skip_on_fail=False,
+                  ignore_downloaded=False):
+    if os.path.exists(local_f) and not ignore_downloaded:
+        return True
     fhandle = None
     d = os.path.dirname(local_f)
+    made_dir = False
     if not os.path.exists(d):
         os.makedirs(d)
+        made_dir = True
     try:
         fhandle = open(local_f, 'wb')
         ftp.retrbinary('RETR ' + remote_f, fhandle.write)
@@ -232,6 +181,8 @@ def _try_download(local_f, remote_f, ftp, skip_on_fail=False):
     except Exception as e:
         if fhandle and os.path.exists(local_f):
             os.remove(local_f)
+        if made_dir:
+            shutil.rmtree(d)
         if skip_on_fail:
             print('Failed on retrbinary', repr(e), traceback.format_exc(), file=sys.stderr)
             return False
@@ -255,8 +206,7 @@ def download(yr, day, config,
         os.makedirs(basedir)
     ftp = ftp or login()
     ftp.cwd(os.path.join(top, str(yr), day))
-    ls = []
-    ftp.retrlines('NLST', ls.append)
+    ls = ftp_ls(ftp)
     for f in ls:
         local_f = os.path.join(basedir, f)
         if os.path.exists(local_f):
