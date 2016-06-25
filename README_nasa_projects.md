@@ -33,3 +33,8 @@ open ladsweb.nascom.nasa.gov
 get README
 ```
 The README for ladsweb ftp, retrieved in the snippet above, shows the directory layout of the FTP - it is saved [here in the repo](README_ladsweb.txt)
+
+## Ideas Discussed in Kickoff (June 24 2016)
+ * Supervised classification related to surface water / ice extent in the Arctic
+ * Hurricane track analysis - dimensionality reduction and feature identification on large weather model outputs
+ * Real time land cover classification on 30 m LANDSAT images (currently there is not real-time updated 30 m land cover map at global scale)
