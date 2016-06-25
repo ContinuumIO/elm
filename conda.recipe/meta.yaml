@@ -6,7 +6,6 @@ package:
 build:
   number: 0
   pin_depends: record
-  noarch_python: True
 
 
 requirements:

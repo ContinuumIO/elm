@@ -44,14 +44,10 @@ envvars:
 ## Run before the script
 before_script:
    - echo "before_script!"
-## Put your main computations here!
 script:
-  - echo "This is my binstar build!"
-  - conda env create
-  - activate iamlp # [win]
-  - source activate iamlp # [not win]
-  - python setup.py develop
-  - py.test
+   - conda build conda.recipe
+   - conda install --use-local iamlp
+   - py.test -m 'not slow'
 ## This will run after the script regardless of the result of script
 ## BINSTAR_BUILD_RESULT=[succcess|failure]
 after_script:
@@ -77,3 +73,4 @@ after_failure:
 ## e.g. conda is an alias for /opt/anaconda/conda-bld/<os-arch>/*.tar.bz2
 build_targets:
    - conda
+
