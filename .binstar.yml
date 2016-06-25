@@ -31,10 +31,6 @@ platform:
 ## The engine are the inital conda packages you want to run with
 engine:
   - python=3.5
-## The envvars param is an environment variable list
-envvars:
-  - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=.
-
 #===============================================================================
 # Script options
 # These options may be broken out into the before_script, script and after_script
@@ -47,7 +43,8 @@ before_script:
 script:
    - conda build conda.recipe
    - conda install --use-local iamlp
-   - py.test -m 'not slow'
+   - mkdir LADSWEB
+   - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'
 ## This will run after the script regardless of the result of script
 ## BINSTAR_BUILD_RESULT=[succcess|failure]
 after_script:
