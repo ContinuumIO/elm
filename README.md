@@ -4,23 +4,34 @@
 
 To use this code:
 
-Install:
+#### Install:
+Create the development environment:
+```
+conda env create
+```
 
+Activate the environment:
+```
+source activate iamlp
+```
+
+Install the source:
 ```
 python setup.py develop
 ```
-Tests of config loader:
+
+Run the tests:
 ```
 py.test
 ```
 
-Download a data set:
+#### Download a data set:
 ```
 DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-download-ladsweb --config iamlp/config/defaults/defaults.yaml
 ```
 (replacing the yaml if not using the default VIIRS Level 2 dataset)
 
-Run the default pipeline yaml:
+#### Run the default pipeline yaml:
 ```
 DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-main --config iamlp/config/defaults/defaults.yaml
 ```
