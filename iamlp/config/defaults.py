@@ -20,6 +20,7 @@ CONFIG_KEYS = [('readers',  dict),
                 ('aggregations', dict),
                 ('masks', dict),
                 ('add_features', dict),
+                ('feature_selectors', dict),
                 ('train', dict),
                 ('predict', dict),
                 ('pipeline', list),
@@ -29,3 +30,4 @@ DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
 DEFAULT_PREDICT = tuple(DEFAULTS['predict'].values())[0]
 DEFAULT_SAMPLER = tuple(DEFAULTS['samplers'].values())[0]
 DEFAULT_READER = tuple(DEFAULTS['readers'].values())[0]
+DEFAULT_FEATURE_SELECTOR = tuple(DEFAULTS['feature_selectors'].values())[0]
