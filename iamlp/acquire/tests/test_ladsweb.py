@@ -1,3 +1,4 @@
+import pytest
 
 from iamlp.acquire.ladsweb_ftp import (login,
                                        download,
@@ -8,11 +9,13 @@ from iamlp.acquire.ladsweb_ftp import (login,
 
 from iamlp.acquire import EXAMPLE_LADSWEB_PRODUCTS
 
-def assert_can_login_and_ls():
+EXAMPLE = '/allData/3001/NPP_D17BRDFIP_L3/2012/137/'
+
+@pytest.mark.slow
+def test_can_login_and_ls():
     ftp = login()
-    ftp.cwd(TOP_DIR)
-    assert bool(ftp_ls())
-    ftp.cwd('/'.join(TOP_DIR, tuple(EXAMPLE_LADSWEB_PRODUCTS.keys())[0]))
-    assert bool(ftp_ls())
+    ftp.cwd(EXAMPLE)
+    ls = ftp_ls(ftp)
+    assert any(x.endswith('hdf') for x in ls)
 
 
