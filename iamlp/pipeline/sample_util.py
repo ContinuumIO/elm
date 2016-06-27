@@ -46,20 +46,31 @@ def all_sample_ops(train_or_predict_dict, config, step):
     sampler_kwargs.update(sampler['selection_kwargs'])
     action_data = [(sampler_func, sampler_args, sampler_kwargs)]
     if 'on_each_sample' in step:
-        on_each_sample_kwargs = step.get('on_each_sample_kwargs') or {}
         actions = make_on_each_sample_func(config, step, **on_each_sample_kwargs)
         action_data.extend(actions)
     return tuple(action_data), sampler, sampler_args, data_source, included_filenames
 
-def make_on_each_sample_func(config, step, **on_each_sample_kwargs):
-    # TODO: assemble steps such as resampling, aggregation
-    # that happen after the image sample is taken
-    # This could use partial and import from other
-    # subpackages to do each image processing step
+def make_on_each_sample_func(config, step):
+    '''make list of (func, args, kwargs) tuples to run on_each_sample
+    Params:
+        config: validated config from iamlp.config.ConfigParser
+        step:   a dictionary that is one step of a "pipeline" list
+    '''
     on_each_sample = step['on_each_sample']
-    actions = []
     for action in on_each_sample:
-        pass # TODO add other actions here in the form:
-             # (module_colon_func_name_as_string, args_to_func, kwargs_to_func)
+        if 'feature_selector' in action:
+            context_columns = config['train'][step['train']].get('context_columns') or []
+            item = ('iamlp.data_selectors.feature_selectors:feature_selector_base',
+                    config['feature_selectors']['feature_selector'],
+                    {'context_columns': context_columns})
+        else:
+            # add items to actions of the form:
+            # (
+            #   module_colon_func_name_as_string,
+            #   args_to_func,
+            #   kwargs_to_func
+            # )
+            raise NotImplementedError('Put other on_each_sample logic here, like resampling')
+        actions.append(item)
     return actions
 

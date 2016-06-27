@@ -1,6 +1,7 @@
 import copy
 import os
 
+import sklearn.feature_selection as skfeat
 import yaml
 
 from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS, DEFAULT_TRAIN
@@ -243,23 +244,75 @@ class ConfigParser(object):
         if k and not isinstance(k, typ):
             raise IAMLPConfigError('In {} expected a {} but '
                                    'found {}'.format(name, typ, k))
-    def _validate_one_train_entry(self, name, t):
+
+    def _validate_all_or_type(self, k, name, typ)
+        if k != 'all':
+            self._validate_type(k, name, typ)
+
+    def _validate_feature_selectors(self):
+        feature_selectors = self.config.get('feature_selectors') or {}
+        if not feature_selectors:
+            return True
+        self._validate_type(feature_selectors, 'feature_selectors', dict)
+        for k, s in feature_selectors.items():
+            self._validate_type(k, 'feature_selectors:{}'.format(k), str)
+            self._validate_type(v, 'feature_selectors:{}'.format(v), dict)
+            selector = s.get('selector')
+            if selector != 'all':
+                self._validate_custom_callable(selector, True,
+                                               'feature_selectors{}'.format(name))
+                scorer = s.get('scorer')
+                no_scorer = ('all', 'sklearn.feature_selection:VarianceThreshold')
+                if scorer and scorer not in dir(skfeat) and not selector in no_scorer:
+                    self._validate_custom_callable(scorer, True,
+                            'feature_selectors:{}'.format(name))
+
+            else:
+                scorer = None
+            s['scorer'] = scorer
+
+
+            feature_choices = s.get('feature_choices') or 'all'
+            self._validate_all_or_type(feature_choices,
+                                       'feature_choices',
+                                       (list, tuple))
+            s['feature_choices'] = val
+            feature_selectors[k] = s
+        self.feature_selectors = feature_selectors
+
+    def _validate_training_funcs(self, name, t):
         if not isinstance(t, dict):
             raise IAMLPConfigError('In train:{} expected a dict '
                                    'but found {}'.format(name, t))
         training_funcs = (('model_selector_func', False),
                            ('model_init_func', True),
                            ('post_fit_func', False),
-                           ('fit_func', True),
+                           ('fit_wrapper_func', True),
+                           ('get_y_func', False)
                            )
 
-        has_partial_fit = False
+        fit_func = t.get('fit_func', 'fit')
+        has_fit_func = False
         for f, required in training_funcs:
-            func = self._validate_custom_callable(t[f], required,
+            cls_or_func = self._validate_custom_callable(t[f], required,
                                            'train:{} - {}'.format(name, f))
             if f == 'model_init_func':
-                model_init_func = func
-                has_partial_fit = hasattr(model_init_func, 'partial_fit')
+                model_init_func = cls_or_func
+                has_fit_func = hasattr(model_init_func, fit_func)
+            if has_fit_func:
+                fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.partial_fit)
+            else:
+                fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.fit)
+        if not has_fit_func:
+            raise IAMLPConfigError('{} has no {} method (fit_func)'.format(model_init_func, fit_func))
+        requires_y = any(x.lower() == 'y' for x in fargs)
+        return has_fit_func, requires_y
+
+
+    def _validate_one_train_entry(self, name, t):
+        has_fit_func, requires_y = self._validate_training_funcs(name, t)
+        if requires_y:
+            self._validate_custom_callable(t.get('get_y_func'), True, 'train:get_y_func (required with {})'.format(repr(t.get('model_init_func'))))
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
             self._validate_type(t[k], 'train:{}'.format(k), dict)
@@ -270,7 +323,7 @@ class ConfigParser(object):
         fit_kwargs = t.get('fit_kwargs', {}) or {}
         t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
         self._validate_type(fit_kwargs['n_batches'], 'fit_kwargs:n_batches', int)
-        if fit_kwargs['n_batches'] > 1 and not has_partial_fit:
+        if fit_kwargs['n_batches'] > 1 and not has_fit_func:
             raise IAMLPConfigError('With fit_kwargs - n_batches {} '
                                    '(>1) the model must have a '
                                    '"partial_fit" method.'.format(fit_kwargs['n_batches']))
@@ -290,12 +343,17 @@ class ConfigParser(object):
         self._validate_type(output_tag, 'train:output_tag', str)
         band_specs = self.data_sources[data_source]['band_specs']
         t['band_names'] = [x[-1] for x in band_specs]
-        # validating ml_features may be tough, TODO?
-        t['ml_features'] = t.get('ml_features', []) or []
-        if t['ml_features'] not in self.all_words:
-            self._validate_type(t['ml_features'], 'train:{}'.format(name), (list, tuple))
+        context_columns = t.get('context_columns') or []
+        self._validate_type(context_columns, 'context_columns', (tuple, list))
+        t['context_columns'] = context_columns
+        feature_selector = t.get('feature_selector') or 'select_all'
+        self._validate_type(feature_selector, 'feature_selector', str)
+        if not feature_selector in self.feature_selectors:
+            raise IAMLPConfigError('In train:{} expected '
+                                   'feature_selector:{} to be a '
+                                   'key in feature_selectors:'
+                                   '{}'.format(k, feature_selector, self.feature_selectors))
         self.config['train'][name] = self.train[name] = t
-
 
     def _validate_train(self):
         self.train = self.config.get('train', {}) or {}
