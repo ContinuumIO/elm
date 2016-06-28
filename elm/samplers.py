@@ -1,10 +1,13 @@
 from collections import namedtuple
+import logging
 import pandas as pd
 import numpy as np
 
 from elm.config import delayed, import_callable
 from elm.data_selection.filename_selection import get_included_filenames
 from elm.data_selection.band_selection import select_from_file
+
+logger = logging.getLogger(__name__)
 
 SAMPLE_FIELDS = 'df band_meta filemeta filename'.split()
 Sample = namedtuple('Sample', SAMPLE_FIELDS)
@@ -36,15 +39,26 @@ def random_images_selection(sampler_name, sampler_dict, data_sources,
         n_rows = None
     elif sampler_dict.get('n_rows_per_sample'):
         n_rows = sampler_dict['n_rows_per_sample']
-    for file_idx in range(sampler_dict['files_per_sample']):
+    has_seen = set()
+    misses = 0
+    file_idx = 0
+    while len(has_seen) < sampler_dict['files_per_sample']:
         sample = random_image_selection(band_specs, n_rows,
                                         **selection_kwargs)
+        logger.info('shape {}'.format(sample.df.shape))
         df, band_meta, filemeta, filename = sample[0], sample[1], sample[2], sample[3]
-        dfs.append(sample.df)
-        band_metas.append(sample.band_meta)
-        filemetas.append(sample.filemeta)
-        filenames.append(sample.filename)
-    return Sample(delayed(pd.concat)(dfs, keys=filenames),
+        if filename not in has_seen:
+            has_seen.add(filename)
+            dfs.append(sample.df)
+            band_metas.append(sample.band_meta)
+            filemetas.append(sample.filemeta)
+            filenames.append(sample.filename)
+        else:
+            misses += 1
+        if misses / sampler_dict['files_per_sample'] > 1:
+            raise ValueError('Not enough files to sample for '
+                             'sampler {}'.format(sampler_dict))
+    return Sample(pd.concat(dfs, keys=filenames),
         band_metas,
         filemetas,
         filenames)

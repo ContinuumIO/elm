@@ -79,7 +79,11 @@ def _select_from_file_base(filename,
                                               lons=lons,
                                               lats=lats)
         band_data.append((band_name, values))
-    logger.info(repr(bounds))
+        logger.info(repr(bounds))
+    if not band_data:
+        raise ValueError('Empty sample with filename {} '
+                         'band_specs {} (nothing '
+                         'matches)'.format(filename, band_specs))
     band_data.extend((('lon', lons), ('lat', lats), ('time', time)))
     joined_df = pd.DataFrame(OrderedDict(band_data))
     joined_df.set_index(['lon', 'lat', 'time'], inplace=True, drop=True)
