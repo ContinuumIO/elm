@@ -65,9 +65,9 @@ masks: {
 add_features: {
   # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "iamlp.preproc.add_features:ndvi",
 }
-feature_selectors: {
+feature_selection: {
   select_all: {
-    selector: all,
+    selection: all,
     score_func: chi2,
     score_func_kwargs: {},
     kwargs: {},
@@ -76,10 +76,10 @@ feature_selectors: {
 }
 train: {
   kmeans: {
-    fit_wrapper_func: "iamlp.pipeline.partial_fit:partial_fit",
-    model_selector_func: "iamlp.model_selectors.kmeans:kmeans_model_averaging",
+    fit_wrapper_func: "iamlp.pipeline.fit:fit",
+    model_selection_func: "iamlp.model_selection.kmeans:kmeans_model_averaging",
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
-    post_fit_func: "iamlp.model_selectors.kmeans:kmeans_add_within_class_var",
+    post_fit_func: "iamlp.model_selection.kmeans:kmeans_add_within_class_var",
     fit_wrapper_kwargs: {
       n_batches: 2
     },
@@ -88,7 +88,7 @@ train: {
     model_init_kwargs: {
       compute_labels: True
     },
-    model_selector_kwargs: {  # TODO this needs to be validated
+    model_selection_kwargs: {  # TODO this needs to be validated
       no_shuffle: 1,
     },
     ensemble_kwargs: {
@@ -100,10 +100,15 @@ train: {
     get_y_func: Null,
     get_y_kwargs: {},
     output_tag: kmeans,
+    # include either "data_source" or "sampler", not both
+    # if giving "sampler" here, it is expected that
+    # the named sampler uses a "data_generator" without
+    # reference to a data_source.  Using a data_generator
+    # can be useful for testing with synthetic data.
     data_source: NPP_DSRF1KD_L2GD,
     sampler: Null,
     keep_columns: [],
-    feature_selector: select_all
+    feature_selection: select_all
   }
 }
 
@@ -121,7 +126,7 @@ pipeline:
   - {download_data_sources: NPP_DSRF1KD_L2GD}
   - {train: kmeans,
      sample_pipeline: [
-      {feature_selector: select_all},
+      {feature_selection: select_all},
     ]}
   - {predict: kmeans}
 

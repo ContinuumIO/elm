@@ -4,3 +4,4 @@ from iamlp.config.env import parse_env_vars
 from iamlp.config.defaults import *
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
+import iamlp.config.logging_config

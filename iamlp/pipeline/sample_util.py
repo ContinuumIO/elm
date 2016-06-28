@@ -1,6 +1,9 @@
 import copy
+import logging
 
 from iamlp.config import import_callable
+
+logger = logging.getLogger(__name__)
 
 def run_sample_pipeline(action_data, sample=None):
     if sample is None:
@@ -13,7 +16,7 @@ def run_sample_pipeline(action_data, sample=None):
         for action in action_data[start_idx:]:
             func_str, args, kwargs = action
             func = import_callable(func_str, True, func_str)
-            print(func, args, kwargs)
+            logger.debug('func {} args {} kwargs {}'.format(func, args, kwargs))
             sample = func(sample, *args, **kwargs)
     return sample
 
@@ -37,14 +40,14 @@ def all_sample_ops(train_or_predict_dict, config, step):
         sampler_kwargs = {}
     else:
         data_source = config.data_sources[d['data_source']]
-        sampler = data_source['sampler']
+        sampler = config.samplers[d['data_source']]
         sampler_func = sampler['callable']
         file_key = sampler.get('file_generator', sampler.get('file_list'))
         file_generator = config.file_generators[file_key]
         file_generator = import_callable(file_generator, True, file_generator)
         data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
         included_filenames = tuple(file_generator(data_source))
-        sampler_args = (sampler_name, sampler, config.data_sources,)
+        sampler_args = (sampler_name or d['data_source'], sampler, config.data_sources,)
         sampler_kwargs = {'included_filenames': included_filenames,
                           }
         selection_kwargs = sampler.get('selection_kwargs') or {}
@@ -75,10 +78,10 @@ def make_sample_pipeline_func(config, step):
     sample_pipeline = step['sample_pipeline']
     actions = []
     for action in sample_pipeline:
-        if 'feature_selector' in action:
+        if 'feature_selection' in action:
             keep_columns = copy.deepcopy(config.train[step['train']].get('keep_columns') or [])
-            item = ('iamlp.data_selectors.feature_selectors:feature_selector_base',
-                    (copy.deepcopy(config.feature_selectors[action['feature_selector']]),),
+            item = ('iamlp.data_selection.feature_selection:feature_selection_base',
+                    (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
                     {'keep_columns': keep_columns})
         else:
             # add items to actions of the form:

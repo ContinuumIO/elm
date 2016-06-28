@@ -3,6 +3,7 @@ import calendar
 import datetime
 import ftplib
 import json
+import logging
 import os
 import pandas as pd
 import shutil
@@ -16,6 +17,8 @@ from iamlp.config.cli import (add_local_dataset_options,
                               add_config_file_argument,
                               add_sample_ladsweb_options)
 from iamlp.config.env import parse_env_vars
+
+logger = logging.getLogger(__name__)
 
 TOP_DIR = '/allData'
 PRODUCT_FORMAT = TOP_DIR + '/{}/{}'
@@ -33,10 +36,10 @@ def cache_file_name(hashed_args_dir, *args):
 
 def login():
     '''Login to ladsweb ftp, return ftp object'''
-    print("Logging into ftp...", end=" ", flush=True)
+    logger.info("Logging into ftp...")
     ftp = ftplib.FTP(LADSWEB_FTP)
     ftp.login()
-    print('ok')
+    logger.info('ok ftp login')
     return ftp
 
 def product_meta_file(LADSWEB_LOCAL_CACHE, tag):
@@ -126,7 +129,7 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
     LADSWEB_LOCAL_CACHE = env['LADSWEB_LOCAL_CACHE']
     if ftp is None:
         ftp = login()
-    print('Logged into ftp')
+    logger.info('Logged into ftp')
     def write_results(meta_file, results):
         d = os.path.dirname(meta_file)
         if not os.path.exists(d):
@@ -139,9 +142,9 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
         ftp.cwd(TOP_DIR)
         product_numbers = ftp_ls(ftp)
     write_results(meta_file, product_numbers)
-    print('There are {} product numbers'.format(len(product_numbers)))
+    logger.info('There are {} product numbers'.format(len(product_numbers)))
     for pidx, p in enumerate(product_numbers):
-        print('Product number {} ({} out of {})'.format(p, pidx, len(product_numbers)))
+        logger.info('Product number {} ({} out of {})'.format(p, pidx, len(product_numbers)))
         prod_dir = os.path.join(TOP_DIR, str(p))
         if not product_names:
             ftp.cwd(prod_dir)
@@ -151,7 +154,7 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
             sample_files = 0
             meta_file = product_meta_file(LADSWEB_LOCAL_CACHE,
                                           '{}_{}'.format(p, name))
-            print('Product name {} ({} out of {})'.format(name, nidx, len(product_names)))
+            logger.info('Product name {} ({} out of {})'.format(name, nidx, len(product_names)))
             prod_name_dir = os.path.join(prod_dir, name)
             counts_dict = {}
             cache_file = cache_file_name('product_meta', str(p), name)
@@ -159,7 +162,7 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
                 continue
             for file_parts in ftp_walk(prod_name_dir, ftp, 1, 1,
                                        max_depth=4):
-                print(file_parts)
+                logger.info('/'.join(file_parts))
                 if sample_files < n_file_samples:
                     remote_f = '/'.join(file_parts)
                     local_f  = ftp_to_local_path(remote_f, LADSWEB_LOCAL_CACHE)
@@ -184,7 +187,7 @@ def get_sample_main(args=None, parse_this=None):
             args = parser.parse_args(parse_this)
         else:
             args = parser.parse_args()
-    print('Running with args: {}'.format(args))
+    logger.info('Running with args: {}'.format(args))
     get_sample_of_ladsweb_products(**vars(args))
 
 def _try_download(local_f, remote_f, ftp, skip_on_fail=False):
@@ -207,7 +210,10 @@ def _try_download(local_f, remote_f, ftp, skip_on_fail=False):
         if made_dir:
             shutil.rmtree(d)
         if skip_on_fail:
-            print('Failed on retrbinary', remote_f, repr(e), traceback.format_exc(), file=sys.stderr)
+            logger.info('Failed on retrbinary '
+                        '{} {} {}'.format(remote_f,
+                                          repr(e),
+                                          traceback.format_exc()))
             return False
         raise
 
@@ -234,9 +240,9 @@ def download(yr, day, config,
         local_f = os.path.join(basedir, f)
         if os.path.exists(local_f):
             continue
-        print('Download', f, end=' ')
+        logger.info('Download', f, end=' ')
         _try_download(local_f, f, ftp)
-        print('ok')
+        logger.info('ok')
         time.sleep(random.uniform(0.2, 0.6))
     with open(cache_file, 'w') as f:
         f.write('Downloaded {}'.format(datetime.datetime.now().isoformat()))
@@ -259,7 +265,7 @@ def main(args=None, parse_this_str=None, config=None):
     current_julian_day = sum(calendar.monthrange(today.year, x)[0] for x in range(1, today.month))
     current_julian_day += today.day - 1
     ftp = None
-    print("Running with args {}".format(args))
+    logger.info("Running with args {}".format(args))
     for yr in args.years:
         for day in args.data_days:
             ftp = download(yr, day, config,

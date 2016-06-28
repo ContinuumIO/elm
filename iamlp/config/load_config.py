@@ -8,7 +8,7 @@ import yaml
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
-from iamlp.model_selectors.util import get_args_kwargs_defaults
+from iamlp.model_selection.util import get_args_kwargs_defaults
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
 from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS
 
@@ -256,23 +256,23 @@ class ConfigParser(object):
         if k != 'all':
             self._validate_type(k, name, typ)
 
-    def _validate_feature_selectors(self):
-        feature_selectors = self.config.get('feature_selectors') or {}
-        if not feature_selectors:
+    def _validate_feature_selection(self):
+        feature_selection = self.config.get('feature_selection') or {}
+        if not feature_selection:
             return True
-        self._validate_type(feature_selectors, 'feature_selectors', dict)
-        for k, s in feature_selectors.items():
-            self._validate_type(k, 'feature_selectors:{}'.format(k), str)
-            self._validate_type(s, 'feature_selectors:{}'.format(s), dict)
-            selector = s.get('selector')
-            if selector != 'all':
-                self._validate_custom_callable(selector, True,
-                                               'feature_selectors:{}'.format(k))
+        self._validate_type(feature_selection, 'feature_selection', dict)
+        for k, s in feature_selection.items():
+            self._validate_type(k, 'feature_selection:{}'.format(k), str)
+            self._validate_type(s, 'feature_selection:{}'.format(s), dict)
+            selection = s.get('selection')
+            if selection != 'all':
+                self._validate_custom_callable(selection, True,
+                                               'feature_selection:{}'.format(k))
                 score_func = s.get('score_func')
                 no_score_func = ('all', 'sklearn.feature_selection:VarianceThreshold')
-                if score_func and score_func not in dir(skfeat) and not selector in no_score_func:
+                if score_func and score_func not in dir(skfeat) and not selection in no_score_func:
                     self._validate_custom_callable(score_func, True,
-                            'feature_selectors:{} score_func'.format(k))
+                            'feature_selection:{} score_func'.format(k))
                 make_scorer_kwargs = s.get('make_scorer_kwargs') or {}
                 self._validate_type(make_scorer_kwargs, 'make_scorer_kwargs', dict)
 
@@ -288,17 +288,17 @@ class ConfigParser(object):
 
             feature_choices = s.get('choices') or 'all'
             self._validate_all_or_type(feature_choices,
-                                       'feature_selectors:{} choices'.format(k),
+                                       'feature_selection:{} choices'.format(k),
                                        (list, tuple))
             s['choices'] = feature_choices
-            feature_selectors[k] = s
-        self.feature_selectors = feature_selectors
+            feature_selection[k] = s
+        self.feature_selection = feature_selection
 
     def _validate_training_funcs(self, name, t):
         if not isinstance(t, dict):
             raise IAMLPConfigError('In train:{} expected a dict '
                                    'but found {}'.format(name, t))
-        training_funcs = (('model_selector_func', False),
+        training_funcs = (('model_selection_func', False),
                            ('model_init_class', True),
                            ('post_fit_func', False),
                            ('fit_wrapper_func', True),
@@ -366,13 +366,13 @@ class ConfigParser(object):
         keep_columns = t.get('keep_columns') or []
         self._validate_type(keep_columns, 'keep_columns', (tuple, list))
         t['keep_columns'] = keep_columns
-        feature_selector = t.get('feature_selector') or 'select_all'
-        self._validate_type(feature_selector, 'feature_selector', str)
-        if not feature_selector in self.feature_selectors:
+        feature_selection = t.get('feature_selection') or 'select_all'
+        self._validate_type(feature_selection, 'feature_selection', str)
+        if not feature_selection in self.feature_selection:
             raise IAMLPConfigError('In train:{} expected '
-                                   'feature_selector:{} to be a '
-                                   'key in feature_selectors:'
-                                   '{}'.format(k, feature_selector, self.feature_selectors))
+                                   'feature_selection:{} to be a '
+                                   'key in feature_selection:'
+                                   '{}'.format(k, feature_selection, self.feature_selection))
         self.config['train'][name] = self.train[name] = t
 
     def _validate_train(self):

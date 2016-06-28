@@ -3,6 +3,7 @@ import os
 import pytest
 import shutil
 import tempfile
+import yaml
 
 from iamlp.config.defaults import *
 from iamlp.config import IAMLPConfigError, ConfigParser
@@ -20,12 +21,13 @@ def dump_config(config):
     return tmp, config_file
 
 def tst_bad_config(bad_config):
+    tmp = None
     try:
         tmp, config_file = dump_config(bad_config)
         with pytest.raises(IAMLPConfigError):
-            ConfigParser(config_file)
+            ConfigParser(config_file_name=config_file)
     finally:
-        if os.path.exists(tmp):
+        if tmp and os.path.exists(tmp):
             shutil.rmtree(tmp)
     # return the ok version for next test
     ok_config = copy.deepcopy(DEFAULTS)

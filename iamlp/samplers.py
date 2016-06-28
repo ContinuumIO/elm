@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 
 from iamlp.config import delayed, import_callable
-from iamlp.data_selectors.filename_selectors import get_included_filenames
-from iamlp.data_selectors.band_selectors import select_from_file
+from iamlp.data_selection.filename_selection import get_included_filenames
+from iamlp.data_selection.band_selection import select_from_file
 
 SAMPLE_FIELDS = 'df band_meta filemeta filename'.split()
 Sample = namedtuple('Sample', SAMPLE_FIELDS)
