@@ -13,6 +13,10 @@ def random_image_selection(band_specs, n_rows,
                            **selection_kwargs):
 
     included_filenames = selection_kwargs['included_filenames']
+    if not included_filenames:
+        raise ValueError('random_image_selection tried to choose from '
+                         'included_files but it had no length.\n'
+                         'Check "file_generators"')
     filename = np.random.choice(included_filenames)
     df, band_meta, filemeta = select_from_file(filename,
                                                band_specs,

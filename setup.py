@@ -10,7 +10,7 @@ cmdclass = versioneer.get_cmdclass()
 setup(name='elm',
       version=version,
       cmdclass=cmdclass,
-      description='Image Analysis Machine Learning Pipeline',
+      description='Ensemble Learning Models',
       install_requires=['deap',
                        'graphviz',
                        'pysptools',],
