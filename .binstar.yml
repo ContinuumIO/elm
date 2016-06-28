@@ -40,11 +40,14 @@ engine:
 ## Run before the script
 before_script:
    - echo "before_script!"
+
+test:
+  - conda env create
+  - python setup.py develop
+  - mkdir LADSWEB
+  - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'
 script:
-   - conda build conda.recipe
-   - conda install --use-local iamlp
-   - mkdir LADSWEB
-   - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'
+  - conda build conda.recipe
 ## This will run after the script regardless of the result of script
 ## BINSTAR_BUILD_RESULT=[succcess|failure]
 after_script:
