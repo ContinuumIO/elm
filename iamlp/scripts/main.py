@@ -1,6 +1,7 @@
 
 from argparse import ArgumentParser
 import datetime
+import logging
 import os
 
 from dask.diagnostics import ProgressBar
@@ -30,7 +31,9 @@ def main(args=None, parse_this_str=None):
     with executor_context(dask_executor, dask_scheduler) as executor:
         pipeline(config, executor)
         ended = datetime.datetime.now()
-        print('Ran from', started, 'to', ended, '({} seconds)'.format((ended - started).total_seconds()))
+        logger.info('Ran from {} to {} ({} '
+                    'seconds)'.format(started, ended,
+                                      (ended - started).total_seconds()))
     return models
 
 

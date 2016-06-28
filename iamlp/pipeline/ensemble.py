@@ -1,11 +1,15 @@
 from collections import namedtuple
 import copy
 from functools import partial
+import logging
 import inspect
 import numpy as np
 
 from iamlp.config import delayed, import_callable
+from iamlp.pipeline.fit import fit
 from concurrent.futures import as_completed
+
+logger = logging.getLogger(__name__)
 
 def wait_for_futures(futures, executor=None):
     if not executor:
@@ -26,13 +30,13 @@ def no_executor_submit(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 def ensemble(executor,
-             model_init_func,
+             model_init_class,
              model_init_kwargs,
              fit_func,
-             partial_fit_args,
+             fit_args,
              fit_kwargs,
-             model_selector_func,
-             model_selector_kwargs,
+             model_selection_func,
+             model_selection_kwargs,
              **ensemble_kwargs):
     if hasattr(executor, 'map'):
         map_function = executor.map
@@ -47,19 +51,20 @@ def ensemble(executor,
     ensemble_size = ensemble_kwargs['ensemble_size']
     n_generations = ensemble_kwargs['n_generations']
     get_results = partial(wait_for_futures, executor=executor)
-    models = [model_init_func(**model_init_kwargs) for _ in range(ensemble_size)]
+    models = [model_init_class(**model_init_kwargs) for _ in range(ensemble_size)]
     for generation in range(n_generations):
-        args_kwargs = tuple(((model,) + tuple(partial_fit_args), fit_kwargs)
+        args_kwargs = tuple(((model,) + tuple(fit_args), fit_kwargs)
                             for model in models)
+        logger.debug('fit args_kwargs {}'.format(args_kwargs))
         models = get_results(
                     map_function(
-                        lambda x: fit_func(*x[0], **x[1]),
+                        lambda x: fit(*x[0], **x[1]),
                         args_kwargs
                     ))
         if generation < n_generations - 1:
-            kwargs = copy.deepcopy(model_selector_kwargs)
+            kwargs = copy.deepcopy(model_selection_kwargs)
             kwargs['generation'] = generation
-            model_selector_func = import_callable(model_selector_func, True, model_selector_func)
-            models = get_results(submit_func(model_selector_func, models, **kwargs))
+            model_selection_func = import_callable(model_selection_func, True, model_selection_func)
+            models = get_results(submit_func(model_selection_func, models, **kwargs))
     return models
 

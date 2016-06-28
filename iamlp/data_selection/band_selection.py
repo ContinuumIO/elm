@@ -2,11 +2,14 @@ from collections import OrderedDict
 
 from gdalconst import GA_ReadOnly
 import gdal
+import logging
 import pandas as pd
 import re
 
 from iamlp.config import delayed
 from iamlp.readers.hdf4_L2_tools import load_hdf4, get_subdataset_bounds
+
+logger = logging.getLogger(__name__)
 
 def match_meta(meta, band_spec):
     search_key, search_value, name = band_spec
@@ -42,8 +45,8 @@ def _select_from_file_base(filename,
                          file_loader=load_hdf4,
                          get_subdataset_bounds=get_subdataset_bounds,
                          **kwargs):
-    from iamlp.data_selectors.geo_selectors import _filter_band_data
-    from iamlp.data_selectors.filename_selectors import _filename_filter
+    from iamlp.data_selection.geo_selection import _filter_band_data
+    from iamlp.data_selection.filename_selection import _filename_filter
 
     keep_file = _filename_filter(filename,
                                     search=filename_search,
@@ -76,7 +79,7 @@ def _select_from_file_base(filename,
                                               lons=lons,
                                               lats=lats)
         band_data.append((band_name, values))
-    print(bounds)
+    logger.info(repr(bounds))
     band_data.extend((('lon', lons), ('lat', lats), ('time', time)))
     joined_df = pd.DataFrame(OrderedDict(band_data))
     joined_df.set_index(['lon', 'lat', 'time'], inplace=True, drop=True)

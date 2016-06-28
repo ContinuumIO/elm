@@ -1,15 +1,16 @@
 import copy
 import os
 
+import sklearn.feature_selection as skfeat
 import yaml
 
-from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS, DEFAULT_TRAIN
+
 from iamlp.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from iamlp.config.util import (IAMLPConfigError,
                                import_callable)
-from iamlp.model_selectors.util import get_args_kwargs_defaults
+from iamlp.model_selection.util import get_args_kwargs_defaults
 from iamlp.acquire.ladsweb_meta import validate_ladsweb_data_source
-
+from iamlp.config.defaults import DEFAULTS, CONFIG_KEYS
 
 
 def file_generator_from_list(some_list, *args, **kwargs):
@@ -27,13 +28,28 @@ class ConfigParser(object):
     # are validated. (the _validate_* private
     # methods are order sensitive.)
     config_keys = CONFIG_KEYS
+    defaults = DEFAULTS
     all_words = ('all', ['all'],)
-    def __init__(self, config_file_name):
-        if not os.path.exists(config_file_name):
-            raise IAMLPConfigError('config_file_name {} does not '
-                                   'exist'.format(config_file_name))
-        with open(config_file_name) as f:
-            self.raw_config = yaml.safe_load(f.read())
+    def __init__(self, config_file_name=None, config=None):
+        '''Parses a config structure
+
+        Params:
+            config_file_name: file name of a config
+            config:           dict loaded from yaml/json already
+        '''
+
+        if not config:
+            if not os.path.exists(config_file_name):
+                raise IAMLPConfigError('config_file_name {} does not '
+                                       'exist'.format(config_file_name))
+            with open(config_file_name) as f:
+                self.raw_config = yaml.safe_load(f.read())
+        elif config:
+            self.raw_config = copy.deepcopy(config)
+        else:
+            raise IAMLPConfigError('ConfigParser expects either '
+                                   'config_file_name or config '
+                                   '(dict) as keyword arguments')
         self.config = copy.deepcopy(DEFAULTS)
         self.config.update(copy.deepcopy(self.raw_config))
         self._update_for_env()
@@ -139,19 +155,12 @@ class ConfigParser(object):
             self._validate_custom_callable(file_gen, True,
                                            'file_generators:{}'.format(name))
 
-    def _validate_file_lists(self):
-        self.file_lists = self.config.get('file_lists', {}) or {}
-        if not isinstance(self.file_lists, dict):
-            raise IAMLPConfigError('Expected file_lists {} to be a dict'.format(self.file_lists))
-        for name, file_list in self.file_lists.items():
-            self.file_generators[name] = partial(file_generator_from_list, file_list)
-
     def _validate_positive_int(self, val, context):
         if not isinstance(val, int) and val:
             raise IAMLPConfigError('In {} expected {} to be an int'.format(context, val))
 
     def _validate_one_sampler(self, sampler, name):
-        defaults = tuple(DEFAULTS['samplers'].values())[0]
+        defaults = tuple(self.defaults['samplers'].values())[0]
         if not sampler or not isinstance(sampler, dict):
             raise IAMLPConfigError('In samplers:{} dict '
                                    'but found {}'.format(name, sampler))
@@ -161,17 +170,15 @@ class ConfigParser(object):
         self._validate_positive_int(sampler['n_rows_per_sample'], name)
         self._validate_positive_int(sampler['files_per_sample'], name)
         file_gen = sampler.get('file_generator')
-        file_list = sampler.get('file_list')
-        if (not file_gen and not file_list) or (file_gen and file_list):
-            raise IAMLPConfigError('In sampler {} expected either (and not both of) '
-                                   '"file_generator": "some_name" or '
-                                   '"file_list": "some_name"'.format(sampler))
-        file_arg = file_gen or file_list
-        if not file_arg in self.file_generators:
-            raise IAMLPConfigError('In sampler {} expected a "file_list" '
-                                   'or "file_gen" name that is a key in '
-                                   '"file_lists" or "file_generators", '
-                                   'respectively.  Got {}'.format(sampler, file_arg))
+        data_gen = sampler.get('data_generator')
+        if data_gen:
+            self._validate_custom_callable(data_gen,
+                                True,
+                                'train:{} data_generator'.format(name))
+        if data_gen and file_gen:
+            raise IAMLPConfigError('in samplers:{} - cannot give '
+                                   '"data_generator" and '
+                                   '"file_generator"'.format(name))
         self._validate_selection_kwargs(sampler, name)
 
     def _validate_samplers(self):
@@ -181,6 +188,7 @@ class ConfigParser(object):
                                    '(expected dict)'.format(self.samplers))
         for name, sampler in self.samplers.items():
             self._validate_one_sampler(sampler, name)
+
 
     def _validate_poly(self, name, poly):
         return True # TODO this should validate a list entry
@@ -243,23 +251,82 @@ class ConfigParser(object):
         if k and not isinstance(k, typ):
             raise IAMLPConfigError('In {} expected a {} but '
                                    'found {}'.format(name, typ, k))
-    def _validate_one_train_entry(self, name, t):
+
+    def _validate_all_or_type(self, k, name, typ):
+        if k != 'all':
+            self._validate_type(k, name, typ)
+
+    def _validate_feature_selection(self):
+        feature_selection = self.config.get('feature_selection') or {}
+        if not feature_selection:
+            return True
+        self._validate_type(feature_selection, 'feature_selection', dict)
+        for k, s in feature_selection.items():
+            self._validate_type(k, 'feature_selection:{}'.format(k), str)
+            self._validate_type(s, 'feature_selection:{}'.format(s), dict)
+            selection = s.get('selection')
+            if selection != 'all':
+                self._validate_custom_callable(selection, True,
+                                               'feature_selection:{}'.format(k))
+                score_func = s.get('score_func')
+                no_score_func = ('all', 'sklearn.feature_selection:VarianceThreshold')
+                if score_func and score_func not in dir(skfeat) and not selection in no_score_func:
+                    self._validate_custom_callable(score_func, True,
+                            'feature_selection:{} score_func'.format(k))
+                make_scorer_kwargs = s.get('make_scorer_kwargs') or {}
+                self._validate_type(make_scorer_kwargs, 'make_scorer_kwargs', dict)
+
+                # TODO is there further validation of make_scorer_kwargs
+                # that can be done -
+                #    they are passed to sklearn.metrics.make_scorer
+
+                s['make_scorer_kwargs'] = make_scorer_kwargs
+            else:
+                score_func = None
+            s['score_func'] = score_func
+
+
+            feature_choices = s.get('choices') or 'all'
+            self._validate_all_or_type(feature_choices,
+                                       'feature_selection:{} choices'.format(k),
+                                       (list, tuple))
+            s['choices'] = feature_choices
+            feature_selection[k] = s
+        self.feature_selection = feature_selection
+
+    def _validate_training_funcs(self, name, t):
         if not isinstance(t, dict):
             raise IAMLPConfigError('In train:{} expected a dict '
                                    'but found {}'.format(name, t))
-        training_funcs = (('model_selector_func', False),
-                           ('model_init_func', True),
+        training_funcs = (('model_selection_func', False),
+                           ('model_init_class', True),
                            ('post_fit_func', False),
-                           ('fit_func', True),
+                           ('fit_wrapper_func', True),
+                           ('get_y_func', False)
                            )
 
-        has_partial_fit = False
+        fit_func = t.get('fit_func', 'fit')
+        has_fit_func = False
         for f, required in training_funcs:
-            func = self._validate_custom_callable(t[f], required,
+            cls_or_func = self._validate_custom_callable(t[f], required,
                                            'train:{} - {}'.format(name, f))
-            if f == 'model_init_func':
-                model_init_func = func
-                has_partial_fit = hasattr(model_init_func, 'partial_fit')
+            if f == 'model_init_class':
+                model_init_class = cls_or_func
+                has_fit_func = hasattr(model_init_class, fit_func)
+                if has_fit_func:
+                    fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.partial_fit)
+                else:
+                    fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.fit)
+        if not has_fit_func:
+            raise IAMLPConfigError('{} has no {} method (fit_func)'.format(model_init_class, fit_func))
+        requires_y = any(x.lower() == 'y' for x in fargs)
+        return has_fit_func, requires_y
+
+
+    def _validate_one_train_entry(self, name, t):
+        has_fit_func, requires_y = self._validate_training_funcs(name, t)
+        if requires_y:
+            self._validate_custom_callable(t.get('get_y_func'), True, 'train:get_y_func (required with {})'.format(repr(t.get('model_init_class'))))
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
             self._validate_type(t[k], 'train:{}'.format(k), dict)
@@ -270,12 +337,12 @@ class ConfigParser(object):
         fit_kwargs = t.get('fit_kwargs', {}) or {}
         t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
         self._validate_type(fit_kwargs['n_batches'], 'fit_kwargs:n_batches', int)
-        if fit_kwargs['n_batches'] > 1 and not has_partial_fit:
+        if fit_kwargs['n_batches'] > 1 and not has_fit_func:
             raise IAMLPConfigError('With fit_kwargs - n_batches {} '
                                    '(>1) the model must have a '
                                    '"partial_fit" method.'.format(fit_kwargs['n_batches']))
         sampler = t.get('sampler', '')
-        if not sampler in self.samplers:
+        if sampler and sampler not in self.samplers:
             raise IAMLPConfigError('train dict at key {} refers '
                                    'to a sampler {} that is '
                                    'not defined in '
@@ -286,16 +353,27 @@ class ConfigParser(object):
                                    'to a data_source {} that is '
                                    'not defined in '
                                    '"data_sources"'.format(name, repr(data_source)))
+        if (data_source and sampler) or (not data_source and not sampler):
+            raise IAMLPConfigError('Conflicting definition of both '
+                                   '"data_source" and "sampler" in '
+                                   '"train".  Provide one of "data_source": '
+                                   '<key from "data_sources", "sampler" '
+                                   'key from "samplers"')
         output_tag = t.get('output_tag')
         self._validate_type(output_tag, 'train:output_tag', str)
         band_specs = self.data_sources[data_source]['band_specs']
         t['band_names'] = [x[-1] for x in band_specs]
-        # validating ml_features may be tough, TODO?
-        t['ml_features'] = t.get('ml_features', []) or []
-        if t['ml_features'] not in self.all_words:
-            self._validate_type(t['ml_features'], 'train:{}'.format(name), (list, tuple))
+        keep_columns = t.get('keep_columns') or []
+        self._validate_type(keep_columns, 'keep_columns', (tuple, list))
+        t['keep_columns'] = keep_columns
+        feature_selection = t.get('feature_selection') or 'select_all'
+        self._validate_type(feature_selection, 'feature_selection', str)
+        if not feature_selection in self.feature_selection:
+            raise IAMLPConfigError('In train:{} expected '
+                                   'feature_selection:{} to be a '
+                                   'key in feature_selection:'
+                                   '{}'.format(k, feature_selection, self.feature_selection))
         self.config['train'][name] = self.train[name] = t
-
 
     def _validate_train(self):
         self.train = self.config.get('train', {}) or {}
@@ -323,7 +401,7 @@ class ConfigParser(object):
         step['download_data_sources'] = download_data_sources
         return step
 
-    def _validate_pipeline_on_each_sample(self, on_each_sample, predict_or_train, options, step):
+    def _validate_pipeline_sample_pipeline(self, sample_pipeline, predict_or_train, options, step):
         # TODO validate operations such as resampling and aggregation
         # after a sample is taken
 
@@ -334,10 +412,10 @@ class ConfigParser(object):
         if not train in self.train:
             raise IAMLPConfigError('Pipeline refers to an undefined "train"'
                                    ' key: {}'.format(repr(train)))
-        on_each_sample = step.get('on_each_sample', []) or []
-        step = self._validate_pipeline_on_each_sample(on_each_sample, 'train',
+        sample_pipeline = step.get('sample_pipeline', []) or []
+        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'train',
                                                       self.train[train], step)
-        step['on_each_sample'] = on_each_sample
+        step['sample_pipeline'] = sample_pipeline
         step['train'] = train
         return step
 
@@ -346,9 +424,9 @@ class ConfigParser(object):
         if not predict in self.predict:
             raise IAMLPConfigError('Pipeline refers to an undefined "predict"'
                                    ' key: {}'.format(repr(predict)))
-        on_each_sample = step.get('on_each_sample', []) or []
-        step = self._validate_pipeline_on_each_sample(on_each_sample, 'predict', self.predict[predict], step)
-        step['on_each_sample'] = on_each_sample
+        sample_pipeline = step.get('sample_pipeline', []) or []
+        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'predict', self.predict[predict], step)
+        step['sample_pipeline'] = sample_pipeline
         step['predict'] = predict
         return step
 

@@ -1,2 +1,3 @@
 include iamlp/config/defaults/*.yaml
 include iamlp/acquire/metadata/*
+include iamlp/examples/*.yaml

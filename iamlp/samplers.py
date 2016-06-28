@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np
 
 from iamlp.config import delayed, import_callable
-from iamlp.data_selectors.filename_selectors import get_included_filenames
-from iamlp.data_selectors.band_selectors import select_from_file
+from iamlp.data_selection.filename_selection import get_included_filenames
+from iamlp.data_selection.band_selection import select_from_file
 
-Sample = namedtuple('Sample', 'df band_meta filemeta filename')
+SAMPLE_FIELDS = 'df band_meta filemeta filename'.split()
+Sample = namedtuple('Sample', SAMPLE_FIELDS)
 
 def random_image_selection(band_specs, n_rows,
                            **selection_kwargs):
@@ -43,3 +44,13 @@ def random_images_selection(sampler_name, sampler_dict, data_sources,
         band_metas,
         filemetas,
         filenames)
+
+def data_generator(func, config, step, name):
+    t = config.train[step['train']]
+    s = config.samplers[t['sampler']]
+    gen = import_callable(s['data_generator'])
+    for sample in gen(**s):
+        if isinstance(sample, tuple) and len(sample) == len(SAMPLE_FIELDS):
+            yield Sample(*sample)
+        else:
+            yield sample

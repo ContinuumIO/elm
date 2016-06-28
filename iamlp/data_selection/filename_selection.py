@@ -1,6 +1,6 @@
 import re
 
-from iamlp.data_selectors.band_selectors import _select_from_file_base
+from iamlp.data_selection.band_selection import _select_from_file_base
 
 
 def _filename_filter(filename, search=None, func=None):
