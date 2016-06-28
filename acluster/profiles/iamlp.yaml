@@ -1,4 +1,4 @@
-name: iamlp
+name: elm
 conda_channels:
   - defaults
   - anaconda-cluster

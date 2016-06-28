@@ -1,4 +1,4 @@
-name: iamlp
+name: elm
 dependencies:
  - python=3.5
  - bokeh

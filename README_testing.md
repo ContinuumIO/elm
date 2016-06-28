@@ -31,8 +31,8 @@ def test_sgd_regressor_simple(tmpdir):
 
  * Travis and/or anaconda-build on push events of every branch
  * Eventually, a nightly test cycle on an ec2 machine for longer running tests, as needed (tests marked slow or too slow for every push event)
- * 
+ *
 
 ## Test Directory Structure
 
-Make a tests directory in each of the iamlp subpackages.  
+Make a tests directory in each of the elm subpackages.
