@@ -26,16 +26,18 @@ def points_in_poly(unique_x, unique_y, include_polys_array):
     breaks = np.where(np.isnan(include_polys_array[:, 0]))[0]
     for i in range(unique_x.size):
         for j in range(unique_y.size):
-            for b in range(0, breaks.size):
+            for b in range(0, breaks.size + 1):
+                if b < breaks.size:
+                    b2 = breaks[b]
+                else:
+                    b2 = include_polys_array.shape[0]
                 if b == 0:
-                    b1 = 0
+                    b1 = -1
                 else:
                     b1 = breaks[b - 1]
-                b2 = breaks[b]
-            x = unique_x[i]
-            y = unique_y[j]
-            idx = i * unique_x.size + j
-            for b1, b2 in zip(breaks[:-1], breaks[1:]):
+                x = unique_x[i]
+                y = unique_y[j]
+                idx = i * unique_x.size + j
                 if point_in_poly(x, y, include_polys_array[b1 + 1: b2, :]):
                     points.append((idx, x, y))
     return np.array(points, dtype=np.float64)
