@@ -12,7 +12,7 @@ conda env create
 
 Activate the environment:
 ```
-source activate iamlp
+source activate elm
 ```
 
 Install the source:
@@ -27,13 +27,13 @@ py.test
 
 #### Download a data set:
 ```
-DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-download-ladsweb --config iamlp/config/defaults/defaults.yaml
+DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 elm-download-ladsweb --config elm/config/defaults/defaults.yaml
 ```
 (replacing the yaml if not using the default VIIRS Level 2 dataset)
 
 #### Run the default pipeline yaml:
 ```
-DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 iamlp-main --config iamlp/config/defaults/defaults.yaml
+DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 elm-main --config elm/config/defaults/defaults.yaml
 ```
 ## Config File Format
 
@@ -154,6 +154,6 @@ Another idea not mentioned in scope: as part of the flexible API for images/mosa
  * [README on testing practices](README_testing.md)
  * [README on NASA contacts and example datasets](README_nasa_projects.md)
  * [README on configuration of the image pipeline](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.md)
- 
+
 
 
