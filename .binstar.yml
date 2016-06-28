@@ -39,12 +39,12 @@ engine:
 
 ## Run before the script
 before_script:
-   - echo "before_script!"
-
-test:
-  - conda env create
-  - python setup.py develop
+  - echo "before_script!"
   - mkdir LADSWEB
+test:
+  - conda env update || conda env create
+  - source activate iamlp
+  - python setup.py develop
   - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'
 script:
   - conda build conda.recipe
@@ -74,3 +74,16 @@ after_failure:
 build_targets:
    - conda
 
+---
+platform:
+  - win-64
+  - win-32
+
+engine:
+  - python=3.5
+
+test:
+  - conda env update || conda env create
+  - activate iamlp
+  - python setup.py develop
+  - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'

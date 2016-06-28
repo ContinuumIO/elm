@@ -7,7 +7,8 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda install conda conda-build
-  - conda env create && source activate iamlp
+  - conda env update || conda env create
+  - source activate iamlp
   - conda build conda.recipe
   - mkdir LADSWEB
 
