@@ -12,6 +12,7 @@ install:
   - source activate elm
   - conda build conda.recipe
   - mkdir LADSWEB
+  - python setup.py develop
 
 script:
   - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
