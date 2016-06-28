@@ -31,7 +31,22 @@ def test_points_in_poly():
     assert points_in_poly(pts_bad[:, 0], pts_bad[:, 1], polys).size == 0
     assert points_in_poly(pts_bad[:, 0], pts_bad[:, 1], poly).size == 0
 
-
+    poly = np.array([[0, 0],[1, 1],[0, 1]], dtype=np.float64)
+    assert not point_in_poly(1., 0., poly)
+    assert not point_in_poly(0., -1e-6, poly)
+    assert not point_in_poly(-1e-6, 0., poly)
+    assert not point_in_poly(0., 1. + 1e-6, poly)
+    polys = np.concatenate((poly,
+                            np.ones((1, poly.shape[1]), dtype=np.float64),
+                            poly + 100)
+                            )
+    a = lambda x: np.array([x], dtype=np.float64)
+    assert points_in_poly(a(1), a(0), poly).size == 0
+    assert points_in_poly(a(1), a(0), polys).size == 0
+    assert points_in_poly(a(0), a(-1e-6), poly).size == 0
+    assert points_in_poly(a(0), a(-1e-6), polys).size == 0
+    assert points_in_poly(a(0), a(1 + 1e-6), poly).size == 0
+    assert points_in_poly(a(0), a(1 + 1e-6), polys).size == 0
 
 @pytest.mark.xfail
 def test_filter_band_data():
