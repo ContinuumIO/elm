@@ -75,7 +75,7 @@ def _rand_int_exclude(exclude, start, end, step):
 
 def kmeans_model_averaging(models, **kwargs):
     no_shuffle = kwargs['no_shuffle']
-    model_init_func = kwargs['model_init_func']
+    model_init_class = kwargs['model_init_class']
     model_init_kwargs = kwargs['model_init_kwargs']
     n_clusters = model_init_kwargs['n_clusters']
     inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
@@ -113,6 +113,6 @@ def kmeans_model_averaging(models, **kwargs):
         cluster_centers_ = cluster_centers_[:n_clusters,:]
         kw = copy.deepcopy(model_init_kwargs)
         kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
-        model = model_init_func(**kw)
+        model = model_init_class(**kw)
         new_models.append(model)
     return new_models

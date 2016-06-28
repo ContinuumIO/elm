@@ -22,10 +22,10 @@ def partial_fit(model,
                 n_batches=2,
                 feature_selector='all',
                 fit_kwargs=None,
-                **on_each_sample_kwargs):
+                **sample_pipeline_kwargs):
     if post_fit_func is not None:
         pff = import_callable(post_fit_func, True, post_fit_func)
-    selection_kwargs = on_each_sample_kwargs.get('selection_kwargs') or {}
+    selection_kwargs = sample_pipeline_kwargs.get('selection_kwargs') or {}
     selection_kwargs = copy.deepcopy(selection_kwargs)
     get_y_kwargs = get_y_kwargs or {}
     if n_batches > 1:
@@ -34,7 +34,7 @@ def partial_fit(model,
 
     iter_offset = 0
     for idx in range(n_batches):
-        sample = run_sample_pipeline(action_data, **on_each_sample_kwargs)
+        sample = run_sample_pipeline(action_data, **sample_pipeline_kwargs)
         fitter = getattr(model, fit_func)
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,

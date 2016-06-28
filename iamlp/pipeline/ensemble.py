@@ -26,7 +26,7 @@ def no_executor_submit(func, *args, **kwargs):
     return func(*args, **kwargs)
 
 def ensemble(executor,
-             model_init_func,
+             model_init_class,
              model_init_kwargs,
              fit_func,
              partial_fit_args,
@@ -47,7 +47,7 @@ def ensemble(executor,
     ensemble_size = ensemble_kwargs['ensemble_size']
     n_generations = ensemble_kwargs['n_generations']
     get_results = partial(wait_for_futures, executor=executor)
-    models = [model_init_func(**model_init_kwargs) for _ in range(ensemble_size)]
+    models = [model_init_class(**model_init_kwargs) for _ in range(ensemble_size)]
     for generation in range(n_generations):
         args_kwargs = tuple(((model,) + tuple(partial_fit_args), fit_kwargs)
                             for model in models)

@@ -40,6 +40,7 @@ samplers: {
     n_rows_per_sample: Null,
     files_per_sample: 1,
     file_generator: default_file_gen,
+    data_generator: Null,
     selection_kwargs: {
       data_filter: Null,
       metadata_filter: Null,
@@ -64,10 +65,11 @@ masks: {
 add_features: {
   # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "iamlp.preproc.add_features:ndvi",
 }
-feature_selector: {
+feature_selectors: {
   select_all: {
     selector: all,
-    scorer: chi2,
+    score_func: chi2,
+    score_func_kwargs: {},
     kwargs: {},
     choices: all,
   }
@@ -76,7 +78,7 @@ train: {
   kmeans: {
     fit_wrapper_func: "iamlp.pipeline.partial_fit:partial_fit",
     model_selector_func: "iamlp.model_selectors.kmeans:kmeans_model_averaging",
-    model_init_func: "sklearn.cluster:MiniBatchKMeans",
+    model_init_class: "sklearn.cluster:MiniBatchKMeans",
     post_fit_func: "iamlp.model_selectors.kmeans:kmeans_add_within_class_var",
     fit_wrapper_kwargs: {
       n_batches: 2
@@ -99,7 +101,8 @@ train: {
     get_y_kwargs: {},
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
-    context_columns: [],
+    sampler: Null,
+    keep_columns: [],
     feature_selector: select_all
   }
 }
@@ -117,8 +120,9 @@ change_detection: {
 pipeline:
   - {download_data_sources: NPP_DSRF1KD_L2GD}
   - {train: kmeans,
-     on_each_sample:
-      - {feature_selector: select_all}
+     sample_pipeline: [
+      {feature_selector: select_all},
+    ]}
   - {predict: kmeans}
 
 

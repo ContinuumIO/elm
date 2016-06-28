@@ -12,9 +12,9 @@ def train_step(config, step, executor):
     SERIAL_EVAL = config.SERIAL_EVAL
     train_dict = config.train[step['train']]
     sample_meta = all_sample_ops(train_dict, config, step)
-    action_data, sampler, sampler_args, data_source, included_filenames = sample_meta
-    model_init_func = import_callable(train_dict['model_init_func'])
-    _, model_init_kwargs = get_args_kwargs_defaults(model_init_func)
+    action_data, sampler  = sample_meta[:2]
+    model_init_class = import_callable(train_dict['model_init_class'])
+    _, model_init_kwargs = get_args_kwargs_defaults(model_init_class)
     model_init_kwargs.update(train_dict['model_init_kwargs'])
     if 'batch_size' in model_init_kwargs:
         model_init_kwargs['batch_size'] = sampler['n_rows_per_sample']
@@ -28,7 +28,7 @@ def train_step(config, step, executor):
     ensemble_kwargs = train_dict['ensemble_kwargs']
     model_selector_kwargs = copy.deepcopy(train_dict['model_selector_kwargs'])
     model_selector_kwargs.update({
-        'model_init_func': model_init_func,
+        'model_init_class': model_init_class,
         'model_init_kwargs': model_init_kwargs,
     })
     model_selector_func = train_dict.get('model_selector_func') or None
@@ -38,7 +38,7 @@ def train_step(config, step, executor):
                                                    True,
                                                    train_dict['fit_func'])
     models = ensemble(executor,
-             model_init_func,
+             model_init_class,
              model_init_kwargs,
              fit_func,
              partial_fit_args,

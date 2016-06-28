@@ -5,6 +5,7 @@ import os
 import traceback
 import yaml
 
+
 EXAMPLE_CALLABLE = 'iamlp.preproc:resampling'
 
 def read_from_egg(tfile, file_type='yaml'):
@@ -30,6 +31,8 @@ class IAMLPConfigError(ValueError):
 
 
 def import_callable(func_or_not, required=True, context=''):
+    if callable(func_or_not):
+        return func_or_not
     context = context + ' -  e' if context else 'E'
     if func_or_not and (not isinstance(func_or_not, str) or func_or_not.count(':') != 1):
         raise IAMLPConfigError('{}xpected {} to be an module:callable '
