@@ -12,7 +12,7 @@ install:
   - source activate elm
   - conda build conda.recipe
   - mkdir LADSWEB
-  - git clone git@github.com/ContinuumIO/elm-data
+  - git clone http://github.com/ContinuumIO/elm-data
   - export ELM_EXAMPLE_DATA_PATH=elm-data
   - python setup.py develop
 
