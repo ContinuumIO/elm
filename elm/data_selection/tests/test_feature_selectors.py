@@ -3,6 +3,7 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+import pytest
 
 from elm.data_selection.feature_selection import feature_selection_base
 

@@ -6,6 +6,7 @@ from elm.example_data import EXAMPLE_FILES
 EXAMPLE_BAND_SPECS = [['long_name', 'Band 1 ', 'band_1',],
                       ['long_name', 'Band 2',  'band_2']]
 
+@pytest.mark.needs_examples
 def test_get_included_filenames():
 
     def filenames_gen():
