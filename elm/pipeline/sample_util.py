@@ -5,7 +5,26 @@ from elm.config import import_callable
 
 logger = logging.getLogger(__name__)
 
+def check_action_data(action_data):
+    if not isinstance(action_data, (list, tuple)):
+        raise ValueError("Expected action_data to run_sample_pipeline to be a list. "
+                        "Got {}".format(type(action_data)))
+    for item in action_data:
+        if not (isinstance(item, tuple) or len(item) == 3):
+            raise ValueError('Expected each item in action_data to be a tuple of 3 items')
+        func, args, kwargs = item
+        func = import_callable(func)
+        if not callable(func):
+            raise ValueError('Expected first item in an action_data element '
+                             'to be a callable, but got {}'.format(func))
+        if not isinstance(args, (tuple, list)):
+            raise ValueError('Expected second item in an action_data element '
+                             'to be a tuple or list (args to {}). Got {}'.format(func, args))
+        if not isinstance(kwargs, dict):
+            raise ValueError('Expected third item in an action_data element '
+                             'to be a dict (kwargs to {}).  Got {}'.format(func, kwargs))
 def run_sample_pipeline(action_data, sample=None):
+    check_action_data(action_data)
     if sample is None:
         samp = action_data[0]
         sampler_func_str, sampler_args, sampler_kwargs = samp
@@ -76,7 +95,7 @@ def make_sample_pipeline_func(config, step):
         step:   a dictionary that is one step of a "pipeline" list
     '''
     sample_pipeline = step['sample_pipeline']
-    actions = []
+    action_data = []
     for action in sample_pipeline:
         if 'feature_selection' in action:
             keep_columns = copy.deepcopy(config.train[step['train']].get('keep_columns') or [])
@@ -84,13 +103,14 @@ def make_sample_pipeline_func(config, step):
                     (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
                     {'keep_columns': keep_columns})
         else:
-            # add items to actions of the form:
+            # add items to action_data of the form:
             # (
             #   module_colon_func_name_as_string,        # string
             #   args_to_func,                            # tuple
             #   kwargs_to_func                           # dict
             # )
             raise NotImplementedError('Put other sample_pipeline logic here, like resampling')
-        actions.append(item)
-    return actions
+        action_data.append(item)
+    check_action_data(action_data)
+    return action_data
 
