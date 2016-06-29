@@ -53,8 +53,7 @@ def final_on_sample_step(fitter,
                  or array of integers
        '''
     args, kwargs = get_args_kwargs_defaults(fitter)
-    fit_kwargs = fit_kwargs or {}
-    fit_kwargs = copy.deepcopy(fit_kwargs)
+    fit_kwargs = copy.deepcopy(fit_kwargs or {})
     if classes is not None:
         fit_kwargs['classes'] = classes
     if 'iter_offset' in kwargs:
@@ -70,5 +69,6 @@ def final_on_sample_step(fitter,
         y = get_y_func(sample)
         fit_args = (sample.values, y)
     else:
+        y = None
         fit_args = (sample.values, )
     return fit_args, fit_kwargs

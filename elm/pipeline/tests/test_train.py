@@ -19,7 +19,18 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'metadata_filter',
                            'data_filter',
                            'geo_filters')
-
+def expected_fit_kwargs(train_dict):
+    fit_kwargs = {
+            'post_fit_func': train_dict.get('post_fit_func'),
+            'fit_func': train_dict.get('fit_func'),
+            'get_y_func': train_dict.get('get_y_func'),
+            'get_y_kwargs': train_dict.get('get_y_kwargs'),
+            'get_weight_func': train_dict.get('get_weight_func'),
+            'get_weight_kwargs': train_dict.get('get_weight_kwargs'),
+            'batches_per_gen': train_dict['ensemble_kwargs'].get('batches_per_gen'),
+            'fit_kwargs': train_dict['fit_kwargs'],
+        }
+    return fit_kwargs
 def return_all(*args, **kwargs):
     '''An empty function to return what is given to it'''
     return args, kwargs
@@ -56,16 +67,13 @@ def test_train_makes_args_kwargs_ok():
             if not k in (set(train_dict['model_init_kwargs']) | {'batch_size'}):
                 assert model_init_kwargs.get(k) == v
         # assert fit_func, typically "fit" or "partial_fit"
-        # is a method of model_init_func
+        # is a method of model_init_class
         assert args[3] in dir(args[1])
         if check_action_data: # TODO remove this if statement after PR #28 merge
             check_action_data(args[4])
-        # fit_func_kwargs
-        assert set(args[5]) == {'post_fit_func', 'selection_kwargs'}
+        # fit_kwargs
+        assert args[5] == expected_fit_kwargs(train_dict)
 
-        assert set(args[5]['selection_kwargs']) == set(EXPECTED_SELECTION_KEYS)
-        geo_filters = args[5]['selection_kwargs']['geo_filters']
-        assert set(geo_filters) == {'include_polys', 'exclude_polys'}
         assert ':' in args[5]['post_fit_func']
         if args[5]['post_fit_func']:
             import_callable(args[5]['post_fit_func'])
