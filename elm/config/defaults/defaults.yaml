@@ -2,8 +2,8 @@
 
 readers: {
   hdf4-eos: {
-     load: "elm.readers.hdf4_L2_tools:load_hdf4",
-     bounds: "elm.readers.hdf4_L2_tools:get_subdataset_bounds"
+     load: "elm.readers.hdf4_tools:load_hdf4",
+     bounds: "elm.readers.hdf4_tools:get_subdataset_bounds"
    }
   }
 downloads: {
