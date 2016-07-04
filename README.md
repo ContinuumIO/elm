@@ -22,7 +22,7 @@ python setup.py develop
 
 Run the tests:
 ```
-py.test
+LADSWEB_LOCAL_CACHE=`pwd` py.test
 ```
 
 #### Download a data set:
