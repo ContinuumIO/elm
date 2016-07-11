@@ -5,14 +5,16 @@
 
 `acluster`
 
-* Copy the contents of this repo's `acluster/profiles` dir to: `~/.acluster/profiles`
-* Make sure you have an acluster provider `aws_east_nasasbir` or equivalent. This involves modifying `~/.acluster/providers.yaml` to add `aws_east_nasasbir` as a provider, or modifying the elm cluster profile's `provider` to be your existing provider, such as a named bare metal cluster or different AWS region provider.
+* Copy the contents of this repo's `acluster/profiles` dir to: `~/.acluster/profiles` so that Anaconda cluster finds it
+* Make sure you have an acluster provider `aws_east_nasasbir` or equivalent that is mentioned in the profile yaml files you copied. This involves modifying `~/.acluster/providers.yaml` to add `aws_east_nasasbir` as a provider, or modifying the elm cluster profile's `provider` to be your existing provider, such as a named bare metal cluster or different AWS region provider.
 * Confirm you have the profile and providers consistent with each other, and your yaml format is okay:
   * `acluster list providers`
   * `acluster list profiles`
-* Adjust the number of nodes and instance ID in the elm profile(s) as needed or create copies of the elm profile for different cluster configurations/sizes
-* Create a cluster by referencing the profile name you have created, `elm` by default: `acluster create -p elm elm-cluster`
-* Install geographic and image data analysis stack (through elm) with:
+* Adjust the number of nodes and instance ID in the `elm` profile(s) as needed or create copies of the `elm` profile for different cluster configurations/sizes
+* Create a cluster by referencing the profile name you have created, `elm` by default: 
+
+`acluster create -p elm elm-cluster`
+* Install geographic and image data analysis stack (through `elm`) with:
 
 `acluster conda create -c nasasbir -n elm python=3.5 elm --stream`
 
