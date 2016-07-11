@@ -14,11 +14,13 @@ dependencies:
  - numpy
  - pandas
  - pytest
+ - rasterio
  - requests
  - scikit-image
  - scikit-learn
  - scipy
  - tblib
+ - xarray
  - yaml
  - pip:
    - deap
