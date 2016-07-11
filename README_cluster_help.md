@@ -26,6 +26,7 @@
 acluster ssh
 source activate elm
 ```
+* See also the [list of packages installed as part of the `elm` environment](environment.yml)
 
 ### Dev Notes
 If testing a cluster with new `elm` code, you may need to [build the elm package first](README_build_package.md)
