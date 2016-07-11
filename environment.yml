@@ -7,6 +7,7 @@ dependencies:
  - gdal
  - h5py
  - jupyter
+ - krb5
  - matplotlib
  - netcdf4
  - networkx
