@@ -4,14 +4,13 @@ conda_channels:
   - anaconda-cluster
   - blaze
   - pypi
-  - psteinberg    # TODO: preliminary testing only - remove later
+  - nasasbir    # TODO: preliminary testing only - remove later
 node_id: ami-d05e75b8
 node_type: m3.medium
 num_nodes: 1
 plugins:
   - notebook
-  - dask:
-    - nprocs: 8
+  - dask
 provider: aws_east_nasasbir
 root_size: 200   # GB
 user: ubuntu
