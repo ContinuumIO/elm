@@ -1,8 +1,10 @@
 name: elm
 dependencies:
  - python=3.5
+ - blaze
  - bokeh
  - dask
+ - datashader
  - distributed
  - fiona
  - gdal
