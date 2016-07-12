@@ -4,6 +4,7 @@ dependencies:
  - bokeh
  - dask
  - distributed
+ - fiona
  - gdal
  - h5py
  - jupyter
@@ -14,12 +15,15 @@ dependencies:
  - numba
  - numpy
  - pandas
+ - pyproj
  - pytest
  - rasterio
  - requests
  - scikit-image
  - scikit-learn
  - scipy
+ - shapely
+ - statsmodels
  - tblib
  - xarray
  - yaml
@@ -27,3 +31,5 @@ dependencies:
    - deap
    - graphviz
    - pysptools
+   - geopy
+   - descartes
