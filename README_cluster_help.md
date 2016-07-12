@@ -15,10 +15,12 @@
 
 `acluster create -p elm elm-cluster`
 * Install geographic and image data analysis stack (through `elm`) with:
+```
+TOKEN=na-c671fafb-9323-43fd-9af7-ce7e2e640244
+acluster conda create -c https://conda.anaconda.org/t/${TOKEN}/nasasbir -n elm python=3.5 elm --stream
+```
 
-`acluster conda create -c nasasbir -n elm python=3.5 elm --stream`
-
-(the `-c nasasbir` part of the command above is the development private Anaconda channel until the package is open source)
+(the `-c nasasbir` and `TOKEN` parts of the command above are related to privacy until the package is open source)
 
 * Use the cluster's tools with:
 
