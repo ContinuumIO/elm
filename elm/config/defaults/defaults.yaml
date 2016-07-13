@@ -76,13 +76,9 @@ feature_selection: {
 }
 train: {
   kmeans: {
-    fit_wrapper_func: "elm.pipeline.fit:fit",
     model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
     post_fit_func: "elm.model_selection.kmeans:kmeans_add_within_class_var",
-    fit_wrapper_kwargs: {
-      n_batches: 2
-    },
     fit_func: partial_fit,
     fit_kwargs: {},
     model_init_kwargs: {
@@ -95,10 +91,13 @@ train: {
       ensemble_size: 2,
       saved_ensemble_size: 1,
       n_generations: 2,
+      batches_per_gen: 2
     },
     sampler: NPP_DSRF1KD_L2GD,
     get_y_func: Null,
     get_y_kwargs: {},
+    get_weight_func: Null,
+    get_weight_kwargs: {},
     output_tag: kmeans,
     # include either "data_source" or "sampler", not both
     # if giving "sampler" here, it is expected that
