@@ -1,6 +1,6 @@
 import re
 
-from elm.data_selection.band_selection import _select_from_file_base
+from elm.sample_util.band_selection import _select_from_file_base
 
 
 def _filename_filter(filename, search=None, func=None):

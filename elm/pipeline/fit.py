@@ -1,10 +1,9 @@
 import copy
 import numpy as np
 
-from elm.samplers import random_images_selection
 from elm.config.dask_settings import delayed, SERIAL_EVAL
-from elm.pipeline.sample_util import run_sample_pipeline
-from elm.pipeline.model_util import final_on_sample_step
+from elm.pipeline.sample_pipeline import run_sample_pipeline
+from elm.pipeline.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 
 
@@ -26,7 +25,7 @@ def fit(model,
     Params:
 
         model:  instantiated model like MiniBatchKmeans()
-        action_data: from elm.pipeline.sample_util:all_sample_ops
+        action_data: from elm.pipeline.sample_pipeline:all_sample_ops
                      (list of tuples of 3 items: (func, args, kwargs))
         fit_func: which attribute to use on model, typically "fit" or "partial_fit"
         get_y_func: function which returns a Y sample for an X sample dataframe
@@ -59,11 +58,12 @@ def fit(model,
                                                     get_y_kwargs=None,
                                                     get_weight_func=None,
                                                     get_weight_kwargs=None,
+                                                    flatten=True,
                                                 )
         model = fitter(*fit_args, **fit_kwargs)
         iter_offset += getattr(model, 'n_iter', 1)
     if post_fit_func is not None:
-        return pff(model, sample.df)
+        return pff(model, fit_args[0])# fit_args[0] is X as flattened
     return model
 
 

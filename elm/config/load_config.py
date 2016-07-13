@@ -91,10 +91,10 @@ class ConfigParser(object):
                 raise ElmConfigError('In readers:{} expected {} to be '
                                        'a dict'.format(k, v))
 
-            load = v.get('load')
-            bounds = v.get('bounds')
-            self._validate_custom_callable(load, True, 'readers:{} load'.format(k))
-            self._validate_custom_callable(bounds, True, 'readers:{} bounds'.format(k))
+            load = v.get('load_array')
+            bounds = v.get('load_meta')
+            self._validate_custom_callable(load, True, 'readers:{} load_array'.format(k))
+            self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
     def _validate_downloads(self):
@@ -164,7 +164,6 @@ class ConfigParser(object):
         if not sampler or not isinstance(sampler, dict):
             raise ElmConfigError('In samplers:{} dict '
                                    'but found {}'.format(name, sampler))
-        self._validate_custom_callable(sampler.get('callable'), True, 'samplers:{}'.format(name))
         sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
         sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
         self._validate_positive_int(sampler['n_rows_per_sample'], name)

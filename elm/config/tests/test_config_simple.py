@@ -104,9 +104,9 @@ def test_readers():
 
         bad_config['readers'][name] = item
         bad_config = tst_bad_config(bad_config)
-    bad_config['readers'][name]['load'] = NOT_FUNCTION
+    bad_config['readers'][name]['load_array'] = NOT_FUNCTION
     bad_config = tst_bad_config(bad_config)
-    bad_config['readers'][name]['bounds'] = NOT_FUNCTION
+    bad_config['readers'][name]['load_meta'] = NOT_FUNCTION
     bad_config = tst_bad_config(bad_config)
 
 def test_downloads():

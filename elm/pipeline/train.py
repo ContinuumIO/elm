@@ -1,7 +1,7 @@
 import copy
 from functools import partial
 
-from elm.pipeline.sample_util import all_sample_ops
+from elm.pipeline.sample_pipeline import all_sample_ops
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config import import_callable
 from elm.pipeline.ensemble import ensemble

@@ -3,8 +3,8 @@ import pandas as pd
 import numpy as np
 
 from elm.config import delayed, import_callable
-from elm.data_selection.filename_selection import get_included_filenames
-from elm.data_selection.band_selection import select_from_file
+from elm.sample_util.filename_selection import get_included_filenames
+from elm.sample_util.band_selection import select_from_file
 
 def random_image_selection(band_specs,
                            **selection_kwargs):
