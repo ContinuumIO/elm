@@ -28,10 +28,27 @@ data_sources: {
   [long_name, "Band 8 ", band_8],
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]]
-  }
+  },
+ S3_LANDSAT_L2_TIFS: {
+  reader: dir_of_tifs_reader,
+  band_specs: [[name, "_B1.TIF", band_1],
+  [name, "_B1.TIF", band_1],
+  [name, "_B2.TIF", band_2],
+  [name, "_B3.TIF", band_3],
+  [name, "_B4.TIF", band_4],
+  [name, "_B5.TIF", band_5],
+  [name, "_B6.TIF", band_6],
+  [name, "_B7.TIF", band_7],
+  [name, "_B8.TIF", band_8],
+  [name, "_B9.TIF", band_9]
+  [name, "_B10.TIF", band_10]
+  [name, "_B11.TIF", band_11]
+  ]
+ }
 }
 file_generators: {
   default_file_gen: "elm.readers.local_file_iterators:get_all_filenames_for_product",
+  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs"
 }
 file_lists: {}
 samplers: {
@@ -49,7 +66,16 @@ samplers: {
         exclude_polys: [],
       },
     }
+  },
+  S3_LANDSAT_L2_TIFS: {
+    files_per_sample: 1,
+    file_generator: tif_file_gen,
+    file_generator_kwargs: {
+      top_dir: S3_LANDSAT
+    },
+    selection_kwargs: {
   }
+}
 }
 polys: {}
 resamplers: {
