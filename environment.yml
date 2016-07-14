@@ -1,4 +1,4 @@
-name: elm-env
+name: elm-env-4
 dependencies:
  - python=3.5
  - blaze
@@ -30,9 +30,10 @@ dependencies:
  - xarray
  - yaml
  - pip:
-   - deap
+   - deap==1.0.1
    - graphviz
    - pysptools
    - geopy
    - descartes
+   - pypandoc
 
