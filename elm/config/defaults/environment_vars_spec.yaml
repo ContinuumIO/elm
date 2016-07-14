@@ -25,3 +25,5 @@ str_fields_specs:
  - {name: HASHED_ARGS_CACHE,
     default: ~/.elm_hashed_args,
     required: True}
+ - {name: ELM_EXAMPLE_DATA_PATH,
+    required: False}

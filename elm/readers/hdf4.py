@@ -34,6 +34,8 @@ def load_hdf4_meta(datafile):
              'GeoTransform':geo_transform,
              'SubDatasets': sds,
              'Bounds': bounds,
+             'Height': dat0.RasterYSize,
+             'Width':  dat0.RasterXSize,
             }
     return meta
 

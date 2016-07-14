@@ -9,8 +9,27 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 
 logger = logging.getLogger(__name__)
+def check_action_data(action_data):
+    if not isinstance(action_data, (list, tuple)):
+        raise ValueError("Expected action_data to run_sample_pipeline to be a list. "
+                        "Got {}".format(type(action_data)))
+    for item in action_data:
+        if not (isinstance(item, tuple) or len(item) == 3):
+            raise ValueError('Expected each item in action_data to be a tuple of 3 items')
+        func, args, kwargs = item
+        func = import_callable(func)
+        if not callable(func):
+            raise ValueError('Expected first item in an action_data element '
+                             'to be a callable, but got {}'.format(func))
+        if not isinstance(args, (tuple, list)):
+            raise ValueError('Expected second item in an action_data element '
+                             'to be a tuple or list (args to {}). Got {}'.format(func, args))
+        if not isinstance(kwargs, dict):
+            raise ValueError('Expected third item in an action_data element '
+                             'to be a dict (kwargs to {}).  Got {}'.format(func, kwargs))
 
 def run_sample_pipeline(action_data, sample=None):
+    check_action_data(action_data)
     if sample is None:
         samp = action_data[0]
         sampler_func_str, sampler_args, sampler_kwargs = samp
@@ -24,6 +43,7 @@ def run_sample_pipeline(action_data, sample=None):
             logger.debug('func {} args {} kwargs {}'.format(func, args, kwargs))
             sample = func(sample, *args, **kwargs)
     return sample
+
 
 def all_sample_ops(train_or_predict_dict, config, step):
     '''Given sampling specs in a pipeline train or predict step,

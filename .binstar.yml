@@ -45,6 +45,8 @@ test:
   - conda env update || conda env create
   - source activate elm
   - python setup.py develop
+  - git clone http://github.com/ContinuumIO/elm-data
+  - export ELM_EXAMPLE_DATA_PATH=elm-data
   - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'
 script:
   - conda build conda.recipe
@@ -85,5 +87,7 @@ engine:
 test:
   - conda env update || conda env create
   - activate elm
+  - git clone http://github.com/ContinuumIO/elm-data
+  - set ELM_EXAMPLE_DATA_PATH=elm-data
   - python setup.py develop
   - DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=LADSWEB py.test -m 'not slow'

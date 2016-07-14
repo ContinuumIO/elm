@@ -24,3 +24,10 @@ def get_all_filenames_for_product(data_source):
         for day in day_dirs:
             for f in glob.glob(os.path.join(day, pattern)):
                 yield f
+
+
+def iter_dirs_of_dirs(top_dir, filetype='TIF'):
+    for root, dirs, files in os.walk(top_dir):
+        keep = [f for f in files if f.endswith(filetype)]
+        if keep:
+            yield root, dirs, keep
