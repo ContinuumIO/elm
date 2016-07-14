@@ -8,7 +8,6 @@ from elm.sample_util.band_selection import select_from_file
 
 def random_image_selection(band_specs,
                            **selection_kwargs):
-
     included_filenames = selection_kwargs['included_filenames']
     if not included_filenames:
         raise ValueError('random_image_selection tried to choose from '

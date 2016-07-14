@@ -14,7 +14,8 @@ def get_y_right_bottom(xsize, ysize, geo_transform):
 
 def geotransform_to_dims(xsize, ysize, geo_transform):
     x_left, x_right, y_top, y_bottom = get_y_right_bottom(xsize, ysize, geo_transform)
-    return np.linspace(x_left, x_right, xsize), np.linspace(y_bottom, y_top, ysize)
+    return (np.linspace(x_left, x_right, xsize),
+            np.linspace(y_bottom, y_top, ysize))
 
 def geotransform_to_bounds(xsize, ysize, geo_transform):
     x_left, x_right, y_top, y_bottom = get_y_right_bottom(xsize, ysize, geo_transform)

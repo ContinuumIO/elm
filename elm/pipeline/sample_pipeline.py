@@ -69,8 +69,10 @@ def all_sample_ops(train_or_predict_dict, config, step):
         file_key = sampler.get('file_generator', sampler.get('file_list'))
         file_generator = config.file_generators[file_key]
         file_generator = import_callable(file_generator, True, file_generator)
+        file_generator_kwargs = sampler.get('file_generator_kwargs') or {}
         data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
-        included_filenames = tuple(file_generator(data_source))
+        file_generator_kwargs['data_source'] = data_source
+        included_filenames = tuple(file_generator(**file_generator_kwargs))
         sampler_func = 'elm.sample_util.samplers:random_image_selection'
         sampler_args = (data_source['band_specs'],)
         sampler_kwargs = {'included_filenames': included_filenames,
@@ -91,8 +93,7 @@ def all_sample_ops(train_or_predict_dict, config, step):
             'load_meta': load_meta,
             'load_array': load_array,
         })
-        sampler_kwargs.update(sampler['selection_kwargs'])
-
+        sampler_kwargs.update(selection_kwargs)
     action_data = [(sampler_func, sampler_args, sampler_kwargs)]
     if 'sample_pipeline' in step:
         actions = make_sample_pipeline_func(config, step)

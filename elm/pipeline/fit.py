@@ -1,4 +1,6 @@
 import copy
+import logging
+
 import numpy as np
 
 from elm.config.dask_settings import delayed, SERIAL_EVAL
@@ -7,6 +9,7 @@ from elm.pipeline.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 from elm.model_selection import get_args_kwargs_defaults
 
+logger = logging.getLogger(__name__)
 
 FIT_FUNC_ERR = ('Expected model {} to have a '
                 '"partial_fit" method with batches_per_gen = {}.\n'
@@ -47,6 +50,8 @@ def fit(model,
 
     iter_offset = 0
     for idx in range(batches_per_gen):
+        logger.info('Partial fit batch {} of {} in '
+                    'current ensemble'.format(idx + 1, batches_per_gen))
         sample = run_sample_pipeline(action_data)
         fitter = getattr(model, fit_func)
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,

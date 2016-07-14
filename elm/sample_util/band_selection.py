@@ -41,8 +41,8 @@ def _select_from_file_base(filename,
                          filename_filter=None,
                          filename_search=None,
                          dry_run=False,
-                         load_meta=load_hdf4_meta,
-                         load_array=load_hdf4_array,
+                         load_meta=None,
+                         load_array=None,
                          **kwargs):
     from elm.sample_util.geo_selection import _filter_band_data
     from elm.sample_util.filename_selection import _filename_filter

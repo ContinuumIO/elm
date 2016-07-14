@@ -26,8 +26,8 @@ def get_all_filenames_for_product(data_source):
                 yield f
 
 
-def iter_dirs_of_dirs(top_dir, filetype='TIF'):
+def iter_dirs_of_dirs(**kwargs):
+    top_dir = kwargs['top_dir']
     for root, dirs, files in os.walk(top_dir):
-        keep = [f for f in files if f.endswith(filetype)]
-        if keep:
-            yield root, dirs, keep
+        if any(f.lower().endswith('tif') or f.lower().endswith('tiff') for f in files):
+            yield root

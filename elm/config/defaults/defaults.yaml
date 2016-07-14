@@ -4,7 +4,11 @@ readers: {
   hdf4-eos: {
      load_array: "elm.readers.hdf4:load_hdf4_array",
      load_meta: "elm.readers.hdf4:load_hdf4_meta"
-   }
+   },
+  dir_of_tifs_reader: {
+     load_array: "elm.readers.tif:load_dir_of_tifs_array",
+     load_meta: "elm.readers.tif:load_dir_of_tifs_meta"
+   },
   }
 downloads: {
  default_downloader: "elm.acquire.ladsweb_ftp:main"
@@ -32,18 +36,16 @@ data_sources: {
  S3_LANDSAT_L2_TIFS: {
   reader: dir_of_tifs_reader,
   band_specs: [[name, "_B1.TIF", band_1],
-  [name, "_B1.TIF", band_1],
   [name, "_B2.TIF", band_2],
   [name, "_B3.TIF", band_3],
   [name, "_B4.TIF", band_4],
   [name, "_B5.TIF", band_5],
   [name, "_B6.TIF", band_6],
   [name, "_B7.TIF", band_7],
-  [name, "_B8.TIF", band_8],
-  [name, "_B9.TIF", band_9]
-  [name, "_B10.TIF", band_10]
-  [name, "_B11.TIF", band_11]
-  ]
+  #[name, "_B8.TIF", band_8], # band 8 in panchromatic and at 15 m rather than 30 m
+  [name, "_B9.TIF", band_9],
+  [name, "_B10.TIF", band_10],
+  [name, "_B11.TIF", band_11]]
  }
 }
 file_generators: {
@@ -68,6 +70,7 @@ samplers: {
     }
   },
   S3_LANDSAT_L2_TIFS: {
+    n_rows_per_sample: Null,
     files_per_sample: 1,
     file_generator: tif_file_gen,
     file_generator_kwargs: {
@@ -118,7 +121,6 @@ train: {
       n_generations: 2,
       batches_per_gen: 2
     },
-    sampler: NPP_DSRF1KD_L2GD,
     get_y_func: Null,
     get_y_kwargs: {},
     get_weight_func: Null,
@@ -129,8 +131,7 @@ train: {
     # the named sampler uses a "data_generator" without
     # reference to a data_source.  Using a data_generator
     # can be useful for testing with synthetic data.
-    data_source: NPP_DSRF1KD_L2GD,
-    sampler: Null,
+    data_source: S3_LANDSAT_L2_TIFS,
     keep_columns: [],
     feature_selection: select_all
   }

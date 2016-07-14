@@ -123,14 +123,13 @@ class ConfigParser(object):
     def _validate_one_data_source(self, name, ds):
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        validate_ladsweb_data_source(ds, name)
         reader = ds.get('reader')
         if not reader in self.readers:
             raise ElmConfigError('Data source config dict {} '
                                    'refers to a "reader" {} that is not defined in '
                                    '"readers"'.format(reader, self.readers))
         download = ds.get('download', '') or ''
-        if not download in self.downloads:
+        if download and not download in self.downloads:
             raise ElmConfigError('data_source {} refers to a '
                                    '"download" {} not defined in "downloads"'
                                    ' section'.format(ds, download))

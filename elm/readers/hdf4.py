@@ -17,7 +17,6 @@ def get_subdataset_bounds(meta):
     return bounds, time
 
 def load_hdf4_meta(datafile):
-    print(datafile)
     f = gdal.Open(datafile)
     sds = f.GetSubDatasets()
 
