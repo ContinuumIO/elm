@@ -53,8 +53,7 @@ def test_bad_train_config():
             for item in NOT_DICT:
                 bad_config['train'][name][k] = item
                 bad_config = tst_bad_config(bad_config)
-    bad_config['train'][name]['fit_kwargs']['n_batches'] = 7.2
-    bad_config = tst_bad_config(bad_config)
+
     for item in NOT_DICT:
         bad_config['train'][name]['ensemble_kwargs'] = item
         bad_config = tst_bad_config(bad_config)
@@ -66,6 +65,8 @@ def test_bad_train_config():
         bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
         bad_config = tst_bad_config(bad_config)
         bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
+        bad_config = tst_bad_config(bad_config)
+        bad_config['train'][name]['ensemble_kwargs']['batches_per_gen'] = item
         bad_config = tst_bad_config(bad_config)
 
 def test_bad_samplers_config():

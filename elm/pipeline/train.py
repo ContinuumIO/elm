@@ -23,12 +23,16 @@ def train_step(config, step, executor):
     model_init_kwargs.update(train_dict['model_init_kwargs'])
     if 'batch_size' in model_init_kwargs:
         model_init_kwargs['batch_size'] = sampler['n_rows_per_sample']
-    post_fit_func = train_dict.get('post_fit_func', None)
     fit_args = (action_data,)
-    fit_kwargs = train_dict['fit_kwargs']
     fit_kwargs = {
-        'post_fit_func': post_fit_func,
-        'selection_kwargs': sampler.get('selection_kwargs') or {},
+        'post_fit_func': train_dict.get('post_fit_func'),
+        'fit_func': train_dict['fit_func'],
+        'get_y_func': train_dict.get('get_y_func'),
+        'get_y_kwargs': train_dict.get('get_y_kwargs'),
+        'get_weight_func': train_dict.get('get_weight_func'),
+        'get_weight_kwargs': train_dict.get('get_weight_kwargs'),
+        'batches_per_gen': train_dict['ensemble_kwargs'].get('batches_per_gen'),
+        'fit_kwargs': train_dict['fit_kwargs'],
     }
     ensemble_kwargs = train_dict['ensemble_kwargs']
     model_selection_kwargs = copy.deepcopy(train_dict['model_selection_kwargs'])
