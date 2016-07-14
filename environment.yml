@@ -1,4 +1,4 @@
-name: elm-env-4
+name: elm-env
 dependencies:
  - python=3.5
  - blaze
