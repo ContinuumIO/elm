@@ -1,4 +1,4 @@
-name: elm
+name: elm-env
 dependencies:
  - python=3.5
  - blaze
@@ -35,3 +35,4 @@ dependencies:
    - pysptools
    - geopy
    - descartes
+
