@@ -3,7 +3,7 @@ import pytest
 
 import numpy as np
 
-from elm.data_selection.geo_selection import points_in_poly, point_in_poly
+from elm.sample_util.geo_selection import points_in_poly, point_in_poly
 
 def test_points_in_poly():
     poly = np.array([[1,1],[1, 0], [0, 0], [0, 1]], dtype=np.float64)

@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
-import elm.pipeline.sample_util as sample_util
+import elm.pipeline.sample_pipeline as sample_pipeline
 
 def data_generator_base(sampler_func, **kwargs):
     while True:
