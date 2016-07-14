@@ -9,7 +9,7 @@ install:
   - conda config --set always_yes true
   - conda install conda conda-build
   - conda env update || conda env create
-  - source activate elm
+  - source activate elm-env
   - conda build conda.recipe
   - mkdir LADSWEB
   - git clone http://github.com/ContinuumIO/elm-data

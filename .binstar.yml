@@ -24,10 +24,7 @@ user: nasasbir
 ## platform defaults to linux-64
 platform:
   - linux-64
-  - linux-32
   - osx-64
-  - win-64
-  - win-32
 ## The engine are the inital conda packages you want to run with
 engine:
   - python=3.5
