@@ -1,6 +1,7 @@
 name: elm-env
 dependencies:
  - python=3.5
+ - blaze
  - bokeh
  - dask
  - distributed
@@ -12,6 +13,7 @@ dependencies:
  - networkx
  - numba
  - numpy
+ - odo
  - pandas
  - pytest
  - rasterio

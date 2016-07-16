@@ -6,7 +6,7 @@ import numpy as np
 import xarray as xr
 
 from elm.config import delayed
-from elm.readers.util import geotransform_to_dims, geotransform_to_bounds
+from elm.readers.util import geotransform_to_dims
 
 directions = ('North', 'South', 'East', 'West')
 def get_subdataset_bounds(meta):
@@ -71,13 +71,13 @@ def load_hdf4_array(datafile, meta, band_specs):
             del dat
             gc.collect()
     band_labels = [_[-1] for _ in band_specs]
-    latitude, longitude = geotransform_to_dims(dat0.RasterXSize, dat0.RasterYSize, meta['GeoTransform'])
+    coord_x, coord_y = geotransform_to_dims(dat0.RasterXSize, dat0.RasterYSize, meta['GeoTransform'])
     band_data = xr.DataArray(store,
                            coords=[('band', band_labels),
-                                   ('latitude', latitude),
-                                   ('longitude', longitude),
+                                   ('y', coord_y),
+                                   ('x', coord_x),
                                    ],
-                           dims=['band','lat','long',],
+                           dims=['band','y','x',],
                            attrs=meta)
 
     return ElmStore({'sample': band_data})

@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 def match_meta(meta, band_spec):
     search_key, search_value, name = band_spec
     for mkey in meta:
-        if bool(re.search(search_key, mkey)):
-            if bool(re.search(search_value, meta[mkey])):
+        if bool(re.search(search_key, mkey, re.IGNORECASE)):
+            if bool(re.search(search_value, meta[mkey], re.IGNORECASE)):
                 return name
     return False
 
