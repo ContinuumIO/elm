@@ -65,3 +65,4 @@ def test_read_array():
     assert sorted((mean_y,
             sample.Bounds.top,
             sample.Bounds.bottom))[1] == mean_y
+    assert np.all(band_names == sample.band)

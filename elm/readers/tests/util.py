@@ -21,10 +21,15 @@ if ELM_HAS_EXAMPLES:
                                         '01',
                                         'imerg',
                                         '*.HDF5'))
+    HDF4_FILES = glob.glob(os.path.join(ELM_EXAMPLE_DATA_PATH,
+                                        'hdf4',
+                                        '*.hdf'
+                                        ))
 else:
     ELM_EXAMPLE_DATA_PATH = None
-    TIF_FILES = None
-    HDF5_FILES = None
+    TIF_FILES = []
+    HDF5_FILES = []
+    HDF4_FILES = []
 
 def assertions_on_metadata(meta, is_band_specific=False):
     required_keys = ('GeoTransform',

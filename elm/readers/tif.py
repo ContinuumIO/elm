@@ -84,7 +84,7 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
             yx_shape = arr.shape[1:]
         else:
             raise ValueError('Did not expect 3-d TIF unless singleton in 0 or 2 dimension')
-    shp = (len(band_order_info),) + yx_shape
+    shp = (len(band_specs),) + yx_shape
     store = np.empty(shp, dtype=arr.dtype)
     store[0, :, :] = arr
     if len(band_order_info) > 1:
