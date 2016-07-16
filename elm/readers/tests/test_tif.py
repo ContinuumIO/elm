@@ -51,7 +51,6 @@ def test_read_meta():
 
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
-@pytest.mark.slow
 def test_read_array():
     raster, meta = load_tif_meta(TIF_FILES[0])
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs)

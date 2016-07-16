@@ -39,7 +39,6 @@ def test_read_meta():
 
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                    reason='elm-data repo has not been cloned')
-@pytest.mark.slow
 def test_read_array():
     for hdf in HDF4_FILES:
         meta = load_hdf4_meta(hdf)
