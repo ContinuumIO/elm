@@ -11,6 +11,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               row_col_to_xy)
 
 directions = ('North', 'South', 'East', 'West')
+
 def get_subdataset_bounds(meta):
     from elm.sample_util.geo_selection import SpatialBounds
     bounds = SpatialBounds(*tuple(float(meta['{}BoundingCoord'.format(word)])
@@ -64,11 +65,13 @@ def load_hdf4_array(datafile, meta, band_specs):
         raise ValueError('No matching bands with band_specs {}'.format(band_specs))
 
     dat0 = gdal.Open(s[0])
-    arr = dat0.ReadAsArray()
-    shp = (len(band_specs),) + arr.shape
+    raster = dat0.ReadAsArray()
+    shp = (len(band_specs),) + raster.shape
     _, band_meta, s, _ = band_order_info[0]
-    store = np.empty(shp, dtype = arr.dtype)
-    store[0, :, :] = arr
+    store = np.empty(shp, dtype = raster.dtype)
+    store[0, :, :] = raster
+    del raster
+    gc.collect()
     if len(band_order_info) > 1:
         for idx, _, s, _ in band_order_info[1:]:
             dat = gdal.Open(s[0]).ReadAsArray()

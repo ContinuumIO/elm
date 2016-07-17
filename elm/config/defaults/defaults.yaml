@@ -1,15 +1,14 @@
-
-
 readers: {
   hdf4-eos: {
      load_array: "elm.readers.hdf4:load_hdf4_array",
      load_meta: "elm.readers.hdf4:load_hdf4_meta"
-   },
+  },
   dir_of_tifs_reader: {
      load_array: "elm.readers.tif:load_dir_of_tifs_array",
      load_meta: "elm.readers.tif:load_dir_of_tifs_meta"
    },
-  }
+}
+
 downloads: {
  default_downloader: "elm.acquire.ladsweb_ftp:main"
 }
@@ -80,7 +79,9 @@ samplers: {
   }
 }
 }
-polys: {}
+polys: {
+
+}
 resamplers: {
 
 }

@@ -1,4 +1,5 @@
 language: python
+
 python:
   - "3.5"
 
@@ -13,10 +14,9 @@ install:
   - conda build conda.recipe
   - mkdir LADSWEB
   - git clone http://github.com/ContinuumIO/elm-data
-  - export ELM_EXAMPLE_DATA_PATH=elm-data
+  - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
+  - ls -lrth $ELM_EXAMPLE_DATA_PATH
   - python setup.py develop
 
 script:
   - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
-
-

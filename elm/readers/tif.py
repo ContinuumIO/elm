@@ -60,7 +60,7 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
 
 def open_prefilter(filename):
     '''Placeholder for future operations on open file handle
-    like resample / aggregate '''
+    like resample / aggregate or setting width, height on load'''
     try:
         r = rio.open(filename)
         return r, r.read()
@@ -78,15 +78,17 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
         raise ValueError('No matching bands with band_specs {}'.format(band_specs))
 
     idx, filename, band_name = band_order_info[0]
-    _, arr = open_prefilter(filename)
-    if len(arr.shape) == 3:
-        if arr.shape[0] == 1:
-            yx_shape = arr.shape[1:]
+    handle, raster = open_prefilter(filename)
+    if len(raster.shape) == 3:
+        if raster.shape[0] == 1:
+            yx_shape = raster.shape[1:]
         else:
             raise ValueError('Did not expect 3-d TIF unless singleton in 0 or 2 dimension')
     shp = (len(band_specs),) + yx_shape
-    store = np.empty(shp, dtype=arr.dtype)
-    store[0, :, :] = arr
+    store = np.empty(shp, dtype=raster.dtype)
+    store[0, :, :] = raster
+    del raster
+    gc.collect()
     if len(band_order_info) > 1:
         for idx, filename, band_name in band_order_info[1:]:
             handle, raster = open_prefilter(filename)
