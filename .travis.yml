@@ -4,11 +4,16 @@ python:
   - "3.5"
 
 install:
+  - BUILD_DIR=`pwd`
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes true
   - conda install conda conda-build
+  - wget https://github.com/github/git-lfs/releases/download/v1.1.0/git-lfs-linux-amd64-1.1.0.tar.gz
+  - tar -zxvf git-lfs-linux-amd64-1.1.0.tar.gz
+  - export PATH=`pwd`/git-lfs-1.1.0:$PATH
+  - git lfs install
   - conda env update || conda env create
   - source activate elm-env
   - conda build conda.recipe
@@ -16,9 +21,12 @@ install:
   - git clone http://github.com/ContinuumIO/elm-data
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - ls -lRth $ELM_EXAMPLE_DATA_PATH
+  - cd $ELM_EXAMPLE_DATA_PATH && git reset && git lfs pull && echo "git lfs pull ok"
+  - cd $BUILD_DIR
   - env
   - ls -lRth
-  - cd $ELM_EXAMPLE_DATA_PATH ; git status ; cd $OLDPWD
+  - cd $ELM_EXAMPLE_DATA_PATH && git log
+  - cd $BUILD_DIR
   - python setup.py develop
 
 script:
