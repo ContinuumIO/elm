@@ -70,4 +70,3 @@ def fit(model,
         return pff(model, fit_args[0])# fit_args[0] is X as flattened
     return model
 
-

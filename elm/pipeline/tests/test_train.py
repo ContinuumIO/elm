@@ -4,13 +4,7 @@ import inspect
 import elm.pipeline.train as elmtrain
 from elm.config import DEFAULTS, ConfigParser, import_callable
 
-# TODO: after PR #28 is merged, remove
-# this try block around the import
-# (PR #28 defines the function check_action_data)
-try:
-    from elm.pipeline.sample_util import check_action_data
-except:
-    check_action_data = None
+from elm.pipeline.sample_util import check_action_data
 old_ensemble = elmtrain.ensemble
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
@@ -37,8 +31,10 @@ def return_all(*args, **kwargs):
 
 @contextlib.contextmanager
 def patch_ensemble():
-    '''This helps test the job of getting arguments to
-    ensemble by changing that function to just return its args,kwargs'''
+    '''This helps test the job of testing
+    getting arguments to
+    ensemble by changing that function to
+    just return its args,kwargs'''
     try:
         elmtrain.ensemble = return_all
         yield

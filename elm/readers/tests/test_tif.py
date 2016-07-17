@@ -9,7 +9,6 @@ from elm.readers.tif import (load_dir_of_tifs_meta,
                              load_dir_of_tifs_array,
                              load_tif_meta,
                              ls_tif_files)
-
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH,
                                     TIF_FILES,
@@ -35,6 +34,8 @@ band_specs = [
 def test_read_meta():
     for tif in TIF_FILES:
         raster, meta = load_tif_meta(tif)
+        assert hasattr(raster, 'read')
+        assert hasattr(raster, 'width')
         assertions_on_metadata(meta, is_band_specific=True)
     band_specs_with_band_8 = band_specs + [['name', '_B8.TIF', 'band_8']]
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs_with_band_8)
@@ -53,7 +54,6 @@ def test_read_meta():
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
 def test_read_array():
-    raster, meta = load_tif_meta(TIF_FILES[0])
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs)
     sample = load_dir_of_tifs_array(TIF_DIR, meta, band_specs)['sample']
     mean_y = np.mean(sample.y)
@@ -66,3 +66,4 @@ def test_read_array():
             sample.Bounds.top,
             sample.Bounds.bottom))[1] == mean_y
     assert np.all(band_names == sample.band)
+

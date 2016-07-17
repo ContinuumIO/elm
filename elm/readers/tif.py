@@ -59,8 +59,9 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
     return meta
 
 def open_prefilter(filename):
-    '''Placeholder for future operations on open file handle
-    like resample / aggregate or setting width, height on load'''
+    '''Placeholder for future operations on open file rasterio
+    handle like resample / aggregate or setting width, height, etc
+    on load.  TODO see optional kwargs to rasterio.open'''
     try:
         r = rio.open(filename)
         return r, r.read()
@@ -75,7 +76,8 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
     bands_share_coords(meta['BandMetaData'], raise_error=True)
 
     if not len(band_order_info):
-        raise ValueError('No matching bands with band_specs {}'.format(band_specs))
+        raise ValueError('No matching bands with '
+                         'band_specs {}'.format(band_specs))
 
     idx, filename, band_name = band_order_info[0]
     handle, raster = open_prefilter(filename)
