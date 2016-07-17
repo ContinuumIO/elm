@@ -21,7 +21,7 @@ install:
   - git clone http://github.com/ContinuumIO/elm-data
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - ls -lRth $ELM_EXAMPLE_DATA_PATH
-  - cd $ELM_EXAMPLE_DATA_PATH && git reset && git lfs pull && echo "git lfs pull ok"
+  - cd $ELM_EXAMPLE_DATA_PATH && git remote set-url origin "https://github.com/ContinuumIO/elm-data.git" && git reset && git lfs pull && echo "git lfs pull ok"
   - cd $BUILD_DIR
   - env
   - ls -lRth
