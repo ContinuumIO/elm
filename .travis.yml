@@ -15,7 +15,10 @@ install:
   - mkdir LADSWEB
   - git clone http://github.com/ContinuumIO/elm-data
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
-  - ls -lrth $ELM_EXAMPLE_DATA_PATH
+  - ls -lRth $ELM_EXAMPLE_DATA_PATH
+  - env
+  - ls -lRth
+  - cd $ELM_EXAMPLE_DATA_PATH ; git status ; cd $OLDPWD
   - python setup.py develop
 
 script:
