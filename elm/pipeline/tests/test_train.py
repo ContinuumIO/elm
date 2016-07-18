@@ -4,7 +4,7 @@ import inspect
 import elm.pipeline.train as elmtrain
 from elm.config import DEFAULTS, ConfigParser, import_callable
 
-from elm.pipeline.sample_util import check_action_data
+from elm.pipeline.sample_pipeline import check_action_data
 old_ensemble = elmtrain.ensemble
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
@@ -65,8 +65,7 @@ def test_train_makes_args_kwargs_ok():
         # assert fit_func, typically "fit" or "partial_fit"
         # is a method of model_init_class
         assert args[3] in dir(args[1])
-        if check_action_data: # TODO remove this if statement after PR #28 merge
-            check_action_data(args[4])
+        check_action_data(args[4][0])
         # fit_kwargs
         assert args[5] == expected_fit_kwargs(train_dict)
 
