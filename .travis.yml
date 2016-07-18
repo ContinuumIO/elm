@@ -4,13 +4,15 @@ python:
   - "3.5"
 
 install:
-  - BUILD_DIR=`pwd`
+  - export BUILD_DIR=`pwd`
+  - export GIT_TRACE=1
   - echo Install Git LFS
   - curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | sudo bash
   - sudo apt-get install git-lfs
   - git lfs install
   - export lfs_version=$(git lfs version | grep -Eoi "\d+\.\d+\.\d+")
   - export PATH=`pwd`/git-lfs-${lfs_version}:$PATH
+  - env | sort
   - echo Install Miniconda
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
@@ -22,10 +24,8 @@ install:
   - source activate elm-env
   - mkdir LADSWEB
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
-  - git clone http://github.com/ContinuumIO/elm-data
+  - git clone http://github.com/ContinuumIO/elm-data || git checkout -f HEAD
   - cd $ELM_EXAMPLE_DATA_PATH && git remote set-url origin https://github.com/ContinuumIO/elm-data.git && git reset && git lfs pull && echo "git lfs pull ok"
-  - cd $BUILD_DIR
-  - env | sort
   - cd $ELM_EXAMPLE_DATA_PATH && git log
   - cd $BUILD_DIR
   - ls -lRth $ELM_EXAMPLE_DATA_PATH
