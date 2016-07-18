@@ -5,29 +5,33 @@ python:
 
 install:
   - BUILD_DIR=`pwd`
+  - echo Install Git LFS
+  - wget https://github.com/github/git-lfs/releases/download/v1.1.0/git-lfs-linux-amd64-1.1.0.tar.gz
+  - tar -zxvf git-lfs-linux-amd64-1.1.0.tar.gz
+  - export PATH=`pwd`/git-lfs-1.1.0:$PATH
+  - git lfs install
+  - echo Install Miniconda
   - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes true
   - conda install conda conda-build
-  - wget https://github.com/github/git-lfs/releases/download/v1.1.0/git-lfs-linux-amd64-1.1.0.tar.gz
-  - tar -zxvf git-lfs-linux-amd64-1.1.0.tar.gz
-  - export PATH=`pwd`/git-lfs-1.1.0:$PATH
-  - git lfs install
+  - echo Create elm-env
   - conda env update || conda env create
   - source activate elm-env
-  - conda build conda.recipe
   - mkdir LADSWEB
-  - git clone http://github.com/ContinuumIO/elm-data
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
-  - ls -lRth $ELM_EXAMPLE_DATA_PATH
-  - cd $ELM_EXAMPLE_DATA_PATH && git remote set-url origin "https://github.com/ContinuumIO/elm-data.git" && git reset && git lfs pull && echo "git lfs pull ok"
+  - git clone http://github.com/ContinuumIO/elm-data
+  - cd $ELM_EXAMPLE_DATA_PATH && git remote set-url origin https://github.com/ContinuumIO/elm-data.git && git reset && git lfs pull && echo "git lfs pull ok"
   - cd $BUILD_DIR
-  - env
-  - ls -lRth
+  - env | sort
   - cd $ELM_EXAMPLE_DATA_PATH && git log
   - cd $BUILD_DIR
+  - ls -lRth $ELM_EXAMPLE_DATA_PATH
+  - git lfs logs last
   - python setup.py develop
 
 script:
+  - cd $BUILD_DIR
+  - conda build conda.recipe
   - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
