@@ -20,10 +20,24 @@ Install the source:
 ```
 python setup.py develop
 ```
+Clone the `elm-data` repo using Git LFS so that more tests can be run:
+```
+brew install git-lfs # or apt-get, yum, etc
+git install lfs
+git clone http://github.com/ContinuumIO/elm-data
+git remote add origin https//github.com/ContinuumIO/elm-data
+```
+
+Add the following to your .bashrc or environment, changing the paths depending on where you have cloned elm-data:
+```
+export LADSWEB_LOCAL_CACHE=/Users/psteinberg/Documents/nasasbir/LADSWEB
+export DASK_EXECUTOR=SERIAL
+export ELM_EXAMPLE_DATA_PATH=/Users/psteinberg/Documents/elm-data
+```
 
 Run the tests:
 ```
-LADSWEB_LOCAL_CACHE=`pwd` py.test
+py.test
 ```
 
 #### Download a data set:
