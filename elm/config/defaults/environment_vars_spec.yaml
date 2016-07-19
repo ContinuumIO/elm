@@ -24,7 +24,17 @@ str_fields_specs:
     required: True}
  - {name: HASHED_ARGS_CACHE,
     default: ~/.elm_hashed_args,
-    required: True}
+    required: True,
+    expanduser: True}
  - {name: ELM_EXAMPLE_DATA_PATH,
     default: ~/elm-data,
-    required: False}
+    required: False,
+    expanduser: True}
+ - {name: ELM_PICKLE_PATH,
+    default: ~/elm-pickle-path,
+    required: True,
+    expanduser: True}
+ - {name: ELM_PREDICT_PATH,
+    default: ~/elm-predict-path,
+    required: True,
+    expanduser: True}

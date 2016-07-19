@@ -11,8 +11,7 @@ def no_selection(models, *args, **kwargs):
 def train_step(config, step, executor):
     SERIAL_EVAL = config.SERIAL_EVAL
     train_dict = config.train[step['train']]
-    sample_meta = all_sample_ops(train_dict, config, step)
-    action_data = sample_meta[:2]
+    action_data = all_sample_ops(train_dict, config, step)
     sampler = train_dict.get('sampler')
     if sampler:
         sampler = config.samplers[sampler]
@@ -35,6 +34,8 @@ def train_step(config, step, executor):
         'fit_kwargs': train_dict['fit_kwargs'],
     }
     ensemble_kwargs = train_dict['ensemble_kwargs']
+    ensemble_kwargs['config'] = config
+    ensemble_kwargs['tag'] = step['train']
     model_selection_kwargs = copy.deepcopy(train_dict['model_selection_kwargs'])
     model_selection_kwargs.update({
         'model_init_class': model_init_class,

@@ -16,7 +16,8 @@ def process_int_env_var(env_var_name, default='0', required=False):
         val = bool(val)
     return val
 
-def process_str_env_var(env_var_name, default='', required=False, choices=None):
+def process_str_env_var(env_var_name, expanduser=False,
+                        default='', required=False, choices=None):
     val =  os.environ.get(env_var_name, default)
     if choices:
         if not val in choices:
@@ -29,6 +30,8 @@ def process_str_env_var(env_var_name, default='', required=False, choices=None):
                                'defined'.format(env_var_name))
     elif not val:
         val = default
+    if expanduser:
+        val = os.path.expanduser(val)
     return val
 
 def parse_env_vars():
@@ -46,6 +49,7 @@ def parse_env_vars():
         else:
             required = item.get('required', False)
         val = process_str_env_var(item['name'],
+                                  expanduser=item.get('expanduser', None),
                                   default=item.get('default', None),
                                   required=required,
                                   choices=item.get('choices', []))

@@ -49,14 +49,19 @@ data_sources: {
 }
 file_generators: {
   default_file_gen: "elm.readers.local_file_iterators:get_all_filenames_for_product",
-  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs"
+  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
+  iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }
 file_lists: {}
 samplers: {
   NPP_DSRF1KD_L2GD: {
     n_rows_per_sample: Null,
     files_per_sample: 1,
-    file_generator: default_file_gen,
+    file_generator: iter_files_recursively,
+    file_generator_kwargs: {
+      top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+      extension: ".hdf"
+    },
     data_generator: Null,
     selection_kwargs: {
       data_filter: Null,
@@ -73,7 +78,7 @@ samplers: {
     files_per_sample: 1,
     file_generator: tif_file_gen,
     file_generator_kwargs: {
-      top_dir: S3_LANDSAT
+      top_dir: "env:ELM_EXAMPLE_DATA_PATH"
     },
     selection_kwargs: {
   }
@@ -117,10 +122,10 @@ train: {
       no_shuffle: 1,
     },
     ensemble_kwargs: {
-      ensemble_size: 2,
+      ensemble_size: 1,
       saved_ensemble_size: 1,
-      n_generations: 2,
-      batches_per_gen: 2
+      n_generations: 1,
+      batches_per_gen: 1
     },
     get_y_func: Null,
     get_y_kwargs: {},
@@ -132,7 +137,7 @@ train: {
     # the named sampler uses a "data_generator" without
     # reference to a data_source.  Using a data_generator
     # can be useful for testing with synthetic data.
-    data_source: S3_LANDSAT_L2_TIFS,
+    data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
     feature_selection: select_all
   }
@@ -140,9 +145,8 @@ train: {
 
 predict: {
   kmeans: {
-    from_output_tag: kmeans,
-    file_generator: default_file_gen,
-    poly_summarize: [],
+    data_source: NPP_DSRF1KD_L2GD,
+    output_format: tif
   }
 }
 change_detection: {
@@ -153,7 +157,11 @@ pipeline:
      sample_pipeline: [
       {feature_selection: select_all},
     ]}
-  - {predict: kmeans}
+  - {predict: kmeans,
+     sample_pipeline: [
+      {feature_selection: select_all},
+      ]
+    }
 
 
 # Config options that can be overriden by environment variables:

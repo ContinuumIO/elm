@@ -17,6 +17,10 @@ KmeansVar = namedtuple('KmeansVar',
                         'sample',
                         'within_class_var',
                         'class_counts'])
+def _predict(self, *args, **kwargs):
+    self.model.batch_size = args[0].shape[0]
+    return self.model.predict(*args, **kwargs)
+KmeansVar.predict = _predict
 
 def kmeans_add_within_class_var(model, flattened):
     n_clusters = model.cluster_centers_.shape[0]

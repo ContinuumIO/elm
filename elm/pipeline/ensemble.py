@@ -1,33 +1,19 @@
 from collections import namedtuple
 import copy
-from functools import partial
-import logging
 import inspect
+import logging
+
+from concurrent.futures import as_completed
+from functools import partial
 import numpy as np
 
 from elm.config import delayed, import_callable
 from elm.pipeline.fit import fit
-from concurrent.futures import as_completed
+from elm.pipeline.serialize import save_models_with_meta
+from elm.pipeline.executor_util import (wait_for_futures,
+                                        no_executor_submit)
 
 logger = logging.getLogger(__name__)
-
-def wait_for_futures(futures, executor=None):
-    if not executor:
-        results = list(futures)
-    elif hasattr(executor, 'gather'): # distributed
-        from distributed import progress
-        progress(futures)
-        results = executor.gather(futures)
-    else:
-        results = []
-        for fut in as_completed(futures):
-            if fut.exception():
-                raise ValueError(fut.exception())
-            results.append(fut.result())
-    return results
-
-def no_executor_submit(func, *args, **kwargs):
-    return func(*args, **kwargs)
 
 def ensemble(executor,
              model_init_class,
@@ -40,10 +26,8 @@ def ensemble(executor,
              **ensemble_kwargs):
     if hasattr(executor, 'map'):
         map_function = executor.map
-        SERIAL_EVAL = True
     else:
         map_function = map
-        SERIAL_EVAL = False
     if hasattr(executor, 'submit'):
         submit_func = executor.submit
     else:
@@ -52,6 +36,7 @@ def ensemble(executor,
     n_generations = ensemble_kwargs['n_generations']
     get_results = partial(wait_for_futures, executor=executor)
     models = [model_init_class(**model_init_kwargs) for _ in range(ensemble_size)]
+    model_selection_func = import_callable(model_selection_func, True, model_selection_func)
     for generation in range(n_generations):
         logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))
         args_kwargs = tuple(((model,) + tuple(fit_args), fit_kwargs)
@@ -65,7 +50,16 @@ def ensemble(executor,
         if generation < n_generations - 1:
             kwargs = copy.deepcopy(model_selection_kwargs)
             kwargs['generation'] = generation
-            model_selection_func = import_callable(model_selection_func, True, model_selection_func)
             models = get_results(submit_func(model_selection_func, models, **kwargs))
+    if ensemble_kwargs.get('saved_ensemble_size'):
+        models = models[:ensemble_kwargs['saved_ensemble_size']]
+    model_paths, meta_path = save_models_with_meta(models,
+                                 ensemble_kwargs['config'].ELM_PICKLE_PATH,
+                                 ensemble_kwargs['tag'],
+                                 ensemble_kwargs['config'])
+    logger.info('Created model pickles: {} '
+                'and meta pickle {}'.format(model_paths, meta_path))
     return models
+
+
 

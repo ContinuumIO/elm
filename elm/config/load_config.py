@@ -1,4 +1,5 @@
 import copy
+import logging
 import os
 
 import sklearn.feature_selection as skfeat
@@ -12,6 +13,7 @@ from elm.model_selection.util import get_args_kwargs_defaults
 from elm.acquire.ladsweb_meta import validate_ladsweb_data_source
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
+logger = logging.getLogger(__name__)
 
 def file_generator_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
@@ -53,26 +55,41 @@ class ConfigParser(object):
         self.config = copy.deepcopy(DEFAULTS)
         self.config.update(copy.deepcopy(self.raw_config))
         self._update_for_env()
+        self._interpolate_env_vars()
         self.validate()
+
+    def _interpolate_env_vars(self):
+        import elm.config.dask_settings as elm_dask_settings
+        config_str = yaml.dump(self.config)
+        for env_var in (ENVIRONMENT_VARS_SPEC['str_fields_specs'] +
+                        ENVIRONMENT_VARS_SPEC['int_fields_specs']):
+            env_str = 'env:{}'.format(env_var['name'])
+            if env_str in config_str:
+                config_str = config_str.replace(env_str,
+                                                getattr(elm_dask_settings,
+                                                        env_var['name']))
+        self.config = yaml.load(config_str)
 
     def _update_for_env(self):
         import elm.config.dask_settings as elm_dask_settings
         for k, v in parse_env_vars().items():
             if v:
-                vars(self)[k] = v
+                setattr(self, k, v)
         for str_var in ENVIRONMENT_VARS_SPEC['str_fields_specs']:
             choices = str_var.get('choices', [])
-            val = self.config.get(str_var['name'])
+            val = getattr(self, str_var['name'], None)
             if choices and val not in choices:
                 raise ElmConfigError('Expected config key or env '
                                        'var {} to be in '
                                        '{} but got {}'.format(k, choices, val))
-            setattr(elm_dask_settings, k, val)
+            setattr(elm_dask_settings, str_var['name'], val)
         for int_var in ENVIRONMENT_VARS_SPEC['int_fields_specs']:
-            k = int_var['name']
-            val = self.config.get(k)
-            setattr(elm_dask_settings, k, val)
+            val = getattr(self, int_var['name'], None)
+            setattr(elm_dask_settings, int_var['name'], val)
         elm_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
+        logger.info('Running with DASK_EXECUTOR={} '
+                    'DASK_SCHEDULER={}'.format(elm_dask_settings.DASK_EXECUTOR,
+                                               elm_dask_settings.DASK_SCHEDULER))
 
     def _validate_custom_callable(self, func_or_not, required, context):
         if func_or_not or (not func_or_not and required):
@@ -455,4 +472,7 @@ class ConfigParser(object):
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
             assert isinstance(getattr(self, key), typ)
+
+    def __str__(self):
+        return yaml.dump(self.config)
 

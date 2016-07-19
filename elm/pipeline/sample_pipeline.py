@@ -66,8 +66,7 @@ def all_sample_ops(train_or_predict_dict, config, step):
     else:
         data_source = config.data_sources[d['data_source']]
         sampler = config.samplers[d['data_source']]
-        file_key = sampler.get('file_generator', sampler.get('file_list'))
-        file_generator = config.file_generators[file_key]
+        file_generator = config.file_generators[sampler['file_generator']]
         file_generator = import_callable(file_generator, True, file_generator)
         file_generator_kwargs = sampler.get('file_generator_kwargs') or {}
         data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
@@ -82,9 +81,9 @@ def all_sample_ops(train_or_predict_dict, config, step):
         load_array = import_callable(reader['load_array'])
         selection_kwargs = sampler.get('selection_kwargs') or {}
         selection_kwargs.update({
-            'data_filter': selection_kwargs.get('data_filter', {}).get('callable', None),
-            'metadata_filter': selection_kwargs.get('metadata_filter', {}).get('callable', None),
-            'filename_filter': selection_kwargs.get('filename_filter', {}).get('callable', None),
+            'data_filter': selection_kwargs.get('data_filter') or None,
+            'metadata_filter': selection_kwargs.get('metadata_filter') or None,
+            'filename_filter': selection_kwargs.get('filename_filter') or None,
             'geo_filters': selection_kwargs.get('geo_filters'),
             'include_polys': [config.polys[k]
                               for k in selection_kwargs.get('include_polys', [])],
@@ -110,7 +109,15 @@ def make_sample_pipeline_func(config, step):
     actions = []
     for action in sample_pipeline:
         if 'feature_selection' in action:
-            keep_columns = copy.deepcopy(config.train[step['train']].get('keep_columns') or [])
+            if 'train' in step:
+                key = step['train']
+            elif 'predict' in step:
+                key = step['predict']
+            else:
+                raise ValueError('Expected "feature_selection" as a '
+                                 'key within a "train" or "predict" pipeline '
+                                 'action ({})'.format(action))
+            keep_columns = copy.deepcopy(config.train[key].get('keep_columns') or [])
             item = ('elm.sample_util.feature_selection:feature_selection_base',
                     (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
                     {'keep_columns': keep_columns})
