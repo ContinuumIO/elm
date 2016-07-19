@@ -25,7 +25,7 @@ install:
   - mkdir LADSWEB
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - git clone http://github.com/ContinuumIO/elm-data || git checkout -f HEAD
-  - cd $ELM_EXAMPLE_DATA_PATH && git remote set-url origin https://github.com/ContinuumIO/elm-data.git && git reset && git lfs pull && echo "git lfs pull ok"
+  - cd $ELM_EXAMPLE_DATA_PATH && git remote add elm_data https://github.com/ContinuumIO/elm-data.git && git reset && git lfs pull elm_data && echo "git lfs pull ok"
   - cd $ELM_EXAMPLE_DATA_PATH && git log
   - cd $BUILD_DIR
   - ls -lRth $ELM_EXAMPLE_DATA_PATH

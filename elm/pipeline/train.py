@@ -9,7 +9,16 @@ def no_selection(models, *args, **kwargs):
     return models
 
 def train_step(config, step, executor):
-    SERIAL_EVAL = config.SERIAL_EVAL
+    '''Evaluate a "train" step in a config's "pipeline"
+
+    Params:
+        config:  full config
+        step:    current step dictionary in config's pipeline,
+                 with a "train" action
+        executor: None or a threaded/process/distributed Executor
+    Returns:
+        models: the fitted models in the ensemble method
+    '''
     train_dict = config.train[step['train']]
     action_data = all_sample_ops(train_dict, config, step)
     sampler = train_dict.get('sampler')
