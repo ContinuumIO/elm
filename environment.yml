@@ -1,26 +1,39 @@
-name: elm
+name: elm-env
 dependencies:
  - python=3.5
+ - blaze
  - bokeh
  - dask
+ - datashader
  - distributed
+ - fiona
  - gdal
  - h5py
  - jupyter
+ - krb5
  - matplotlib
  - netcdf4
  - networkx
  - numba
  - numpy
  - pandas
+ - pyproj
  - pytest
+ - rasterio
  - requests
  - scikit-image
  - scikit-learn
  - scipy
+ - shapely
+ - statsmodels
  - tblib
+ - xarray
  - yaml
  - pip:
-   - deap
+   - deap==1.0.1
    - graphviz
    - pysptools
+   - geopy
+   - descartes
+   - pypandoc
+
