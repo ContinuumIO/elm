@@ -38,6 +38,27 @@ def ensemble(executor,
              model_selection_func,
              model_selection_kwargs,
              **ensemble_kwargs):
+    '''Train model(s) in ensemble
+
+    Params:
+        executor: None or a thread/process/distributed Executor
+        model_init_class: a class which initializes a model
+        model_init_kwargs: kwargs to the model init class
+        fit_func: a function such as elm.pipeline.fit:fit
+        fit_args: args to fit func, typically "action_data" as a tuple
+                  (See also elm.pipeline.sample_pipeline which creates
+                  action_data list, a list of sample pipeline actions)
+        fit_kwargs: kwargs to the fit function such as kwargs related
+                    to getting sample weights and corresponding Y values,
+                    if needed
+        model_selection_func: func which takes a model and kwargs
+                    and returns an ordered list of models from
+                    best to worst and may change the size of model
+                    list
+        ensemble_kwargs: kwargs such as "ensemble_size" and "n_generations"
+                    which control the ensemble size and number of
+                    generations in the ensemble (calls to model_selection_func)
+        '''
     if hasattr(executor, 'map'):
         map_function = executor.map
         SERIAL_EVAL = True

@@ -107,4 +107,4 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
                            dims=['band','y','x',],
                            attrs=meta)
 
-    return ElmStore({'sample': band_data})
+    return ElmStore({'sample': band_data}, attrs=meta)

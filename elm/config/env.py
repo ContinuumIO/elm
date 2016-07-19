@@ -32,6 +32,15 @@ def process_str_env_var(env_var_name, default='', required=False, choices=None):
     return val
 
 def parse_env_vars():
+    '''Process the environment vars specifications
+    in defaults/environment_vars_specs.yaml, making sure
+    that required env vars are present, that they have values
+    among the available choices, and that they are of the correct
+    data type after parsing
+
+    Returns:
+        elm_env_vars: dict of environment vars relative to elm
+    '''
     int_fields_specs = ENVIRONMENT_VARS_SPEC['int_fields_specs']
     str_fields_specs = ENVIRONMENT_VARS_SPEC['str_fields_specs']
     elm_env_vars = {}

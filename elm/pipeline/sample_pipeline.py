@@ -10,6 +10,14 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
 def check_action_data(action_data):
+    '''Check that each action in action_data from all_sample_ops
+    is a tuple of (func, args, kwargs)
+
+    Params:
+        action_data: list of (func, args, kwargs) tuples
+    Returns True or raises ValueError
+
+    '''
     if not isinstance(action_data, (list, tuple)):
         raise ValueError("Expected action_data to run_sample_pipeline to be a list. "
                         "Got {}".format(type(action_data)))
@@ -27,8 +35,15 @@ def check_action_data(action_data):
         if not isinstance(kwargs, dict):
             raise ValueError('Expected third item in an action_data element '
                              'to be a dict (kwargs to {}).  Got {}'.format(func, kwargs))
+    return True
 
 def run_sample_pipeline(action_data, sample=None):
+    '''Given action_data as a list of (func, args, kwargs) tuples,
+    run each function passing args and kwargs to it
+    Params:
+        action_data: list from all_sample_ops typically
+        sample:      None if the sample is not already taken
+    '''
     check_action_data(action_data)
     if sample is None:
         samp = action_data[0]
@@ -47,11 +62,15 @@ def run_sample_pipeline(action_data, sample=None):
 
 def all_sample_ops(train_or_predict_dict, config, step):
     '''Given sampling specs in a pipeline train or predict step,
-    return a tuple of:
-        no_args_sampler function,
-        sampler dict,
-        args that pwere partialed into no_args_sampler
-        kwargs that were partialed into no_args_sampler'''
+    return action_data, a list of (func, args, kwargs) actions
+
+    Params:
+        train_or_predict_dict: a "train" or "predict" dict from config
+        config:                full config
+        step:                  a dictionary that is the current step
+                               in the pipeline, like a "train" or "predict"
+                               step
+    '''
     d = train_or_predict_dict
     sampler_name = d.get('sampler')
     data_source = d.get('data_source')

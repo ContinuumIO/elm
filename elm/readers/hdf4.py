@@ -83,4 +83,4 @@ def load_hdf4_array(datafile, meta, band_specs):
                            dims=['band','y','x',],
                            attrs=meta)
 
-    return ElmStore({'sample': band_data})
+    return ElmStore({'sample': band_data}, attrs=meta)
