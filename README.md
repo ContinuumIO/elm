@@ -12,8 +12,9 @@ conda env create
 
 Activate the environment:
 ```
-source activate elm
+source activate elm-env
 ```
+(older versions of the code may have `elm` in place of `elm-env` above.  The environment name was changed to avoid conflict with `elm` package on anaconda.org.  The `elm-env` is uploaded to the nasasbir org on anaconda.org.)
 
 Install the source:
 ```
