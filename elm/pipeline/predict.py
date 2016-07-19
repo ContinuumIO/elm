@@ -10,7 +10,7 @@ from elm.pipeline.executor_util import (wait_for_futures,
                                         no_executor_submit)
 from elm.pipeline.sample_pipeline import (all_sample_ops,
                                           flatten_cube)
-from elm.pipeline.serialize import (band_to_tif,
+from elm.pipeline.serialize import (predict_to_netcdf,
                                     load_models_from_tag)
 from elm.pipeline.sample_pipeline import run_sample_pipeline
 
@@ -41,7 +41,8 @@ def _predict_one_sample(action_data, serialize, model, return_serialized=True):
     return prediction
 
 def predict_step(config, step, executor,
-                 models=None, train_config=None):
+                 models=None, train_config=None,
+                 serialize=None):
 
     if hasattr(executor, 'map'):
         map_function = executor.map
@@ -59,11 +60,12 @@ def predict_step(config, step, executor,
         data_source = config.data_sources[predict_dict['data_source']]
     action_data = all_sample_ops(predict_dict, config, step)
     tag = step['predict']
-    def serialize(prediction, sample):
-        fname = predict_file_name(config.ELM_PREDICT_PATH,
-                                  tag,
-                                  sample['sample'].Bounds)
-        return band_to_tif(prediction, fname)
+    if serialize is None:
+        def serialize(prediction, sample):
+            fname = predict_file_name(config.ELM_PREDICT_PATH,
+                                      tag,
+                                      sample['sample'].Bounds)
+            return predict_to_netcdf(prediction, fname)
     if models is None:
         models, meta = load_models_from_tag(config.ELM_PICKLE_PATH,
                                             tag)

@@ -40,6 +40,9 @@ def load_models_from_tag(elm_pickle_path, tag):
         models.append(load(path))
     return (models, load(meta_path))
 
+def predict_to_netcdf():
+    pass
+
 def band_to_tif(band, filename):
     kwargs = dict(
                 driver='GTiff',
@@ -52,9 +55,13 @@ def band_to_tif(band, filename):
                 height=band.shape[1],
 
             )
+    raise NotImplementedError('This band_to_tif function is not working - hanging '
+                              'indefinitely')
     if 'crs' in band.attrs['MetaData']:
         kwargs['crs'] = band.attrs['MetaData']['crs']
     kwargs['transform'] = band.attrs['GeoTransform']
+    mkdir_p(filename)
+    print(filename)
     with rio.drivers():
         with rio.open(filename, 'w', **kwargs) as f:
             data = band.astype(rio.float32)

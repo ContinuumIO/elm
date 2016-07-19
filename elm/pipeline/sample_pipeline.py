@@ -6,7 +6,8 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
-
+from elm.preproc.elm_store import ElmStore
+from elm.readers.util import row_col_to_xy
 
 logger = logging.getLogger(__name__)
 def check_action_data(action_data):
@@ -214,5 +215,28 @@ def flatten_cube(elm_store):
                         dims=('space',
                               es.dims[0]),
                         attrs=es.attrs)
-    return flat.dropna(dim='space')
+    flat_dropped = flat.dropna(dim='space')
+    flat_dropped.attrs.update(flat.attrs)
+    flat_dropped.attrs['dropped_points'] = flat.shape[0] - flat_dropped.shape[0]
+    return ElmStore({'sample': flat_dropped}, attrs=flat_dropped.attrs)
+
+def flattened_to_cube(flat):
+    attrs = flat.attrs
+    filled = np.empty((flat.band.size, attrs['Height'], attrs['Width'])) * np.NaN
+    size = attrs['Height'] * attrs['Width']
+    space = np.intersect1d(np.arange(size), flat.space)
+    row = space // attrs['Width']
+    col = space - attrs['Width'] * row
+    for band in range(flat.sample.values.shape[1]):
+        shp = filled[band, row, col].shape
+        reshp = flat.sample.values[:, band].reshape(shp)
+        filled[band, row, col] = reshp
+    x, y =  row_col_to_xy(np.arange(attrs['Height']),
+                  np.arange(attrs['Width']),
+                  attrs['GeoTransform'])
+    coords = [('band', flat.band), ('y', y), ('x', x)]
+    filled = xr.DataArray(filled,
+                          coords=coords,
+                          dims=['band', 'y', 'x'])
+    return ElmStore({'sample': filled}, attrs=attrs)
 
