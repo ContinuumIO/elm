@@ -6,11 +6,16 @@ from rasterio.coords import BoundingBox
 SPATIAL_KEYS = ('Height', 'Width', 'GeoTransform', 'Bounds')
 
 def xy_to_row_col(x, y, geo_transform):
+    ''' Get row and column idx's from x and y where
+    x and y are the coordinates matching the upper left
+    corner of cell'''
     col = np.int32((x - geo_transform[0]) / geo_transform[1])
     row = np.int32((y - geo_transform[3]) / geo_transform[5])
     return row, col
 
 def row_col_to_xy(row, col, geo_transform):
+    '''Return the x, y coords that correspond to the
+    upper left corners of cells at row, col'''
     x = (col * geo_transform[1]) + geo_transform[0]
     y = (row * geo_transform[5]) + geo_transform[3]
     return x, y
