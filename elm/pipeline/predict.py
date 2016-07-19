@@ -25,17 +25,17 @@ def predict_file_name(elm_predict_path, tag, bounds):
 def _predict_one_sample(action_data, serialize, model, return_serialized=True):
     sample = run_sample_pipeline(action_data)
     sample_flat = flatten_cube(sample)
-    prediction = model.predict(sample_flat)
+    prediction = model.predict(sample_flat.sample.values)
     prediction.resize(sample.y.size, sample.x.size)
     attrs = {'predict': {'from': dict(sample.attrs)}}
     attrs.update(sample['sample'].attrs)
     print(attrs, sample['sample'])
-    prediction = xr.DataArray(prediction,
+    prediction = xr.Dataset({'predict': xr.DataArray(prediction,
                               coords=[
                                     ('y', sample.y),
                                     ('x', sample.x),
                                     ],
-                              attrs=attrs)
+                              attrs=attrs)}, attrs=attrs)
     if return_serialized:
         return serialize(prediction, sample)
     return prediction

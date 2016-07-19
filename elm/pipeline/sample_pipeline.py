@@ -153,7 +153,7 @@ def make_sample_pipeline_func(config, step):
     return actions
 
 def final_on_sample_step(fitter,
-                         model, sample,
+                         model, s,
                          iter_offset,
                          fit_kwargs,
                          get_y_func=None,
@@ -162,6 +162,7 @@ def final_on_sample_step(fitter,
                          get_weight_kwargs=None,
                          classes=None,
                          flatten=True,
+                         flatten_y=False,
                       ):
     '''This is the final function called on a sample_pipeline
     or a simple sample that is input to training.  It ensures
@@ -172,7 +173,7 @@ def final_on_sample_step(fitter,
     Params:
        fitter:  a model attribute like "fit" or "partial_fit"
        model:   a sklearn model like MiniBatchKmeans()
-       sample:  a dataframe sample
+       s:       an ElmStore or xarray.Dataset with 'sample' DataArray
        fit_kwargs: kwargs to fit_func from config
        get_y_func: a function which takes an X sample DataFrame
                    and returns the corresponding Y
@@ -194,12 +195,12 @@ def final_on_sample_step(fitter,
         fit_kwargs['check_input'] = True
     if 'sample_weight' in kwargs and get_weight_func is not None:
         get_weight_kwargs = get_weight_kwargs or {}
-        fit_kwargs['sample_weight'] = get_weight_func(sample, **get_weight_kwargs)
+        fit_kwargs['sample_weight'] = get_weight_func(s.sample.values, **get_weight_kwargs)
     if flatten:
-        X = flatten_cube(sample).values
+        X = flatten_cube(s).sample.values
     if any(a.lower() == 'y' for a in args):
-        Y = get_y_func(sample)
-        if flatten:
+        Y = get_y_func(s)
+        if flatten_y:
             Y = flatten_cube(Y)
         fit_args = (X, Y)
     else:

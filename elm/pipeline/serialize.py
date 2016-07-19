@@ -40,8 +40,8 @@ def load_models_from_tag(elm_pickle_path, tag):
         models.append(load(path))
     return (models, load(meta_path))
 
-def predict_to_netcdf():
-    pass
+def predict_to_netcdf(prediction, fname):
+    prediction.to_netcdf(fname)
 
 def band_to_tif(band, filename):
     kwargs = dict(

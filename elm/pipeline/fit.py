@@ -52,9 +52,9 @@ def fit(model,
     for idx in range(batches_per_gen):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
-        sample = run_sample_pipeline(action_data)
+        samp = run_sample_pipeline(action_data)
         fitter = getattr(model, fit_func)
-        fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
+        fit_args, fit_kwargs = final_on_sample_step(fitter, model, samp,
                                                     iter_offset,
                                                     fit_kwargs,
                                                     classes=None,
