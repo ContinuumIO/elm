@@ -39,7 +39,7 @@ class ConfigParser(object):
         '''
 
         if not config:
-            if not os.path.exists(config_file_name):
+            if not config_file_name or not os.path.exists(config_file_name):
                 raise ElmConfigError('config_file_name {} does not '
                                        'exist'.format(config_file_name))
             with open(config_file_name) as f:
@@ -56,6 +56,7 @@ class ConfigParser(object):
         self.validate()
 
     def _update_for_env(self):
+        '''Update the config based on environment vars'''
         import elm.config.dask_settings as elm_dask_settings
         for k, v in parse_env_vars().items():
             if v:
@@ -75,6 +76,7 @@ class ConfigParser(object):
         elm_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
 
     def _validate_custom_callable(self, func_or_not, required, context):
+        '''Validate a callable given like "numpy:mean" can be imported'''
         if func_or_not or (not func_or_not and required):
             if not isinstance(func_or_not, str):
                 raise ElmConfigError('In {} expected {} to be a '
@@ -82,6 +84,7 @@ class ConfigParser(object):
         return import_callable(func_or_not, required=required, context=context)
 
     def _validate_readers(self):
+        '''Validate the "readers" section of config'''
         err_msg = "Expected a 'readers' dictionary in config"
         self.readers = readers = self.config.get('readers')
         if not readers or not isinstance(readers, dict):
@@ -91,13 +94,14 @@ class ConfigParser(object):
                 raise ElmConfigError('In readers:{} expected {} to be '
                                        'a dict'.format(k, v))
 
-            load = v.get('load')
-            bounds = v.get('bounds')
-            self._validate_custom_callable(load, True, 'readers:{} load'.format(k))
-            self._validate_custom_callable(bounds, True, 'readers:{} bounds'.format(k))
+            load = v.get('load_array')
+            bounds = v.get('load_meta')
+            self._validate_custom_callable(load, True, 'readers:{} load_array'.format(k))
+            self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
     def _validate_downloads(self):
+        '''Validate the "downloads" section of config'''
         self.downloads = self.config.get('downloads', {}) or {}
         if self.downloads and not isinstance(self.downloads, dict):
             raise ElmConfigError('Expected downloads to be a dict but '
@@ -109,6 +113,8 @@ class ConfigParser(object):
             self._validate_custom_callable(v, True, 'downloads:{}'.format(k))
 
     def _validate_band_specs(self, band_specs, name):
+        '''Validate "band_specs"'''
+
         if not band_specs or not isinstance(band_specs, list):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
@@ -121,22 +127,25 @@ class ConfigParser(object):
                                        "band name)".format(band_spec, name))
 
     def _validate_one_data_source(self, name, ds):
+        '''Validate one data source within "data_sources"
+        section of config'''
+
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        validate_ladsweb_data_source(ds, name)
         reader = ds.get('reader')
         if not reader in self.readers:
             raise ElmConfigError('Data source config dict {} '
                                    'refers to a "reader" {} that is not defined in '
                                    '"readers"'.format(reader, self.readers))
         download = ds.get('download', '') or ''
-        if not download in self.downloads:
+        if download and not download in self.downloads:
             raise ElmConfigError('data_source {} refers to a '
                                    '"download" {} not defined in "downloads"'
                                    ' section'.format(ds, download))
         self._validate_band_specs(ds.get('band_specs'), name)
 
     def _validate_data_sources(self):
+        '''Validate all "data_sources" of config'''
         self.data_sources = self.config.get('data_sources', {}) or {}
         if not self.data_sources or not isinstance(self.data_sources, dict):
             raise ElmConfigError('Expected "data_sources" in config to be a '
@@ -145,6 +154,7 @@ class ConfigParser(object):
             self._validate_one_data_source(name, ds)
 
     def _validate_file_generators(self):
+        '''Validate the "file_generators" section of config'''
         self.file_generators = self.config.get('file_generators', {}) or {}
         if not isinstance(self.file_generators, dict):
             raise ElmConfigError('Expected file_generators to be a dict, but '
@@ -156,15 +166,16 @@ class ConfigParser(object):
                                            'file_generators:{}'.format(name))
 
     def _validate_positive_int(self, val, context):
+        '''Validate that a positive int was given'''
         if not isinstance(val, int) and val:
             raise ElmConfigError('In {} expected {} to be an int'.format(context, val))
 
     def _validate_one_sampler(self, sampler, name):
+        '''Validate one of the "samplers" in "samplers" section of config'''
         defaults = tuple(self.defaults['samplers'].values())[0]
         if not sampler or not isinstance(sampler, dict):
             raise ElmConfigError('In samplers:{} dict '
                                    'but found {}'.format(name, sampler))
-        self._validate_custom_callable(sampler.get('callable'), True, 'samplers:{}'.format(name))
         sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
         sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
         self._validate_positive_int(sampler['n_rows_per_sample'], name)
@@ -182,6 +193,7 @@ class ConfigParser(object):
         self._validate_selection_kwargs(sampler, name)
 
     def _validate_samplers(self):
+        '''Validate all of the "samplers" section of config'''
         self.samplers = self.config.get('samplers', {}) or {}
         if not self.samplers or not isinstance(self.samplers, dict):
             raise ElmConfigError('Invalid "samplers" config entry {} '
@@ -201,6 +213,8 @@ class ConfigParser(object):
             self._validate_poly(name, poly)
 
     def _validate_selection_kwargs(self, sampler, name):
+        '''Validate the "selection_kwargs" related to
+        sample pre-processing'''
         selection_kwargs = sampler.get('selection_kwargs')
         if not selection_kwargs:
             return
@@ -208,9 +222,9 @@ class ConfigParser(object):
             raise ElmConfigError('In sampler:{} expected '
                                    '"selection_kwargs" to be '
                                    'a dict'.format(selection_kwargs))
-        selection_kwargs['geo_filter'] = selection_kwargs.get('geo_filter', {}) or {}
+        selection_kwargs['geo_filters'] = selection_kwargs.get('geo_filters', {}) or {}
         for poly_field in ('include_polys', 'exclude_polys'):
-            pf = selection_kwargs['geo_filter'].get(poly_field, []) or []
+            pf = selection_kwargs['geo_filters'].get(poly_field, []) or []
             for item in pf:
                 if not item in self.polys:
                     raise ElmConfigError('config\'s selection_kwargs dict {} '
@@ -257,6 +271,7 @@ class ConfigParser(object):
             self._validate_type(k, name, typ)
 
     def _validate_feature_selection(self):
+        '''Validate the "feature_selection" section of config'''
         feature_selection = self.config.get('feature_selection') or {}
         if not feature_selection:
             return True
@@ -295,21 +310,24 @@ class ConfigParser(object):
         self.feature_selection = feature_selection
 
     def _validate_training_funcs(self, name, t):
+        '''Validate functions given in "train" section of config'''
         if not isinstance(t, dict):
             raise ElmConfigError('In train:{} expected a dict '
                                    'but found {}'.format(name, t))
         training_funcs = (('model_selection_func', False),
                            ('model_init_class', True),
                            ('post_fit_func', False),
-                           ('fit_wrapper_func', True),
-                           ('get_y_func', False)
+                           ('get_y_func', False),
+                           ('get_weight_func', False),
                            )
 
         fit_func = t.get('fit_func', 'fit')
         has_fit_func = False
+        has_funcs = {}
         for f, required in training_funcs:
             cls_or_func = self._validate_custom_callable(t[f], required,
                                            'train:{} - {}'.format(name, f))
+            has_funcs[f] = bool(cls_or_func)
             if f == 'model_init_class':
                 model_init_class = cls_or_func
                 has_fit_func = hasattr(model_init_class, fit_func)
@@ -320,10 +338,16 @@ class ConfigParser(object):
         if not has_fit_func:
             raise ElmConfigError('{} has no {} method (fit_func)'.format(model_init_class, fit_func))
         requires_y = any(x.lower() == 'y' for x in fargs)
+        if not fkwargs.get('sample_weight') and has_funcs['get_weight_func']:
+            raise ElmConfigError('train:{} - {} does not support a '
+                                 '"sample_weight" (sample_weights were implied '
+                                 'giving "get_sample_weight" '
+                                 'function {}'.format(name, model_init_class, t['get_sample_weight']))
         return has_fit_func, requires_y
 
 
     def _validate_one_train_entry(self, name, t):
+        '''Validate one dict within "train" section of config'''
         has_fit_func, requires_y = self._validate_training_funcs(name, t)
         if requires_y:
             self._validate_custom_callable(t.get('get_y_func'), True, 'train:get_y_func (required with {})'.format(repr(t.get('model_init_class'))))
@@ -331,16 +355,10 @@ class ConfigParser(object):
         for k in kwargs_fields:
             self._validate_type(t[k], 'train:{}'.format(k), dict)
 
-        for f in ('saved_ensemble_size', 'n_generations', 'ensemble_size'):
+        for f in ('saved_ensemble_size', 'n_generations',
+                  'ensemble_size', 'batches_per_gen'):
             self._validate_positive_int(t['ensemble_kwargs'].get(f), f)
 
-        fit_kwargs = t.get('fit_kwargs', {}) or {}
-        t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
-        self._validate_type(fit_kwargs['n_batches'], 'fit_kwargs:n_batches', int)
-        if fit_kwargs['n_batches'] > 1 and not has_fit_func:
-            raise ElmConfigError('With fit_kwargs - n_batches {} '
-                                   '(>1) the model must have a '
-                                   '"partial_fit" method.'.format(fit_kwargs['n_batches']))
         sampler = t.get('sampler', '')
         if sampler and sampler not in self.samplers:
             raise ElmConfigError('train dict at key {} refers '
@@ -376,11 +394,13 @@ class ConfigParser(object):
         self.config['train'][name] = self.train[name] = t
 
     def _validate_train(self):
+        '''Validate the "train" section of config'''
         self.train = self.config.get('train', {}) or {}
         for name, t in self.train.items():
             self._validate_one_train_entry(name, t)
 
     def _validate_predict(self):
+        '''Validate the "predict" section of config'''
         self.predict = self.config.get('predict', {}) or {}
         return True # TODO validate predict config
 
@@ -391,6 +411,7 @@ class ConfigParser(object):
         return True
 
     def _validate_pipeline_download_data_sources(self, step):
+        # TODO deprecate pipeline download actions
         # TODO make sure that the dataset can be downloaded or exists locally
         download_data_sources = step.get('download_data_sources', []) or []
 
@@ -408,6 +429,7 @@ class ConfigParser(object):
         return step
 
     def _validate_pipeline_train(self, step):
+        '''Validate a "train" step within config's "pipeline"'''
         train = step.get('train')
         if not train in self.train:
             raise ElmConfigError('Pipeline refers to an undefined "train"'
@@ -420,6 +442,7 @@ class ConfigParser(object):
         return step
 
     def _validate_pipeline_predict(self, step):
+        '''Validate a "predict" step within config's "pipeline"'''
         predict = step.get('predict')
         if not predict in self.predict:
             raise ElmConfigError('Pipeline refers to an undefined "predict"'
@@ -431,6 +454,7 @@ class ConfigParser(object):
         return step
 
     def _validate_pipeline(self):
+        '''Validate config's "pipeline"'''
         self.pipeline = pipeline = self.config.get('pipeline', []) or []
         if not pipeline or not isinstance(pipeline, (tuple, list)):
             raise ElmConfigError('Expected a "pipeline" list of action '
@@ -452,6 +476,9 @@ class ConfigParser(object):
                                        'of the following keys: {}'.format(PIPELINE_ACTIONS))
 
     def validate(self):
+        '''Validate all sections of config, calling a function
+        _validate_{} where {} is replaced by a section name, like
+        "train"'''
         for key, typ in self.config_keys:
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
