@@ -27,7 +27,9 @@ def predict_file_name(elm_predict_path, tag, bounds):
                                              bounds.right,
                                              bounds.top))
 
-def _predict_one_sample(action_data, serialize, model, return_serialized=True):
+def _predict_one_sample(action_data, serialize, model,
+                        return_serialized=True, to_cube=True):
+    # TODO: control to_cube from config
     sample = run_sample_pipeline(action_data)
     sample_flat = flatten_cube(sample)
     prediction1 = model.predict(sample_flat.sample.values).astype('i4')[:, np.newaxis]
@@ -38,14 +40,16 @@ def _predict_one_sample(action_data, serialize, model, return_serialized=True):
                                  ('band', np.array(['class']))],
                           attrs=attrs)},
                         attrs=attrs)
-    prediction = flattened_to_cube(prediction, **attrs)
+    if to_cube:
+        prediction = flattened_to_cube(prediction, **attrs)
     if return_serialized:
         return serialize(prediction, sample)
     return prediction
 
 def predict_step(config, step, executor,
                  models=None,
-                 serialize=None):
+                 serialize=None,
+                 to_cube=True):
 
     if hasattr(executor, 'map'):
         map_function = executor.map
@@ -74,5 +78,5 @@ def predict_step(config, step, executor,
     if models is None:
         models, meta = load_models_from_tag(config.ELM_PICKLE_PATH,
                                             tag)
-    predict = partial(_predict_one_sample, action_data, serialize)
+    predict = partial(_predict_one_sample, action_data, serialize, to_cube=to_cube)
     return get_results(map_function(predict, models))

@@ -6,8 +6,9 @@ from elm.config.util import read_from_egg
 
 YAML_DIR = 'defaults'
 
+DEFAULTS_FILE = os.path.join(YAML_DIR, 'defaults.yaml')
 DEFAULTS = read_from_egg(
-                os.path.join(YAML_DIR, 'defaults.yaml')
+                DEFAULTS_FILE
                 )
 
 CONFIG_KEYS = [('readers',  dict),

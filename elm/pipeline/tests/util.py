@@ -21,5 +21,4 @@ def train_with_synthetic_data(partial_config, sampler_func):
                  if 'train' in s][0]
     config.samplers[sampler_name]['data_generator'] = partial(data_generator_base, sampler_func)
     config.train[train_name]['sampler'] = sampler_name
-
     return config, sampler_name, step, idx, train_name

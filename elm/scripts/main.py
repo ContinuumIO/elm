@@ -26,14 +26,14 @@ def cli(args=None, parse_this_str=None):
 
 def main(args=None, parse_this_str=None):
     started = datetime.datetime.now()
+    args = cli(args=args, parse_this_str=parse_this_str)
     err = None
     try:
-        args = cli(args=args, parse_this_str=parse_this_str)
         config = ConfigParser(args.config)
         if args.echo_config:
             logger.info(str(config))
-        dask_executor = config.DASK_EXECUTOR
-        dask_scheduler = config.DASK_SCHEDULER
+        dask_executor = getattr(config, 'DASK_EXECUTOR', 'SERIAL')
+        dask_scheduler = getattr(config, 'DASK_SCHEDULER', None)
         with executor_context(dask_executor, dask_scheduler) as executor:
             return_values = pipeline(config, executor)
     except Exception as e:
