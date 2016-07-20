@@ -49,10 +49,10 @@ linear_models_predict = ['ARDRegression',
               'Ridge',
               'RidgeClassifierCV',
               'RidgeCV',
-              'RANSACRegressor',
               'SGDClassifier',
               'SGDRegressor',
               'TheilSenRegressor']
+
 LINEAR_MODELS_WITH_PREDICT_STR = ['sklearn.linear_model:{}'.format(func)
                                    for func in linear_models_predict]
 LINEAR_MODELS_WITH_PREDICT_STR += ['sklearn.gaussian_process:GaussianProcess',

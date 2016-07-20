@@ -25,7 +25,7 @@ def process_str_env_var(env_var_name, expanduser=False,
                                    'in choices {} '
                                    '(go {}'
                                    ')'.format(env_var_name, choices, val))
-    if required and not val:
+    if required and (not val and not default):
         raise ElmConfigError('Expected env var {} to be '
                                'defined'.format(env_var_name))
     elif not val:

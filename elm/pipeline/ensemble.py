@@ -75,7 +75,7 @@ def ensemble(executor,
     if ensemble_kwargs.get('saved_ensemble_size'):
         models = models[:ensemble_kwargs['saved_ensemble_size']]
     model_paths, meta_path = save_models_with_meta(models,
-                                 ensemble_kwargs['config'].ELM_PICKLE_PATH,
+                                 ensemble_kwargs['config'].ELM_TRAIN_PATH,
                                  ensemble_kwargs['tag'],
                                  ensemble_kwargs['config'])
     logger.info('Created model pickles: {} '

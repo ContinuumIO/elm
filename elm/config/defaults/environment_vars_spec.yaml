@@ -30,7 +30,7 @@ str_fields_specs:
     default: ~/elm-data,
     required: False,
     expanduser: True}
- - {name: ELM_PICKLE_PATH,
+ - {name: ELM_TRAIN_PATH,
     default: ~/elm-pickle-path,
     required: True,
     expanduser: True}

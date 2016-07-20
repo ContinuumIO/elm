@@ -94,6 +94,8 @@ class ConfigParser(object):
 
     def _validate_custom_callable(self, func_or_not, required, context):
         '''Validate a callable given like "numpy:mean" can be imported'''
+        if callable(func_or_not):
+            return func_or_not
         if func_or_not or (not func_or_not and required):
             if not isinstance(func_or_not, str):
                 raise ElmConfigError('In {} expected {} to be a '

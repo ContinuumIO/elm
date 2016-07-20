@@ -8,9 +8,9 @@ import rasterio as rio
 
 from sklearn.externals import joblib
 
-def get_paths_for_tag(elm_pickle_path, tag):
-    model_root = os.path.join(elm_pickle_path, tag + '_{}.pkl')
-    meta_path = os.path.join(elm_pickle_path, tag + '_meta.pkl')
+def get_paths_for_tag(elm_train_path, tag):
+    model_root = os.path.join(elm_train_path, tag, '_{}.pkl')
+    meta_path = os.path.join(elm_train_path, tag, '_meta.pkl')
     return model_root, meta_path
 
 def mkdir_p(path):
@@ -21,8 +21,8 @@ def mkdir_p(path):
 def dump(data, path):
     joblib.dump(data, path)
 
-def save_models_with_meta(models, elm_pickle_path, tag, meta):
-    model_root, meta_path = get_paths_for_tag(elm_pickle_path, tag)
+def save_models_with_meta(models, elm_train_path, tag, meta):
+    model_root, meta_path = get_paths_for_tag(elm_train_path, tag)
     paths = []
     for idx, model in enumerate(models):
         paths.append(model_root.format(idx))
@@ -35,8 +35,8 @@ def save_models_with_meta(models, elm_pickle_path, tag, meta):
 def load(path):
     return joblib.load(path)
 
-def load_models_from_tag(elm_pickle_path, tag):
-    model_root, meta_path = get_paths_for_tag(elm_pickle_path, tag)
+def load_models_from_tag(elm_train_path, tag):
+    model_root, meta_path = get_paths_for_tag(elm_train_path, tag)
     models = []
     for path in glob.glob(model_root.format('*')):
         if bool(re.search(model_root.format('\d+'), path)):
