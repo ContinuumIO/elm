@@ -54,6 +54,7 @@ def test_elm_store_to_flat_to_elm_store():
     samp2 = sample_pipeline.flattened_to_cube(flat_smaller)
     v = samp.sample.values
     v2 = samp2.sample.values
+    assert v[np.isnan(v)].size == v2[np.isnan(v2)].size
     v = v[~np.isnan(v)]
     v2 = v2[~np.isnan(v2)]
     assert np.all(v == v2)
