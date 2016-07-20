@@ -14,13 +14,13 @@ toolbox = base.Toolbox()
 
 KmeansVar = namedtuple('KmeansVar',
                        ['model',
-                        'df',
+                        'sample',
                         'within_class_var',
                         'class_counts'])
 
-def kmeans_add_within_class_var(model, df):
+def kmeans_add_within_class_var(model, flattened):
     n_clusters = model.cluster_centers_.shape[0]
-    var = np.sum((model.cluster_centers_[model.labels_] - df.values) ** 2, axis=1)
+    var = np.sum((model.cluster_centers_[model.labels_] - flattened) ** 2, axis=1)
     within_class_var = np.zeros(n_clusters, dtype=np.float64)
     df2 = pd.DataFrame({'var': var, 'label': model.labels_})
     g = df2.groupby('label')
@@ -34,7 +34,7 @@ def kmeans_add_within_class_var(model, df):
     bc = np.bincount(model.labels_)
     class_counts = np.zeros(model.cluster_centers_.shape[0])
     class_counts[:bc.size] =  bc
-    return KmeansVar(model, df, within_class_var, class_counts)
+    return KmeansVar(model, flattened, within_class_var, class_counts)
 
 
 def distance(c1, c2):

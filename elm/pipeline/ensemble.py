@@ -53,6 +53,7 @@ def ensemble(executor,
     get_results = partial(wait_for_futures, executor=executor)
     models = [model_init_class(**model_init_kwargs) for _ in range(ensemble_size)]
     for generation in range(n_generations):
+        logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))
         args_kwargs = tuple(((model,) + tuple(fit_args), fit_kwargs)
                             for model in models)
         logger.debug('fit args_kwargs {}'.format(args_kwargs))

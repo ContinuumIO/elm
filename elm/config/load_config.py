@@ -39,7 +39,7 @@ class ConfigParser(object):
         '''
 
         if not config:
-            if not os.path.exists(config_file_name):
+            if not config_file_name or not os.path.exists(config_file_name):
                 raise ElmConfigError('config_file_name {} does not '
                                        'exist'.format(config_file_name))
             with open(config_file_name) as f:
@@ -91,10 +91,10 @@ class ConfigParser(object):
                 raise ElmConfigError('In readers:{} expected {} to be '
                                        'a dict'.format(k, v))
 
-            load = v.get('load')
-            bounds = v.get('bounds')
-            self._validate_custom_callable(load, True, 'readers:{} load'.format(k))
-            self._validate_custom_callable(bounds, True, 'readers:{} bounds'.format(k))
+            load = v.get('load_array')
+            bounds = v.get('load_meta')
+            self._validate_custom_callable(load, True, 'readers:{} load_array'.format(k))
+            self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
     def _validate_downloads(self):
@@ -123,14 +123,13 @@ class ConfigParser(object):
     def _validate_one_data_source(self, name, ds):
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        validate_ladsweb_data_source(ds, name)
         reader = ds.get('reader')
         if not reader in self.readers:
             raise ElmConfigError('Data source config dict {} '
                                    'refers to a "reader" {} that is not defined in '
                                    '"readers"'.format(reader, self.readers))
         download = ds.get('download', '') or ''
-        if not download in self.downloads:
+        if download and not download in self.downloads:
             raise ElmConfigError('data_source {} refers to a '
                                    '"download" {} not defined in "downloads"'
                                    ' section'.format(ds, download))
@@ -164,7 +163,6 @@ class ConfigParser(object):
         if not sampler or not isinstance(sampler, dict):
             raise ElmConfigError('In samplers:{} dict '
                                    'but found {}'.format(name, sampler))
-        self._validate_custom_callable(sampler.get('callable'), True, 'samplers:{}'.format(name))
         sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
         sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
         self._validate_positive_int(sampler['n_rows_per_sample'], name)
@@ -208,9 +206,9 @@ class ConfigParser(object):
             raise ElmConfigError('In sampler:{} expected '
                                    '"selection_kwargs" to be '
                                    'a dict'.format(selection_kwargs))
-        selection_kwargs['geo_filter'] = selection_kwargs.get('geo_filter', {}) or {}
+        selection_kwargs['geo_filters'] = selection_kwargs.get('geo_filters', {}) or {}
         for poly_field in ('include_polys', 'exclude_polys'):
-            pf = selection_kwargs['geo_filter'].get(poly_field, []) or []
+            pf = selection_kwargs['geo_filters'].get(poly_field, []) or []
             for item in pf:
                 if not item in self.polys:
                     raise ElmConfigError('config\'s selection_kwargs dict {} '
@@ -301,15 +299,17 @@ class ConfigParser(object):
         training_funcs = (('model_selection_func', False),
                            ('model_init_class', True),
                            ('post_fit_func', False),
-                           ('fit_wrapper_func', True),
-                           ('get_y_func', False)
+                           ('get_y_func', False),
+                           ('get_weight_func', False),
                            )
 
         fit_func = t.get('fit_func', 'fit')
         has_fit_func = False
+        has_funcs = {}
         for f, required in training_funcs:
             cls_or_func = self._validate_custom_callable(t[f], required,
                                            'train:{} - {}'.format(name, f))
+            has_funcs[f] = bool(cls_or_func)
             if f == 'model_init_class':
                 model_init_class = cls_or_func
                 has_fit_func = hasattr(model_init_class, fit_func)
@@ -320,6 +320,11 @@ class ConfigParser(object):
         if not has_fit_func:
             raise ElmConfigError('{} has no {} method (fit_func)'.format(model_init_class, fit_func))
         requires_y = any(x.lower() == 'y' for x in fargs)
+        if not fkwargs.get('sample_weight') and has_funcs['get_weight_func']:
+            raise ElmConfigError('train:{} - {} does not support a '
+                                 '"sample_weight" (sample_weights were implied '
+                                 'giving "get_sample_weight" '
+                                 'function {}'.format(name, model_init_class, t['get_sample_weight']))
         return has_fit_func, requires_y
 
 
@@ -331,16 +336,10 @@ class ConfigParser(object):
         for k in kwargs_fields:
             self._validate_type(t[k], 'train:{}'.format(k), dict)
 
-        for f in ('saved_ensemble_size', 'n_generations', 'ensemble_size'):
+        for f in ('saved_ensemble_size', 'n_generations',
+                  'ensemble_size', 'batches_per_gen'):
             self._validate_positive_int(t['ensemble_kwargs'].get(f), f)
 
-        fit_kwargs = t.get('fit_kwargs', {}) or {}
-        t['fit_kwargs']['n_batches'] = fit_kwargs['n_batches'] = fit_kwargs.get('n_batches', 1)
-        self._validate_type(fit_kwargs['n_batches'], 'fit_kwargs:n_batches', int)
-        if fit_kwargs['n_batches'] > 1 and not has_fit_func:
-            raise ElmConfigError('With fit_kwargs - n_batches {} '
-                                   '(>1) the model must have a '
-                                   '"partial_fit" method.'.format(fit_kwargs['n_batches']))
         sampler = t.get('sampler', '')
         if sampler and sampler not in self.samplers:
             raise ElmConfigError('train dict at key {} refers '

@@ -1,4 +1,6 @@
 name: elm-env
+channels:
+ - conda-forge # essential for rasterio on osx
 dependencies:
  - python=3.5
  - blaze
@@ -6,8 +8,7 @@ dependencies:
  - dask
  - datashader
  - distributed
- - fiona
- - gdal
+ - gdal=2
  - h5py
  - jupyter
  - krb5
@@ -36,4 +37,3 @@ dependencies:
    - geopy
    - descartes
    - pypandoc
-

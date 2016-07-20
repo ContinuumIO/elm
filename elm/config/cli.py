@@ -2,7 +2,7 @@ from argparse import ArgumentParser
 
 from elm.config.defaults import DEFAULTS
 
-d = tuple(DEFAULTS['data_sources'].values())[0]
+d = [v for v in DEFAULTS['data_sources'].values() if 'product_name' in v][0]
 DEFAULT_PRODUCT_NAME = d['product_name']
 DEFAULT_PRODUCT_NUMBER = d['product_number']
 

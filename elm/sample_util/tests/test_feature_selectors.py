@@ -3,8 +3,9 @@ from functools import partial
 
 import numpy as np
 import pandas as pd
+import pytest
 
-from elm.data_selection.feature_selection import feature_selection_base
+from elm.sample_util.feature_selection import feature_selection_base
 
 # TODO consider moving some default selection like
 # these somewhere import-able
