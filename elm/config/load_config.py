@@ -347,13 +347,11 @@ class ConfigParser(object):
             has_funcs[f] = bool(cls_or_func)
             if f == 'model_init_class':
                 model_init_class = cls_or_func
-                has_fit_func = hasattr(model_init_class, fit_func)
-                if has_fit_func:
-                    fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.partial_fit)
-                else:
-                    fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.fit)
-        if not has_fit_func:
-            raise ElmConfigError('{} has no {} method (fit_func)'.format(model_init_class, fit_func))
+                ff = getattr(model_init_class, fit_func, None)
+                if ff is None:
+                    raise ElmConfigError('fit_func {} was given but {} '
+                                         'does not have this method'.format(t.get('fit_func'), t.get('model_init_class')))
+                fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.fit)
         requires_y = any(x.lower() == 'y' for x in fargs)
         if not fkwargs.get('sample_weight') and has_funcs['get_weight_func']:
             raise ElmConfigError('train:{} - {} does not support a '

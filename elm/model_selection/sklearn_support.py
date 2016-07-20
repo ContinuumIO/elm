@@ -73,4 +73,5 @@ ALL_MODELS_STR = LINEAR_MODELS_WITH_PREDICT_STR + FIT_TRANSFORM_MODELS_STR + \
                  PARTIAL_FIT_MODEL_STR
 ALL_MODELS_DICT = {k: import_callable(k) for k in ALL_MODELS_STR}
 UNSUPERVISED_MODEL_STR = [k for k, v in ALL_MODELS_DICT.items()
-                          if len(get_args_kwargs_defaults(v)[0]) == 1]
+                          if hasattr(v, 'fit')
+                          and 'y' in get_args_kwargs_defaults(v.fit)[1]]
