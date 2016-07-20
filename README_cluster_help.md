@@ -14,7 +14,11 @@
 * Create a cluster by referencing the profile name you have created, `elm` by default: 
 
 `acluster create -p elm elm-cluster`
-* Install geographic and image data analysis stack (through `elm`) with:
+* Install geographic and image data analysis stack (after changing directories to the repo cloned locally):
+```
+acluster conda push environment.yml
+```
+* Install the `elm` machine learning code:
 ```
 TOKEN=na-c671fafb-9323-43fd-9af7-ce7e2e640244
 acluster conda create -c https://conda.anaconda.org/t/${TOKEN}/nasasbir -n elm python=3.5 elm --stream
@@ -26,7 +30,7 @@ acluster conda create -c https://conda.anaconda.org/t/${TOKEN}/nasasbir -n elm p
 
 ```bash
 acluster ssh
-source activate elm
+source activate elm-env
 ```
 * See also the [list of packages installed as part of the `elm` environment](environment.yml)
 
