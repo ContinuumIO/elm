@@ -35,7 +35,7 @@ def main(args=None, parse_this_str=None):
         dask_executor = config.DASK_EXECUTOR
         dask_scheduler = config.DASK_SCHEDULER
         with executor_context(dask_executor, dask_scheduler) as executor:
-            pipeline(config, executor)
+            return_values = pipeline(config, executor)
     except Exception as e:
         err = e
         raise
@@ -45,7 +45,7 @@ def main(args=None, parse_this_str=None):
                     'seconds)'.format(started, ended,
                                       (ended - started).total_seconds()))
         logger.info('There were errors {}'.format(repr(err)) if err else 'ok')
-    return models
+    return return_values
 
 if __name__ == "__main__":
     models = main()

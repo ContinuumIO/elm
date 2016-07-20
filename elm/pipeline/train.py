@@ -8,7 +8,7 @@ from elm.pipeline.ensemble import ensemble
 def no_selection(models, *args, **kwargs):
     return models
 
-def train_step(config, step, executor):
+def train_step(config, step, executor, **kwargs):
     '''Evaluate a "train" step in a config's "pipeline"
 
     Params:

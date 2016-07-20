@@ -221,8 +221,10 @@ def flatten_cube(elm_store):
     flat_dropped.attrs['dropped_points'] = flat.shape[0] - flat_dropped.shape[0]
     return ElmStore({'sample': flat_dropped}, attrs=flat_dropped.attrs)
 
-def flattened_to_cube(flat):
-    attrs = flat.attrs
+def flattened_to_cube(flat, **attrs):
+    attrs2 = flat.attrs
+    attrs2.update(copy.deepcopy(attrs))
+    attrs = attrs2
     filled = np.empty((flat.band.size, attrs['Height'], attrs['Width'])) * np.NaN
     size = attrs['Height'] * attrs['Width']
     space = np.intersect1d(np.arange(size), flat.space)

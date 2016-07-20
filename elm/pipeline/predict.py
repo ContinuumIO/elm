@@ -1,7 +1,9 @@
-import copy
 from functools import partial
+import copy
+import datetime
 import os
 
+import numpy as np
 import xarray as xr
 
 from elm.config import import_callable
@@ -9,10 +11,13 @@ from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.executor_util import (wait_for_futures,
                                         no_executor_submit)
 from elm.pipeline.sample_pipeline import (all_sample_ops,
-                                          flatten_cube)
+                                          flatten_cube,
+                                          flattened_to_cube)
 from elm.pipeline.serialize import (predict_to_netcdf,
+                                    predict_to_pickle,
                                     load_models_from_tag)
 from elm.pipeline.sample_pipeline import run_sample_pipeline
+from elm.preproc.elm_store import ElmStore
 
 def predict_file_name(elm_predict_path, tag, bounds):
     return os.path.join(elm_predict_path,
@@ -25,23 +30,21 @@ def predict_file_name(elm_predict_path, tag, bounds):
 def _predict_one_sample(action_data, serialize, model, return_serialized=True):
     sample = run_sample_pipeline(action_data)
     sample_flat = flatten_cube(sample)
-    prediction = model.predict(sample_flat.sample.values)
-    prediction.resize(sample.y.size, sample.x.size)
-    attrs = {'predict': {'from': dict(sample.attrs)}}
-    attrs.update(sample['sample'].attrs)
-    print(attrs, sample['sample'])
-    prediction = xr.Dataset({'predict': xr.DataArray(prediction,
-                              coords=[
-                                    ('y', sample.y),
-                                    ('x', sample.x),
-                                    ],
-                              attrs=attrs)}, attrs=attrs)
+    prediction1 = model.predict(sample_flat.sample.values).astype('i4')[:, np.newaxis]
+    attrs = copy.deepcopy(sample.attrs)
+    attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
+    prediction = ElmStore({'sample': xr.DataArray(prediction1,
+                          coords=[('space',sample_flat.space.values),
+                                 ('band', np.array(['class']))],
+                          attrs=attrs)},
+                        attrs=attrs)
+    prediction = flattened_to_cube(prediction, **attrs)
     if return_serialized:
         return serialize(prediction, sample)
     return prediction
 
 def predict_step(config, step, executor,
-                 models=None, train_config=None,
+                 models=None,
                  serialize=None):
 
     if hasattr(executor, 'map'):
@@ -65,7 +68,9 @@ def predict_step(config, step, executor,
             fname = predict_file_name(config.ELM_PREDICT_PATH,
                                       tag,
                                       sample['sample'].Bounds)
-            return predict_to_netcdf(prediction, fname)
+            predict_to_netcdf(prediction, fname)
+            predict_to_pickle(prediction, fname)
+            return True
     if models is None:
         models, meta = load_models_from_tag(config.ELM_PICKLE_PATH,
                                             tag)

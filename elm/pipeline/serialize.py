@@ -1,6 +1,7 @@
 import glob
 import os
 import pickle
+import re
 
 import numpy as np
 import rasterio as rio
@@ -13,6 +14,7 @@ def get_paths_for_tag(elm_pickle_path, tag):
     return model_root, meta_path
 
 def mkdir_p(path):
+    '''Ensure the *dirname* of argument path has been created'''
     if not os.path.exists(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
 
@@ -37,11 +39,24 @@ def load_models_from_tag(elm_pickle_path, tag):
     model_root, meta_path = get_paths_for_tag(elm_pickle_path, tag)
     models = []
     for path in glob.glob(model_root.format('*')):
-        models.append(load(path))
+        if bool(re.search(model_root.format('\d+'), path)):
+            # if it is not a "meta" in place of model idx
+            models.append(load(path))
     return (models, load(meta_path))
 
-def predict_to_netcdf(prediction, fname):
-    prediction.to_netcdf(fname)
+def drop_some_attrs(prediction):
+    # I couldn't get it it to dump to netcdf
+    # without dropping almost all the metadata
+    prediction.attrs = {'GeoTransform': np.array(prediction.attrs['GeoTransform'])}
+
+def predict_to_pickle(prediction, fname_base):
+    dump(prediction, fname_base + '.xr')
+
+def predict_to_netcdf(prediction, fname_base):
+    mkdir_p(fname_base)
+    prediction.sample.values = prediction.sample.values.astype('i4')
+    drop_some_attrs(prediction)
+    prediction.to_netcdf(fname_base + '.nc')
 
 def band_to_tif(band, filename):
     kwargs = dict(
