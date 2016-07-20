@@ -82,6 +82,7 @@ def new_training_config(**train_kwargs):
     finally:
         config['train'][DEFAULT_TRAIN_KEY] = DEFAULT_TRAIN
 
+@pytest.mark.slow
 @pytest.mark.parametrize('model_init_class', UNSUPERVISED_MODEL_STR)
 def test_unsupervised_sklearn(model_init_class):
     with tmp_dirs_context() as (pickle_path, predict_path, cwd):
@@ -93,6 +94,10 @@ def test_unsupervised_sklearn(model_init_class):
                   'model_init_kwargs': default_init_kwargs}
         print(model_init_class)
         c = import_callable(model_init_class)
+        if not hasattr(c, 'predict'):
+            # TODO: handle models with "fit_transform" or "transform" methods
+            # only
+            pytest.skip('Has to predict method: not supporting transform methods yet')
         if 'MiniBatchKMeans' not in model_init_class:
             kwargs['post_fit_func'] = None
             kwargs['model_init_kwargs'] = {}
@@ -104,6 +109,7 @@ def test_unsupervised_sklearn(model_init_class):
         else:
             kwargs['fit_func'] = 'fit'
             kwargs['ensemble_kwargs']['n_generations'] = 1
+
         with new_training_config(**kwargs) as config:
             print(config)
             log = tst_one_config(pickle_path, predict_path, config=config, cwd=cwd)
