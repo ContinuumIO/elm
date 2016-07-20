@@ -1,4 +1,6 @@
 name: elm-env
+channels:
+ - conda-forge # essential for rasterio on osx
 dependencies:
  - python=3.5
  - bokeh
@@ -17,6 +19,7 @@ dependencies:
  - pandas
  - pyproj
  - pytest
+ - rasterio
  - requests
  - scikit-image
  - scikit-learn
@@ -30,7 +33,6 @@ dependencies:
    - deap==1.0.1
    - graphviz
    - pysptools
-   - rasterio
    - pypandoc
    - geopy
    - descartes
