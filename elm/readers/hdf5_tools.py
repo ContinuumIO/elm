@@ -23,3 +23,15 @@ def hdf5_attrs(fpath, attr=None):
             return {attr: f.attrs[attr]}
         else:
             raise ValueError("attr {} not found in {} attributes".format(attr))
+
+def hdf5_info(fpath):
+    """Return a dict of all groups and datasets with corresponding metadata
+       The key will be path of the group or dataset and the value will be the metadata
+    """
+    info = {}
+    with h5py.File(fpath, 'r') as f:
+        info['/'] = dict(f.attrs)
+        groups = []
+        f.visit(groups.append)
+        for path in groups:
+            info[path] = dict(f[path].attrs)
