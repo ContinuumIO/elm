@@ -35,5 +35,5 @@ install:
 script:
   - cd $BUILD_DIR
   - conda build conda.recipe
-  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow' -v
+  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
   - cat elapsed_time_test.txt
