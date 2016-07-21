@@ -12,10 +12,8 @@ DEFAULTS = read_from_egg(
                 )
 
 CONFIG_KEYS = [('readers',  dict),
-               ('downloads', dict),
+                ('sample_args_generators', dict),
                 ('data_sources', dict),
-                ('file_generators', dict),
-                ('samplers', dict),
                 ('polys', dict),
                 ('resamplers', dict),
                 ('aggregations', dict),
@@ -29,7 +27,6 @@ CONFIG_KEYS = [('readers',  dict),
 DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]
 DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
 DEFAULT_PREDICT = tuple(DEFAULTS['predict'].values())[0]
-DEFAULT_SAMPLER = tuple(DEFAULTS['samplers'].values())[0]
 DEFAULT_READER = tuple(DEFAULTS['readers'].values())[0]
 DEFAULT_FEATURE_SELECTOR = tuple(DEFAULTS['feature_selection'].values())[0]
 

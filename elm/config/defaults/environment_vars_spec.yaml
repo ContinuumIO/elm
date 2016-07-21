@@ -20,11 +20,11 @@ str_fields_specs:
  - {name: DASK_SCHEDULER,
     required: True
    }
- - {name: LADSWEB_LOCAL_CACHE,
-    required: True}
- - {name: HASHED_ARGS_CACHE,
+ - {name: LADSWEB_LOCAL_CACHE,  # needs to be deprecated
+    required: False}
+ - {name: HASHED_ARGS_CACHE,    # needs to be deprecated
     default: ~/.elm_hashed_args,
-    required: True,
+    required: False,
     expanduser: True}
  - {name: ELM_EXAMPLE_DATA_PATH,
     default: ~/elm-data,

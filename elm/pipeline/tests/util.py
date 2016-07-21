@@ -13,12 +13,30 @@ import pandas as pd
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
+import elm.pipeline.train as elmtrain
+import elm.pipeline.predict as predict
+old_ensemble = elmtrain.ensemble
+old_predict_step = predict.predict_step
 
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
-def data_generator_base(sampler_func, **kwargs):
-    while True:
-        yield sampler_func()
+@contextlib.contextmanager
+def patch_ensemble_predict():
+    '''This helps test the job of testing
+    getting arguments to
+    ensemble by changing that function to
+    just return its args,kwargs'''
+    def return_all(*args, **kwargs):
+        '''An empty function to return what is given to it'''
+        return args, kwargs
+    try:
+        elmtrain.ensemble = return_all
+        predict.predict_step = return_all
+        yield
+    finally:
+        elmtrain.ensemble = old_ensemble
+        predict.predict_step = return_all
+
 
 @contextlib.contextmanager
 def tmp_dirs_context(tag):
@@ -43,17 +61,6 @@ def tmp_dirs_context(tag):
         etime = (datetime.datetime.now() - start).total_seconds()
         with open(ELAPSED_TIME_FILE, 'a') as f:
             f.write('{} {} {} seconds\n'.format(tag, status, etime))
-
-def train_with_synthetic_data(partial_config, sampler_func):
-    config = copy.deepcopy(DEFAULTS)
-    config.update(partial_config)
-    config = ConfigParser(config=config)
-    sampler_name = tuple(config.defaults['samplers'])[0]
-    step, idx, train_name = [(s,idx, s['train']) for idx, s in enumerate(config.pipeline)
-                 if 'train' in s][0]
-    config.samplers[sampler_name]['data_generator'] = partial(data_generator_base, sampler_func)
-    config.train[train_name]['sampler'] = sampler_name
-    return config, sampler_name, step, idx, train_name
 
 
 def example_get_y_func(flat_sample):

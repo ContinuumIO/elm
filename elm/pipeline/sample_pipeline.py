@@ -1,5 +1,6 @@
 import copy
 import logging
+from pprint import pformat
 
 import numpy as np
 import xarray as xr
@@ -10,6 +11,7 @@ from elm.preproc.elm_store import ElmStore
 from elm.readers.util import row_col_to_xy
 
 logger = logging.getLogger(__name__)
+
 def check_action_data(action_data):
     '''Check that each action in action_data from all_sample_ops
     is a tuple of (func, args, kwargs)
@@ -23,19 +25,20 @@ def check_action_data(action_data):
         raise ValueError("Expected action_data to run_sample_pipeline to be a list. "
                         "Got {}".format(type(action_data)))
     for item in action_data:
-        if not (isinstance(item, tuple) or len(item) == 3):
-            raise ValueError('Expected each item in action_data to be a tuple of 3 items')
+        if (not isinstance(item, tuple) or len(item) != 3):
+            raise ValueError('Expected each item in action_data to '
+                             'be a tuple of 3 items. Got {}'.format(pformat(item)))
         func, args, kwargs = item
         func = import_callable(func)
         if not callable(func):
             raise ValueError('Expected first item in an action_data element '
-                             'to be a callable, but got {}'.format(func))
+                             'to be a callable, but got {}'.format(pformat(func)))
         if not isinstance(args, (tuple, list)):
             raise ValueError('Expected second item in an action_data element '
-                             'to be a tuple or list (args to {}). Got {}'.format(func, args))
+                             'to be a tuple or list (args to {}). Got {}'.format(pformat(func), pformat(args)))
         if not isinstance(kwargs, dict):
             raise ValueError('Expected third item in an action_data element '
-                             'to be a dict (kwargs to {}).  Got {}'.format(func, kwargs))
+                             'to be a dict (kwargs to {}).  Got {}'.format(pformat(func), pformat(kwargs)))
     return True
 
 def run_sample_pipeline(action_data, sample=None):
@@ -73,46 +76,40 @@ def all_sample_ops(train_or_predict_dict, config, step):
                                step
     '''
     d = train_or_predict_dict
-    sampler_name = d.get('sampler')
-    data_source = d.get('data_source')
-    if sampler_name:
-        sampler = config.samplers[sampler_name]
-        data_generator = sampler['data_generator']
-        gen = import_callable(data_generator)(**sampler)
-        def sampler_func(*args, **kwargs):
-            return next(gen)
-        sampler_args = ()
-        sampler_kwargs = {}
-    else:
-        data_source = config.data_sources[d['data_source']]
-        sampler = config.samplers[d['data_source']]
-        file_generator = config.file_generators[sampler['file_generator']]
-        file_generator = import_callable(file_generator, True, file_generator)
-        file_generator_kwargs = sampler.get('file_generator_kwargs') or {}
-        data_source['LADSWEB_LOCAL_CACHE'] = config.LADSWEB_LOCAL_CACHE
-        file_generator_kwargs['data_source'] = data_source
-        included_filenames = tuple(file_generator(**file_generator_kwargs))
-        sampler_func = 'elm.sample_util.samplers:random_image_selection'
-        sampler_args = (data_source['band_specs'],)
-        sampler_kwargs = {'included_filenames': included_filenames,
-                          }
-        reader = config.readers[data_source['reader']]
-        load_meta = import_callable(reader['load_meta'])
-        load_array = import_callable(reader['load_array'])
-        selection_kwargs = sampler.get('selection_kwargs') or {}
-        selection_kwargs.update({
-            'data_filter': selection_kwargs.get('data_filter') or None,
-            'metadata_filter': selection_kwargs.get('metadata_filter') or None,
-            'filename_filter': selection_kwargs.get('filename_filter') or None,
-            'geo_filters': selection_kwargs.get('geo_filters'),
-            'include_polys': [config.polys[k]
-                              for k in selection_kwargs.get('include_polys', [])],
-            'exclude_polys': [config.polys[k]
-                              for k in selection_kwargs.get('exclude_polys', [])],
-            'load_meta': load_meta,
-            'load_array': load_array,
-        })
-        sampler_kwargs.update(selection_kwargs)
+
+    data_source = d['data_source']
+    data_source = config.data_sources[d['data_source']]
+    s = d.get('sample_args_generator',
+                                  data_source.get('sample_args_generator'))
+    if not s:
+        raise ValueError('Expected a sample_args_generator callable')
+    sample_args_generator = config.sample_args_generators[s]
+    sample_args_generator = import_callable(sample_args_generator)
+    sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
+                                         data_source.get('sample_args_generator_kwargs') or {})
+    sample_args_generator_kwargs['data_source'] = data_source
+    sampler_func = data_source['sample_from_args_func'] # TODO: this needs to be
+                                                        # added to ConfigParser
+                                                        # validation (sample_from_args_func requirement)
+    sampler_args = (data_source['band_specs'],)
+    sampler_kwargs = {'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))}
+    reader = config.readers[data_source['reader']]
+    load_meta = import_callable(reader['load_meta'])
+    load_array = import_callable(reader['load_array'])
+    selection_kwargs = data_source.get('selection_kwargs') or {}
+    selection_kwargs.update({
+        'data_filter':     selection_kwargs.get('data_filter') or None,
+        'metadata_filter': selection_kwargs.get('metadata_filter') or None,
+        'filename_filter': selection_kwargs.get('filename_filter') or None,
+        'geo_filters':     selection_kwargs.get('geo_filters') or {},
+        'include_polys':   [config.polys[k]
+                            for k in selection_kwargs.get('include_polys', [])],
+        'exclude_polys':   [config.polys[k]
+                            for k in selection_kwargs.get('exclude_polys', [])],
+        'load_meta':       load_meta,
+        'load_array':      load_array,
+    })
+    sampler_kwargs.update(selection_kwargs)
     action_data = [(sampler_func, sampler_args, sampler_kwargs)]
     if 'sample_pipeline' in step:
         actions = make_sample_pipeline_func(config, step)

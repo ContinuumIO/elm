@@ -5,31 +5,63 @@ import pandas as pd
 import xarray as xr
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
-from elm.pipeline.tests.util import train_with_synthetic_data
 import elm.pipeline.sample_pipeline as sample_pipeline
+from elm.preproc.elm_store import ElmStore
+from elm.pipeline.tests.util import tmp_dirs_context
 
-COLS = ['band_{}'.format(idx + 1) for idx in range(40)]
+BASE = copy.deepcopy(DEFAULTS)
+
+BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
+GEO = (-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995)
 
 def sample():
-    df = pd.DataFrame(np.random.uniform(0, 1, 25 * 40).reshape(25, 40))
-    df.iloc[10] = 0
-    df.columns = COLS
-    return df
+    height, width = 100, 80
+    val = np.random.uniform(0, 1, width * height * 40).reshape((height * width,len(BANDS)))
+    # make half the columns have tiny variance
+    val[:, len(BANDS) // 2:] *= 1e-7
+    attrs = {'Width': width, 'Height': height, 'GeoTransform': GEO}
+
+    es = ElmStore({'sample': xr.DataArray(val,
+                coords=[('space', np.arange(width * height)),
+                        ('band', BANDS)],
+                dims=['space', 'band'],
+                attrs=attrs)},
+            attrs=attrs)
+    return es
+
+def gen(*args, **kwargs):
+    yield from range(5)
+
+BASE['data_source'] = {'sample_args_generator': gen,
+                       'sample_from_args_func': sample}
 
 
 def test_sample_pipeline_feature_selection():
-    config, sampler_name, step, idx, train_name = train_with_synthetic_data({}, sample)
-    selection_name = tuple(config.feature_selection)[0]
-    config.pipeline[idx]['feature_selection'] = step['feature_selection'] = selection_name
-    config.feature_selection[selection_name]['selection'] = 'sklearn.feature_selection:VarianceThreshold'
-    config.feature_selection[selection_name]['kwargs']['threshold'] = 0.08
-    config.train[train_name]['sampler'] = sampler_name
-    action_data = sample_pipeline.all_sample_ops(config.train[train_name], config, step)
-    for repeats in range(100):
-        s = sample_pipeline.run_sample_pipeline(action_data)
-        assert s.shape[1] < 40
-        assert np.all(s.iloc[10] == 0.)
-        assert all(c in COLS for c in s.columns)
+    tag = selection_name = 'variance_selection'
+    config = copy.deepcopy(BASE)
+    with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+        for idx, action in enumerate(config['pipeline']):
+            if 'train' in action or 'predict' in action:
+                train_name = action.get('train', action.get('predict'))
+                if 'sample_pipeline' in action:
+                    action['sample_pipeline'] += [{'feature_selection': selection_name}]
+                else:
+                    action['sample_pipeline'] = [{'feature_selection': selection_name}]
+                config = ConfigParser(config=config)
+                config.feature_selection[selection_name] = {
+                    'selection': 'sklearn.feature_selection:VarianceThreshold',
+                    'threshold': 0.08,
+                    'score_func': np.var,
+                    'choices': BANDS,
+                    'kwargs': {},
+                }
+                action_data = sample_pipeline.all_sample_ops(config.train[train_name], config, action)
+
+                for repeats in range(100):
+                    s = sample_pipeline.run_sample_pipeline(action_data)
+                    assert s.sample.shape[1] < 40
+                    assert np.mean(s.sample[:len(BANDS) // 2]) > np.mean(s.sample[len(BANDS) // 2:])
+                    assert all(b in BANDS for b in s.band)
 
 
 def test_elm_store_to_flat_to_elm_store():

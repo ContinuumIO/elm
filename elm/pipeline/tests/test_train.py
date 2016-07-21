@@ -1,11 +1,9 @@
 import contextlib
 import inspect
 
-import elm.pipeline.train as elmtrain
 from elm.config import DEFAULTS, ConfigParser, import_callable
-
+from elm.pipeline.test.util import patch_ensemble_predict
 from elm.pipeline.sample_pipeline import check_action_data
-old_ensemble = elmtrain.ensemble
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'filename_filter',
@@ -25,24 +23,9 @@ def expected_fit_kwargs(train_dict):
             'fit_kwargs': train_dict['fit_kwargs'],
         }
     return fit_kwargs
-def return_all(*args, **kwargs):
-    '''An empty function to return what is given to it'''
-    return args, kwargs
-
-@contextlib.contextmanager
-def patch_ensemble():
-    '''This helps test the job of testing
-    getting arguments to
-    ensemble by changing that function to
-    just return its args,kwargs'''
-    try:
-        elmtrain.ensemble = return_all
-        yield
-    finally:
-        elmtrain.ensemble = old_ensemble
 
 def test_train_makes_args_kwargs_ok():
-    with patch_ensemble():
+    with patch_ensemble_predict():
         config = ConfigParser(config=DEFAULTS)
         for step in config.pipeline:
             if 'train' in step:

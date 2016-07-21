@@ -21,16 +21,11 @@ def train_step(config, step, executor, **kwargs):
     '''
     train_dict = config.train[step['train']]
     action_data = all_sample_ops(train_dict, config, step)
-    sampler = train_dict.get('sampler')
-    if sampler:
-        sampler = config.samplers[sampler]
-    else:
-        sampler = config.samplers[train_dict['data_source']]
+    data_source = train_dict.get('data_source')
+
     model_init_class = import_callable(train_dict['model_init_class'])
     _, model_init_kwargs = get_args_kwargs_defaults(model_init_class)
     model_init_kwargs.update(train_dict['model_init_kwargs'])
-    if 'batch_size' in model_init_kwargs:
-        model_init_kwargs['batch_size'] = sampler['n_rows_per_sample']
     fit_args = (action_data,)
     fit_kwargs = {
         'post_fit_func': train_dict.get('post_fit_func'),

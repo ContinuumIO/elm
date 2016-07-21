@@ -69,20 +69,6 @@ def test_bad_train_config():
         bad_config['train'][name]['ensemble_kwargs']['batches_per_gen'] = item
         bad_config = tst_bad_config(bad_config)
 
-def test_bad_samplers_config():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['samplers'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['samplers'][name] = item
-        bad_config = tst_bad_config(bad_config)
-        if item:
-            bad_config['samplers'][name]['selection_kwargs'] = item
-            bad_config = tst_bad_config(bad_config)
-    for item in NOT_INT:
-        bad_config['samplers'][name]['files_per_sample'] = item
-        bad_config = tst_bad_config(bad_config)
-        bad_config['samplers'][name]['n_rows_per_sample'] = item
-        bad_config = tst_bad_config(bad_config)
 
 def test_bad_pipeline():
     bad_config = copy.deepcopy(DEFAULTS)
@@ -94,7 +80,7 @@ def test_bad_pipeline():
             bad_config = tst_bad_config(bad_config)
 
     # TODO more tests on valid operations
-    # e.g. train, download_data_sources, predict, resample, etc
+    # e.g. train, predict, resample, etc
 
 def test_readers():
     bad_config = copy.deepcopy(DEFAULTS)
@@ -110,19 +96,11 @@ def test_readers():
     bad_config['readers'][name]['load_meta'] = NOT_FUNCTION
     bad_config = tst_bad_config(bad_config)
 
-def test_downloads():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['downloads'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['downloads'] = item
-        bad_config = tst_bad_config(bad_config)
-    bad_config['downloads'][name] = NOT_FUNCTION
-    bad_config = tst_bad_config(bad_config)
 
-def test_file_generators():
+def test_sample_args_generators():
     bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['file_generators'].keys())[0]
+    name = tuple(bad_config['sample_args_generators'].keys())[0]
     for item in NOT_DICT:
-        bad_config['file_generators'] = item
+        bad_config['sample_args_generators'] = item
         bad_config = tst_bad_config(bad_config)
-    bad_config['file_generators'][name] = NOT_FUNCTION
+    bad_config['sample_args_generators'][name] = NOT_FUNCTION

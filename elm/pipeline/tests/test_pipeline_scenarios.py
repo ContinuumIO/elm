@@ -29,9 +29,6 @@ def test_default_config():
         len_train, len_predict = map(os.listdir, (train_path, predict_path))
         assert len_train
         assert len_predict
-        return
-    raise ValueError()
-
 
 @contextlib.contextmanager
 def new_training_config(**train_kwargs):
@@ -53,16 +50,14 @@ def adjust_config_sample_size(config, n_rows):
             else:
                 step['sample_pipeline'] = random_rows
 
-# The following models take longer than about 11 seconds
-# to fit / predict a sample of size 2000 so are likely
-# infeasible for the type of work we are doing (some take
-# much longer than 11 seconds)
+# The following slow_models take longer than about 11 seconds
+# to fit / predict a sample of size (500, 11) with default init kwargs
 slow_models = ('ARDRegression',
                'TheilSenRegressor',
                'GaussianProcess',
                'Birch',
                'LogisticRegressionCV')
-
+# The MultiTask* models are not handled yet
 multi_task = ('MultiTaskLasso',
               'MultiTaskElasticNetCV',
               'MultiTaskElasticNet',
@@ -78,11 +73,11 @@ def tst_sklearn_method(model_init_class, c, n_rows):
                   'ensemble_kwargs': default_ensemble,
                   'model_init_kwargs': default_init_kwargs}
         if not hasattr(c, 'predict'):
-            # TODO: handle models with "fit_transform" or "transform" methods
-            # only
+            # TODO: handle models with "fit_transform"
+            # or "transform" methods (ones without a "predict")
             pytest.xfail('Has no predict method: not supporting transform methods yet')
         if any(m in model_init_class for m in multi_task):
-            pytest.xfail('{} models from sklearn are unsupported (TODO?)'.format(model_init_class))
+            pytest.xfail('{} models from sklearn are unsupported'.format(model_init_class))
         method_args, method_kwargs = get_args_kwargs_defaults(c.fit)
         if any(a.lower() == 'y' for a in method_args):
             #  supervised
@@ -90,7 +85,8 @@ def tst_sklearn_method(model_init_class, c, n_rows):
         elif 'n_clusters' in method_kwargs:
             kwargs['n_clusters'] = 2
         if any(s in model_init_class for s in slow_models):
-            # This one is quite slow
+            # These are too slow for most image classification
+            # uses
             pytest.skip('{} is too slow for this test'.format(model_init_class))
         if 'MiniBatchKMeans' not in model_init_class:
             kwargs['post_fit_func'] = None
@@ -114,10 +110,10 @@ def tst_sklearn_method(model_init_class, c, n_rows):
             assert predict_outputs
             pickles = [t for t in train_outputs if t.endswith('.pkl')]
             assert pickles
-            nc, xr = [[p for p in predict_outputs if p.endswith(end)]
+            netcdfs, xarrays = [[p for p in predict_outputs if p.endswith(end)]
                         for end in ('.nc', '.xr')]
-            assert nc
-            assert xr
+            assert netcdfs
+            assert xarrays
 
 
 @pytest.mark.slow
@@ -125,7 +121,7 @@ def tst_sklearn_method(model_init_class, c, n_rows):
 def test_sklearn_methods_slow(model_init_class, func):
     '''Test running each classifier/regressor/cluster model
     through the default pipeline adjusted as necessary, where
-    the training sample size is a full file
+    the training sample size is a full file (None as n_rows)
 
     pytest.mark.parametrize calls this
     function once for each model_init_class in ALL_MODELS_DICT
@@ -137,7 +133,8 @@ def test_sklearn_methods_slow(model_init_class, func):
 def test_sklearn_methods_fast(model_init_class, func):
     '''Test running each classifier/regressor/cluster model
     through the default pipeline adjusted as necessary, where
-    the training sample size is random small subset of one file's rows
+    the training sample size is random small
+    subset of one file's rows
 
     pytest.mark.parametrize calls this
     function once for each model_init_class in ALL_MODELS_DICT

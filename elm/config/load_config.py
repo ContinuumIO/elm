@@ -15,7 +15,7 @@ from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
 
-def file_generator_from_list(some_list, *args, **kwargs):
+def sample_args_generator_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
 
@@ -162,6 +162,20 @@ class ConfigParser(object):
                                    '"download" {} not defined in "downloads"'
                                    ' section'.format(ds, download))
         self._validate_band_specs(ds.get('band_specs'), name)
+        s = ds.get('sample_args_generator')
+        if not s in self.sample_args_generators:
+            raise ElmConfigError('Expected data_source: '
+                                 'sample_args_generator {} to be in '
+                                 'sample_args_generators.keys()')
+        sample_args_generator = self.sample_args_generators[s]
+        self._validate_custom_callable(sample_args_generator,
+                                True,
+                                'train:{} sample_args_generator'.format(name))
+        sample_from_args_func = ds.get('sample_from_args_func')
+        self._validate_custom_callable(sample_from_args_func,
+                                True,
+                                'train:{} sample_from_args_func'.format(name))
+        self._validate_selection_kwargs(ds, name)
 
     def _validate_data_sources(self):
         '''Validate all "data_sources" of config'''
@@ -172,54 +186,22 @@ class ConfigParser(object):
         for name, ds in self.data_sources.items():
             self._validate_one_data_source(name, ds)
 
-    def _validate_file_generators(self):
-        '''Validate the "file_generators" section of config'''
-        self.file_generators = self.config.get('file_generators', {}) or {}
-        if not isinstance(self.file_generators, dict):
-            raise ElmConfigError('Expected file_generators to be a dict, but '
-                                   'got {}'.format(self.file_generators))
-        for name, file_gen in self.file_generators.items():
+    def _validate_sample_args_generators(self):
+        '''Validate the "sample_args_generators" section of config'''
+        self.sample_args_generators = self.config.get('sample_args_generators', {}) or {}
+        if not isinstance(self.sample_args_generators, dict):
+            raise ElmConfigError('Expected sample_args_generators to be a dict, but '
+                                   'got {}'.format(self.sample_args_generators))
+        for name, file_gen in self.sample_args_generators.items():
             if not name or not isinstance(name, str):
-                raise ElmConfigError('Expected "name" key in file_generators {} ')
+                raise ElmConfigError('Expected "name" key in sample_args_generators {} ')
             self._validate_custom_callable(file_gen, True,
-                                           'file_generators:{}'.format(name))
+                                           'sample_args_generators:{}'.format(name))
 
     def _validate_positive_int(self, val, context):
         '''Validate that a positive int was given'''
         if not isinstance(val, int) and val:
             raise ElmConfigError('In {} expected {} to be an int'.format(context, val))
-
-    def _validate_one_sampler(self, sampler, name):
-        '''Validate one of the "samplers" in "samplers" section of config'''
-        defaults = tuple(self.defaults['samplers'].values())[0]
-        if not sampler or not isinstance(sampler, dict):
-            raise ElmConfigError('In samplers:{} dict '
-                                   'but found {}'.format(name, sampler))
-        sampler['n_rows_per_sample'] = sampler.get('n_rows_per_sample', defaults['n_rows_per_sample'])
-        sampler['files_per_sample'] = sampler.get('files_per_sample', defaults['files_per_sample'])
-        self._validate_positive_int(sampler['n_rows_per_sample'], name)
-        self._validate_positive_int(sampler['files_per_sample'], name)
-        file_gen = sampler.get('file_generator')
-        data_gen = sampler.get('data_generator')
-        if data_gen:
-            self._validate_custom_callable(data_gen,
-                                True,
-                                'train:{} data_generator'.format(name))
-        if data_gen and file_gen:
-            raise ElmConfigError('in samplers:{} - cannot give '
-                                   '"data_generator" and '
-                                   '"file_generator"'.format(name))
-        self._validate_selection_kwargs(sampler, name)
-
-    def _validate_samplers(self):
-        '''Validate all of the "samplers" section of config'''
-        self.samplers = self.config.get('samplers', {}) or {}
-        if not self.samplers or not isinstance(self.samplers, dict):
-            raise ElmConfigError('Invalid "samplers" config entry {} '
-                                   '(expected dict)'.format(self.samplers))
-        for name, sampler in self.samplers.items():
-            self._validate_one_sampler(sampler, name)
-
 
     def _validate_poly(self, name, poly):
         return True # TODO this should validate a list entry
@@ -231,14 +213,14 @@ class ConfigParser(object):
         for name, poly in self.polys:
             self._validate_poly(name, poly)
 
-    def _validate_selection_kwargs(self, sampler, name):
+    def _validate_selection_kwargs(self, data_source, name):
         '''Validate the "selection_kwargs" related to
         sample pre-processing'''
-        selection_kwargs = sampler.get('selection_kwargs')
+        selection_kwargs = data_source.get('selection_kwargs')
         if not selection_kwargs:
             return
         if not isinstance(selection_kwargs, dict):
-            raise ElmConfigError('In sampler:{} expected '
+            raise ElmConfigError('In data_source:{} expected '
                                    '"selection_kwargs" to be '
                                    'a dict'.format(selection_kwargs))
         selection_kwargs['geo_filters'] = selection_kwargs.get('geo_filters', {}) or {}
@@ -257,7 +239,7 @@ class ConfigParser(object):
                                                'selection_kwargs:{} - {}'.format(name, filter_name))
             else:
                 selection_kwargs.pop(filter_name)
-        self.samplers[name]['selection_kwargs'] = selection_kwargs
+        self.data_sources[name]['selection_kwargs'] = selection_kwargs
 
 
     def _validate_resamplers(self):
@@ -375,25 +357,12 @@ class ConfigParser(object):
         for f in ('saved_ensemble_size', 'n_generations',
                   'ensemble_size', 'batches_per_gen'):
             self._validate_positive_int(t['ensemble_kwargs'].get(f), f)
-
-        sampler = t.get('sampler', '')
-        if sampler and sampler not in self.samplers:
-            raise ElmConfigError('train dict at key {} refers '
-                                   'to a sampler {} that is '
-                                   'not defined in '
-                                   '"samplers"'.format(name, repr(sampler)))
         data_source = t.get('data_source')
         if not data_source in self.data_sources:
             raise ElmConfigError('train dict at key {} refers '
                                    'to a data_source {} that is '
                                    'not defined in '
                                    '"data_sources"'.format(name, repr(data_source)))
-        if (data_source and sampler) or (not data_source and not sampler):
-            raise ElmConfigError('Conflicting definition of both '
-                                   '"data_source" and "sampler" in '
-                                   '"train".  Provide one of "data_source": '
-                                   '<key from "data_sources", "sampler" '
-                                   'key from "samplers"')
         output_tag = t.get('output_tag')
         self._validate_type(output_tag, 'train:output_tag', str)
         band_specs = self.data_sources[data_source]['band_specs']
