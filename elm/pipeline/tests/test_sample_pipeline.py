@@ -39,21 +39,19 @@ def test_sample_pipeline_feature_selection():
                     action['sample_pipeline'] += [{'feature_selection': selection_name}]
                 else:
                     action['sample_pipeline'] = [{'feature_selection': selection_name}]
-                config = ConfigParser(config=config)
+                config = ConfigParser(config=BASE)
                 config.feature_selection[selection_name] = {
                     'selection': 'sklearn.feature_selection:VarianceThreshold',
-                    'threshold': 0.08,
-                    'score_func': np.var,
+                    'score_func': None,
                     'choices': BANDS,
-                    'kwargs': {},
+                    'kwargs': {'threshold': 0.08,},
                 }
                 action_data = sample_pipeline.all_sample_ops(config.train[train_name], config, action)
 
-                for repeats in range(100):
+                for repeats in range(5):
                     s = sample_pipeline.run_sample_pipeline(action_data)
                     assert s.sample.shape[1] < 40
-                    assert np.mean(s.sample[:len(BANDS) // 2]) > np.mean(s.sample[len(BANDS) // 2:])
-                    assert all(b in BANDS for b in s.band)
+                    assert set(s.sample.band.values) < set(BANDS)
 
 
 def test_elm_store_to_flat_to_elm_store():

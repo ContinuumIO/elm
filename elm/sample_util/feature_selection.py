@@ -51,6 +51,7 @@ def feature_selection_base(sample_x,
         feature_selection_args = (feature_score_func,)
     else:
         feature_selection_args = ()
+    print(feature_selection_args, feature_selection_kwargs, flush=True)
     selection = feature_selection(*feature_selection_args,
                                 **feature_selection_kwargs)
     if feature_choices == 'all':
@@ -62,7 +63,7 @@ def feature_selection_base(sample_x,
     ml_columns = selection.get_support(indices=True)
     sample_x_dropped_bands =  xr.Dataset({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
                                               coords=[('space', sample_x.sample.space),
-                                                      ('band', band_idx[ml_columns])],
+                                                      ('band', sample_x.sample.band[band_idx[ml_columns]])],
                                               dims=('space','band'),
                                               attrs=sample_x.sample.attrs)},
                                           attrs=sample_x.attrs)
