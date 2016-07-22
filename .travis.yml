@@ -21,6 +21,7 @@ install:
   - echo Create elm-env
   - conda env update || conda env create
   - source activate elm-env
+  - conda list
   - mkdir LADSWEB
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - git clone http://github.com/ContinuumIO/elm-data || git checkout -f HEAD
