@@ -7,33 +7,25 @@ import xarray as xr
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
 from elm.preproc.elm_store import ElmStore
-from elm.pipeline.tests.util import tmp_dirs_context
+from elm.pipeline.tests.util import (tmp_dirs_context,
+                                     random_elm_store,
+                                     BANDS,
+                                     GEO)
 
 BASE = copy.deepcopy(DEFAULTS)
 
-BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
-GEO = (-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995)
 
-def sample():
-    height, width = 100, 80
-    val = np.random.uniform(0, 1, width * height * 40).reshape((height * width,len(BANDS)))
-    # make half the columns have tiny variance
-    val[:, len(BANDS) // 2:] *= 1e-7
-    attrs = {'Width': width, 'Height': height, 'GeoTransform': GEO}
-
-    es = ElmStore({'sample': xr.DataArray(val,
-                coords=[('space', np.arange(width * height)),
-                        ('band', BANDS)],
-                dims=['space', 'band'],
-                attrs=attrs)},
-            attrs=attrs)
-    return es
 
 def gen(*args, **kwargs):
     yield from range(5)
 
+def sampler():
+    es = random_elm_store(BANDS)
+    es.sample.values[:, len(BANDS) // 2:] *= 1e-7
+    return es
+
 BASE['data_source'] = {'sample_args_generator': gen,
-                       'sample_from_args_func': sample}
+                       'sample_from_args_func': sampler}
 
 
 def test_sample_pipeline_feature_selection():

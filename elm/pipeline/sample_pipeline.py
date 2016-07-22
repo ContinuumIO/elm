@@ -221,6 +221,9 @@ def final_on_sample_step(fitter,
 
 def flatten_cube(elm_store):
     es = elm_store['sample']
+    if len(es.shape) == 2:
+        # its already flat
+        return elm_store
     flat = xr.DataArray(np.array(tuple(es.values[idx, :, :].ravel()
                               for idx in range(es.shape[0]))).T,
                         coords=[np.arange(np.prod(es.shape[1:])),
@@ -234,6 +237,9 @@ def flatten_cube(elm_store):
     return ElmStore({'sample': flat_dropped}, attrs=flat_dropped.attrs)
 
 def flattened_to_cube(flat, **attrs):
+    if len(flat.sample.shape) == 3:
+        # it's not actually flat
+        return flat
     attrs2 = flat.attrs
     attrs2.update(copy.deepcopy(attrs))
     attrs = attrs2

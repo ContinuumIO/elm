@@ -2,8 +2,9 @@ import contextlib
 import inspect
 
 from elm.config import DEFAULTS, ConfigParser, import_callable
-from elm.pipeline.test.util import patch_ensemble_predict
+from elm.pipeline.tests.util import patch_ensemble_predict
 from elm.pipeline.sample_pipeline import check_action_data
+
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'filename_filter',
@@ -25,7 +26,7 @@ def expected_fit_kwargs(train_dict):
     return fit_kwargs
 
 def test_train_makes_args_kwargs_ok():
-    with patch_ensemble_predict():
+    with patch_ensemble_predict() as (elmtrain, elmpredict):
         config = ConfigParser(config=DEFAULTS)
         for step in config.pipeline:
             if 'train' in step:

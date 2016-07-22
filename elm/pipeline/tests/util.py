@@ -10,15 +10,20 @@ import yaml
 
 import numpy as np
 import pandas as pd
+import xarray as xr
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
+from elm.preproc.elm_store import ElmStore
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
 
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
+
+BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
+GEO = (-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995)
 
 @contextlib.contextmanager
 def patch_ensemble_predict():
@@ -32,7 +37,7 @@ def patch_ensemble_predict():
     try:
         elmtrain.ensemble = return_all
         predict.predict_step = return_all
-        yield
+        yield (elmtrain, predict)
     finally:
         elmtrain.ensemble = old_ensemble
         predict.predict_step = return_all
@@ -103,3 +108,19 @@ def test_one_config(config=None, cwd=None):
         raise ValueError('Error: Bad return code: {}'.format(r))
     assert 'elm.scripts.main - ok' in log
     return log
+
+def random_elm_store(bands, mn=0, mx=1, height=100, width=80):
+    val = np.random.uniform(mn,
+                            mx,
+                            width * height * len(bands)).reshape((height * width,len(bands)))
+    attrs = {'Width': width,
+             'Height': height,
+             'GeoTransform': GEO}
+
+    es = ElmStore({'sample': xr.DataArray(val,
+                coords=[('space', np.arange(width * height)),
+                        ('band', bands)],
+                dims=['space', 'band'],
+                attrs=attrs)},
+            attrs=attrs)
+    return es
