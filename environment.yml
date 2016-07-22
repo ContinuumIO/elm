@@ -8,6 +8,7 @@ dependencies:
  - datashader
  - distributed
  - gdal=2
+ - geos
  - h5py
  - jupyter
  - krb5
