@@ -35,3 +35,5 @@ def hdf5_info(fpath):
         f.visit(groups.append)
         for path in groups:
             info[path] = dict(f[path].attrs)
+
+    return info
