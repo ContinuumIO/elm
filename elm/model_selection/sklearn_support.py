@@ -75,3 +75,8 @@ ALL_MODELS_DICT = {k: import_callable(k) for k in ALL_MODELS_STR}
 UNSUPERVISED_MODEL_STR = [k for k, v in ALL_MODELS_DICT.items()
                           if hasattr(v, 'fit')
                           and 'y' in get_args_kwargs_defaults(v.fit)[1]]
+
+
+ALL_MODELS_ESTIMATOR_TYPES = {k: getattr(v, '_estimator_type', None)
+                              for k,v in ALL_MODELS_DICT.items()}
+

@@ -12,9 +12,9 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'metadata_filter',
                            'data_filter',
                            'geo_filters')
+
 def expected_fit_kwargs(train_dict):
     fit_kwargs = {
-            'post_fit_func': train_dict.get('post_fit_func'),
             'fit_func': train_dict.get('fit_func'),
             'get_y_func': train_dict.get('get_y_func'),
             'get_y_kwargs': train_dict.get('get_y_kwargs'),
@@ -24,6 +24,7 @@ def expected_fit_kwargs(train_dict):
             'fit_kwargs': train_dict['fit_kwargs'],
         }
     return fit_kwargs
+
 
 def test_train_makes_args_kwargs_ok():
     with patch_ensemble_predict() as (elmtrain, elmpredict):
@@ -48,19 +49,17 @@ def test_train_makes_args_kwargs_ok():
                 assert model_init_kwargs.get(k) == v
         # assert fit_func, typically "fit" or "partial_fit"
         # is a method of model_init_class
-        assert args[3] in dir(args[1])
-        check_action_data(args[4][0])
+        check_action_data(args[3][0])
         # fit_kwargs
-        assert args[5] == expected_fit_kwargs(train_dict)
-
-        assert ':' in args[5]['post_fit_func']
-        if args[5]['post_fit_func']:
-            import_callable(args[5]['post_fit_func'])
-        assert ':' in args[6]
-        # model_selection_func
+        assert args[4] == expected_fit_kwargs(train_dict)
+        assert not args[5] or (':' in args[5] and import_callable(args[5]))
+        # model_scoring
         import_callable(args[6])
-        # model_selection_kwargs
-        model_selection_kwargs = args[7]
+        # model scoring kwargs
+        assert isinstance(args[7], dict)
+        assert not args[8] or (':' in args[8] and import_callable(args[8]))
+        model_selection_kwargs = args[9]
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))
-        assert isinstance(model_selection_kwargs.get('no_shuffle'), int)
+
+

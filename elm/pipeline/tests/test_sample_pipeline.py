@@ -42,7 +42,7 @@ def test_sample_pipeline_feature_selection():
                 config = ConfigParser(config=BASE)
                 config.feature_selection[selection_name] = {
                     'selection': 'sklearn.feature_selection:VarianceThreshold',
-                    'score_func': None,
+                    'scoring': None,
                     'choices': BANDS,
                     'kwargs': {'threshold': 0.08,},
                 }

@@ -1,6 +1,9 @@
+from collections import Iterable
 import copy
 import logging
+import numbers
 import os
+import traceback
 
 import sklearn.feature_selection as skfeat
 import yaml
@@ -12,6 +15,7 @@ from elm.config.util import (ElmConfigError,
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.acquire.ladsweb_meta import validate_ladsweb_data_source
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
+
 
 logger = logging.getLogger(__name__)
 
@@ -284,11 +288,11 @@ class ConfigParser(object):
             if selection != 'all':
                 self._validate_custom_callable(selection, True,
                                                'feature_selection:{}'.format(k))
-                score_func = s.get('score_func')
-                no_score_func = ('all', 'sklearn.feature_selection:VarianceThreshold')
-                if score_func and score_func not in dir(skfeat) and not selection in no_score_func:
-                    self._validate_custom_callable(score_func, True,
-                            'feature_selection:{} score_func'.format(k))
+                scoring = s.get('scoring')
+                no_scoring = ('all', 'sklearn.feature_selection:VarianceThreshold')
+                if scoring and scoring not in dir(skfeat) and not selection in no_scoring:
+                    self._validate_custom_callable(scoring, True,
+                            'feature_selection:{} scoring'.format(k))
                 make_scorer_kwargs = s.get('make_scorer_kwargs') or {}
                 self._validate_type(make_scorer_kwargs, 'make_scorer_kwargs', dict)
 
@@ -298,8 +302,8 @@ class ConfigParser(object):
 
                 s['make_scorer_kwargs'] = make_scorer_kwargs
             else:
-                score_func = None
-            s['score_func'] = score_func
+                scoring = None
+            s['scoring'] = scoring
 
 
             feature_choices = s.get('choices') or 'all'
@@ -310,6 +314,38 @@ class ConfigParser(object):
             feature_selection[k] = s
         self.feature_selection = feature_selection
 
+    def _validate_one_model_scoring(self, key, value):
+        from elm.model_selection.metrics import METRICS
+        scoring = value.get('scoring')
+        if scoring in METRICS:
+            context = 'model_scoring:{}'.format(key)
+            # TODO more validation of custom scorers?
+            scoring_agg = value.get('scoring_agg')
+            if scoring_agg:
+                self._validate_custom_callable(scoring_agg, True, context + '(scoring_agg)')
+            greater_is_better = value.get('greater_is_better') or None
+            score_weights = value.get('score_weights') or None
+            err_msg = 'In {}, expected either one of "greater_is_better", "score_weights"'
+            if greater_is_better is not None and score_weights is not None:
+                raise ElmConfigError(err_msg)
+            elif greater_is_better is not None:
+                self._validate_type(greater_is_better, context + '(greater_is_better)', bool)
+            elif score_weights is not None:
+                self._validate_type(score_weights, context + '(score_weights)', Iterable)
+            else:
+                raise ElmConfigError(err_msg)
+        else:
+            # I think there is little validation
+            # that can be done?
+            pass
+    def _validate_model_scoring(self):
+        ms = self.config.get('model_scoring') or {}
+        self._validate_type(ms, 'model_scoring', dict)
+        for k, v in ms.items():
+            self._validate_type(v, 'model_scoring:{}'.format(k), dict)
+            self._validate_one_model_scoring(k, v)
+        self.model_scoring = ms
+
     def _validate_training_funcs(self, name, t):
         '''Validate functions given in "train" section of config'''
         if not isinstance(t, dict):
@@ -317,43 +353,65 @@ class ConfigParser(object):
                                    'but found {}'.format(name, t))
         training_funcs = (('model_selection_func', False),
                            ('model_init_class', True),
-                           ('post_fit_func', False),
                            ('get_y_func', False),
                            ('get_weight_func', False),
                            )
 
-        fit_func = t.get('fit_func', 'fit')
         has_fit_func = False
         has_funcs = {}
         for f, required in training_funcs:
-            cls_or_func = self._validate_custom_callable(t[f], required,
+            if f == 'model_selection_func' and t.get(f) == 'no_selection':
+                no_selection = True
+                continue
+            elif f == 'model_selection_func':
+                no_selection = False
+            cls_or_func = self._validate_custom_callable(t.get(f), required,
                                            'train:{} - {}'.format(name, f))
             has_funcs[f] = bool(cls_or_func)
             if f == 'model_init_class':
                 model_init_class = cls_or_func
-                ff = getattr(model_init_class, fit_func, None)
-                if ff is None:
-                    raise ElmConfigError('fit_func {} was given but {} '
-                                         'does not have this method'.format(t.get('fit_func'), t.get('model_init_class')))
-                fargs, fkwargs = get_args_kwargs_defaults(cls_or_func.fit)
+                fit_func = getattr(model_init_class, 'partial_fit', getattr(model_init_class, 'fit', None))
+                if fit_func is None:
+                    raise ElmConfigError('model_init_class {} '
+                                         'does not have "fit" or "partial_fit" method'.format(t.get('model_init_class')))
+                fargs, fkwargs,var_keyword = get_args_kwargs_defaults(cls_or_func.fit)
         requires_y = any(x.lower() == 'y' for x in fargs)
         if not fkwargs.get('sample_weight') and has_funcs['get_weight_func']:
             raise ElmConfigError('train:{} - {} does not support a '
                                  '"sample_weight" (sample_weights were implied '
                                  'giving "get_sample_weight" '
                                  'function {}'.format(name, model_init_class, t['get_sample_weight']))
-        return has_fit_func, requires_y
+        return has_fit_func, requires_y, no_selection
 
 
     def _validate_one_train_entry(self, name, t):
         '''Validate one dict within "train" section of config'''
-        has_fit_func, requires_y = self._validate_training_funcs(name, t)
+        has_fit_func, requires_y, no_selection = self._validate_training_funcs(name, t)
         if requires_y:
-            self._validate_custom_callable(t.get('get_y_func'), True, 'train:get_y_func (required with {})'.format(repr(t.get('model_init_class'))))
+            self._validate_custom_callable(t.get('get_y_func'),
+                                           True,
+                                           'train:get_y_func (required with ''{})'.format(repr(t.get('model_init_class'))))
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
             self._validate_type(t[k], 'train:{}'.format(k), dict)
-
+        if not no_selection:
+            self._validate_type(t.get('model_selection_kwargs'),
+                                'train:{} (model_selection_kwargs)'.format(name),
+                                dict)
+            if t.get('sort_fitness'):
+                self._validate_custom_callable(t.get('sort_fitness'),
+                                               True,
+                                               'train:{} (sort_fitness)'.format(repr(t.get('sort_fitness'))))
+            ms = t.get('model_scoring')
+            if ms:
+                self._validate_type(ms, 'train:{} (model_scoring)'.format(name),
+                                    (str, numbers.Number, tuple))
+                if not ms in self.model_scoring:
+                    raise ElmConfigError('train:{}\'s model_scoring: {} is not a '
+                                         'key in config\'s model_scoring '
+                                         'dict'.format(name, ms))
+            else:
+                t['model_scoring'] = None
         for f in ('saved_ensemble_size', 'n_generations',
                   'ensemble_size', 'batches_per_gen'):
             self._validate_positive_int(t['ensemble_kwargs'].get(f), f)

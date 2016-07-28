@@ -68,13 +68,23 @@ def tmp_dirs_context(tag):
             f.write('{} {} {} seconds\n'.format(tag, status, etime))
 
 
-def example_get_y_func(flat_sample):
+def example_get_y_func_binary(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.sample.values, axis=1)
     med = np.median(col_means)
-    ret = np.zeros(col_means.shape)
+    ret = np.zeros(col_means.shape, dtype=np.float32)
     ret[col_means > med] = 1
     return ret
+
+def example_get_y_func_continuous(flat_sample):
+    '''For use in testing supervised methods which need a get_y_func'''
+    col_means = np.mean(flat_sample.sample.values, axis=1)
+    return col_means
+
+def example_custom_continuous_scorer(y_true, y_pred):
+    '''This is mean_4th_power_error'''
+    return np.mean((y_pred - y_true)**4)
+
 
 class ExpectedFuncCalledError(ValueError):
     pass
@@ -93,6 +103,8 @@ def test_one_config(config=None, cwd=None):
     config_filename = os.path.join(cwd, 'config.yaml')
     with open(config_filename, 'w') as f:
         f.write(config_str)
+    env = copy.deepcopy(os.environ)
+    env['ELM_LOGGING_LEVEL'] = 'DEBUG'
     proc = sp.Popen(['elm-main',
                       '--config',
                       config_filename,
@@ -100,7 +112,7 @@ def test_one_config(config=None, cwd=None):
                      cwd=cwd,
                      stdout=sp.PIPE,
                      stderr=sp.STDOUT,
-                     env=os.environ)
+                     env=env)
     r = proc.wait()
     log = proc.stdout.read().decode()
     print(log)

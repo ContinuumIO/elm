@@ -82,30 +82,32 @@ add_features: {
 feature_selection: {
   select_all: {
     selection: all,
-    score_func: chi2,
-    score_func_kwargs: {},
+    scoring: chi2,
+    scoring_kwargs: {},
     kwargs: {},
     choices: all,
   }
 }
+model_scoring: {
+  accuracy_score_cv: {
+    scoring: "accuracy_score",
+    scoring_agg: "numpy:median",
+    greater_is_better: True,
+    needs_proba: False,
+    needs_threshold: False,
+  },
+  ensemble_kmeans_scoring: {
+    scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
+  }
+}
+
 train: {
   kmeans: {
-    model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
-    post_fit_func: "elm.model_selection.kmeans:kmeans_add_within_class_var",
-    fit_func: partial_fit,
+    # TODO Deprecate code dealing with: "post_fit_func":
     fit_kwargs: {},
     model_init_kwargs: {
       compute_labels: True
-    },
-    model_selection_kwargs: {  # TODO this needs to be validated
-      no_shuffle: 1,
-    },
-    ensemble_kwargs: {
-      ensemble_size: 1,
-      saved_ensemble_size: 1,
-      n_generations: 1,
-      batches_per_gen: 1
     },
     get_y_func: Null,
     get_y_kwargs: {},
@@ -114,7 +116,20 @@ train: {
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    feature_selection: select_all
+    feature_selection: select_all,
+    ensemble_kwargs: {
+      init_ensemble_size: 1,  # how many models to initialize at start
+      saved_ensemble_size: 1, # how many models to serialize as "best"
+      n_generations: 1,       # how many model train/select generations
+      batches_per_gen: 1,     # how many partial_fit calls per train/select generation
+    },
+    model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
+    model_selection_kwargs: {
+      drop_n: 0,
+      init_n: 0,
+      evolve_n: 1,
+    },
+    model_scoring: ensemble_kmeans_scoring,
   }
 }
 

@@ -184,7 +184,7 @@ def final_on_sample_step(fitter,
        classes:  if using classification, all possible classes as iterable
                  or array of integers
        '''
-    args, kwargs = get_args_kwargs_defaults(fitter)
+    args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
     if get_weight_func:
@@ -202,6 +202,10 @@ def final_on_sample_step(fitter,
         fit_kwargs['sample_weight'] = get_weight_func(X, **get_weight_kwargs)
 
     if any(a.lower() == 'y' for a in args):
+        if not callable(get_y_func):
+            raise ValueError('Fit function {} requires a Y positional '
+                             'argument but config\'s train section '
+                             'get_y_func is not a callable'.format(fitter))
         Y = get_y_func(X)
         if flatten_y:
             Y = flatten_cube(Y)

@@ -20,7 +20,7 @@ def feature_selection_base(sample_x,
             selection: a string like
                       "sklearn.feature_selection:VarianceThreshold"
             kwargs:   init key word arguments to selection given
-            score_func: score_func, if needed, passed to selection().fit
+            scoring: scoring, if needed, passed to selection().fit
             choices:    limit the feature selection to list of column names
                         (exclude metadata columns from thresholding)
         keep_columns: columns to keep regardless of selection's selection
@@ -37,21 +37,20 @@ def feature_selection_base(sample_x,
     if feature_selection == 'all':
         return sample_x
     feature_selection_kwargs = selection_dict['kwargs']
-    score_func_kwargs = selection_dict.get('score_func_kwargs') or {}
+    scoring_kwargs = selection_dict.get('scoring_kwargs') or {}
     feature_choices = selection_dict['choices']
     feature_selection = import_callable(feature_selection)
-    feature_score_func = selection_dict.get('score_func')
-    if feature_score_func is not None:
-        if isinstance(feature_score_func, str):
-            feature_score_func = getattr(skfeat, feature_score_func, None)
+    feature_scoring = selection_dict.get('scoring')
+    if feature_scoring is not None:
+        if isinstance(feature_scoring, str):
+            feature_scoring = getattr(skfeat, feature_scoring, None)
         else:
-            feature_score_func = import_callable(selection_dict['score_func'])
-        if score_func_kwargs:
-            feature_score_func = partial(feature_score_func, **score_func_kwargs)
-        feature_selection_args = (feature_score_func,)
+            feature_scoring = import_callable(selection_dict['scoring'])
+        if scoring_kwargs:
+            feature_scoring = partial(feature_scoring, **scoring_kwargs)
+        feature_selection_args = (feature_scoring,)
     else:
         feature_selection_args = ()
-    print(feature_selection_args, feature_selection_kwargs, flush=True)
     selection = feature_selection(*feature_selection_args,
                                 **feature_selection_kwargs)
     if feature_choices == 'all':

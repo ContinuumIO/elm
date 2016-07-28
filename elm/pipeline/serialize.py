@@ -1,4 +1,5 @@
 import glob
+import logging
 import os
 import pickle
 import re
@@ -8,9 +9,11 @@ import rasterio as rio
 
 from sklearn.externals import joblib
 
+logger = logging.getLogger(__name__)
+
 def get_paths_for_tag(elm_train_path, tag):
-    model_root = os.path.join(elm_train_path, tag, '_{}.pkl')
-    meta_path = os.path.join(elm_train_path, tag, '_meta.pkl')
+    model_root = os.path.join(elm_train_path, tag, '{}-{}.pkl')
+    meta_path = os.path.join(elm_train_path, tag, '{}_meta.pkl')
     return model_root, meta_path
 
 def mkdir_p(path):
@@ -24,12 +27,12 @@ def dump(data, path):
 def save_models_with_meta(models, elm_train_path, tag, meta):
     model_root, meta_path = get_paths_for_tag(elm_train_path, tag)
     paths = []
-    for idx, model in enumerate(models):
-        paths.append(model_root.format(idx))
+    for name, model in models:
+        paths.append(model_root.format(tag, name))
         mkdir_p(paths[-1])
         dump(model, paths[-1])
     mkdir_p(meta_path)
-    dump(meta, meta_path)
+    dump(meta, meta_path.format(tag))
     return (paths, meta_path)
 
 def load(path):
@@ -37,12 +40,13 @@ def load(path):
 
 def load_models_from_tag(elm_train_path, tag):
     model_root, meta_path = get_paths_for_tag(elm_train_path, tag)
+    logger.info('Pickles: {} {}'.format(model_root, meta_path))
     models = []
-    for path in glob.glob(model_root.format('*')):
-        if bool(re.search(model_root.format('\d+'), path)):
-            # if it is not a "meta" in place of model idx
-            models.append(load(path))
-    return (models, load(meta_path))
+    for path in glob.glob(model_root.format('*-*.pkl')):
+        if path.endswith('_meta.pkl'):
+            continue
+        models.append(load(path))
+    return (models, load(meta_path.format(tag)))
 
 def drop_some_attrs(prediction):
     # I couldn't get it it to dump to netcdf
