@@ -12,10 +12,9 @@ from elm.pipeline.fit import fit
 from elm.pipeline.serialize import save_models_with_meta
 from elm.pipeline.executor_util import (wait_for_futures,
                                         no_executor_submit)
-from elm.model_selection.base import (base_selection,
-                                      no_selection,
-                                      score_one_model,
-                                      pareto_front)
+from elm.model_selection.base import (base_selection, no_selection)
+from elm.model_selection.scoring import score_one_model
+from elm.model_selection.sorting import pareto_front
 
 logger = logging.getLogger(__name__)
 

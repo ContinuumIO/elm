@@ -1,122 +1,17 @@
-import array
 from collections import namedtuple
 import copy
 from functools import partial
 import logging
 import inspect
 
-from deap import creator, base, tools
-from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import MiniBatchKMeans
 from elm.config import import_callable
 
-from elm.model_selection.util import (get_args_kwargs_defaults,
-                                     filter_kwargs_to_func)
-from elm.model_selection.metrics import METRICS
-import sklearn.metrics as sk_metrics
+from elm.model_selection.sorting import pareto_front
 
 logger = logging.getLogger(__name__)
-
-def pareto_front(weights, objectives, take=None):
-    toolbox = base.Toolbox()
-    take = take or objectives.shape[0]
-    creator.create("FitnessMulti", base.Fitness, weights=weights)
-    creator.create("Individual",
-                   array.array,
-                   typecode='d',
-                   fitness=creator.FitnessMulti)
-    toolbox.register('evaluate', lambda x: x)
-    objectives = [creator.Individual(objectives[idx, :])
-                  for idx in range(objectives.shape[0])]
-    for (idx, obj) in enumerate(objectives):
-        obj.idx = idx
-        obj.fitness.values = toolbox.evaluate(obj)
-    sel = selNSGA2(objectives, take)
-    return tuple(item.idx for item in sel)
-
-
-def no_selection(models, *args, **kwargs):
-    return models
-
-
-def make_scorer(scoring, **scoring_kwargs):
-    if not hasattr(scoring, 'fit'):
-        if scoring in METRICS:
-            scoring = import_callable(METRICS[scoring])
-        else:
-            scoring = import_callable(scoring)
-    func_kwargs = filter_kwargs_to_func(scoring, **scoring_kwargs)
-    scorer = sk_metrics.make_scorer(scoring,
-                                 greater_is_better=scoring_kwargs.get('greater_is_better', True),
-                                 needs_proba=scoring_kwargs.get('needs_proba', False),
-                                 needs_threshold=scoring_kwargs.get('needs_threshold', False),
-                                 **func_kwargs)
-    return scorer
-
-
-def _score_one_model_with_y_true(model,
-                                scoring,
-                                x,
-                                y_true,
-                                sample_weight=None,
-                                **kwargs):
-    if not isinstance(scoring, sk_metrics.scorer._PredictScorer):
-        scorer = make_scorer(scoring, **kwargs)
-    else:
-        scorer = scoring
-    # now scorer has signature:
-    #__call__(self, estimator, x, y_true, sample_weight=None)
-    return scorer(model, x, y_true, sample_weight=sample_weight)
-
-
-
-def _score_one_model_no_y_true(model,
-                               scoring,
-                               x,
-                               sample_weight=None,
-                               **kwargs):
-    kwargs_to_scoring = copy.deepcopy(kwargs)
-    kwargs_to_scoring['sample_weight'] = sample_weight
-    kwargs_to_scoring = filter_kwargs_to_func(scoring,
-                                            **kwargs_to_scoring)
-    return scoring(model, x, **kwargs_to_scoring)
-
-
-def select_top_n_models(models, best_idxes, **kwargs):
-    '''Run in ensemble without modifying the models on each generation, then
-    on final generation take "top_n" models (top_n from kwargs)'''
-    top_n = kwargs['top_n']
-    logger.debug('Enter select_top_n with {} models and best_idxes {}'.format(len(models), best_idxes))
-    if kwargs['generation'] < kwargs['n_generations'] - 1:
-        pass
-    else:
-        models = [models[b] for b in best_idxes[:top_n]]
-    logger.debug('Exit select_top_n with {} models'.format(len(models)))
-    return models
-
-def score_one_model(model,
-                    scoring,
-                    x,
-                    y=None,
-                    sample_weight=None,
-                    **kwargs):
-    if y is not None:
-        model._score = _score_one_model_with_y_true(model,
-                                                    scoring,
-                                                    x,
-                                                    y_true=y,
-                                                    sample_weight=None,
-                                                    **kwargs)
-    else:
-        scoring = import_callable(scoring)
-        model._score = _score_one_model_no_y_true(model,
-                        scoring,
-                        x,
-                        sample_weight=None,
-                        **kwargs)
-    return model
 
 
 def base_selection(models,
@@ -124,6 +19,26 @@ def base_selection(models,
                    sort_fitness=pareto_front,
                    score_weights=None,
                    **model_selection_kwargs):
+    '''Calls given model_selection_func after sort_fitness is called (if given)
+    Params:
+        models: sequence of 2-tuples (model_name, model)
+        model_selection_func: called with the signature:
+            model_selection_func(models, best_idxes, **model_selection_kwargs)
+
+            where best_idxes is the sorted fitness order if sort_fitness is given
+
+            Otherwise if sort_fitness is not given, the signature is:
+
+            model_selection_func(models, **model_selection_kwargs)
+        sort_fitness: a function, pareto_front by default, to sort scores
+            signature: sort_fitness(weights, objectives, take=None)
+        score_weights: passed to sort_fitness as weights, e.g.:
+            [-1, 1] for minimizing the first element of model _score array
+            and maximizing the second element
+        model_selection_kwargs: passed to model_selection_func
+    Returns:
+        models: sequence of 2-tuples (model_name, model)
+    '''
     logger.debug('base_selection with kwargs: {}'.format(model_selection_kwargs))
     if sort_fitness == 'pareto_front':
         sort_fitness = pareto_front
@@ -152,3 +67,17 @@ def base_selection(models,
         models = model_selection_func(models, **model_selection_kwargs)
     return models
 
+def select_top_n_models(models, best_idxes, **kwargs):
+    '''Run in ensemble without modifying the models on each generation, then
+    on final generation take "top_n" models (top_n from kwargs)'''
+    top_n = kwargs['top_n']
+    logger.debug('Enter select_top_n with {} models and best_idxes {}'.format(len(models), best_idxes))
+    if kwargs['generation'] < kwargs['n_generations'] - 1:
+        pass
+    else:
+        models = [models[b] for b in best_idxes[:top_n]]
+    logger.debug('Exit select_top_n with {} models'.format(len(models)))
+    return models
+
+def no_selection(models, *args, **kwargs):
+    return models

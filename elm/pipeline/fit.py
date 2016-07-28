@@ -11,7 +11,7 @@ from elm.pipeline.sample_pipeline import run_sample_pipeline
 from elm.pipeline.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 from elm.model_selection import get_args_kwargs_defaults
-from elm.model_selection.base import (score_one_model,
+from elm.model_selection.scoring import (score_one_model,
                                       make_scorer)
 
 logger = logging.getLogger(__name__)
