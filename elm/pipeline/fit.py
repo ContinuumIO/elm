@@ -58,18 +58,12 @@ def fit(model,
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
         samp = run_sample_pipeline(action_data)
-        if not scoring:
-            fitter = getattr(model, 'partial_fit', None)
-            if fitter is None:
-                fitter = getattr(model, 'fit')
-                logger.debug('Use fit')
-            else:
-                logger.debug('Use partial_fit')
+        fitter = getattr(model, 'partial_fit', None)
+        if fitter is None:
+            fitter = getattr(model, 'fit')
+            logger.debug('Use fit')
         else:
-            fitter = partial(score_one_model, model,
-                                 scoring,
-                                 **scoring_kwargs)
-            logger.debug('Use score_one_model')
+            logger.debug('Use partial_fit')
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, samp,
                                                     iter_offset,
                                                     fit_kwargs,
@@ -80,8 +74,10 @@ def fit(model,
                                                     get_weight_func=get_weight_func,
                                                     get_weight_kwargs=get_weight_kwargs,
                                                 )
-        model = fitter(*fit_args, **fit_kwargs)
 
+        model = fitter(*fit_args, **fit_kwargs)
+        if scoring:
+            model = score_one_model(model, scoring, *fit_args, **fit_kwargs)
         iter_offset += getattr(model, 'n_iter', 1)
     return model
 

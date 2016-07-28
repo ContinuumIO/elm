@@ -187,40 +187,42 @@ def final_on_sample_step(fitter,
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
-    if get_weight_func:
-        get_weight_func = import_callable(get_weight_func)
+    if flatten:
+        X = flatten_cube(s)
     if get_y_func:
         get_y_func = import_callable(get_y_func)
+        Y = get_y_func(X)
+        if flatten_y:
+            Y = flatten_cube(Y)
+    else:
+        Y = None
+    if get_weight_func:
+        get_weight_func = import_callable(get_weight_func)
+        get_weight_kwargs = get_weight_kwargs or {}
+        fit_kwargs['sample_weight'] = get_weight_func(X, **get_weight_kwargs)
     if 'iter_offset' in kwargs:
         fit_kwargs['iter_offset'] = iter_offset
     if 'check_input' in kwargs:
         fit_kwargs['check_input'] = True
-    if flatten:
-        X = flatten_cube(s)
-    if 'sample_weight' in kwargs and get_weight_func is not None:
-        get_weight_kwargs = get_weight_kwargs or {}
-        fit_kwargs['sample_weight'] = get_weight_func(X, **get_weight_kwargs)
 
     if any(a.lower() == 'y' for a in args):
         if not callable(get_y_func):
             raise ValueError('Fit function {} requires a Y positional '
                              'argument but config\'s train section '
                              'get_y_func is not a callable'.format(fitter))
-        Y = get_y_func(X)
-        if flatten_y:
-            Y = flatten_cube(Y)
+    if Y is not None:
         fit_args = (X.sample.values, Y)
-        if 'classes' in kwargs:
-            if classes is None:
-                # TODO test that classes (the integer classes known
-                # ahead of time) can be specified in the config
-                # rather than just np.unique
-                # if it happens that a given sample does not have
-                # all classes represented, then the np.unique is wrong
-                classes = np.unique(Y)
-            fit_kwargs['classes'] = classes
     else:
-        fit_args = (X.sample.values, )
+        fit_args = (X.sample.values,)
+    if 'classes' in kwargs:
+        if classes is None:
+            # TODO test that classes (the integer classes known
+            # ahead of time) can be specified in the config
+            # rather than just np.unique
+            # if it happens that a given sample does not have
+            # all classes represented, then the np.unique is wrong
+            classes = np.unique(Y)
+        fit_kwargs['classes'] = classes
     return fit_args, fit_kwargs
 
 def flatten_cube(elm_store):

@@ -99,22 +99,24 @@ def select_top_n_models(models, best_idxes, **kwargs):
 def score_one_model(model,
                     scoring,
                     x,
-                    y_true=None,
+                    y=None,
                     sample_weight=None,
                     **kwargs):
-    if y_true is not None:
-        return _score_one_model_with_y_true(model,
-                    scoring,
-                    x,
-                    y_true=y_true,
-                    sample_weight=None,
-                    **kwargs)
-    scoring = import_callable(scoring)
-    return _score_one_model_no_y_true(model,
-                    scoring,
-                    x,
-                    sample_weight=None,
-                    **kwargs)
+    if y is not None:
+        model._score = _score_one_model_with_y_true(model,
+                                                    scoring,
+                                                    x,
+                                                    y_true=y,
+                                                    sample_weight=None,
+                                                    **kwargs)
+    else:
+        scoring = import_callable(scoring)
+        model._score = _score_one_model_no_y_true(model,
+                        scoring,
+                        x,
+                        sample_weight=None,
+                        **kwargs)
+    return model
 
 
 def base_selection(models,

@@ -15,7 +15,6 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
 
 def expected_fit_kwargs(train_dict):
     fit_kwargs = {
-            'fit_func': train_dict.get('fit_func'),
             'get_y_func': train_dict.get('get_y_func'),
             'get_y_kwargs': train_dict.get('get_y_kwargs'),
             'get_weight_func': train_dict.get('get_weight_func'),
@@ -34,12 +33,20 @@ def test_train_makes_args_kwargs_ok():
                 break
         train_dict = config.train[step['train']]
         args, kwargs = elmtrain.train_step(config, step, None)
+        (executor,
+         model_init_class,
+         model_init_kwargs,
+         fit_args,
+         fit_kwargs,
+         model_scoring,
+         model_scoring_kwargs,
+         model_selection_func,
+         model_selection_kwargs,) = args
         assert kwargs == train_dict.get('ensemble_kwargs')
-        assert args[0] is None # executor
-        assert callable(args[1])   # model init func
-        assert "KMeans" in repr(args[1])
-        assert isinstance(args[2], dict)  # model init kwargs
-        model_init_kwargs = args[2]
+        assert executor is None
+        assert callable(model_init_class)   # model init func
+        assert "KMeans" in repr(model_init_class)
+        assert isinstance(model_init_kwargs, dict)  # model init kwargs
         for k,v in train_dict['model_init_kwargs'].items():
             assert model_init_kwargs[k] == v
         # check model init kwargs include the defaults for the method
@@ -49,17 +56,15 @@ def test_train_makes_args_kwargs_ok():
                 assert model_init_kwargs.get(k) == v
         # assert fit_func, typically "fit" or "partial_fit"
         # is a method of model_init_class
-        check_action_data(args[3][0])
+        check_action_data(fit_args[0])
         # fit_kwargs
-        assert args[4] == expected_fit_kwargs(train_dict)
-        assert not args[5] or (':' in args[5] and import_callable(args[5]))
+        assert fit_kwargs == expected_fit_kwargs(train_dict)
         # model_scoring
-        import_callable(args[6])
+        assert not model_scoring or (':' in model_scoring and import_callable(model_scoring))
         # model scoring kwargs
-        assert isinstance(args[7], dict)
-        assert not args[8] or (':' in args[8] and import_callable(args[8]))
-        model_selection_kwargs = args[9]
+
+        assert isinstance(model_scoring_kwargs, dict)
+        assert not model_selection_func or (':' in model_selection_func and import_callable(model_selection_func))
+        assert isinstance(model_selection_kwargs, dict)
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))
-
-
