@@ -1,8 +1,12 @@
 from functools import partial
 
+import numpy as np
 import sklearn.feature_selection as skfeat
-from elm.config import import_callable
+import xarray as xr
 
+from elm.config import import_callable
+from elm.pipeline.sample_pipeline import (flatten_cube,
+                                          flattened_to_cube,)
 
 def feature_selection_base(sample_x,
                           selection_dict,
@@ -16,7 +20,7 @@ def feature_selection_base(sample_x,
             selection: a string like
                       "sklearn.feature_selection:VarianceThreshold"
             kwargs:   init key word arguments to selection given
-            score_func: score_func, if needed, passed to selection().fit
+            scoring: scoring, if needed, passed to selection().fit
             choices:    limit the feature selection to list of column names
                         (exclude metadata columns from thresholding)
         keep_columns: columns to keep regardless of selection's selection
@@ -24,39 +28,45 @@ def feature_selection_base(sample_x,
         sample_x: dataframe subset of selection's chosen columns
                    among choices
     '''
-    if sample_y is not None:
-        y = sample_y.values[:, 0]  # TODO is y always 1 column?
+    if len(sample_x.sample.shape) == 3:
+        sample_x = flatten_cube(sample_x)
+        reshape_needed = True
     else:
-        y = None
+        reshape_needed = False
     feature_selection = selection_dict['selection']
-    feature_selection_kwargs = selection_dict['kwargs']
-    feature_score_func = selection_dict['score_func']
-    score_func_kwargs = selection_dict.get('score_func_kwargs') or {}
-    feature_choices = selection_dict['choices']
     if feature_selection == 'all':
         return sample_x
+    feature_selection_kwargs = selection_dict['kwargs']
+    scoring_kwargs = selection_dict.get('scoring_kwargs') or {}
+    feature_choices = selection_dict['choices']
     feature_selection = import_callable(feature_selection)
-    feature_selection_kwargs = feature_selection_kwargs or {}
-    if feature_score_func is not None:
-        if not callable(feature_score_func):
-            func = getattr(skfeat, feature_score_func, None)
-            if func is None:
-                func = import_callable(feature_score_func)
-            feature_score_func = func
-        if score_func_kwargs:
-            feature_score_func = partial(feature_score_func, **score_func_kwargs)
-        feature_selection_args = (feature_score_func,)
+    feature_scoring = selection_dict.get('scoring')
+    if feature_scoring is not None:
+        if isinstance(feature_scoring, str):
+            feature_scoring = getattr(skfeat, feature_scoring, None)
+        else:
+            feature_scoring = import_callable(selection_dict['scoring'])
+        if scoring_kwargs:
+            feature_scoring = partial(feature_scoring, **scoring_kwargs)
+        feature_selection_args = (feature_scoring,)
     else:
         feature_selection_args = ()
     selection = feature_selection(*feature_selection_args,
                                 **feature_selection_kwargs)
     if feature_choices == 'all':
-        feature_choices = sample_x.columns
-    x = sample_x[feature_choices].values
-    selection.fit(x, y=y)
-    ml_columns = [sample_x[feature_choices].columns[idx]
-                  for idx in selection.get_support(indices=True)]
-    keep_columns = keep_columns or []
-    keep_columns = list(keep_columns)
-    select_column_idxes = list(ml_columns + keep_columns)
-    return sample_x[select_column_idxes]
+        feature_choices = list(sample_x.sample.band)
+    band_idx = np.array([idx for idx, band in enumerate(sample_x.sample.band)
+                         if band in feature_choices])
+    subset = sample_x.sample[:, band_idx]
+    selection.fit(subset.values, y=sample_y)
+    ml_columns = selection.get_support(indices=True)
+    sample_x_dropped_bands =  xr.Dataset({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
+                                              coords=[('space', sample_x.sample.space),
+                                                      ('band', sample_x.sample.band[band_idx[ml_columns]])],
+                                              dims=('space','band'),
+                                              attrs=sample_x.sample.attrs)},
+                                          attrs=sample_x.attrs)
+    del sample_x
+    if reshape_needed:
+        return flattened_to_cube(sample_x_dropped_bands)
+    return sample_x_dropped_bands

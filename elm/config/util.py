@@ -71,6 +71,6 @@ def import_callable(func_or_not, required=True, context=''):
     func = getattr(mod, func, None)
     if not callable(func):
         raise ElmConfigError('{}xpected {} to be callable - '
-                               'it was imported but it is not '
+                               'module was imported but attribute not found or is not '
                                'callable'.format(context, func_or_not))
     return func

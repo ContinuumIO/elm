@@ -9,19 +9,11 @@ readers: {
    },
 }
 
-downloads: {
- default_downloader: "elm.acquire.ladsweb_ftp:main"
-}
-
 data_sources: {
  NPP_DSRF1KD_L2GD: {
-  product_number: 3001,
-  product_name: NPP_DSRF1KD_L2GD,
   reader: hdf4-eos,
   file_pattern: "*.hdf",
-  years: [2015],
-  data_days: all,
-  download: default_downloader,
+  sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[long_name, "Band 1 ", band_1],
   [long_name, "Band 2 ", band_2],
   [long_name, "Band 3 ", band_3],
@@ -30,10 +22,30 @@ data_sources: {
   [long_name, "Band 7 ", band_7],
   [long_name, "Band 8 ", band_8],
   [long_name, "Band 10 ", band_10],
-  [long_name, "Band 11 ", band_11]]
+  [long_name, "Band 11 ", band_11]],
+  sample_args_generator: iter_files_recursively,
+  sample_args_generator_kwargs: {
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+    extension: ".hdf"
   },
+  selection_kwargs: {
+    data_filter: Null,
+    metadata_filter: Null,
+    filename_filter: Null,
+    geo_filters: {
+      include_polys: [],
+      exclude_polys: [],
+    },
+   },
+ },
  S3_LANDSAT_L2_TIFS: {
+  sample_args_generator: tif_file_gen,
+  sample_args_generator_kwargs: {
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH"
+  },
+  selection_kwargs: {},
   reader: dir_of_tifs_reader,
+  sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[name, "_B1.TIF", band_1],
   [name, "_B2.TIF", band_2],
   [name, "_B3.TIF", band_3],
@@ -47,38 +59,11 @@ data_sources: {
   [name, "_B11.TIF", band_11]]
  }
 }
-file_generators: {
-  default_file_gen: "elm.readers.local_file_iterators:get_all_filenames_for_product",
-  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs"
+sample_args_generators: {
+  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
+  iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }
-file_lists: {}
-samplers: {
-  NPP_DSRF1KD_L2GD: {
-    n_rows_per_sample: Null,
-    files_per_sample: 1,
-    file_generator: default_file_gen,
-    data_generator: Null,
-    selection_kwargs: {
-      data_filter: Null,
-      metadata_filter: Null,
-      filename_filter: Null,
-      geo_filters: {
-        include_polys: [],
-        exclude_polys: [],
-      },
-    }
-  },
-  S3_LANDSAT_L2_TIFS: {
-    n_rows_per_sample: Null,
-    files_per_sample: 1,
-    file_generator: tif_file_gen,
-    file_generator_kwargs: {
-      top_dir: S3_LANDSAT
-    },
-    selection_kwargs: {
-  }
-}
-}
+
 polys: {
 
 }
@@ -97,52 +82,65 @@ add_features: {
 feature_selection: {
   select_all: {
     selection: all,
-    score_func: chi2,
-    score_func_kwargs: {},
+    scoring: chi2,
+    scoring_kwargs: {},
     kwargs: {},
     choices: all,
   }
 }
+model_scoring: {
+  accuracy_score_cv: {
+    scoring: "accuracy_score",
+    scoring_agg: "numpy:median",
+    greater_is_better: True,
+    needs_proba: False,
+    needs_threshold: False,
+  },
+  ensemble_kmeans_scoring: {
+    scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
+  }
+}
+
 train: {
   kmeans: {
-    model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
-    post_fit_func: "elm.model_selection.kmeans:kmeans_add_within_class_var",
-    fit_func: partial_fit,
+    # TODO Deprecate code dealing with: "post_fit_func":
     fit_kwargs: {},
     model_init_kwargs: {
       compute_labels: True
-    },
-    model_selection_kwargs: {  # TODO this needs to be validated
-      no_shuffle: 1,
-    },
-    ensemble_kwargs: {
-      ensemble_size: 2,
-      saved_ensemble_size: 1,
-      n_generations: 2,
-      batches_per_gen: 2
     },
     get_y_func: Null,
     get_y_kwargs: {},
     get_weight_func: Null,
     get_weight_kwargs: {},
     output_tag: kmeans,
-    # include either "data_source" or "sampler", not both
-    # if giving "sampler" here, it is expected that
-    # the named sampler uses a "data_generator" without
-    # reference to a data_source.  Using a data_generator
-    # can be useful for testing with synthetic data.
-    data_source: S3_LANDSAT_L2_TIFS,
+    data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    feature_selection: select_all
+    feature_selection: select_all,
+    ensemble_kwargs: {
+      init_ensemble_size: 1,  # how many models to initialize at start
+      saved_ensemble_size: 1, # how many models to serialize as "best"
+      n_generations: 1,       # how many model train/select generations
+      batches_per_gen: 1,     # how many partial_fit calls per train/select generation
+    },
+    model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
+    model_selection_kwargs: {
+      drop_n: 0,
+      init_n: 0,
+      evolve_n: 1,
+    },
+    model_scoring: ensemble_kmeans_scoring,
   }
 }
 
 predict: {
   kmeans: {
-    from_output_tag: kmeans,
-    file_generator: default_file_gen,
-    poly_summarize: [],
+    data_source: NPP_DSRF1KD_L2GD,
+    sample_args_generator: iter_files_recursively,
+    sample_args_generator_kwargs: {
+      top_dir: 'env:ELM_EXAMPLE_DATA_PATH',
+      extension: '.hdf'
+    }
   }
 }
 change_detection: {
@@ -153,7 +151,11 @@ pipeline:
      sample_pipeline: [
       {feature_selection: select_all},
     ]}
-  - {predict: kmeans}
+  - {predict: kmeans,
+     sample_pipeline: [
+      {feature_selection: select_all},
+      ]
+    }
 
 
 # Config options that can be overriden by environment variables:
