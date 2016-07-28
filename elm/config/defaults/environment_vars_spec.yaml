@@ -15,11 +15,9 @@ str_fields_specs:
     DISTRIBUTED,
     SERIAL,
     THREAD_POOL,
-    PROCESS_POOL]
-   }
+    PROCESS_POOL]}
  - {name: DASK_SCHEDULER,
-    required: True
-   }
+    required: True}
  - {name: LADSWEB_LOCAL_CACHE,  # needs to be deprecated
     required: False}
  - {name: HASHED_ARGS_CACHE,    # needs to be deprecated
@@ -31,7 +29,11 @@ str_fields_specs:
     required: False,
     expanduser: True}
  - {name: ELM_TRAIN_PATH,
-    default: ~/elm-pickle-path,
+    default: ~/elm-train-path,
+    required: True,
+    expanduser: True}
+ - {name: ELM_TRANSFORM_PATH,
+    default: ~/elm-transform-path,
     required: True,
     expanduser: True}
  - {name: ELM_PREDICT_PATH,

@@ -100,6 +100,13 @@ model_scoring: {
     scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
   }
 }
+transform: {
+  pca: {
+    model_init_class: "sklearn.decomposition.IncrementalPCA",
+    model_init_kwargs: {"n_components": 3},
+    data_source: NPP_DSRF1KD_L2GD,
+  }
+}
 
 train: {
   kmeans: {
@@ -116,7 +123,6 @@ train: {
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    feature_selection: select_all,
     ensemble_kwargs: {
       init_ensemble_size: 1,  # how many models to initialize at start
       saved_ensemble_size: 1, # how many models to serialize as "best"
@@ -147,13 +153,17 @@ change_detection: {
   time_series: []
 }
 pipeline:
+  - {transform: pca,
+     method: partial_fit}
   - {train: kmeans,
      sample_pipeline: [
       {feature_selection: select_all},
+      {transform: pca, method: transform},
     ]}
   - {predict: kmeans,
      sample_pipeline: [
       {feature_selection: select_all},
+      {transform: pca, method: transform},
       ]
     }
 
