@@ -11,6 +11,7 @@ dependencies:
  - h5py
  - jupyter
  - krb5
+ - libgdal=2
  - matplotlib
  - netcdf4
  - networkx
