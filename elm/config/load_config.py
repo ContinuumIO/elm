@@ -23,10 +23,12 @@ def sample_args_generator_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
 
-PIPELINE_ACTIONS = ('download_data_sources',
-                    'train',
+PIPELINE_ACTIONS = ('train',
                     'predict',
-                    'change_detection')
+                    'transform',)
+                    # TODO other steps like
+                    #'change_detection',
+                    #'spatial_summary'
 
 class ConfigParser(object):
     # The list below reflects the order
@@ -180,6 +182,10 @@ class ConfigParser(object):
                                 True,
                                 'train:{} sample_from_args_func'.format(name))
         self._validate_selection_kwargs(ds, name)
+        keep_columns = ds.get('keep_columns') or []
+        self._validate_type(keep_columns, 'keep_columns', (tuple, list))
+        ds['keep_columns'] = keep_columns
+
 
     def _validate_data_sources(self):
         '''Validate all "data_sources" of config'''
@@ -330,6 +336,7 @@ class ConfigParser(object):
                 raise ElmConfigError(err_msg)
             elif greater_is_better is not None:
                 self._validate_type(greater_is_better, context + '(greater_is_better)', bool)
+                self.config['model_scoring'][key]['score_weights'] = [-1 if not greater_is_better else 1]
             elif score_weights is not None:
                 self._validate_type(score_weights, context + '(score_weights)', Iterable)
             else:
@@ -351,20 +358,16 @@ class ConfigParser(object):
         if not isinstance(t, dict):
             raise ElmConfigError('In train:{} expected a dict '
                                    'but found {}'.format(name, t))
-        training_funcs = (('model_selection_func', False),
-                           ('model_init_class', True),
+        training_funcs = (('model_init_class', True),
                            ('get_y_func', False),
                            ('get_weight_func', False),
                            )
 
         has_fit_func = False
         has_funcs = {}
+        sel = t.get('model_selection')
+        no_selection = not sel or sel in ('no_selection',)
         for f, required in training_funcs:
-            if f == 'model_selection_func' and t.get(f) == 'no_selection':
-                no_selection = True
-                continue
-            elif f == 'model_selection_func':
-                no_selection = False
             cls_or_func = self._validate_custom_callable(t.get(f), required,
                                            'train:{} - {}'.format(name, f))
             has_funcs[f] = bool(cls_or_func)
@@ -384,64 +387,80 @@ class ConfigParser(object):
         return has_fit_func, requires_y, no_selection
 
 
-    def _validate_one_train_entry(self, name, t):
+    def _validate_one_train_or_transform_entry(self, train_or_transform, name, t):
         '''Validate one dict within "train" section of config'''
         has_fit_func, requires_y, no_selection = self._validate_training_funcs(name, t)
-        if requires_y:
-            self._validate_custom_callable(t.get('get_y_func'),
-                                           True,
-                                           'train:get_y_func (required with ''{})'.format(repr(t.get('model_init_class'))))
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
-            self._validate_type(t[k], 'train:{}'.format(k), dict)
+            self._validate_type(t[k], '{}:{}'.format(train_or_transform, k), dict)
         if not no_selection:
-            self._validate_type(t.get('model_selection_kwargs'),
-                                'train:{} (model_selection_kwargs)'.format(name),
-                                dict)
+            mod = t.get('model_selection')
+            if not mod in self.model_selection:
+                raise ElmConfigError('{}:model_selection {} is not a '
+                                     'key in config\'s model_selection'.format(train_or_transform, mod))
             if t.get('sort_fitness'):
                 self._validate_custom_callable(t.get('sort_fitness'),
                                                True,
-                                               'train:{} (sort_fitness)'.format(repr(t.get('sort_fitness'))))
+                                               '{}:{} (sort_fitness)'.format(train_or_transform,repr(t.get('sort_fitness'))))
             ms = t.get('model_scoring')
             if ms:
-                self._validate_type(ms, 'train:{} (model_scoring)'.format(name),
+                self._validate_type(ms, '{}:{} (model_scoring)'.format(train_or_transform,name),
                                     (str, numbers.Number, tuple))
                 if not ms in self.model_scoring:
-                    raise ElmConfigError('train:{}\'s model_scoring: {} is not a '
+                    raise ElmConfigError('{}:{}\'s model_scoring: {} is not a '
                                          'key in config\'s model_scoring '
-                                         'dict'.format(name, ms))
+                                         'dict'.format(train_or_transform, name, ms))
             else:
-                t['model_scoring'] = None
-        for f in ('saved_ensemble_size', 'n_generations',
-                  'ensemble_size', 'batches_per_gen'):
-            self._validate_positive_int(t['ensemble_kwargs'].get(f), f)
+                raise ElmConfigError('In {}:{} model_scoring must be defined if model_selection is used'.format(train_or_transform, name))
         data_source = t.get('data_source')
         if not data_source in self.data_sources:
-            raise ElmConfigError('train dict at key {} refers '
+            raise ElmConfigError('{} dict at key {} refers '
                                    'to a data_source {} that is '
                                    'not defined in '
-                                   '"data_sources"'.format(name, repr(data_source)))
+                                   '"data_sources"'.format(train_or_transform, name, repr(data_source)))
+        data_source = self.data_sources[data_source]
+        if requires_y:
+            self._validate_custom_callable(data_source.get('get_y_func'),
+                                           True,
+                                           '{}:get_y_func (required with '
+                                           '{})'.format(train_or_transform,
+                                                        repr(t.get('model_init_class'))))
         output_tag = t.get('output_tag')
         self._validate_type(output_tag, 'train:output_tag', str)
-        band_specs = self.data_sources[data_source]['band_specs']
+        band_specs = data_source['band_specs']
         t['band_names'] = [x[-1] for x in band_specs]
-        keep_columns = t.get('keep_columns') or []
-        self._validate_type(keep_columns, 'keep_columns', (tuple, list))
-        t['keep_columns'] = keep_columns
-        feature_selection = t.get('feature_selection') or 'select_all'
-        self._validate_type(feature_selection, 'feature_selection', str)
-        if not feature_selection in self.feature_selection:
-            raise ElmConfigError('In train:{} expected '
-                                   'feature_selection:{} to be a '
-                                   'key in feature_selection:'
-                                   '{}'.format(k, feature_selection, self.feature_selection))
-        self.config['train'][name] = self.train[name] = t
+        self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
+
+    def _validate_train_or_transform(self, train_or_transform):
+        '''Validate the "train" section of config'''
+        setattr(self, train_or_transform, self.config.get(train_or_transform, {}) or {})
+        for name, t in getattr(self, train_or_transform).items():
+            self._validate_one_train_or_transform_entry(train_or_transform,name, t)
 
     def _validate_train(self):
-        '''Validate the "train" section of config'''
-        self.train = self.config.get('train', {}) or {}
-        for name, t in self.train.items():
-            self._validate_one_train_entry(name, t)
+        return self._validate_train_or_transform('train')
+
+    def _validate_transform(self):
+        return self._validate_train_or_transform('transform')
+
+    def _validate_ensembles(self):
+        self.ensembles = self.config.get('ensembles') or {}
+        self._validate_type(self.ensembles, 'config - ensembles', dict)
+        for f in ('saved_ensemble_size', 'n_generations',
+                  'init_ensemble_size', 'batches_per_gen'):
+            for k in self.ensembles:
+                self._validate_positive_int(self.ensembles[k].get(f), f)
+
+    def _validate_model_selection(self):
+        self.model_selection = self.config.get('model_selection') or {}
+        self._validate_type(self.model_selection, 'config - model_selection', dict)
+        for k,v in self.model_selection.items():
+            self._validate_type(v.get('kwargs'),
+                                'model_selection:{} - {}'.format(k, 'kwargs'),
+                                dict)
+            self._validate_custom_callable(v.get('func'),
+                                           True,
+                                           'model_selection:{} - {}'.format(k, 'func'))
 
     def _validate_predict(self):
         '''Validate the "predict" section of config'''
@@ -453,18 +472,6 @@ class ConfigParser(object):
         # TODO fill this in
         self._validate_type(self.change_detection, 'change_detection', dict)
         return True
-
-    def _validate_pipeline_download_data_sources(self, step):
-        # TODO deprecate pipeline download actions
-        # TODO make sure that the dataset can be downloaded or exists locally
-        download_data_sources = step.get('download_data_sources', []) or []
-
-        if isinstance(download_data_sources, str):
-            download_data_sources = [download_data_sources]
-        self._validate_type(download_data_sources, 'download_data_sources', (list, tuple))
-        download_data_sources = download_data_sources
-        step['download_data_sources'] = download_data_sources
-        return step
 
     def _validate_pipeline_sample_pipeline(self, sample_pipeline, predict_or_train, options, step):
         # TODO validate operations such as resampling and aggregation
@@ -484,6 +491,20 @@ class ConfigParser(object):
         step['sample_pipeline'] = sample_pipeline
         step['train'] = train
         return step
+
+    def _validate_pipeline_transform(self, step):
+        '''Validate a "train" step within config's "pipeline"'''
+        transform = step.get('transform')
+        if not transform in self.transform:
+            raise ElmConfigError('Pipeline refers to an undefined "transform"'
+                                   ' key: {}'.format(repr(transform)))
+        sample_pipeline = step.get('sample_pipeline', []) or []
+        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'train',
+                                                      self.transform[transform], step)
+        step['sample_pipeline'] = sample_pipeline
+        step['transform'] = transform
+        return step
+
 
     def _validate_pipeline_predict(self, step):
         '''Validate a "predict" step within config's "pipeline"'''

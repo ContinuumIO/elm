@@ -3,14 +3,15 @@ import copy
 import numpy as np
 import pandas as pd
 import xarray as xr
-
+from sklearn.decomposition import IncrementalPCA
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
 from elm.preproc.elm_store import ElmStore
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      random_elm_store,
                                      BANDS,
-                                     GEO)
+                                     GEO,
+                                     remove_pipeline_transforms)
 
 BASE = copy.deepcopy(DEFAULTS)
 
@@ -32,6 +33,7 @@ def test_sample_pipeline_feature_selection():
     tag = selection_name = 'variance_selection'
     config = copy.deepcopy(BASE)
     with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+        remove_pipeline_transforms(config)
         for idx, action in enumerate(config['pipeline']):
             if 'train' in action or 'predict' in action:
                 train_name = action.get('train', action.get('predict'))
@@ -39,17 +41,18 @@ def test_sample_pipeline_feature_selection():
                     action['sample_pipeline'] += [{'feature_selection': selection_name}]
                 else:
                     action['sample_pipeline'] = [{'feature_selection': selection_name}]
-                config = ConfigParser(config=BASE)
-                config.feature_selection[selection_name] = {
+
+                config2 = ConfigParser(config=BASE)
+                config2.feature_selection[selection_name] = {
                     'selection': 'sklearn.feature_selection:VarianceThreshold',
                     'scoring': None,
                     'choices': BANDS,
                     'kwargs': {'threshold': 0.08,},
                 }
-                action_data = sample_pipeline.all_sample_ops(config.train[train_name], config, action)
-
+                action_data = sample_pipeline.all_sample_ops(config2.train[train_name], config2, action)
+                transform_models = None
                 for repeats in range(5):
-                    s = sample_pipeline.run_sample_pipeline(action_data)
+                    s = sample_pipeline.run_sample_pipeline(action_data, transform_dict=None)
                     assert s.sample.shape[1] < 40
                     assert set(s.sample.band.values) < set(BANDS)
 

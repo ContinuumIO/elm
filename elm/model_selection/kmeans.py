@@ -21,11 +21,11 @@ def ensemble_kmeans_scoring(model,
                             **kwargs):
     assert len(x.shape) == 2
     model.partial_fit(x)
-    model._score = np.sqrt(np.sum(model.transform(x)))
-    return model
+    return np.sqrt(np.sum(model.transform(x)))
 
 
-def kmeans_model_averaging(models, **kwargs):
+
+def kmeans_model_averaging(models, best_idxes=None, **kwargs):
 
     linear_prob = np.linspace(len(models), 1, len(models))
     drop_n = kwargs['drop_n']

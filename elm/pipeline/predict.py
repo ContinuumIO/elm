@@ -18,7 +18,8 @@ from elm.pipeline.sample_pipeline import (all_sample_ops,
                                           flattened_to_cube)
 from elm.pipeline.serialize import (predict_to_netcdf,
                                     predict_to_pickle,
-                                    load_models_from_tag)
+                                    load_models_from_tag,
+                                    predict_file_name)
 from elm.pipeline.sample_pipeline import run_sample_pipeline
 from elm.preproc.elm_store import ElmStore
 
@@ -35,10 +36,12 @@ def predict_file_name(elm_predict_path, tag, bounds):
 
 def _predict_one_sample(action_data, serialize, model,
                         return_serialized=True, to_cube=True,
-                        sample=None):
+                        sample=None, transform_dict=None):
     # TODO: control to_cube from config
     name, model = model
-    sample = run_sample_pipeline(action_data, sample=sample)
+    sample = run_sample_pipeline(action_data,
+                                 sample=sample,
+                                 transform_dict=transform_dict)
     sample_flat = flatten_cube(sample)
     prediction1 = model.predict(sample_flat.sample.values)[:, np.newaxis]
     attrs = copy.deepcopy(sample.attrs)
@@ -57,7 +60,8 @@ def _predict_one_sample(action_data, serialize, model,
 def predict_step(config, step, executor,
                  models=None,
                  serialize=None,
-                 to_cube=True):
+                 to_cube=True,
+                 transform_dict=None):
 
     if hasattr(executor, 'map'):
         map_function = executor.map
@@ -67,7 +71,6 @@ def predict_step(config, step, executor,
         submit_func = executor.submit
     else:
         submit_func = no_executor_submit
-
     get_results = partial(wait_for_futures, executor=executor)
     predict_dict = config.predict[step['predict']]
     action_data = all_sample_ops(predict_dict, config, step)
@@ -94,6 +97,7 @@ def predict_step(config, step, executor,
         return _predict_one_sample(action_data_copy,
                                    serialize,
                                    model,
-                                   to_cube=to_cube)
+                                   to_cube=to_cube,
+                                   transform_dict=transform_dict)
     arg_gen = itertools.product(args, models)
     return get_results(map_function(predict, arg_gen))

@@ -1,11 +1,11 @@
+import copy
 import numpy as np
+from elm.preproc.elm_store import ElmStore
 
 def random_rows(es, n_rows):
     '''Drop '''
-    sample = es.sample.where(es.sample.notnull()).dropna(dim='space')
-    if n_rows > sample.space.size
-        return es
-    inds = np.arange(sample.values.shape[0])
+    attrs = copy.deepcopy(es.attrs)
+    attrs['random_rows'] = n_rows
+    inds = np.arange(es.sample.values.shape[0])
     np.random.shuffle(inds)
-    es['sample'] = sample.isel(space=inds[:n_rows])
-    return es
+    return ElmStore({'sample': es.sample[inds[:n_rows], :]}, attrs=attrs)

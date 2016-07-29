@@ -12,6 +12,9 @@ from elm.readers.util import row_col_to_xy
 
 logger = logging.getLogger(__name__)
 
+_SAMPLE_PIPELINE_SPECS = {}
+
+
 def check_action_data(action_data):
     '''Check that each action in action_data from all_sample_ops
     is a tuple of (func, args, kwargs)
@@ -41,7 +44,7 @@ def check_action_data(action_data):
                              'to be a dict (kwargs to {}).  Got {}'.format(pformat(func), pformat(kwargs)))
     return True
 
-def run_sample_pipeline(action_data, sample=None):
+def run_sample_pipeline(action_data, sample=None, transform_dict=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
     Params:
@@ -58,6 +61,11 @@ def run_sample_pipeline(action_data, sample=None):
     if len(action_data) > start_idx:
         for action in action_data[start_idx:]:
             func_str, args, kwargs = action
+            if action[0].endswith('transform_sample_pipeline_step'):
+                samp_pipeline_step = args[0]
+                if transform_dict:
+                    transform_models = transform_dict[samp_pipeline_step['transform']]
+                    args = tuple(args) + (transform_models,)
             func = import_callable(func_str, True, func_str)
             logger.debug('func {} args {} kwargs {}'.format(func, args, kwargs))
             sample = func(sample, *args, **kwargs)
@@ -127,30 +135,47 @@ def make_sample_pipeline_func(config, step):
     for action in sample_pipeline:
         if 'feature_selection' in action:
             if 'train' in step:
-                key = step['train']
+                key1 = 'train'
             elif 'predict' in step:
-                key = step['predict']
+                key1 = 'predict'
+            elif 'transform' in step:
+                key1 = 'transform'
             else:
                 raise ValueError('Expected "feature_selection" as a '
                                  'key within a "train" or "predict" pipeline '
                                  'action ({})'.format(action))
-            keep_columns = copy.deepcopy(config.train[key].get('keep_columns') or [])
+            d = getattr(config, key1)[step[key1]]
+            data_source = config.data_sources[d['data_source']]
+            keep_columns = copy.deepcopy(data_source.get('keep_columns') or [])
             item = ('elm.sample_util.feature_selection:feature_selection_base',
                     (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
                     {'keep_columns': keep_columns})
-        elif 'take_random_rows' in step:
+        elif 'random_sample' in action:
             item = ('elm.preproc.random_rows:random_rows',
-                    action['take_random_rows'],
+                    (action['random_sample'],),
                     {})
+        elif 'transform' in action:
+            item = ('elm.pipeline.transform:transform_sample_pipeline_step',
+                    (action, config),
+                    config.transform[action['transform']])
+
+        else:
             # add items to actions of the form:
             # (
             #   module_colon_func_name_as_string,        # string
             #   args_to_func,                            # tuple
             #   kwargs_to_func                           # dict
             # )
-            raise NotImplementedError('Put other sample_pipeline logic here, like resampling')
+            raise NotImplementedError('sample_pipeline action {} not recognized.'.format(action))
         actions.append(item)
     return actions
+
+def _check_array(arr, context):
+    if np.any(np.isnan(arr)):
+        raise ValueError('NaNs in {} (NaN count = {})'.format(context, np.where(np.isnan(arr))[0].size))
+
+    if not np.all(np.isfinite(arr)):
+        raise ValueError('Infs in {} (Inf count = {})'.format(context, np.where(np.isnan(arr))[0].size))
 
 def final_on_sample_step(fitter,
                          model, s,
@@ -187,6 +212,7 @@ def final_on_sample_step(fitter,
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
+
     if flatten:
         X = flatten_cube(s)
     if get_y_func:
@@ -205,15 +231,22 @@ def final_on_sample_step(fitter,
     if 'check_input' in kwargs:
         fit_kwargs['check_input'] = True
 
-    if any(a.lower() == 'y' for a in args):
-        if not callable(get_y_func):
-            raise ValueError('Fit function {} requires a Y positional '
-                             'argument but config\'s train section '
-                             'get_y_func is not a callable'.format(fitter))
+    if any(a.lower() == 'y' for a in args) and Y is None:
+        raise ValueError('Fit function {} requires a Y positional '
+                         'argument but config\'s train section '
+                         'get_y_func is not a callable'.format(fitter))
     if Y is not None:
         fit_args = (X.sample.values, Y)
+        logger.debug('fit to X (shape {}) and Y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))
+
     else:
         fit_args = (X.sample.values,)
+        logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
+    _check_array(X.sample.values, "X.sample.values")
+    if Y is not None:
+        _check_array(Y, "Y")
+    if fit_kwargs.get('sample_weight') is not None:
+        _check_array(fit_kwargs['sample_weight'], 'sample_weight')
     if 'classes' in kwargs:
         if classes is None:
             # TODO test that classes (the integer classes known
@@ -223,6 +256,9 @@ def final_on_sample_step(fitter,
             # all classes represented, then the np.unique is wrong
             classes = np.unique(Y)
         fit_kwargs['classes'] = classes
+    if 'batch_size' in model.get_params():
+        logger.debug('set batch_size {}'.format(X.sample.values.shape[0]))
+        model.set_params(batch_size = X.sample.values.shape[0])
     return fit_args, fit_kwargs
 
 def flatten_cube(elm_store):

@@ -30,7 +30,9 @@ def fit(model,
         batches_per_gen=2,
         fit_kwargs=None,
         scoring=None,
-        scoring_kwargs=None):
+        scoring_kwargs=None,
+        transform_dict=None,
+        fit_method='partial_fit'):
     '''fit calls partial_fit or fit on a model after running the sample_pipeline
 
     Params:
@@ -44,26 +46,17 @@ def fit(model,
         fit_kwargs: kwargs passed to partial_fit or fit method of model
 
     '''
-    scoring_kwargs = scoring_kwargs or {}
     get_y_kwargs = get_y_kwargs or {}
     if batches_per_gen > 1:
-        if not hasattr(model, 'partial_fit'):
+        if not hasattr(model, 'partial_fit') and fit_method == 'partial_fit':
             raise ValueError(FIT_FUNC_ERR.format(repr(model), batches_per_gen))
 
     iter_offset = 0
-    scoring_kwargs = scoring_kwargs or {}
-    scoring_kwargs = {k:v for k,v in scoring_kwargs.items()
-                      if not k in ('scoring',)}
     for idx in range(batches_per_gen):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
-        samp = run_sample_pipeline(action_data)
-        fitter = getattr(model, 'partial_fit', None)
-        if fitter is None:
-            fitter = getattr(model, 'fit')
-            logger.debug('Use fit')
-        else:
-            logger.debug('Use partial_fit')
+        samp = run_sample_pipeline(action_data, transform_dict=transform_dict)
+        fitter = getattr(model, fit_method)
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, samp,
                                                     iter_offset,
                                                     fit_kwargs,
@@ -77,7 +70,9 @@ def fit(model,
 
         model = fitter(*fit_args, **fit_kwargs)
         if scoring:
-            model = score_one_model(model, scoring, *fit_args, **fit_kwargs)
+            fit_kwargs.update(scoring_kwargs or {})
+            kw = {k:v for k,v in fit_kwargs.items() if not k in ('scoring',)}
+            model = score_one_model(model, scoring, *fit_args, **kw)
         iter_offset += getattr(model, 'n_iter', 1)
     return model
 

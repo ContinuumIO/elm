@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from elm.pipeline.train import train_step
 from elm.pipeline.predict import predict_step
+from elm.pipeline.transform import transform_pipeline_step
 from elm.pipeline.download_data_sources import download_data_sources_step
 
 def on_step(*args, **kwargs):
@@ -11,12 +12,15 @@ def on_step(*args, **kwargs):
         return ('train', train_step(*args, **kwargs))
     elif 'predict' in step:
         return ('predict', predict_step(*args, **kwargs))
+    elif 'transform' in step:
+        return ('transform', transform_pipeline_step(*args, **kwargs))
     else:
         raise NotImplemented('Put other operations like "change_detection" here')
 
 def pipeline(config, executor):
     '''Run all steps of a config's "pipeline"'''
     return_values = defaultdict(lambda: {})
+    transform_dict = {}
     for idx, step in enumerate(config.pipeline):
         models = None
         if 'predict' in step and 'train' in return_values:
@@ -26,6 +30,8 @@ def pipeline(config, executor):
                 # in-memory models returned by train step
                 # already run
                 models = return_values['train'][step['predict']]
-        kwargs = {'models': models}
+        kwargs = {'models': models, 'transform_dict': transform_dict}
         step_type, ret_val = on_step(config, step, executor, **kwargs)
         return_values[step_type][step[step_type]] = ret_val
+        if step_type == 'transform':
+            transform_dict[step[step_type]] = ret_val

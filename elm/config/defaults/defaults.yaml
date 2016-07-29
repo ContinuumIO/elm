@@ -37,6 +37,12 @@ data_sources: {
       exclude_polys: [],
     },
    },
+  get_y_func: Null,
+  get_y_kwargs: {},
+  get_weight_func: Null,
+  get_weight_kwargs: {},
+  keep_columns: [],
+  batch_size: 1440000,
  },
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
@@ -56,8 +62,14 @@ data_sources: {
   #[name, "_B8.TIF", band_8], # band 8 in panchromatic and at 15 m rather than 30 m
   [name, "_B9.TIF", band_9],
   [name, "_B10.TIF", band_10],
-  [name, "_B11.TIF", band_11]]
- }
+  [name, "_B11.TIF", band_11]],
+  get_y_func: Null,
+  get_y_kwargs: {},
+  get_weight_func: Null,
+  get_weight_kwargs: {},
+  keep_columns: [],
+  batch_size: 1440000,
+  },
 }
 sample_args_generators: {
   tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
@@ -98,13 +110,49 @@ model_scoring: {
   },
   ensemble_kmeans_scoring: {
     scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
+    score_weights: [-1],
   }
 }
+model_selection: {
+  kmeans_model_averaging: {
+    kwargs: {
+      drop_n: 0,
+      init_n: 0,
+      evolve_n: 1,
+    },
+    func: "elm.model_selection.kmeans:kmeans_model_averaging",
+  },
+  select_top_n: {
+    kwargs: {
+      top_n: 1,
+    },
+    func: "elm.model_selection.base:select_top_n_models"
+  }
+}
+ensembles: {
+  no_ensemble: {
+    init_ensemble_size: 1,  # how many models to initialize at start
+    saved_ensemble_size: 1, # how many models to serialize as "best"
+    n_generations: 1,       # how many model train/select generations
+    batches_per_gen: 1,     # how many partial_fit calls per train/select generation
+  },
+  small_ensemble: {
+    init_ensemble_size: 16,  # how many models to initialize at start
+    saved_ensemble_size: 4, # how many models to serialize as "best"
+    n_generations: 4,       # how many model train/select generations
+    batches_per_gen: 4,     # how many partial_fit calls per train/select generation
+  }
+}
+
 transform: {
   pca: {
-    model_init_class: "sklearn.decomposition.IncrementalPCA",
-    model_init_kwargs: {"n_components": 3},
+    model_init_class: "sklearn.decomposition:IncrementalPCA",
+    model_init_kwargs: {"n_components": 2},
     data_source: NPP_DSRF1KD_L2GD,
+    ensemble: no_ensemble,
+    model_selection: Null,
+    model_scoring: Null
+
   }
 }
 
@@ -116,26 +164,12 @@ train: {
     model_init_kwargs: {
       compute_labels: True
     },
-    get_y_func: Null,
-    get_y_kwargs: {},
-    get_weight_func: Null,
-    get_weight_kwargs: {},
+    ensemble: no_ensemble,
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    ensemble_kwargs: {
-      init_ensemble_size: 1,  # how many models to initialize at start
-      saved_ensemble_size: 1, # how many models to serialize as "best"
-      n_generations: 1,       # how many model train/select generations
-      batches_per_gen: 1,     # how many partial_fit calls per train/select generation
-    },
-    model_selection_func: "elm.model_selection.kmeans:kmeans_model_averaging",
-    model_selection_kwargs: {
-      drop_n: 0,
-      init_n: 0,
-      evolve_n: 1,
-    },
     model_scoring: ensemble_kmeans_scoring,
+    model_selection: kmeans_model_averaging,
   }
 }
 
@@ -154,8 +188,12 @@ change_detection: {
 }
 pipeline:
   - {transform: pca,
-     method: partial_fit}
+     method: partial_fit,
+     sample_pipeline: [
+      {feature_selection: select_all},
+    ]}
   - {train: kmeans,
+     method: partial_fit,
      sample_pipeline: [
       {feature_selection: select_all},
       {transform: pca, method: transform},

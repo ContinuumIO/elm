@@ -26,6 +26,11 @@ def _score_one_model_with_y_true(model,
                                 y_true,
                                 sample_weight=None,
                                 **kwargs):
+    if scoring is None:
+        kw = copy.deepcopy(kwargs)
+        kw['sample_weight'] = sample_weight
+        kwargs_to_scoring = filter_kwargs_to_func(model.score, **kw)
+        return model.score(x, y_true, **kwargs)
     if not isinstance(scoring, sk_metrics.scorer._PredictScorer):
         scorer = make_scorer(scoring, **kwargs)
     else:
@@ -43,8 +48,12 @@ def _score_one_model_no_y_true(model,
                                **kwargs):
     kwargs_to_scoring = copy.deepcopy(kwargs)
     kwargs_to_scoring['sample_weight'] = sample_weight
-    kwargs_to_scoring = filter_kwargs_to_func(scoring,
-                                            **kwargs_to_scoring)
+    if scoring is None:
+        return model.score(x, **kwargs_to_scoring)
+    else:
+        kwargs_to_scoring = filter_kwargs_to_func(scoring,
+                                                **kwargs_to_scoring)
+
     return scoring(model, x, **kwargs_to_scoring)
 
 
@@ -55,6 +64,10 @@ def score_one_model(model,
                     y=None,
                     sample_weight=None,
                     **kwargs):
+    if scoring is None:
+        if not hasattr(model, 'score') or not callable(model.score):
+            raise ValueError('Cannot score model.  No scoring given and '
+                             'model has no "score" callable attribute')
     if y is not None:
         model._score = _score_one_model_with_y_true(model,
                                                     scoring,
@@ -63,7 +76,8 @@ def score_one_model(model,
                                                     sample_weight=None,
                                                     **kwargs)
     else:
-        scoring = import_callable(scoring)
+        if scoring is not None:
+            scoring = import_callable(scoring)
         model._score = _score_one_model_no_y_true(model,
                         scoring,
                         x,

@@ -136,3 +136,9 @@ def random_elm_store(bands, mn=0, mx=1, height=100, width=80):
                 attrs=attrs)},
             attrs=attrs)
     return es
+def remove_pipeline_transforms(config):
+    config['pipeline'] = [_ for _ in config['pipeline'] if not 'transform' in _]
+
+    for item in config['pipeline']:
+        if 'sample_pipeline' in item:
+            item['sample_pipeline'] = [_ for _ in item['sample_pipeline'] if not 'transform' in _]

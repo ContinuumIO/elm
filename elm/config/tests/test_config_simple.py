@@ -55,18 +55,17 @@ def test_bad_train_config():
                 bad_config = tst_bad_config(bad_config)
 
     for item in NOT_DICT:
-        bad_config['train'][name]['ensemble_kwargs'] = item
+        bad_config['ensembles'] = item
         bad_config = tst_bad_config(bad_config)
+    k = tuple(bad_config['ensembles'].keys())[0]
     for item in NOT_INT:
-        bad_config['train'][name]['ensemble_kwargs']['ensemble_size'] = item
+        bad_config['ensembles'][k]['init_ensemble_size'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['saved_ensemble_size'] = item
+        bad_config['ensembles'][k]['saved_ensemble_size'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
+        bad_config['ensembles'][k]['n_generations'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
-        bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['batches_per_gen'] = item
+        bad_config['ensembles'][k]['batches_per_gen'] = item
         bad_config = tst_bad_config(bad_config)
 
 

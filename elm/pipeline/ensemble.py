@@ -33,12 +33,14 @@ def _validate_ensemble_members(models):
 def ensemble(executor,
              model_init_class,
              model_init_kwargs,
+             fit_method,
              fit_args,
              fit_kwargs,
              model_scoring,
              model_scoring_kwargs,
              model_selection_func,
              model_selection_kwargs,
+             transform_dict,
              **ensemble_kwargs):
     '''Train model(s) in ensemble
 
@@ -90,6 +92,8 @@ def ensemble(executor,
     fit_kwargs = copy.deepcopy(fit_kwargs)
     fit_kwargs['scoring'] = model_scoring
     fit_kwargs['scoring_kwargs'] = model_scoring_kwargs
+    fit_kwargs['transform_dict'] = transform_dict
+    fit_kwargs['fit_method'] = fit_method
     for generation in range(n_generations):
         model_names = [name for name, model in models]
         logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))
@@ -105,17 +109,13 @@ def ensemble(executor,
         if model_selection_func:
             model_selection_kwargs['n_generations'] = n_generations
             model_selection_kwargs['generation'] = generation
-            score_weights = model_selection_kwargs.get('score_weights') or None
-            scoring_kwargs = fit_kwargs.get('scoring_kwargs') or {}
-            key = 'greater_is_better'
-            if key in scoring_kwargs:
-                if not isinstance(score_weights, Sequence):
-                    score_weights = [ 1 if scoring_kwargs[key] else -1]
-            sort_fitness = model_selection_kwargs.get('sort_fitness') or None
+            score_weights = fit_kwargs['scoring_kwargs'].get('score_weights') or None
+            sort_fitness = model_scoring_kwargs.get('sort_fitness', model_selection_kwargs.get('sort_fitness')) or None
             if not sort_fitness:
                 sort_fitness = pareto_front
             else:
                 sort_fitness = import_callable(sort_fitness)
+            logger.debug('base_selection {}'.format(repr((models, model_selection_func, sort_fitness, score_weights, model_selection_kwargs))))
             models = base_selection(models,
                                     model_selection_func=model_selection_func,
                                     sort_fitness=sort_fitness,
@@ -132,7 +132,7 @@ def ensemble(executor,
     else:
         saved_models = models
     model_paths, meta_path = save_models_with_meta(saved_models,
-                                 ensemble_kwargs['config'].ELM_TRAIN_PATH,
+                                 ensemble_kwargs['base_output_dir'],
                                  ensemble_kwargs['tag'],
                                  ensemble_kwargs['config'])
     logger.info('Created model pickles: {} '
