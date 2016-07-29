@@ -34,5 +34,5 @@ install:
 
 script:
   - cd $BUILD_DIR
-  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
+  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow' -v
   - cat elapsed_time_test.txt
