@@ -10,8 +10,6 @@ PARTIAL_FIT_MODEL_STR = (
     'sklearn.linear_model:PassiveAggressiveRegressor',
     'sklearn.cluster:MiniBatchKMeans',
     'sklearn.cluster:Birch',
-    'sklearn.decomposition:MiniBatchDictionaryLearning',
-    'sklearn.decomposition:IncrementalPCA',
     'sklearn.neural_network:BernoulliRBM'
 )
 
@@ -62,21 +60,44 @@ LINEAR_MODELS_WITH_PREDICT_STR = tuple(LINEAR_MODELS_WITH_PREDICT_STR)
 FIT_TRANSFORM_MODELS_STR = ('sklearn.cluster:SpectralClustering',
                             'sklearn.manifold:SpectralEmbedding',
                             'sklearn.manifold:LocallyLinearEmbedding',
-                            'sklearn.decomposition:IncrementalPCA',
                             'sklearn.linear_model:LogisticRegression',
                             'sklearn.linear_model:LogisticRegressionCV',
                             'sklearn.linear_model:Perceptron',
                             'sklearn.linear_model:RandomizedLasso',
                             'sklearn.linear_model:RandomizedLogisticRegression',
                             )
-ALL_MODELS_STR = LINEAR_MODELS_WITH_PREDICT_STR + FIT_TRANSFORM_MODELS_STR + \
+MODELS_WITH_PREDICT_STR = LINEAR_MODELS_WITH_PREDICT_STR + FIT_TRANSFORM_MODELS_STR + \
                  PARTIAL_FIT_MODEL_STR
-ALL_MODELS_DICT = {k: import_callable(k) for k in ALL_MODELS_STR}
-UNSUPERVISED_MODEL_STR = [k for k, v in ALL_MODELS_DICT.items()
+MODELS_WITH_PREDICT_DICT = {k: import_callable(k) for k in MODELS_WITH_PREDICT_STR}
+
+#
+DECOMP_PARTIAL_FIT_MODEL_STR = (
+    'sklearn.decomposition:MiniBatchDictionaryLearning',
+    'sklearn.decomposition:IncrementalPCA',
+)
+DECOMP_MODEL_STR = (
+    'sklearn.decomposition:PCA',
+    'sklearn.decomposition:ProjectedGradientNMF',
+    'sklearn.decomposition:RandomizedPCA',
+    'sklearn.decomposition:KernelPCA',
+    'sklearn.decomposition:FactorAnalysis',
+    'sklearn.decomposition:FastICA',
+    'sklearn.decomposition:TruncatedSVD',
+    'sklearn.decomposition:NMF',
+    'sklearn.decomposition:SparsePCA',
+    'sklearn.decomposition:MiniBatchSparsePCA',
+    'sklearn.decomposition:SparseCoder',
+    'sklearn.decomposition:DictionaryLearning',
+    'sklearn.decomposition:LatentDirichletAllocation',
+) + DECOMP_PARTIAL_FIT_MODEL_STR
+UNSUPERVISED_MODEL_STR = [k for k, v in MODELS_WITH_PREDICT_DICT.items()
                           if hasattr(v, 'fit')
                           and 'y' in get_args_kwargs_defaults(v.fit)[1]]
 
 
-ALL_MODELS_ESTIMATOR_TYPES = {k: getattr(v, '_estimator_type', None)
-                              for k,v in ALL_MODELS_DICT.items()}
+MODELS_WITH_PREDICT_ESTIMATOR_TYPES = {k: getattr(v, '_estimator_type', None)
+                              for k,v in MODELS_WITH_PREDICT_DICT.items()}
+
+
+
 

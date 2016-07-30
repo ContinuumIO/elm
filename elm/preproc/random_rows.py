@@ -1,9 +1,10 @@
 import copy
 import numpy as np
 from elm.preproc.elm_store import ElmStore
-
+from elm.pipeline.sample_pipeline import flatten_cube
 def random_rows(es, n_rows):
     '''Drop '''
+    es = flatten_cube(es)
     attrs = copy.deepcopy(es.attrs)
     attrs['random_rows'] = n_rows
     inds = np.arange(es.sample.values.shape[0])

@@ -57,18 +57,20 @@ def run_sample_pipeline(action_data, sample=None, transform_dict=None):
         sampler_func_str, sampler_args, sampler_kwargs = samp
         sampler_func = import_callable(sampler_func_str, True, sampler_func_str)
         sample = sampler_func(*sampler_args, **sampler_kwargs)
-    start_idx = (1 if sample is not None else 0)
-    if len(action_data) > start_idx:
-        for action in action_data[start_idx:]:
-            func_str, args, kwargs = action
-            if action[0].endswith('transform_sample_pipeline_step'):
-                samp_pipeline_step = args[0]
-                if transform_dict:
-                    transform_models = transform_dict[samp_pipeline_step['transform']]
-                    args = tuple(args) + (transform_models,)
-            func = import_callable(func_str, True, func_str)
-            logger.debug('func {} args {} kwargs {}'.format(func, args, kwargs))
-            sample = func(sample, *args, **kwargs)
+        start_idx = 1
+    else:
+        start_idx = 0
+    for action in action_data[start_idx:]:
+        func_str, args, kwargs = action
+        if action[0].endswith('transform_sample_pipeline_step'):
+            samp_pipeline_step = args[0]
+            if transform_dict:
+                transform_models = transform_dict[samp_pipeline_step['transform']]
+                args = tuple(args) + (transform_models,)
+        func = import_callable(func_str, True, func_str)
+        logger.debug('func {} args {} kwargs {}'.format(func, args, kwargs))
+        sample = func(sample, *args, **kwargs)
+        logger.debug('sample.shape {}'.format(sample.sample.shape))
     return sample
 
 

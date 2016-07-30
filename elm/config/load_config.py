@@ -429,6 +429,10 @@ class ConfigParser(object):
         self._validate_type(output_tag, 'train:output_tag', str)
         band_specs = data_source['band_specs']
         t['band_names'] = [x[-1] for x in band_specs]
+        ensemble = t.get('ensemble')
+        if not ensemble or not ensemble in self.ensembles:
+            raise ElmConfigError('Each train or transform dict must have an '
+                                 '"ensemble" key that is also a key in "ensembles"')
         self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
 
     def _validate_train_or_transform(self, train_or_transform):
