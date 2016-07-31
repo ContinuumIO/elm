@@ -51,6 +51,7 @@ def dump(data, path):
     joblib.dump(data, path)
 
 def save_models_with_meta(models, elm_train_path, tag, meta):
+    mkdir_p(elm_train_path)
     paths = get_paths_for_tag(elm_train_path, tag,
                               [_[0] for _ in models])
     paths_out = []
