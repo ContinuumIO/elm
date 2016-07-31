@@ -16,10 +16,12 @@ from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
+import elm.pipeline.transform as elmtransform
 from elm.preproc.elm_store import ElmStore
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
-
+old_transform = elmtransform.transform_sample_pipeline_step
+old_init_transform = elmtrain.init_sample_pipeline_transform_models
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
@@ -36,11 +38,16 @@ def patch_ensemble_predict():
         return args, kwargs
     try:
         elmtrain.ensemble = return_all
+        elmtransform.transform_sample_pipeline_step = return_all
+        elmtrain.init_sample_pipeline_transform_models = return_all
         predict.predict_step = return_all
+
         yield (elmtrain, predict)
     finally:
         elmtrain.ensemble = old_ensemble
-        predict.predict_step = return_all
+        predict.predict_step = old_predict_step
+        elmtransform.transform_sample_pipeline_step = old_transform
+        elmtrain.init_sample_pipeline_transform_models = old_init_transform
 
 
 @contextlib.contextmanager
