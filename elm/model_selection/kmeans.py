@@ -11,15 +11,15 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
-
-
+from elm.pipeline.sample_pipeline import flatten_cube
+from elm.preproc.elm_store import ElmStore
 
 def ensemble_kmeans_scoring(model,
                             x,
                             y_true=None,
                             scoring=None,
                             **kwargs):
-    assert len(x.shape) == 2
+
     model.partial_fit(x)
     return np.sqrt(np.sum(model.transform(x)))
 

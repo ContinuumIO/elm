@@ -9,13 +9,16 @@ import yaml
 
 from elm.pipeline import pipeline
 from elm.config import DEFAULTS, DEFAULTS_FILE, import_callable
-from elm.model_selection import ALL_MODELS_DICT
+from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection import get_args_kwargs_defaults
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      test_one_config as tst_one_config,
                                      remove_pipeline_transforms)
-from elm.model_selection.sklearn_support import ALL_MODELS_ESTIMATOR_TYPES
+from elm.model_selection.sklearn_support import MODELS_WITH_PREDICT_ESTIMATOR_TYPES
+
 config = copy.deepcopy(DEFAULTS)
+SMALL_ROW_COUNT = 500
+
 for step in config['pipeline']:
     if 'train' in step:
         DEFAULT_TRAIN_KEY = step['train']
@@ -26,9 +29,10 @@ for step in config['pipeline']:
 
 def test_default_config():
     tag = 'run-with-default-config'
-    with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+    with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         out = tst_one_config(config=DEFAULTS, cwd=cwd)
         len_train, len_predict = map(os.listdir, (train_path, predict_path))
+        assert os.path.exists(transform_path)
         assert len_train
         assert len_predict
 
@@ -66,7 +70,7 @@ multi_task = ('MultiTaskLasso',
               'MultiTaskLassoCV')
 
 def get_type(model_init_class):
-    return ALL_MODELS_ESTIMATOR_TYPES[model_init_class]
+    return MODELS_WITH_PREDICT_ESTIMATOR_TYPES[model_init_class]
 
 
 def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
@@ -90,12 +94,14 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
         * Model selection logic works for ensembles
     '''
     tag = '{}-n_rows-{}'.format(model_init_class, n_rows)
+    embedding = ('LocallyLinearEmbedding', 'SpectralEmbedding', 'SpectralCluster')
+    if any(s in model_init_class for s in embedding):
+        pytest.xfail('Affinity matrix would be too large - embedding methods')
     if 'DictionaryLearning' in model_init_class:
         pytest.skip('Too slow (DictionaryLearning on random data)')
-    if 'SpectralCluster' in model_init_class:
-        pytest.skip('SpectralClustering with random data has little connectivity')
-
-    with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+    if n_rows is None and 'LocallyLinearEmbedding' in model_init_class:
+        pytest.skip('LocallyLinearEmbedding is too slow for unlimited rows in this test')
+    with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         # make a small ensemble for simplicity
         default_ensemble =  {
                               'init_ensemble_size': 2,  # how many models to initialize at start
@@ -103,12 +109,29 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                               'n_generations': 1,       # how many model train/select generations
                               'batches_per_gen': 1,     # how many partial_fit calls per train/select generation
                             }
-        default_init_kwargs = copy.deepcopy(DEFAULT_TRAIN['model_init_kwargs'])
+        ks = set(c().get_params())
+        models_defaults = {}
+        # The following are helpful to prevent
+        # slow resampling on models that
+        # start with "Randomized", e.g. RandomizedLasso
+
+        if 'n_resampling' in ks:
+            models_defaults['n_resampling'] = 2
+        if 'sample_fraction' in ks:
+            models_defaults['sample_fraction'] = 0.2
+        if 'n_jobs' in ks:
+            models_defaults['n_jobs'] = -1
+        if 'pre_dispatch' in ks:
+            models_defaults['pre_dispatch'] = '2*n_jobs'
         # Initialize the model given in arguments
+        if 'max_iter' in ks:
+            models_defaults['max_iter'] = 10
+        if 'n_neighbors' in ks:
+            models_defaults['n_neighbors'] = 1
         kwargs = {'model_init_class': model_init_class,
                   'model_selection': 'no_selection',
                   'ensemble_kwargs': default_ensemble,
-                  'model_init_kwargs': default_init_kwargs}
+                  'model_init_kwargs': models_defaults}
         if not hasattr(c, 'predict'):
             # TODO: handle models with "fit_transform"
             # or "transform" methods (ones without a "predict")
@@ -118,11 +141,10 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
         if any(m in model_init_class for m in multi_task):
             pytest.xfail('{} models from sklearn are unsupported'.format(model_init_class))
         method_args, method_kwargs, _ = get_args_kwargs_defaults(c.fit)
-        kwargs['model_init_kwargs'] = {}
         kwargs['model_scoring'] = None
         DEFAULT_DS_KEY = DEFAULTS['train'][DEFAULT_TRAIN_KEY]['data_source']
         data_sources = DEFAULTS['data_sources']
-        data_source = data_sources[DEFAULT_DS_KEY]
+        data_source = copy.deepcopy(data_sources[DEFAULT_DS_KEY])
         if any(a.lower() == 'y' for a in method_args):
             #  supervised
             model_type = get_type(model_init_class)
@@ -140,11 +162,9 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
         if 'MiniBatchKMeans' in model_init_class:
             kwargs['model_scoring'] = "ensemble_kmeans_scoring"
             kwargs['model_selection'] = "kmeans_model_averaging"
+            kwargs['get_y_func'] = None
         if 'OrthogonalMatchingPursuit' in model_init_class:
-            # This is incorrectly classified as a continuous
-            # model in the if block a few lines above
-            kwargs['model_scoring'] = None
-            kwargs['model_selection'] = None
+            pytest.skip('OrthogonalMatchingPursuit typically has higher dimensionality input than this test')
         if model_init_class.endswith('CV'):
             kwargs['model_scoring'] = None
             kwargs['model_selection'] = None
@@ -191,40 +211,30 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                         for end in ('.nc', '.xr')]
                 assert netcdfs
                 assert xarrays
+            if use_transform:
+                pickles = [t for t in os.listdir(transform_path) if t.endswith('.pkl')]
+                assert pickles
 
 
 @pytest.mark.slow
-@pytest.mark.parametrize('model_init_class,func', sorted(ALL_MODELS_DICT.items()))
+@pytest.mark.parametrize('model_init_class,func', sorted(MODELS_WITH_PREDICT_DICT.items()))
 def test_sklearn_methods_slow(model_init_class, func):
     '''Test running each classifier/regressor/cluster model
     through the default pipeline adjusted as necessary, where
     the training sample size is a full file (None as n_rows)
 
     pytest.mark.parametrize calls this
-    function once for each model_init_class in ALL_MODELS_DICT
+    function once for each model_init_class in MODELS_WITH_PREDICT_DICT
 
     Does not use PCA transforms
     '''
+    if model_init_class.split(':')[-1].startswith('Randomized'):
+        pytest.skip('sklearn Randomized* classes are too slow for this test')
     tst_sklearn_method(model_init_class, func, None, use_transform=False)
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize('model_init_class,func', sorted(ALL_MODELS_DICT.items()))
-def test_sklearn_methods_transform(model_init_class, func):
-    '''Test running each classifier/regressor/cluster model
-    through the default pipeline adjusted as necessary, where
-    the training sample size is random small
-    subset of one file's rows
 
-    pytest.mark.parametrize calls this
-    function once for each model_init_class in ALL_MODELS_DICT
-
-    Uses PCA transform before each model
-    '''
-    tst_sklearn_method(model_init_class, func, None, use_transform=True)
-
-
-@pytest.mark.parametrize('model_init_class,func', sorted(ALL_MODELS_DICT.items()))
+@pytest.mark.parametrize('model_init_class,func', sorted(MODELS_WITH_PREDICT_DICT.items()))
 def test_sklearn_methods_fast(model_init_class, func):
     '''Test running each classifier/regressor/cluster model
     through the default pipeline adjusted as necessary, where
@@ -232,7 +242,7 @@ def test_sklearn_methods_fast(model_init_class, func):
     subset of one file's rows
 
     pytest.mark.parametrize calls this
-    function once for each model_init_class in ALL_MODELS_DICT
+    function once for each model_init_class in MODELS_WITH_PREDICT_DICT
 
     Does not use PCA transform
     '''

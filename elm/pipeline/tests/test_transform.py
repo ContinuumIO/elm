@@ -20,15 +20,13 @@ def tst_once(tag, config):
 def tst_transform(model_init_class, is_slow):
     config = copy.deepcopy(DEFAULTS)
     c = import_callable(model_init_class)()
-    batch_size = 5000
+    batch_size = 1000
     params = c.get_params()
     # Make it run faster:
-    if 'max_iter' in params:
-        params['max_iter'] = 3
     if 'tol' in params:
-        params['tol'] *= 1000
+        params['tol'] *= 10
     if 'n_components' in params:
-        params['n_components'] = 2
+        params['n_components'] = 1
     if 'eigen_solver' in params:
         params['eigen_solver'] = 'dense'
     if 'n_topics' in params:
@@ -37,8 +35,8 @@ def tst_transform(model_init_class, is_slow):
         params['batch_size'] = batch_size
     if 'n_jobs' in params:
         params['n_jobs'] = 4
-    if 'n_iter' in params:
-        params['n_iter'] = 3
+    if 'whiten' in params:
+        params['whiten'] = True
     transform = {'tested': {'model_init_kwargs': params,
                             'model_init_class': model_init_class,
                             'data_source': DEFAULT_TRAIN['data_source'],

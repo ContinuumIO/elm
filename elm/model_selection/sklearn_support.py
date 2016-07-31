@@ -72,7 +72,6 @@ MODELS_WITH_PREDICT_DICT = {k: import_callable(k) for k in MODELS_WITH_PREDICT_S
 
 #
 DECOMP_PARTIAL_FIT_MODEL_STR = (
-    'sklearn.decomposition:MiniBatchDictionaryLearning',
     'sklearn.decomposition:IncrementalPCA',
 )
 DECOMP_MODEL_STR = (
@@ -86,7 +85,6 @@ DECOMP_MODEL_STR = (
     'sklearn.decomposition:NMF',
     'sklearn.decomposition:SparsePCA',
     'sklearn.decomposition:MiniBatchSparsePCA',
-    'sklearn.decomposition:SparseCoder',
     'sklearn.decomposition:DictionaryLearning',
     'sklearn.decomposition:LatentDirichletAllocation',
 ) + DECOMP_PARTIAL_FIT_MODEL_STR

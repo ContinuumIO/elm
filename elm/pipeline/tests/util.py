@@ -46,21 +46,24 @@ def patch_ensemble_predict():
 @contextlib.contextmanager
 def tmp_dirs_context(tag):
     start = datetime.datetime.now()
-    tmp1, tmp2, tmp3 = (tempfile.mkdtemp() for _ in range(3))
+    tmp1, tmp2, tmp3, tmp4 = (tempfile.mkdtemp() for _ in range(4))
     try:
         old1 = os.environ.get('ELM_TRAIN_PATH') or ''
         old2 =  os.environ.get('ELM_PREDICT_PATH') or ''
+        old3 = os.environ.get('ELM_TRANSFORM_PATH') or ''
         os.environ['ELM_TRAIN_PATH'] = tmp1
         os.environ['ELM_PREDICT_PATH'] = tmp2
+        os.environ['ELM_TRANSFORM_PATH'] = tmp3
         status = 'ok'
-        yield (tmp1, tmp2, tmp3)
+        yield (tmp1, tmp2, tmp3, tmp4)
     except Exception as e:
         status = repr(e)
         raise
     finally:
         os.environ['ELM_TRAIN_PATH'] = old1
         os.environ['ELM_PREDICT_PATH'] = old2
-        for tmp in (tmp1, tmp2, tmp3):
+        os.environ['ELM_TRANSFORM_PATH'] = old3
+        for tmp in (tmp1, tmp2, tmp3, tmp4):
             if os.path.exists(tmp):
                 shutil.rmtree(tmp)
         etime = (datetime.datetime.now() - start).total_seconds()

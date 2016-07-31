@@ -32,7 +32,7 @@ BASE['data_source'] = {'sample_args_generator': gen,
 def test_sample_pipeline_feature_selection():
     tag = selection_name = 'variance_selection'
     config = copy.deepcopy(BASE)
-    with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+    with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         remove_pipeline_transforms(config)
         for idx, action in enumerate(config['pipeline']):
             if 'train' in action or 'predict' in action:
