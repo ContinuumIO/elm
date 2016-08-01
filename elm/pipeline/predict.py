@@ -57,6 +57,26 @@ def _predict_one_sample(action_data, serialize, model,
         return serialize(prediction, sample)
     return prediction
 
+def _predict_one_sample_one_arg(action_data, transform_dict, arg):
+    filename, model = arg
+    logger.info('Predict {}'.format(filename))
+    action_data_copy = copy.deepcopy(action_data)
+    action_data_copy[0][-1]['filename'] = filename
+    return _predict_one_sample(action_data_copy,
+                               serialize,
+                               model,
+                               to_cube=to_cube,
+                               transform_dict=transform_dict)
+
+
+def _default_serialize(tag, config, prediction, sample):
+    fname = predict_file_name(config.ELM_PREDICT_PATH,
+                              tag,
+                              sample['sample'].Bounds)
+    predict_to_netcdf(prediction, fname)
+    predict_to_pickle(prediction, fname)
+    return True
+
 def predict_step(config, step, executor,
                  models=None,
                  serialize=None,
@@ -77,27 +97,12 @@ def predict_step(config, step, executor,
     sampler_kwargs = action_data[0][-1]
     tag = step['predict']
     if serialize is None:
-        def serialize(prediction, sample):
-            fname = predict_file_name(config.ELM_PREDICT_PATH,
-                                      tag,
-                                      sample['sample'].Bounds)
-            predict_to_netcdf(prediction, fname)
-            predict_to_pickle(prediction, fname)
-            return True
+        serialize = partial(_default_serialize, tag, config)
     if models is None:
         logger.info('Load pickled models from {} {}'.format(config.ELM_TRAIN_PATH, tag))
         models, meta = load_models_from_tag(config.ELM_TRAIN_PATH,
                                             tag)
     args = sampler_kwargs['generated_args']
-    def predict(arg):
-        filename, model = arg
-        logger.info('Predict {}'.format(filename))
-        action_data_copy = copy.deepcopy(action_data)
-        action_data_copy[0][-1]['filename'] = filename
-        return _predict_one_sample(action_data_copy,
-                                   serialize,
-                                   model,
-                                   to_cube=to_cube,
-                                   transform_dict=transform_dict)
     arg_gen = itertools.product(args, models)
+    predict = partial(_predict_one_sample_one_arg, action_data, transform_dict)
     return get_results(map_function(predict, arg_gen))
