@@ -7,7 +7,7 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 from elm.readers.util import row_col_to_xy
 
 logger = logging.getLogger(__name__)
@@ -153,7 +153,7 @@ def make_sample_pipeline_func(config, step):
                     (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
                     {'keep_columns': keep_columns})
         elif 'random_sample' in action:
-            item = ('elm.preproc.random_rows:random_rows',
+            item = ('elm.sample_util.random_rows:random_rows',
                     (action['random_sample'],),
                     {})
         elif 'transform' in action:

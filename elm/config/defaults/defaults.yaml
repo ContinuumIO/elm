@@ -89,7 +89,7 @@ masks: {
 
 }
 add_features: {
-  # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "elm.preproc.add_features:ndvi",
+  # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "elm.sample_util.add_features:ndvi",
 }
 feature_selection: {
   select_all: {

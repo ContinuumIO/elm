@@ -21,7 +21,7 @@ from elm.pipeline.serialize import (predict_to_netcdf,
                                     load_models_from_tag,
                                     predict_file_name)
 from elm.pipeline.sample_pipeline import run_sample_pipeline
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +57,7 @@ def _predict_one_sample(action_data, serialize, model,
         return serialize(prediction, sample)
     return prediction
 
-def _predict_one_sample_one_arg(action_data, transform_dict, arg):
+def _predict_one_sample_one_arg(action_data, transform_dict, serialize, to_cube, arg):
     filename, model = arg
     logger.info('Predict {}'.format(filename))
     action_data_copy = copy.deepcopy(action_data)
@@ -104,5 +104,9 @@ def predict_step(config, step, executor,
                                             tag)
     args = sampler_kwargs['generated_args']
     arg_gen = itertools.product(args, models)
-    predict = partial(_predict_one_sample_one_arg, action_data, transform_dict)
+    predict = partial(_predict_one_sample_one_arg,
+                      action_data,
+                      transform_dict,
+                      serialize,
+                      to_cube)
     return get_results(map_function(predict, arg_gen))

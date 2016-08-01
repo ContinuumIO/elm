@@ -6,7 +6,7 @@ import xarray as xr
 from sklearn.decomposition import IncrementalPCA
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.pipeline.sample_pipeline as sample_pipeline
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      random_elm_store,
                                      BANDS,
