@@ -18,10 +18,10 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes true
-  - conda install conda conda-build
   - echo Create elm-env
   - conda env update || conda env create
   - source activate elm-env
+  - conda list
   - mkdir LADSWEB
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - git clone http://github.com/ContinuumIO/elm-data || git checkout -f HEAD
@@ -34,5 +34,5 @@ install:
 
 script:
   - cd $BUILD_DIR
-  - conda build conda.recipe
-  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow'
+  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow' -v
+  - cat elapsed_time_test.txt

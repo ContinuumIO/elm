@@ -3,7 +3,6 @@ channels:
  - conda-forge # essential for rasterio on osx
 dependencies:
  - python=3.5
- - blaze
  - bokeh
  - dask
  - datashader
@@ -34,6 +33,6 @@ dependencies:
    - deap==1.0.1
    - graphviz
    - pysptools
+   - pypandoc
    - geopy
    - descartes
-   - pypandoc

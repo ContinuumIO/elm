@@ -2,10 +2,6 @@ from argparse import ArgumentParser
 
 from elm.config.defaults import DEFAULTS
 
-d = [v for v in DEFAULTS['data_sources'].values() if 'product_name' in v][0]
-DEFAULT_PRODUCT_NAME = d['product_name']
-DEFAULT_PRODUCT_NUMBER = d['product_number']
-
 def add_years_data_days(parser):
     parser.add_argument('--years',
                         type=int,
@@ -20,11 +16,11 @@ def add_years_data_days(parser):
 def add_local_dataset_options(parser):
     parser.add_argument('--product_number',
                         type=int,
-                        default=DEFAULT_PRODUCT_NUMBER,
+                        default=3001,
                         help="ladsweb integer directory number in allData/ (default: %(default)s)")
     parser.add_argument('--product_name',
                         type=str,
-                        default=DEFAULT_PRODUCT_NAME,
+                        default='NPP_DSRF1KD_L2GD',
                         help='ladsweb dataset name within allData/--product_number (default: %(default)s)')
     return add_years_data_days(parser)
 

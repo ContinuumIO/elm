@@ -1,11 +1,10 @@
 import contextlib
 import inspect
 
-import elm.pipeline.train as elmtrain
 from elm.config import DEFAULTS, ConfigParser, import_callable
-
+from elm.pipeline.tests.util import patch_ensemble_predict
 from elm.pipeline.sample_pipeline import check_action_data
-old_ensemble = elmtrain.ensemble
+
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'filename_filter',
@@ -13,48 +12,43 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'metadata_filter',
                            'data_filter',
                            'geo_filters')
-def expected_fit_kwargs(train_dict):
+
+def expected_fit_kwargs(data_source, train_dict, ensemble):
     fit_kwargs = {
-            'post_fit_func': train_dict.get('post_fit_func'),
-            'fit_func': train_dict.get('fit_func'),
-            'get_y_func': train_dict.get('get_y_func'),
-            'get_y_kwargs': train_dict.get('get_y_kwargs'),
-            'get_weight_func': train_dict.get('get_weight_func'),
-            'get_weight_kwargs': train_dict.get('get_weight_kwargs'),
-            'batches_per_gen': train_dict['ensemble_kwargs'].get('batches_per_gen'),
+            'get_y_func': data_source.get('get_y_func'),
+            'get_y_kwargs': data_source.get('get_y_kwargs'),
+            'get_weight_func': data_source.get('get_weight_func'),
+            'get_weight_kwargs': data_source.get('get_weight_kwargs'),
+            'batches_per_gen': ensemble.get('batches_per_gen'),
             'fit_kwargs': train_dict['fit_kwargs'],
         }
     return fit_kwargs
-def return_all(*args, **kwargs):
-    '''An empty function to return what is given to it'''
-    return args, kwargs
 
-@contextlib.contextmanager
-def patch_ensemble():
-    '''This helps test the job of testing
-    getting arguments to
-    ensemble by changing that function to
-    just return its args,kwargs'''
-    try:
-        elmtrain.ensemble = return_all
-        yield
-    finally:
-        elmtrain.ensemble = old_ensemble
 
 def test_train_makes_args_kwargs_ok():
-    with patch_ensemble():
+    with patch_ensemble_predict() as (elmtrain, elmpredict):
         config = ConfigParser(config=DEFAULTS)
         for step in config.pipeline:
             if 'train' in step:
                 break
         train_dict = config.train[step['train']]
         args, kwargs = elmtrain.train_step(config, step, None)
-        assert kwargs == train_dict.get('ensemble_kwargs')
-        assert args[0] is None # executor
-        assert callable(args[1])   # model init func
-        assert "KMeans" in repr(args[1])
-        assert isinstance(args[2], dict)  # model init kwargs
-        model_init_kwargs = args[2]
+        (executor,
+         model_init_class,
+         model_init_kwargs,
+         fit_method,
+         fit_args,
+         fit_kwargs,
+         model_scoring,
+         model_scoring_kwargs,
+         model_selection_func,
+         model_selection_kwargs,
+         transform_dict) = args
+        assert kwargs == config.ensembles[train_dict['ensemble']]
+        assert executor is None
+        assert callable(model_init_class)   # model init func
+        assert "KMeans" in repr(model_init_class)
+        assert isinstance(model_init_kwargs, dict)  # model init kwargs
         for k,v in train_dict['model_init_kwargs'].items():
             assert model_init_kwargs[k] == v
         # check model init kwargs include the defaults for the method
@@ -64,19 +58,21 @@ def test_train_makes_args_kwargs_ok():
                 assert model_init_kwargs.get(k) == v
         # assert fit_func, typically "fit" or "partial_fit"
         # is a method of model_init_class
-        assert args[3] in dir(args[1])
-        check_action_data(args[4][0])
+        check_action_data(fit_args[0])
         # fit_kwargs
-        assert args[5] == expected_fit_kwargs(train_dict)
+        data_source = config.data_sources[train_dict['data_source']]
+        ensemble = config.ensembles[train_dict['ensemble']]
+        assert fit_kwargs == expected_fit_kwargs(data_source, train_dict, ensemble)
+        # model_scoring
+        assert not model_scoring or (':' in model_scoring and import_callable(model_scoring))
+        # model scoring kwargs
 
-        assert ':' in args[5]['post_fit_func']
-        if args[5]['post_fit_func']:
-            import_callable(args[5]['post_fit_func'])
-        assert ':' in args[6]
-        # model_selection_func
-        import_callable(args[6])
-        # model_selection_kwargs
-        model_selection_kwargs = args[7]
+        assert isinstance(model_scoring_kwargs, dict)
+        assert not model_selection_func or (':' in model_selection_func and import_callable(model_selection_func))
+        assert isinstance(model_selection_kwargs, dict)
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))
-        assert isinstance(model_selection_kwargs.get('no_shuffle'), int)
+        if any('transform' in step for step in config.pipeline):
+            assert transform_dict is not None
+        else:
+            assert transform_dict is None

@@ -51,7 +51,7 @@ def _select_from_file_base(filename,
     keep_file = _filename_filter(filename,
                                  search=filename_search,
                                  func=filename_filter)
-    args_required, kwargs_default = get_args_kwargs_defaults(load_meta)
+    args_required, _, _ = get_args_kwargs_defaults(load_meta)
     if len(args_required) == 1:
         meta = load_meta(filename)
     else:

@@ -7,112 +7,60 @@ from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
-from sklearn.cluster import MiniBatchKMeans
+from sklearn.cluster import KMeans, MiniBatchKMeans
 from elm.config import delayed
-from elm.model_selection.util import get_args_kwargs_defaults
-toolbox = base.Toolbox()
+from elm.model_selection.util import (get_args_kwargs_defaults,
+                                      filter_kwargs_to_func)
+from elm.pipeline.sample_pipeline import flatten_cube
+from elm.preproc.elm_store import ElmStore
 
-KmeansVar = namedtuple('KmeansVar',
-                       ['model',
-                        'sample',
-                        'within_class_var',
-                        'class_counts'])
+def ensemble_kmeans_scoring(model,
+                            x,
+                            y_true=None,
+                            scoring=None,
+                            **kwargs):
 
-def kmeans_add_within_class_var(model, flattened):
-    n_clusters = model.cluster_centers_.shape[0]
-    var = np.sum((model.cluster_centers_[model.labels_] - flattened) ** 2, axis=1)
-    within_class_var = np.zeros(n_clusters, dtype=np.float64)
-    df2 = pd.DataFrame({'var': var, 'label': model.labels_})
-    g = df2.groupby('label')
-    agg = g.sum()
-    for idx in range(n_clusters):
-        if idx in agg.index:
-            sel = agg.loc[idx]
-            within_class_var[idx] = sel.values[0]
-        else:
-            within_class_var[idx] = 0.
-    bc = np.bincount(model.labels_)
-    class_counts = np.zeros(model.cluster_centers_.shape[0])
-    class_counts[:bc.size] =  bc
-    return KmeansVar(model, flattened, within_class_var, class_counts)
+    model.partial_fit(x)
+    return np.sqrt(np.sum(model.transform(x)))
 
 
-def distance(c1, c2):
-    resids = (c1 - c2)
-    return np.sqrt(np.sum(resids ** 2))
 
+def kmeans_model_averaging(models, best_idxes=None, **kwargs):
 
-def get_distance_matrix(centroids):
+    linear_prob = np.linspace(len(models), 1, len(models))
+    drop_n = kwargs['drop_n']
+    evolve_n = kwargs['evolve_n']
+    init_n = kwargs['init_n']
+    last_gen = kwargs['n_generations'] - 1 == kwargs['generation']
+    if last_gen:
+        # To avoid attempting to predict
+        # when the model has not been fit
+        # do not initialize any models on the
+        # final generation of ensemble training.
+        return models
+    if drop_n > len(models):
+        raise ValueError('All models would be dropped by drop_n {} '
+                         'with len(models) {}'.format(drop_n, len(models)))
+    if drop_n - evolve_n - init_n != 0:
+        raise ValueError('Length of models should stay the same (drop_n - evolve_n - init_n === 0)')
 
-    distance_matrix = np.empty((centroids.shape[0], centroids.shape[0]), dtype=np.float64)
-    for i in range(centroids.shape[0]):
-        for j in range(0, i):
-            distance_matrix[i, j] = distance_matrix[j, i] = distance(centroids[i,:], centroids[j,:])
-    distance_matrix[np.diag_indices_from(distance_matrix)] = 0.
-    return distance_matrix
-
-
-def pareto_front(objectives, centroids, take, weights):
-    creator.create("FitnessMulti", base.Fitness, weights=weights)
-    creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMulti)
-    toolbox.register('evaluate', lambda x: x)
-    objectives = [creator.Individual(objectives[idx, :]) for idx in range(objectives.shape[0])]
-    objectives2 = []
-    for (idx, (obj, cen)) in enumerate(zip(objectives, centroids)):
-        obj.idx = idx
-        obj.cen = cen
-        obj.fitness.values = toolbox.evaluate(obj)
-    sel = selNSGA2(objectives, take)
-    return tuple((item.cen, item.idx) for item in sel)
-
-def _rand_int_exclude(exclude, start, end, step):
-    choices = np.arange(start, end, step)
-    probs = np.ones(choices.size)
-    for e in exclude:
-        probs[e] = 0
-    probs /= probs.sum()
-    return int(np.random.choice(choices, p=probs))
-
-def kmeans_model_averaging(models, **kwargs):
-    no_shuffle = kwargs['no_shuffle']
-    model_init_class = kwargs['model_init_class']
-    model_init_kwargs = kwargs['model_init_kwargs']
-    n_clusters = model_init_kwargs['n_clusters']
-    inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
-    inertia.sort()
-    best_idxes = [i[1] for i in inertia[:no_shuffle]]
-    centroids = np.concatenate([m.model.cluster_centers_ for m in models])
-    class_counts = np.concatenate([m.class_counts for m in models])
-    within_class_var = np.concatenate([m.within_class_var for m in models])
-    distance_matrix = get_distance_matrix(centroids)
-    new_models = [models[idx].model for idx in best_idxes]
-    centroid_idxes = list(range(centroids.shape[0]))
-    num_rows = n_clusters * len(models)
-    for idx in range(no_shuffle, len(models)):
-        model_stats = models[idx]
-        new_centroids = []
-        exclude = set()
-        for idx in range(n_clusters // 2 + 1):
-            cen_choice = _rand_int_exclude(exclude, 0, num_rows, 1)
-            exclude.add(cen_choice)
-            cen = model_stats.model.cluster_centers_[cen_choice % n_clusters]
-            new_centroids.append(cen)
-            distance_col = distance_matrix[cen_choice, :]
-            objectives = np.column_stack((distance_col,
-                                          within_class_var,
-                                          class_counts))
-            best = pareto_front(objectives,
-                                centroids,
-                                  take=1,
-                                  weights=(1, -1, 1))[0]
-            row = best[0]
-            position = best[1]
-            exclude.add(position)
-            new_centroids.append(np.array(row))
-        cluster_centers_ = np.row_stack(new_centroids)
-        cluster_centers_ = cluster_centers_[:n_clusters,:]
-        kw = copy.deepcopy(model_init_kwargs)
-        kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
-        model = model_init_class(**kw)
-        new_models.append(model)
-    return new_models
+    dropped = models[drop_n:]
+    models = models[:-drop_n]
+    centroids = np.concatenate(tuple(m.cluster_centers_ for name, m in models))
+    name_idx = 0
+    new_models = []
+    for new in range(evolve_n):
+        meta_model = KMeans(**filter_kwargs_to_func(KMeans, **kwargs['model_init_kwargs']))
+        meta_model.fit(centroids)
+        new_kwargs = copy.deepcopy(kwargs['model_init_kwargs'])
+        new_kwargs['init'] = meta_model.cluster_centers_
+        new_kwargs = filter_kwargs_to_func(KMeans, **new_kwargs)
+        new_model = (dropped[name_idx][0], MiniBatchKMeans(**new_kwargs))
+        new_models.append(new_model)
+        name_idx += 1
+    for new in range(init_n):
+        new_kwargs = filter_kwargs_to_func(MiniBatchKMeans, **kwargs['model_init_kwargs'])
+        new_models.append((dropped[name_idx][0],
+                           MiniBatchKMeans(**new_kwargs)))
+        name_idx += 1
+    return tuple(new_models) + tuple(models)
