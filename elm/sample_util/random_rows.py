@@ -1,6 +1,6 @@
 import copy
 import numpy as np
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 from elm.pipeline.sample_pipeline import flatten_cube
 def random_rows(es, n_rows):
     '''Drop '''

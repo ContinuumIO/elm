@@ -38,7 +38,7 @@ def load_hdf4_meta(datafile):
 
 
 def load_hdf4_array(datafile, meta, band_specs):
-    from elm.preproc.elm_store import ElmStore
+    from elm.sample_util.elm_store import ElmStore
     from elm.sample_util.band_selection import match_meta
     f = gdal.Open(datafile, GA_ReadOnly)
     sds = meta['SubDatasets']

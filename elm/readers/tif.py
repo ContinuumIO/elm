@@ -10,7 +10,7 @@ from elm.sample_util.band_selection import match_meta
 from elm.readers.util import (geotransform_to_dims,
                               bands_share_coords,
                               SPATIAL_KEYS)
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 logger = logging.getLogger(__name__)
 
 def load_tif_meta(filename):

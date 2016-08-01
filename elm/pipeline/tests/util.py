@@ -17,7 +17,7 @@ import elm.pipeline.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
-from elm.preproc.elm_store import ElmStore
+from elm.sample_util.elm_store import ElmStore
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
 old_transform = elmtransform.transform_sample_pipeline_step

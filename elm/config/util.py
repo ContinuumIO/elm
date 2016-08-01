@@ -6,7 +6,7 @@ import traceback
 import yaml
 
 
-EXAMPLE_CALLABLE = 'elm.preproc:resampling'
+EXAMPLE_CALLABLE = 'numpy:median'
 
 def read_from_egg(tfile, file_type='yaml'):
     '''Read a relative path, getting the contents
