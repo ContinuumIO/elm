@@ -30,26 +30,53 @@ git remote add origin https//github.com/ContinuumIO/elm-data
 
 Add the following to your .bashrc or environment, changing the paths depending on where you have cloned elm-data:
 ```
-export LADSWEB_LOCAL_CACHE=/Users/psteinberg/Documents/nasasbir/LADSWEB
 export DASK_EXECUTOR=SERIAL
 export ELM_EXAMPLE_DATA_PATH=/Users/psteinberg/Documents/elm-data
 ```
 
-Run the tests:
-```
-py.test
-```
 
-#### Download a data set:
+#### Run the default config
 ```
 DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 elm-download-ladsweb --config elm/config/defaults/defaults.yaml
 ```
 (replacing the yaml if not using the default VIIRS Level 2 dataset)
 
+Run the faster running tests:
+```
+py.test -m "not slow"
+```
+or all of the tests:
+```
+py.test
+```
+or get the verbose test output
+```
+py.test -v
+```
+and cut and paste a test mark to run a specific test:
+```
+py.test -k test_train_makes_args_kwargs_ok
+```
+
 #### Run the default pipeline yaml:
+_In serial_:
 ```
-DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 elm-main --config elm/config/defaults/defaults.yaml
+DASK_EXECUTOR=SERIAL elm-main --config elm/config/defaults/defaults.yaml  --echo-config
 ```
+_With dask-distributed_:
+```
+dask-scheduler
+```
+In separate command prompts do this for each worker:
+```
+dworker 10.0.0.10:8786 # or what dask-scheduler gave as IP
+```
+Then
+```
+ELM_LOGGING_LEVEL=DEBUG DASK_EXECUTOR=DISTRIBUTED DASK_SCHEDULER=10.0.0.10:8786 elm-main --config elm/config/defaults/defaults.yaml  --echo-config
+```
+(You should modify the `ensembles` section of one of the configs in `elm/example_configs` to a larger ensemble to see a better parallel versus serial performance difference)
+
 ## Config File Format
 
 It is easiest to copy the default config referenced above in snippets, and then follow [these instructions on editing the config](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.md).
