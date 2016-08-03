@@ -23,7 +23,7 @@ python setup.py develop
 Clone the `elm-data` repo using Git LFS so that more tests can be run:
 ```
 brew install git-lfs # or apt-get, yum, etc
-git install lfs
+git lfs install
 git clone http://github.com/ContinuumIO/elm-data
 git remote add origin https//github.com/ContinuumIO/elm-data
 ```
