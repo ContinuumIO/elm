@@ -60,17 +60,16 @@ def fit(model,
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
-                                                    classes=None,
+                                                    classes=None, # TODO these need to be passed in some cases
                                                     flatten=True,
                                                     sample_y=sample_y,
-                                                    sample_weight=sample_weight,
-                                                )
+                                                    sample_weight=sample_weight)
         model = fitter(*fit_args, **fit_kwargs)
         if scoring:
             fit_kwargs.update(scoring_kwargs or {})
-            kw = {k:v for k,v in fit_kwargs.items() if not k in ('scoring',)}
+            kw = {k:v for k,v in fit_kwargs.items()
+                  if not k in ('scoring',)}
             model = score_one_model(model, scoring, *fit_args, **kw)
         iter_offset += getattr(model, 'n_iter', 1)
     return model
-
 

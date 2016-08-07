@@ -49,8 +49,11 @@ def run_sample_pipeline(action_data, sample=None, transform_dict=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
     Params:
-        action_data: list from get_sample_pipeline_action_data typically
-        sample:      None if the sample is not already taken
+        action_data:     list from get_sample_pipeline_action_data typically
+        sample:          None if the sample is not already taken
+        transform_dict:  dict of transform models, e.g. PCA, with names.
+                         An example:
+                            {'pca': [('tag_0', PCA(.....))]}
     '''
     sample_y, sample_weight = None, None
     check_action_data(action_data)
@@ -157,7 +160,7 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
     return tuple(action_data)
 
 def make_sample_pipeline_func(config, step):
-    '''make list of (func, args, kwargs) tuples to run sample_pipeline
+    '''Make list of (func, args, kwargs) tuples to run sample_pipeline
     Params:
         config: validated config from elm.config.ConfigParser
         step:   a dictionary that is one step of a "pipeline" list
@@ -225,6 +228,7 @@ def make_sample_pipeline_func(config, step):
 
 
 def check_array(arr, msg, **kwargs):
+    '''Util func for checking sample remains finite and not-NaN'''
     if arr is None:
         raise ValueError('Array cannot be None ({}): '.format(msg))
     try:
@@ -308,6 +312,15 @@ def final_on_sample_step(fitter,
     return fit_args, fit_kwargs
 
 def flatten_cube(elm_store):
+    '''Given an ElmStore with dims (band, y, x) return ElmStore
+    with shape (space, band) where space is a flattening of x,y
+
+    Params:
+        elm_store:  3-d ElmStore (band, y, x)
+
+    Returns:
+        elm_store:  2-d ElmStore (space, band)
+    '''
     es = elm_store['sample']
     if len(es.shape) == 2:
         # its already flat
@@ -326,6 +339,17 @@ def flatten_cube(elm_store):
 
 
 def flattened_to_cube(flat, **attrs):
+    '''Given an ElmStore that has been flattened to (space, band) dims,
+    return a 3-d ElmStore with dims (band, y, x).  Requires that metadata
+    about x,y dims were preserved when the 2-d input ElmStore was created
+
+    Params:
+        flat: a 2-d ElmStore (space, band)
+        attrs: attribute dict to update the dict of the returned ElmStore
+
+    Returns:
+        es:  ElmStore (band, y, x)
+    '''
     if len(flat.sample.shape) == 3:
         # it's not actually flat
         return flat

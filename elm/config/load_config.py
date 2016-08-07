@@ -77,6 +77,7 @@ class ConfigParser(object):
 
 
     def _interpolate_env_vars(self):
+        '''Replace config items like env:ELM_TRANSFORM_PATH with relevant env var'''
         import elm.config.dask_settings as elm_dask_settings
         config_str = yaml.dump(self.config)
         for env_var in (ENVIRONMENT_VARS_SPEC['str_fields_specs'] +
@@ -322,6 +323,7 @@ class ConfigParser(object):
         self.feature_selection = feature_selection
 
     def _validate_one_model_scoring(self, key, value):
+        '''Validate one model_scoring key-value (one scoring configuration)'''
         from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:
@@ -347,6 +349,7 @@ class ConfigParser(object):
             # that can be done?
             pass
     def _validate_model_scoring(self):
+        '''Validate the "model_scoring" dict of config'''
         ms = self.config.get('model_scoring') or {}
         self._validate_type(ms, 'model_scoring', dict)
         for k, v in ms.items():
@@ -354,11 +357,11 @@ class ConfigParser(object):
             self._validate_one_model_scoring(k, v)
         self.model_scoring = ms
 
-    def _validate_training_funcs(self, name, t):
+    def _validate_train_or_transform_funcs(self, name, t):
         '''Validate functions given in "train" section of config'''
         if not isinstance(t, dict):
             raise ElmConfigError('In train:{} expected a dict '
-                                   'but found {}'.format(name, t))
+                                 'but found {}'.format(name, t))
         training_funcs = (('model_init_class', True),
                            ('get_y_func', False),
                            ('get_weight_func', False),
@@ -389,8 +392,8 @@ class ConfigParser(object):
 
 
     def _validate_one_train_or_transform_entry(self, train_or_transform, name, t):
-        '''Validate one dict within "train" section of config'''
-        has_fit_func, requires_y, no_selection = self._validate_training_funcs(name, t)
+        '''Validate one dict within "train" or "transform" section of config'''
+        has_fit_func, requires_y, no_selection = self._validate_train_or_transform_funcs(name, t)
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
             self._validate_type(t[k], '{}:{}'.format(train_or_transform, k), dict)
@@ -437,18 +440,21 @@ class ConfigParser(object):
         self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
 
     def _validate_train_or_transform(self, train_or_transform):
-        '''Validate the "train" section of config'''
+        '''Validate the "train" or "transform" section of config'''
         setattr(self, train_or_transform, self.config.get(train_or_transform, {}) or {})
         for name, t in getattr(self, train_or_transform).items():
             self._validate_one_train_or_transform_entry(train_or_transform,name, t)
 
     def _validate_train(self):
+        '''Validate the "train" section of config'''
         return self._validate_train_or_transform('train')
 
     def _validate_transform(self):
+        '''Validate the "transform" section of config'''
         return self._validate_train_or_transform('transform')
 
     def _validate_sklearn_preprocessing(self):
+        '''Validate "sklearn_preprocessing" dict in config'''
         self.sklearn_preprocessing = self.config.get('sklearn_preprocessing') or {}
         self._validate_type(self.sklearn_preprocessing, 'sklearn_preprocessing', dict)
         for k, v in self.sklearn_preprocessing.items():
@@ -466,6 +472,7 @@ class ConfigParser(object):
 
 
     def _validate_ensembles(self):
+        '''Validate the "ensembles" section of config'''
         self.ensembles = self.config.get('ensembles') or {}
         self._validate_type(self.ensembles, 'config - ensembles', dict)
         for f in ('saved_ensemble_size', 'n_generations',
@@ -474,6 +481,7 @@ class ConfigParser(object):
                 self._validate_positive_int(self.ensembles[k].get(f), f)
 
     def _validate_model_selection(self):
+        '''Validate "model_selection" section of config'''
         self.model_selection = self.config.get('model_selection') or {}
         self._validate_type(self.model_selection, 'config - model_selection', dict)
         for k,v in self.model_selection.items():
@@ -491,6 +499,16 @@ class ConfigParser(object):
 
     @classmethod
     def _get_sample_pipeline(cls, config, step):
+        '''Get the "sample_pipeline" which may be composed of
+        several named "sample_pipeline" elements, e.g.
+        pipeline:
+            - method: partial_fit
+              sample_pipeline:
+              - {get_y: true}
+              - {sklearn_preprocessing: require_positive}
+              - {sample_pipeline: log10}
+              transform: pca
+        '''
         sp = step.get('sample_pipeline') or []
         err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
         def clean(sp):
@@ -512,6 +530,7 @@ class ConfigParser(object):
         return sample_pipeline
 
     def _validate_sample_pipelines(self):
+        '''Validate the "sample_pipelines" section of config'''
         self.sample_pipelines = self.config.get('sample_pipelines') or {}
         for k, v in self.sample_pipelines.items():
             msg = 'sample_pipelines:{}'.format(k)
@@ -538,16 +557,11 @@ class ConfigParser(object):
 
 
     def _validate_change_detection(self):
+        raise NotImplementedError()
         self.change_detection = self.config.get('change_detection', {}) or {}
         # TODO fill this in
         self._validate_type(self.change_detection, 'change_detection', dict)
         return True
-
-    def _validate_pipeline_sample_pipeline(self, sample_pipeline, predict_or_train, options, step):
-        # TODO validate operations such as resampling and aggregation
-        # after a sample is taken
-
-        return step
 
     def _validate_pipeline_train(self, step):
         '''Validate a "train" step within config's "pipeline"'''
@@ -556,8 +570,6 @@ class ConfigParser(object):
             raise ElmConfigError('Pipeline refers to an undefined "train"'
                                    ' key: {}'.format(repr(train)))
         sample_pipeline = step.get('sample_pipeline', []) or []
-        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'train',
-                                                      self.train[train], step)
         step['sample_pipeline'] = sample_pipeline
         step['train'] = train
         return step
@@ -569,8 +581,6 @@ class ConfigParser(object):
             raise ElmConfigError('Pipeline refers to an undefined "transform"'
                                    ' key: {}'.format(repr(transform)))
         sample_pipeline = step.get('sample_pipeline', []) or []
-        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'train',
-                                                      self.transform[transform], step)
         step['sample_pipeline'] = sample_pipeline
         step['transform'] = transform
         return step
@@ -583,7 +593,6 @@ class ConfigParser(object):
             raise ElmConfigError('Pipeline refers to an undefined "predict"'
                                    ' key: {}'.format(repr(predict)))
         sample_pipeline = step.get('sample_pipeline', []) or []
-        step = self._validate_pipeline_sample_pipeline(sample_pipeline, 'predict', self.predict[predict], step)
         step['sample_pipeline'] = sample_pipeline
         step['predict'] = predict
         return step
