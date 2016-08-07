@@ -43,12 +43,14 @@ data_sources: {
   get_weight_kwargs: {},
   keep_columns: [],
   batch_size: 1440000,
+
  },
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
   sample_args_generator_kwargs: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH"
   },
+
   selection_kwargs: {},
   reader: dir_of_tifs_reader,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
@@ -97,6 +99,12 @@ feature_selection: {
     scoring: chi2,
     scoring_kwargs: {},
     kwargs: {},
+    choices: all,
+  },
+  top_80_percent: {
+    selection: "sklearn.feature_selection:SelectPercentile",
+    kwargs: {percentile: 80},
+    scoring: f_classif,
     choices: all,
   }
 }
@@ -154,6 +162,67 @@ transform: {
     model_scoring: Null
 
   }
+}
+
+sklearn_preprocessing: {
+  min_max: {
+    method: minmax_scale,
+    feature_range: [0, 1],
+    axis: 0,
+    copy: False,
+  },
+  standard: {
+    method: StandardScaler,
+    copy: False,
+    with_mean: True,
+    with_std: True,
+  },
+  poly_2nd_interactions_only: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: True,
+    include_bias: True,
+  },
+  poly_2nd: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: False,
+    include_bias: True,
+  },
+  log: {
+    method: FunctionTransformer,
+    func: "numpy:log",
+    validate: True,
+  },
+  log10: {
+    method: FunctionTransformer,
+    func: "numpy:log10",
+    validate: True,
+  },
+  require_positive: {
+    method: FunctionTransformer,
+    func: "elm.sample_util.encoding_scaling:require_positive",
+    func_kwargs: {small_num: 0.0001},
+  },
+}
+
+sample_pipelines: {
+  log10: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+  ],
+  standardize_log10: [
+    {sample_pipeline: log10},
+    {sklearn_preprocessing: standard},
+  ],
+  standardize_log10_var_top_80: [
+    {sample_pipeline: standardize_log10},
+    {feature_selection: top_80_percent},
+  ],
+  standardize_log10_var_top_80_interactions: [
+    {sample_pipeline: standardize_log10_var_top_80},
+    {sklearn_preprocessing: poly_2nd_interactions_only},
+  ]
 }
 
 train: {

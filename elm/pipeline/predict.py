@@ -13,7 +13,7 @@ from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.executor_util import (wait_for_futures,
                                         no_executor_submit)
-from elm.pipeline.sample_pipeline import (all_sample_ops,
+from elm.pipeline.sample_pipeline import (get_sample_pipeline_action_data,
                                           flatten_cube,
                                           flattened_to_cube)
 from elm.pipeline.serialize import (predict_to_netcdf,
@@ -39,7 +39,7 @@ def _predict_one_sample(action_data, serialize, model,
                         sample=None, transform_dict=None):
     # TODO: control to_cube from config
     name, model = model
-    sample = run_sample_pipeline(action_data,
+    sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                  sample=sample,
                                  transform_dict=transform_dict)
     sample_flat = flatten_cube(sample)
@@ -93,7 +93,7 @@ def predict_step(config, step, executor,
         submit_func = no_executor_submit
     get_results = partial(wait_for_futures, executor=executor)
     predict_dict = config.predict[step['predict']]
-    action_data = all_sample_ops(predict_dict, config, step)
+    action_data = get_sample_pipeline_action_data(predict_dict, config, step)
     sampler_kwargs = action_data[0][-1]
     tag = step['predict']
     if serialize is None:

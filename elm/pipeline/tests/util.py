@@ -17,6 +17,7 @@ import elm.pipeline.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
+from elm.sample_util.util import bands_as_columns
 from elm.sample_util.elm_store import ElmStore
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
@@ -78,6 +79,7 @@ def tmp_dirs_context(tag):
             f.write('{} {} {} seconds\n'.format(tag, status, etime))
 
 
+@bands_as_columns
 def example_get_y_func_binary(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.sample.values, axis=1)
@@ -86,10 +88,12 @@ def example_get_y_func_binary(flat_sample):
     ret[col_means > med] = 1
     return ret
 
+@bands_as_columns
 def example_get_y_func_continuous(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.sample.values, axis=1)
     return col_means
+
 
 def example_custom_continuous_scorer(y_true, y_pred):
     '''This is mean_4th_power_error'''
@@ -99,10 +103,12 @@ def example_custom_continuous_scorer(y_true, y_pred):
 class ExpectedFuncCalledError(ValueError):
     pass
 
+@bands_as_columns
 def get_y_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('From get_y_func')
 
+@bands_as_columns
 def get_weight_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('from get_weight_func')

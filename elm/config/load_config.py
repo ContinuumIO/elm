@@ -5,7 +5,9 @@ import numbers
 import os
 import traceback
 
+import numpy as np
 import sklearn.feature_selection as skfeat
+import sklearn.preprocessing as skpre
 import yaml
 
 
@@ -30,11 +32,20 @@ PIPELINE_ACTIONS = ('train',
                     #'change_detection',
                     #'spatial_summary'
 
+SAMPLE_PIPELINE_ACTIONS = ('transform',
+                           'feature_selection',
+                           'sklearn_preprocessing',
+                           'random_sample',
+                           'sample_pipeline',
+                           'get_y',
+                           'get_weight',)
+REQUIRES_METHOD = ('train', 'predict', 'transform')
 class ConfigParser(object):
     # The list below reflects the order
     # in which the keys of the config
     # are validated. (the _validate_* private
     # methods are order sensitive.)
+
     config_keys = CONFIG_KEYS
     defaults = DEFAULTS
     all_words = ('all', ['all'],)
@@ -63,6 +74,7 @@ class ConfigParser(object):
         self._update_for_env()
         self._interpolate_env_vars()
         self.validate()
+
 
     def _interpolate_env_vars(self):
         import elm.config.dask_settings as elm_dask_settings
@@ -111,7 +123,7 @@ class ConfigParser(object):
     def _validate_readers(self):
         '''Validate the "readers" section of config'''
         err_msg = "Expected a 'readers' dictionary in config"
-        self.readers = readers = self.config.get('readers')
+        self.readers = readers = self.config.get('readers') or {}
         if not readers or not isinstance(readers, dict):
             raise ElmConfigError(err_msg)
         for k, v in readers.items():
@@ -125,17 +137,6 @@ class ConfigParser(object):
             self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
-    def _validate_downloads(self):
-        '''Validate the "downloads" section of config'''
-        self.downloads = self.config.get('downloads', {}) or {}
-        if self.downloads and not isinstance(self.downloads, dict):
-            raise ElmConfigError('Expected downloads to be a dict but '
-                                   'got {}'.format(self.downloads))
-        if not self.downloads:
-            # TODO raise error if the files don'talready exist
-            return
-        for k, v in self.downloads.items():
-            self._validate_custom_callable(v, True, 'downloads:{}'.format(k))
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
@@ -447,6 +448,23 @@ class ConfigParser(object):
     def _validate_transform(self):
         return self._validate_train_or_transform('transform')
 
+    def _validate_sklearn_preprocessing(self):
+        self.sklearn_preprocessing = self.config.get('sklearn_preprocessing') or {}
+        self._validate_type(self.sklearn_preprocessing, 'sklearn_preprocessing', dict)
+        for k, v in self.sklearn_preprocessing.items():
+            self._validate_type(v, 'sklearn_preprocessing:{}'.format(k), dict)
+            if v.get('method') in dir(skpre):
+                pass
+            else:
+                self._validate_custom_callable(v.get('method'),
+                                               True,
+                                               'sklearn_preprocessing:{} - method'.format(k))
+            if v['method'].split(':')[-1] == 'FunctionTransformer':
+                self._validate_custom_callable(v.get('func'),
+                                               True,
+                                               'sklearn_preprocessing:{} - func passed to FunctionTransformer'.format(k))
+
+
     def _validate_ensembles(self):
         self.ensembles = self.config.get('ensembles') or {}
         self._validate_type(self.ensembles, 'config - ensembles', dict)
@@ -470,6 +488,54 @@ class ConfigParser(object):
         '''Validate the "predict" section of config'''
         self.predict = self.config.get('predict', {}) or {}
         return True # TODO validate predict config
+
+    @classmethod
+    def _get_sample_pipeline(cls, config, step):
+        sp = step.get('sample_pipeline') or []
+        err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
+        def clean(sp):
+            sample_pipeline = []
+            for item in sp:
+                if 'sample_pipeline' in item:
+                    sp2 = item['sample_pipeline']
+                    if isinstance(sp2, (tuple, list)):
+                        sample_pipeline.extend(sp2)
+                    elif sp2 and sp2 in config.sample_pipelines:
+                        sample_pipeline.extend(clean(config.sample_pipelines[sp2]))
+                    else:
+                        raise ElmConfigError(err_msg.format(sp2))
+                else:
+                    sample_pipeline.append(item)
+            return sample_pipeline
+        sample_pipeline = clean(sp)
+        assert not any('sample_pipeline' in item for item in sample_pipeline),(repr(sample_pipeline))
+        return sample_pipeline
+
+    def _validate_sample_pipelines(self):
+        self.sample_pipelines = self.config.get('sample_pipelines') or {}
+        for k, v in self.sample_pipelines.items():
+            msg = 'sample_pipelines:{}'.format(k)
+            self._validate_type(v, msg, (list, tuple))
+            for item in v:
+                self._validate_type(item, msg + ' - {}'.format(item), dict)
+                ok = False
+                for k in SAMPLE_PIPELINE_ACTIONS:
+                    if k in item:
+                        ok = True
+                        match = SAMPLE_PIPELINE_ACTIONS.index(k)
+                        match = SAMPLE_PIPELINE_ACTIONS[match]
+                        if not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
+                            raise ElmConfigError('sample_pipeline item {0} is of type '
+                                                 '{1} and refers to a key that is not in '
+                                                 '"{1}" dict of config'.format(item, match))
+                if not ok:
+                    raise ElmConfigError('sample_pipeline item {} does not '
+                                         'have a key that is in the set {}'
+                                         ''.format(item , SAMPLE_PIPELINE_ACTIONS))
+        for step in (self.config.get('pipeline') or []):
+            if 'sample_pipeline' in step:
+                step['sample_pipeline'] = self._get_sample_pipeline(self, step)
+
 
     def _validate_change_detection(self):
         self.change_detection = self.config.get('change_detection', {}) or {}

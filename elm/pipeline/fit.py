@@ -38,7 +38,7 @@ def fit(model,
     Params:
 
         model:  instantiated model like MiniBatchKmeans()
-        action_data: from elm.pipeline.sample_pipeline:all_sample_ops
+        action_data: from elm.pipeline.sample_pipeline:get_sample_pipeline_action_data
                      (list of tuples of 3 items: (func, args, kwargs))
         get_y_func: function which returns a Y sample for an X sample dataframe
         get_y_kwargs: kwargs for get_y_func
@@ -55,19 +55,16 @@ def fit(model,
     for idx in range(batches_per_gen):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
-        samp = run_sample_pipeline(action_data, transform_dict=transform_dict)
+        sample, sample_y, sample_weight = run_sample_pipeline(action_data, transform_dict=transform_dict)
         fitter = getattr(model, fit_method)
-        fit_args, fit_kwargs = final_on_sample_step(fitter, model, samp,
+        fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
                                                     classes=None,
                                                     flatten=True,
-                                                    get_y_func=get_y_func,
-                                                    get_y_kwargs=get_y_kwargs,
-                                                    get_weight_func=get_weight_func,
-                                                    get_weight_kwargs=get_weight_kwargs,
+                                                    sample_y=sample_y,
+                                                    sample_weight=sample_weight,
                                                 )
-
         model = fitter(*fit_args, **fit_kwargs)
         if scoring:
             fit_kwargs.update(scoring_kwargs or {})

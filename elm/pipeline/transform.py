@@ -5,7 +5,9 @@ from functools import partial
 import numpy as np
 import xarray as xr
 
+from elm.config import import_callable
 from elm.pipeline.serialize import load_models_from_tag
+from elm.sample_util.util import bands_as_columns
 
 logger = logging.getLogger(__name__)
 
@@ -24,15 +26,13 @@ def transform_pipeline_step(*args, **kwargs):
     logger.debug('transform_pipeline_step')
     return _train_or_transform_step('transform', *args, **kwargs)
 
-
+@bands_as_columns
 def transform_sample_pipeline_step(sample_x,
                                    action,
                                    config,
                                    transform_models,
                                    **kwargs):
 
-    from elm.pipeline.sample_pipeline import flatten_cube
-    sample_x = flatten_cube(sample_x)
     assert len(transform_models) == 1
     name, transform_model = transform_models[0]
     t = action['transform']

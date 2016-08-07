@@ -13,6 +13,8 @@ from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
 from elm.pipeline.sample_pipeline import flatten_cube
 from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.util import bands_as_columns
+
 
 def ensemble_kmeans_scoring(model,
                             x,
