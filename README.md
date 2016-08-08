@@ -25,7 +25,7 @@ Clone the `elm-data` repo using Git LFS so that more tests can be run:
 brew install git-lfs # or apt-get, yum, etc
 git lfs install
 git clone https://github.com/ContinuumIO/elm-data
-git remote add origin https//github.com/ContinuumIO/elm-data
+git remote add origin https://github.com/ContinuumIO/elm-data
 ```
 
 Add the following to your .bashrc or environment, changing the paths depending on where you have cloned elm-data:
