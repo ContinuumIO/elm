@@ -124,7 +124,7 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
 
     '''
     env = parse_env_vars()
-    if not 'LADSWEB_LOCAL_CACHE' in env:
+    if not 'LADSWEB_LOCAL_CACHE' in env or env.get('LADSWEB_LOCAL_CACHE') is None:
         raise ValueError('Define the LADSWEB_LOCAL_CACHE env var to a download location')
     LADSWEB_LOCAL_CACHE = env['LADSWEB_LOCAL_CACHE']
     if ftp is None:
@@ -137,6 +137,8 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
         with open(meta_file, 'w') as f:
             f.write(json.dumps(results))
     product_numbers = product_numbers or []
+    import pdb
+    pdb.set_trace()
     meta_file = product_meta_file(LADSWEB_LOCAL_CACHE, 'unique_product_numbers')
     if not product_numbers:
         ftp.cwd(TOP_DIR)
