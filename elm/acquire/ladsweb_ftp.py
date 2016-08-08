@@ -236,7 +236,7 @@ def download(yr, day, config,
         local_f = os.path.join(basedir, f)
         if os.path.exists(local_f):
             continue
-        logger.info('Download', f, end=' ')
+        logger.info('Download {}'.format(f))
         _try_download(local_f, f, ftp)
         logger.info('ok')
         time.sleep(random.uniform(0.2, 0.6))
