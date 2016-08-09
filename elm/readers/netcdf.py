@@ -50,7 +50,7 @@ def _get_geotransform(nc_info):
     y_range = (float(nc_info['SouthBoundingCoordinate']), float(nc_info['NorthBoundingCoordinate']))
 
     aform = Affine(float(nc_info['LongitudeResolution']), 0.0, x_range[0],
-                   0.0, -float(nc_info['LongitudeResolution']), y_range[1])
+                   0.0, -float(nc_info['LatitudeResolution']), y_range[1])
 
     return aform.to_gdal()
 
