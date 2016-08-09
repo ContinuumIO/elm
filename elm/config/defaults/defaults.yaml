@@ -239,6 +239,7 @@ train: {
     keep_columns: [],
     model_scoring: ensemble_kmeans_scoring,
     model_selection: kmeans_model_averaging,
+    param_grid: {n_clusters: [3,4,5,6,7,8]}
   }
 }
 

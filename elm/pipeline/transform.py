@@ -11,15 +11,6 @@ from elm.sample_util.util import bands_as_columns
 
 logger = logging.getLogger(__name__)
 
-def transform_pipeline_step_fit():
-    pass
-
-def transform_pipeline_step_fit_transform():
-    pass
-
-def transform_pipeline_step_transform():
-    pass
-
 
 def transform_pipeline_step(*args, **kwargs):
     from elm.pipeline.train import _train_or_transform_step

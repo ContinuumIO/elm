@@ -72,6 +72,7 @@ def _train_or_transform_step(train_or_transform, config, step, executor, **kwarg
         model_selection_kwargs.update({
             'model_init_class': model_init_class,
             'model_init_kwargs': model_init_kwargs,
+            'param_grid': train_dict.get('param_grid') or {},
         })
         model_selection_func = model_selection['func']
     else:

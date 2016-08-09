@@ -190,6 +190,8 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                 if not use_transform:
                     item['sample_pipeline'] = [item2 for item2 in item.get('sample_pipeline', [])
                                                if not 'transform' in item2]
+                if data_source.get('get_y_func'):
+                    item['sample_pipeline'] += [{'get_y': True}]
             if not has_predict:
                 config['pipeline'] = [_ for _ in config['pipeline'] if not 'predict' in _]
             config['data_sources'][DEFAULT_DS_KEY] = data_source

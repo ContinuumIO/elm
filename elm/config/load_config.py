@@ -509,29 +509,35 @@ class ConfigParser(object):
               - {sample_pipeline: log10}
               transform: pca
         '''
+        has_seen = set()
         sp = step.get('sample_pipeline') or []
         err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
-        def clean(sp):
+        def clean(sp, has_seen):
             sample_pipeline = []
             for item in sp:
                 if 'sample_pipeline' in item:
                     sp2 = item['sample_pipeline']
+                    if sp2 in has_seen:
+                        raise ElmConfigError('Recursive "sample_pipeline":{}'.format(sp2))
+                    has_seen.add(sp2)
                     if isinstance(sp2, (tuple, list)):
                         sample_pipeline.extend(sp2)
                     elif sp2 and sp2 in config.sample_pipelines:
-                        sample_pipeline.extend(clean(config.sample_pipelines[sp2]))
+                        sample_pipeline2, has_seen = clean(config.sample_pipelines[sp2], has_seen)
+                        sample_pipeline.extend(sample_pipeline2)
                     else:
                         raise ElmConfigError(err_msg.format(sp2))
                 else:
                     sample_pipeline.append(item)
-            return sample_pipeline
-        sample_pipeline = clean(sp)
+            return sample_pipeline, has_seen
+        sample_pipeline, _ = clean(sp, has_seen)
         assert not any('sample_pipeline' in item for item in sample_pipeline),(repr(sample_pipeline))
         return sample_pipeline
 
     def _validate_sample_pipelines(self):
         '''Validate the "sample_pipelines" section of config'''
         self.sample_pipelines = self.config.get('sample_pipelines') or {}
+        self._validate_type(self.sample_pipelines, 'sample_pipelines', dict)
         for k, v in self.sample_pipelines.items():
             msg = 'sample_pipelines:{}'.format(k)
             self._validate_type(v, msg, (list, tuple))
@@ -551,7 +557,10 @@ class ConfigParser(object):
                     raise ElmConfigError('sample_pipeline item {} does not '
                                          'have a key that is in the set {}'
                                          ''.format(item , SAMPLE_PIPELINE_ACTIONS))
-        for step in (self.config.get('pipeline') or []):
+        p = (self.config.get('pipeline') or [])
+        self._validate_type(p, 'pipeline', (list, tuple))
+        for step in p:
+            self._validate_type(step, 'pipeline: {}'.format(step), dict)
             if 'sample_pipeline' in step:
                 step['sample_pipeline'] = self._get_sample_pipeline(self, step)
 

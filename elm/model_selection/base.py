@@ -61,7 +61,6 @@ def base_selection(models,
             raise ValueError('Length of score_weights {} does '
                              'not match scores.shape[1] {}'.format(scores.shape[1], len(score_weights)))
         best_idxes = sort_fitness(score_weights, scores)
-
         models = model_selection_func(models, best_idxes, **model_selection_kwargs)
     else:
         models = model_selection_func(models, **model_selection_kwargs)
