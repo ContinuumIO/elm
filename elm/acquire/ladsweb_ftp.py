@@ -5,17 +5,15 @@ import ftplib
 import json
 import logging
 import os
-import pandas as pd
 import shutil
-import sys
 import random
 import time
 import traceback
 
 from elm.config import ConfigParser
 from elm.config.cli import (add_local_dataset_options,
-                              add_config_file_argument,
-                              add_sample_ladsweb_options)
+                            add_config_file_argument,
+                            add_sample_ladsweb_options)
 from elm.config.env import parse_env_vars
 
 logger = logging.getLogger(__name__)
@@ -82,16 +80,14 @@ def ftp_walk(root, ftp,
         max_depth: max depth of recursion
 
     '''
-    ls = []
-    keys = []
     if _ftp_is_file(ftp, root):
         yield root.split('/')
     elif depth <= max_depth:
         for idx1, item in enumerate(ftp_ls(ftp, dirname=root)):
             yield from ftp_walk(os.path.join(root, item), ftp,
-                                  at_each_level,
-                                  depth=depth + 1,
-                                  max_depth=max_depth)
+                                at_each_level,
+                                depth=depth + 1,
+                                max_depth=max_depth)
             if depth > break_depth:
                 break
             if idx1 > at_each_level:
@@ -124,18 +120,20 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
 
     '''
     env = parse_env_vars()
-    if not 'LADSWEB_LOCAL_CACHE' in env:
+    if env.get('LADSWEB_LOCAL_CACHE') is None:
         raise ValueError('Define the LADSWEB_LOCAL_CACHE env var to a download location')
     LADSWEB_LOCAL_CACHE = env['LADSWEB_LOCAL_CACHE']
     if ftp is None:
         ftp = login()
     logger.info('Logged into ftp')
+
     def write_results(meta_file, results):
         d = os.path.dirname(meta_file)
         if not os.path.exists(d):
             os.makedirs(d)
         with open(meta_file, 'w') as f:
             f.write(json.dumps(results))
+
     product_numbers = product_numbers or []
     meta_file = product_meta_file(LADSWEB_LOCAL_CACHE, 'unique_product_numbers')
     if not product_numbers:
@@ -150,7 +148,6 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
             ftp.cwd(prod_dir)
             product_names = ftp_ls(ftp)
         for nidx, name in enumerate(product_names):
-            product_dict = {}
             sample_files = 0
             meta_file = product_meta_file(LADSWEB_LOCAL_CACHE,
                                           '{}_{}'.format(p, name))
@@ -165,10 +162,9 @@ def get_sample_of_ladsweb_products(product_numbers=None, product_names=None,
                 logger.info('/'.join(file_parts))
                 if sample_files < n_file_samples:
                     remote_f = '/'.join(file_parts)
-                    local_f  = ftp_to_local_path(remote_f, LADSWEB_LOCAL_CACHE)
+                    local_f = ftp_to_local_path(remote_f, LADSWEB_LOCAL_CACHE)
                     if not _try_download(local_f, remote_f, ftp,
-                                        skip_on_fail=True,
-                                        ):
+                                         skip_on_fail=True):
                         counts_dict['failed_on_download'] = remote_f
                     sample_files += 1
                 else:
@@ -240,7 +236,7 @@ def download(yr, day, config,
         local_f = os.path.join(basedir, f)
         if os.path.exists(local_f):
             continue
-        logger.info('Download', f, end=' ')
+        logger.info('Download {}'.format(f))
         _try_download(local_f, f, ftp)
         logger.info('ok')
         time.sleep(random.uniform(0.2, 0.6))
@@ -273,5 +269,5 @@ def main(args=None, parse_this_str=None, config=None):
                            args.product_number,
                            ftp=ftp)
 
-if __name__ ==  '__main__':
+if __name__ == '__main__':
     main()
