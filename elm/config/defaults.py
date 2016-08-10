@@ -23,9 +23,11 @@ CONFIG_KEYS = [('readers',  dict),
                 ('feature_selection', dict),
                 ('model_scoring', dict),
                 ('model_selection', dict),
+                ('sklearn_preprocessing', dict),
                 ('transform', dict),
                 ('train', dict),
                 ('predict', dict),
+                ('sample_pipelines', dict),
                 ('pipeline', list),
             ]
 DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]

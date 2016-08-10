@@ -3,7 +3,7 @@ from functools import partial
 import logging
 import numbers
 
-from elm.pipeline.sample_pipeline import all_sample_ops
+from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config import import_callable
 from elm.pipeline.ensemble import ensemble
@@ -25,7 +25,7 @@ def _train_or_transform_step(train_or_transform, config, step, executor, **kwarg
     '''
 
     train_dict = getattr(config, train_or_transform)[step[train_or_transform]]
-    action_data = all_sample_ops(train_dict, config, step)
+    action_data = get_sample_pipeline_action_data(train_dict, config, step)
     data_source = config.data_sources[train_dict.get('data_source')]
     if train_dict.get('model_scoring'):
         logger.debug('Has model_scoring {}'.format(train_dict['model_scoring']))
@@ -39,7 +39,7 @@ def _train_or_transform_step(train_or_transform, config, step, executor, **kwarg
     model_init_class = import_callable(train_dict['model_init_class'])
     _, model_init_kwargs, _ = get_args_kwargs_defaults(model_init_class)
     default_fit = 'partial_fit' if 'partial_fit' in dir(model_init_class) else 'fit'
-    fit_method = step.get('method', train_dict.get('fit_method', 'fit'))
+    fit_method = step.get('method', train_dict.get('fit_method', train_dict.get('method', 'fit')))
     if 'batch_size' in model_init_kwargs:
         batch_size = step.get('batch_size', train_dict.get('batch_size', data_source.get('batch_size')))
         if (not isinstance(batch_size, numbers.Number) or batch_size <= 0) and 'partial_fit' == fit_method:
@@ -72,6 +72,7 @@ def _train_or_transform_step(train_or_transform, config, step, executor, **kwarg
         model_selection_kwargs.update({
             'model_init_class': model_init_class,
             'model_init_kwargs': model_init_kwargs,
+            'param_grid': train_dict.get('param_grid') or {},
         })
         model_selection_func = model_selection['func']
     else:
