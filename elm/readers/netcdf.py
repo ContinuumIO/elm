@@ -1,14 +1,15 @@
 from __future__ import print_function
+import xarray as xr
 
 import netCDF4 as nc
 from affine import Affine
 
 from elm.readers.util import (geotransform_to_bounds)
+from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.band_selection import match_meta
 
 
 def _nc_str_to_dict(nc_str):
-    '''helper func for splitting nc strings
-    '''
     str_list = [g.split('=') for g in nc_str.split(';\n')]
     return dict([g for g in str_list if len(g) == 2])
 
@@ -23,10 +24,6 @@ def _get_grid_headers(nc_dataset):
 
 
 def _get_nc_attrs(nc_dataset):
-    '''
-    what metadata does the hdf4 test return
-
-    '''
     _assert_nc_attr(nc_dataset, 'Grid.GridHeader')
     _assert_nc_attr(nc_dataset, 'HDF5_GLOBAL.FileHeader')
     _assert_nc_attr(nc_dataset, 'HDF5_GLOBAL.FileInfo')
@@ -46,7 +43,7 @@ def _get_bandmeta(nc_dataset):
 def _get_geotransform(nc_info):
 
     # rotation not taken into account
-    x_range = (float(nc_info['WestBoundingCoordinate']), float(nc_info['EastBoundingCoordinate']))
+    x_range = (float(nc_info['WestBoundingCoordinate']), float(nc_info['EastBoundingCoordinate'])) 
     y_range = (float(nc_info['SouthBoundingCoordinate']), float(nc_info['NorthBoundingCoordinate']))
 
     aform = Affine(float(nc_info['LongitudeResolution']), 0.0, x_range[0],
@@ -64,12 +61,33 @@ def _get_subdatasets(nc_dataset):
     return sds
 
 
+def _normalize_coords(ds):
+    '''makes sure that output dataset has `x` and `y` coordinates.
+    '''
+
+    coord_names = [k for k in ds.coords.keys()]
+
+    valid_x_names = ('lon','longitude', 'x')
+    valid_y_names = ('lat','latitude', 'y')
+
+    x_coord = next((c for c in coord_names if c.lower() in valid_x_names), None)
+    y_coord = next((c for c in coord_names if c.lower() in valid_y_names), None)
+
+    if x_coord is None:
+        raise ValueError('x coordinate not found within input dataset')
+    if y_coord is None:
+        raise ValueError('y coordinate not found within input dataset')
+
+    coords = dict(x=ds[x_coord], y=ds[y_coord]) 
+    return coords 
+
+
 def load_netcdf_meta(datafile):
     '''
     loads metadata for NetCDF
 
     Parameters
-    -------
+    ----------
     datafile - str: Path on disk to NetCDF file
 
     Returns
@@ -92,3 +110,30 @@ def load_netcdf_meta(datafile):
             'Name': datafile,
             }
     return meta
+
+
+def load_netcdf_array(datafile, meta, variables):
+    '''
+    loads metadata for NetCDF
+
+    Parameters
+    ----------
+    datafile - str: Path on disk to NetCDF file
+    meta - dict: netcdf metadata object 
+    variables - dict<str:str>, list<str>: list of variables to load
+
+    Returns
+    -------
+    ElmStore xarray.Dataset
+    '''
+    ds = xr.open_dataset(datafile)
+
+    if isinstance(variables, dict):
+        data = { k: ds[v] for k, v in variables.items() }
+
+    if isinstance(variables, (list, tuple)):
+        data = { v: ds[v] for v in variables }
+
+    return ElmStore(data, 
+                    coords=_normalize_coords(ds),
+                    attrs=meta) #  TODO: does this need a `sample` property?
