@@ -36,14 +36,13 @@ data_sources: {
       include_polys: [],
       exclude_polys: [],
     },
-   },
+  },
   get_y_func: Null,
   get_y_kwargs: {},
   get_weight_func: Null,
   get_weight_kwargs: {},
   keep_columns: [],
   batch_size: 1440000,
-
  },
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
@@ -159,8 +158,8 @@ transform: {
     data_source: NPP_DSRF1KD_L2GD,
     ensemble: no_ensemble,
     model_selection: Null,
-    model_scoring: Null
-
+    model_scoring: Null,
+    param_grid: pca_kmeans,
   }
 }
 
@@ -219,12 +218,38 @@ sample_pipelines: {
     {sample_pipeline: standardize_log10},
     {feature_selection: top_80_percent},
   ],
-  standardize_log10_var_top_80_interactions: [
+  standardize_log10_var_top_80_inter: [
     {sample_pipeline: standardize_log10_var_top_80},
     {sklearn_preprocessing: poly_2nd_interactions_only},
-  ]
+  ],
+  standardize_log10_var_top_80_trans: [
+    {sample_pipeline: standardize_log10_var_top_80},
+    {transform: pca, method: fit_transform},
+  ],
+  standardize_log10_var_top_80_inter_trans: [
+    {sample_pipeline: standardize_log10_var_top_80_inter},
+    {transform: pca, method: fit_transform},
+  ],
 }
-
+param_grids: {
+  pca_kmeans: {
+    kmeans__n_clusters: [3,4,5,6,7,8],
+    pca__n_components: [2,3,4,5],
+    sample_pipeline: [standardize_log10_var_top_80_inter_trans,
+                      standardize_log10_var_top_80_trans],
+    feature_selection: {top_80_percent: {kwargs: {percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9],}}},
+    # data_sources: {selection_kwargs: {some_kwarg: [1,2,3,5,6]}}
+    control: {
+      select_method: selNSGA2,
+      crossover_method: cxTwoPoint,
+      mutate_method: mutShuffleIndexes,
+      init_pop: random,
+      indpb: 0.2,
+      mutpb: 0.4,
+      mu:    24,
+    }
+  }
+}
 train: {
   kmeans: {
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
@@ -239,7 +264,7 @@ train: {
     keep_columns: [],
     model_scoring: ensemble_kmeans_scoring,
     model_selection: kmeans_model_averaging,
-    param_grid: {n_clusters: [3,4,5,6,7,8]}
+    param_grid: pca_kmeans
   }
 }
 

@@ -17,6 +17,7 @@ def transform_pipeline_step(*args, **kwargs):
     logger.debug('transform_pipeline_step')
     return _train_or_transform_step('transform', *args, **kwargs)
 
+
 @bands_as_columns
 def transform_sample_pipeline_step(sample_x,
                                    action,
@@ -38,6 +39,9 @@ def transform_sample_pipeline_step(sample_x,
     attrs['transform'] = {'new_shape': list(output.shape)}
     assert not np.any(np.isnan(output))
     assert np.all(np.isfinite(output))
+    # TODO if a 'fit' or 'fit_transform' is called in sample_pipeline
+    # that transform model needs to be serialized later using the relevant
+    # "transform" tag
     sample_x['sample'] = xr.DataArray(output,
                                       coords=[(dims[0],
                                                getattr(sample_x.sample, dims[0]).values),
@@ -69,7 +73,7 @@ def init_sample_pipeline_transform_models(config, step):
     transform_dict = {}
     for action in sample_pipeline:
         if 'transform' in action:
-            transform = config.transform[action['transform']]
+            transform = copy.deepcopy(config.transform[action['transform']])
             transform_models = _get_transform_models(action, config, **transform)
             transform_dict[action['transform']] = transform_models
     logger.debug('Initialized {} transform_models'.format(len(transform_dict)))

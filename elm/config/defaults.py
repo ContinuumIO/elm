@@ -29,7 +29,8 @@ CONFIG_KEYS = [('readers',  dict),
                 ('predict', dict),
                 ('sample_pipelines', dict),
                 ('pipeline', list),
-            ]
+                ('param_grids', dict),
+    ]
 DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]
 DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
 DEFAULT_PREDICT = tuple(DEFAULTS['predict'].values())[0]

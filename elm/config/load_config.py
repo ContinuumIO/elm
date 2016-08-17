@@ -250,7 +250,7 @@ class ConfigParser(object):
                 self._validate_custom_callable(f, True,
                                                'selection_kwargs:{} - {}'.format(name, filter_name))
             else:
-                selection_kwargs.pop(filter_name)
+                selection_kwargs[filter_name] = None
         self.data_sources[name]['selection_kwargs'] = selection_kwargs
 
 
@@ -324,6 +324,7 @@ class ConfigParser(object):
 
     def _validate_one_model_scoring(self, key, value):
         '''Validate one model_scoring key-value (one scoring configuration)'''
+        logger.info(repr((key, value)))
         from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:
@@ -335,14 +336,12 @@ class ConfigParser(object):
             greater_is_better = value.get('greater_is_better') or None
             score_weights = value.get('score_weights') or None
             err_msg = 'In {}, expected either one of "greater_is_better", "score_weights"'
-            if greater_is_better is not None and score_weights is not None:
-                raise ElmConfigError(err_msg)
-            elif greater_is_better is not None:
+            if greater_is_better is not None:
                 self._validate_type(greater_is_better, context + '(greater_is_better)', bool)
                 self.config['model_scoring'][key]['score_weights'] = [-1 if not greater_is_better else 1]
-            elif score_weights is not None:
+            if score_weights is not None:
                 self._validate_type(score_weights, context + '(score_weights)', Iterable)
-            else:
+            if greater_is_better is None and score_weights is None:
                 raise ElmConfigError(err_msg)
         else:
             # I think there is little validation
@@ -512,6 +511,12 @@ class ConfigParser(object):
         has_seen = set()
         sp = step.get('sample_pipeline') or []
         err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
+        if isinstance(sp, str):
+            if not sp in config.sample_pipelines:
+                raise ElmConfigError('Pipeline step refers to a '
+                                     'sample_pipeline ({}) that is not in '
+                                     'config\'s sample_pipeline section'.format(sp))
+            return config.sample_pipelines[sp]
         def clean(sp, has_seen):
             sample_pipeline = []
             for item in sp:
@@ -564,6 +569,25 @@ class ConfigParser(object):
             if 'sample_pipeline' in step:
                 step['sample_pipeline'] = self._get_sample_pipeline(self, step)
 
+    def _validate_param_grids(self):
+        from elm.model_selection.evolve import get_param_grid
+        self.param_grids = self.config.get('param_grids') or {}
+        self._validate_type(self.param_grids, 'param_grids', dict)
+        for k, v in self.param_grids.items():
+            self._validate_type(v, 'param_grids:{}'.format(k), dict)
+            for k2, v2 in v.items():
+                self._validate_type(v2, 'param_grids:{} - {}'.format(k, k2),
+                                    (str, list, tuple, dict))
+            if not 'control' in v:
+                raise ElmConfigError('TODO help on the "control" part of a param_grid')
+            steps = [step for step in self.pipeline
+                     if step.get('param_grid')]
+            for step in steps:
+                if not step['param_grid'] in self.param_grids:
+                    raise ElmConfigError('Pipeline step {} refers to '
+                                         'a param_grid which is not defined '
+                                         'in param_grids ({})'.format(step, step['param_grid']))
+                get_param_grid(self, step)
 
     def _validate_change_detection(self):
         raise NotImplementedError()
@@ -593,7 +617,6 @@ class ConfigParser(object):
         step['sample_pipeline'] = sample_pipeline
         step['transform'] = transform
         return step
-
 
     def _validate_pipeline_predict(self, step):
         '''Validate a "predict" step within config's "pipeline"'''

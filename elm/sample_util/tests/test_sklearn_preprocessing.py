@@ -63,7 +63,7 @@ def test_standard_scaler_and_interactions():
     assert mean < 0.1 and mean > -0.1
     std = np.std(scaled.sample.values)
     assert std > 0.9 and std < 1.1
-    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_interactions'}]
+    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
     scaled2 = tst_one_sample_pipeline(sp, es)
     assert scaled2.sample.shape[1] > es.sample.shape[1]
 
@@ -72,10 +72,10 @@ def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [
           {'get_y': True},
-          {'sample_pipeline': 'standardize_log10_var_top_80_interactions'},
+          {'sample_pipeline': 'standardize_log10_var_top_80_inter'},
     ]
     tst_one_sample_pipeline(sp, es,
                             run_it=True,
-                            tag='standardize_log10_var_top_80_interactions')
+                            tag='standardize_log10_var_top_80_inter')
 
 
