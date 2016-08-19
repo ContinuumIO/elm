@@ -8,6 +8,7 @@ import xarray as xr
 from elm.config import import_callable
 from elm.pipeline.serialize import load_models_from_tag
 from elm.sample_util.util import bands_as_columns
+from elm.pipeline.util import _make_model_args_from_config
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,9 @@ def transform_sample_pipeline_step(sample_x,
                                    transform_models,
                                    **kwargs):
 
+    assert transform_models
     assert len(transform_models) == 1
+    assert len(transform_models[0]) == 2
     name, transform_model = transform_models[0]
     t = action['transform']
     method = action.get('method', 'fit_transform')
@@ -51,31 +54,44 @@ def transform_sample_pipeline_step(sample_x,
 
     return sample_x
 
-def _get_transform_models(action, config, **kwargs):
+
+def _get_saved_transform_models(action, config, **kwargs):
     method = action.get('method', 'fit_transform')
     tag = action['transform']
-    if not 'fit' in method:
-        logger.debug('Transform method does not include "fit"')
-        logger.info('Load pickled transform_models from {} {}'.format(config.ELM_TRANSFORM_PATH, tag))
-        transform_models, meta = load_models_from_tag(config.ELM_TRANSFORM_PATH, tag)
-        assert len(transform_models) == 1
-        name, transform_model = transform_models[0]
-    else:
-        model_init_class = import_callable(kwargs['model_init_class'])
-        transform_model = model_init_class(**kwargs['model_init_kwargs'])
-        name = 'tag_0'
+    logger.debug('Transform method does not include "fit"')
+    logger.info('Load pickled transform_models from {} {}'.format(config.ELM_TRANSFORM_PATH, tag))
+    transform_models, meta = load_models_from_tag(config.ELM_TRANSFORM_PATH, tag)
+    assert len(transform_models) == 1 and len(transform_models[0]) == 2
+    name, transform_model = transform_models[0]
     return [(name, transform_model)]
 
 
-def init_sample_pipeline_transform_models(config, step):
+def init_saved_transform_models(config, step):
 
     sample_pipeline = step.get('sample_pipeline') or []
-    transform_dict = {}
+    transform_model = None
     for action in sample_pipeline:
         if 'transform' in action:
             transform = copy.deepcopy(config.transform[action['transform']])
-            transform_models = _get_transform_models(action, config, **transform)
-            transform_dict[action['transform']] = transform_models
-    logger.debug('Initialized {} transform_models'.format(len(transform_dict)))
-    return transform_dict
+            transform_model = _get_saved_transform_models(action,
+                                                          config,
+                                                          **transform)
+    logger.debug('Initialized transform model {}'.format(transform_model))
+    return transform_model
 
+
+def get_new_or_saved_transform_model(config, step):
+    transform_model = None
+    sample_pipeline = step.get('sample_pipeline') or []
+    for item in sample_pipeline:
+        if 'transform' in item:
+            method = item.get('method', config.transform.get('method', None))
+            if method is None:
+                raise ValueError('Expected a "method" for transform')
+            if 'fit' not in method:
+                return init_saved_transform_models(config, step)
+            else:
+                model_args = _make_model_args_from_config(config, config.transform[step['transform']], step)
+                model = model_args.model_init_class(**model_args.model_init_kwargs)
+                return [('tag_0', model)]
+    return None

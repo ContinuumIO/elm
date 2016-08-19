@@ -6,12 +6,11 @@ import yaml
 from elm.config import ConfigParser
 from elm.model_selection.evolve import (get_param_grid,
                                         individual_to_new_config,
-                                        get_evolve_meta,
+                                        _get_evolve_meta,
                                         EvoParams,
                                         evolve_setup,
                                         evo_init_func,
                                         evo_general)
-
 
 config_str = '''
 sklearn_preprocessing: {
@@ -148,7 +147,7 @@ def _setup_pg(config=None):
     param_grid'''
     if config is None:
         config, param_grid = _setup()
-    out = get_evolve_meta(config)
+    out = _get_evolve_meta(config)
     assert len(out) == 2
     step_name_to_param_grid_name, param_grid_name_to_deap = out
     return (config,
@@ -192,16 +191,18 @@ def test_individual_to_new_config():
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 40
 
 
-def test_get_evolve_meta():
+def test__get_evolve_meta():
     '''Tests param_grid metadata'''
     (config,
      step_name_to_param_grid_name,
      param_grid_name_to_deap) = _setup_pg()
-    assert 'kmeans' in step_name_to_param_grid_name
-    assert step_name_to_param_grid_name['kmeans'] in param_grid_name_to_deap
-    pg = param_grid_name_to_deap[step_name_to_param_grid_name['kmeans']]
+    expected_key = (0, 'kmeans')
+    assert expected_key in step_name_to_param_grid_name
+    assert step_name_to_param_grid_name[expected_key] in param_grid_name_to_deap
+    pg = param_grid_name_to_deap[step_name_to_param_grid_name[expected_key]]
     assert isinstance(pg, dict)
     assert 'control' in pg
+
 
 def tst_evo_setup_evo_init_func(config=None):
     '''Tests that param_grid is parsed and the deap toolbox
@@ -210,15 +211,15 @@ def tst_evo_setup_evo_init_func(config=None):
     (config,
      step_name_to_param_grid_name,
      param_grid_name_to_deap) = _setup_pg(config=config)
-    pgen = evolve_setup(config, step_name_to_param_grid_name, param_grid_name_to_deap)
-    eps = tuple(pgen)
-    assert len(eps) == 1
+    eps = evolve_setup(config)
+    assert isinstance(eps, dict) and len(eps) == 1
     evo_params = eps[0]
     assert isinstance(evo_params, EvoParams)
     pop = evo_init_func(evo_params)
+    assert len(pop) == 24
     for ind in pop:
         for item, choices in zip(ind, evo_params.deap_params['choices']):
-            assert item < len(choices)
+            assert item < len(choices) and item >= 0
     assert len(set(map(tuple, pop))) > 1
     return config, evo_params, pop
 
@@ -250,18 +251,15 @@ def test_evo_general(fitnesses, score_weights):
                          pop,
                          control['cxpb'],
                          control['mutpb'],
-                         control['ngen'],
-                         control['mu'])
+                         control['ngen'])
     assert next(ea_gen) is None # dummy call to next
     invalid_ind = pop
     assert len(pop) == 24
     original_pop = copy.deepcopy(pop)
     best = original_pop[1]  # in this synthetic data,
                             # the 2nd param set is always best
-    while True:
+    while invalid_ind:
         (pop, invalid_ind, record, logbook) = ea_gen.send(fitnesses)
-        if not invalid_ind:
-            break
     matches_best = tuple(ind for ind in pop if ind == best)
     assert matches_best
     assert original_pop != pop

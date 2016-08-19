@@ -45,15 +45,15 @@ def check_action_data(action_data):
                              'to be a dict (kwargs to {}).  Got {}'.format(pformat(func), pformat(kwargs)))
     return True
 
-def run_sample_pipeline(action_data, sample=None, transform_dict=None):
+
+def run_sample_pipeline(action_data, sample=None, transform_model=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
     Params:
         action_data:     list from get_sample_pipeline_action_data typically
         sample:          None if the sample is not already taken
-        transform_dict:  dict of transform models, e.g. PCA, with names.
-                         An example:
-                            {'pca': [('tag_0', PCA(.....))]}
+        transform_model: An example:
+                             [('tag_0', PCA(.....))]
     '''
     sample_y, sample_weight = None, None
     check_action_data(action_data)
@@ -69,8 +69,7 @@ def run_sample_pipeline(action_data, sample=None, transform_dict=None):
         if func_str.endswith('transform_sample_pipeline_step'):
             logger.debug('transform sample_pipeline step')
             samp_pipeline_step = args[0]
-            transform_models = transform_dict[samp_pipeline_step['transform']]
-            args = tuple(args) + (transform_models,)
+            args = tuple(args) + (transform_model,)
         func = import_callable(func_str, True, func_str)
         if sample is None:
             logger.debug('sample create sample_pipeline step')

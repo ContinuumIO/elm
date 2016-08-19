@@ -1,4 +1,3 @@
-
 import array
 from collections import defaultdict, OrderedDict, namedtuple
 import copy
@@ -132,7 +131,7 @@ def parse_param_grid_items(param_grid_name, train_config, transform_config,
 def get_param_grid(config, step):
     param_grid_name = step.get('param_grid') or None
     if not param_grid_name:
-        return (None, None)
+        return None
     train_step_name = step.get('train')
     if train_step_name:
         train_config = config.train[train_step_name]
@@ -334,21 +333,28 @@ def _configure_toolbox(toolbox, **kwargs):
 def _random_choice(choices):
     return [random.choice(range(len(choice))) for choice in choices]
 
-def get_evolve_meta(config):
+
+def _get_evolve_meta(config):
     param_grid_name_to_deap = {}
     step_name_to_param_grid_name = {}
-    for step in config.pipeline:
+    for idx, step in enumerate(config.pipeline):
         pg = get_param_grid(config, step)
         if pg:
             param_grid_name_to_deap.update(pg)
-            step_name_to_param_grid_name[step.get('train', step.get('transform'))] = tuple(pg.keys())[0]
+            idx_name = (idx, step.get('train', step.get('transform')))
+            step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
     if not param_grid_name_to_deap:
         return None
     return (step_name_to_param_grid_name, param_grid_name_to_deap)
 
 
-def evolve_setup(config, step_name_to_param_grid_name, param_grid_name_to_deap):
-    for step_name, param_grid_name in step_name_to_param_grid_name.items():
+def evolve_setup(config):
+    out = _get_evolve_meta(config)
+    if not out:
+        return {}
+    step_name_to_param_grid_name, param_grid_name_to_deap = out
+    evo_params_dict = {}
+    for ((idx, step_name), param_grid_name) in step_name_to_param_grid_name.items():
         deap_params = param_grid_name_to_deap[param_grid_name]
         kwargs = copy.deepcopy(deap_params['control'])
         toolbox = base.Toolbox()
@@ -376,7 +382,8 @@ def evolve_setup(config, step_name_to_param_grid_name, param_grid_name_to_deap):
                deap_params=deap_params,
                param_grid_name=param_grid_name,
         )
-        yield evo_params
+        evo_params_dict[idx] = evo_params
+    return evo_params_dict
 
 
 def evo_init_func(evo_params):
@@ -387,7 +394,20 @@ def evo_init_func(evo_params):
     return pop
 
 
-def evo_general(toolbox, pop, cxpb, mutpb, ngen, mu):
+def evo_general(toolbox, pop, cxpb, mutpb, ngen):
+    '''This is a general evolutionary algorithm based
+    on an NSGA2 example from deap:
+
+        https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+    Parameters:
+        toolbox: deap toolbox with select, mate, mutate methods
+        pop:     population from toolbox.population_guess() or similar
+        cxpb:    crossover prob (float 0 < cxpb < 1)
+        mutpb:   mutation prob (float 0 < cxpb < 1)
+        ngen:    number of generations (int)
+                     (Note: the loop here starts at generation 1 not zero)
+        mu:      population size
+    '''
     yield None # dummy to initialize
     stats = tools.Statistics(lambda ind: ind.fitness.values)
     stats.register('avg', np.mean, axis=0)
@@ -396,7 +416,8 @@ def evo_general(toolbox, pop, cxpb, mutpb, ngen, mu):
     stats.register('max', np.max, axis=0)
     logbook = tools.Logbook()
     logbook.header = ('gen', 'evals', 'std', 'min', 'avg', 'max')
-    for gen in range(1, ngen):
+    for gen in range(1, ngen): # starts at 1 because it assumes
+                               # already evaluated once
         offspring = toolbox.select(pop)
         offspring = [toolbox.clone(ind) for ind in offspring]
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):

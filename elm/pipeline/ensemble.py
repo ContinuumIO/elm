@@ -10,8 +10,7 @@ import numpy as np
 from elm.config import delayed, import_callable
 from elm.pipeline.fit import fit
 from elm.pipeline.serialize import save_models_with_meta
-from elm.pipeline.executor_util import (wait_for_futures,
-                                        no_executor_submit)
+from elm.pipeline.executor_util import wait_for_futures
 from elm.model_selection.base import (base_selection, no_selection)
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
@@ -31,11 +30,11 @@ def _validate_ensemble_members(models):
     return models
 
 
-def _prepare_fit_kwargs(model_args, transform_dict):
+def _prepare_fit_kwargs(model_args, transform_model):
     fit_kwargs = copy.deepcopy(model_args.fit_kwargs)
     fit_kwargs['scoring'] = model_args.model_scoring
     fit_kwargs['scoring_kwargs'] = model_args.model_scoring_kwargs
-    fit_kwargs['transform_dict'] = transform_dict
+    fit_kwargs['transform_model'] = transform_model
     fit_kwargs['fit_method'] = model_args.fit_method
     return fit_kwargs
 
@@ -70,7 +69,7 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-def _serialize(models, **ensemble_kwargs):
+def _serialize_models(models, **ensemble_kwargs):
     if ensemble_kwargs.get('saved_ensemble_size') is not None:
         saved_models = models[:ensemble_kwargs['saved_ensemble_size']]
     else:
@@ -84,7 +83,7 @@ def _serialize(models, **ensemble_kwargs):
     return models
 
 
-def _fit_list_of_models(args_kwargs, map_function, get_results):
+def _fit_list_of_models(args_kwargs, map_function, get_results, models):
     model_names = [name for name, model in models]
     fitted = get_results(
                 map_function(
@@ -94,23 +93,22 @@ def _fit_list_of_models(args_kwargs, map_function, get_results):
     models = tuple(zip(model_names, fitted))
     return models
 
+
 def ensemble(executor,
              model_args,
-             transform_model_args,
-             transform_dict,
-             evo_params,
+             transform_model,
              **ensemble_kwargs):
     '''Train model(s) in ensemble
 
     Params:
         executor: None or a thread/process/distributed Executor
         model_args: ModelArgs namedtuple
-        transform_dict: dictionary like:
+        transform_model: dictionary like:
                         {transform_name: [("tag_0", transform_model)]}
 
                         for transform models like PCA that have already
                         been "fit".  If using "fit" or "fit_transform" in
-                        "sample_pipeline" then this transform_dict has no
+                        "sample_pipeline" then this transform_model has no
                         effect.
         ensemble_kwargs: kwargs such as "ensemble_size" and "n_generations"
                     which control the ensemble size and number of
@@ -121,36 +119,40 @@ def ensemble(executor,
     else:
         map_function = map
     get_results = partial(wait_for_futures, executor=executor)
-    if evo_params is not None:
-        return evolve(map_function, get_results,
-                      model_args, transform_model_args,
-                      transform_dict, evo_params, **ensemble_kwargs)
     model_selection_kwargs = model_args.model_selection_kwargs or {}
     ensemble_size = ensemble_kwargs['init_ensemble_size']
     n_generations = ensemble_kwargs['n_generations']
     model_names = ensemble_kwargs.get('model_names', None)
     ensemble_init_func = ensemble_kwargs.get('ensemble_init_func') or None
+    model_init_kwargs = model_args.model_init_kwargs
+    model_init_class = model_args.model_init_class
     if not ensemble_init_func:
-        models = tuple(('tag_{}'.format(idx), model_args.model_init_class(**model_init_kwargs))
+        models = tuple(('tag_{}'.format(idx), model_init_class(**model_init_kwargs))
                         for idx in range(ensemble_kwargs['init_ensemble_size']))
     else:
         ensemble_init_func = import_callable(ensemble_init_func)
-        models = ensemble_init_func(model_args.model_init_class,
-                                    model_args.model_init_kwargs,
+        models = ensemble_init_func(model_init_class,
+                                    model_init_kwargs,
                                     **ensemble_kwargs)
     models = _validate_ensemble_members(models)
     model_selection_func = _get_model_selection_func(model_args)
-    fit_kwargs = _prepare_fit_kwargs(model_args, trans)
+    fit_kwargs = _prepare_fit_kwargs(model_args, transform_model)
     for generation in range(n_generations):
         logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))
         args_kwargs = tuple(((model,) + tuple(model_args.fit_args), fit_kwargs)
                             for name, model in models)
         logger.debug('fit args_kwargs {}'.format(args_kwargs))
-        models = _fit_list_of_models(args_kwargs, map_function, get_results)
+        models = _fit_list_of_models(args_kwargs,
+                                     map_function,
+                                     get_results,
+                                     models)
         if model_selection_func:
-            models = _run_model_selection_func(model_selection_func, model_args,
-                                               n_generations, generation,
-                                               fit_kwargs, models)
+            models = _run_model_selection_func(model_selection_func,
+                                               model_args,
+                                               n_generations,
+                                               generation,
+                                               fit_kwargs,
+                                               models)
         else:
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing
