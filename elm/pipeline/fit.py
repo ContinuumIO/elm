@@ -71,7 +71,7 @@ def fit(model,
                             # or return a fitted model
             model = out
         assert model
-        if scoring:
+        if scoring or scoring_kwargs:
             kw = copy.deepcopy(scoring_kwargs or {})
             kw.update(fit_kwargs)
             kw = {k: v for k,v in kw.items()

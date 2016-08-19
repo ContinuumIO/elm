@@ -60,7 +60,8 @@ def _score_one_model_no_y_true(model,
     kwargs_to_scoring = copy.deepcopy(kwargs)
     kwargs_to_scoring['sample_weight'] = sample_weight
     if scoring is None:
-        return model.score(x, **kwargs_to_scoring)
+        kwargs = filter_kwargs_to_func(model.score, **kwargs_to_scoring)
+        return model.score(x, **kwargs)
     kwargs_to_scoring = filter_kwargs_to_func(scoring,
                                             **kwargs_to_scoring)
 
@@ -78,7 +79,9 @@ def score_one_model(model,
         if not hasattr(model, 'score') or not callable(model.score):
             raise ValueError('Cannot score model.  No scoring given and '
                              'model has no "score" callable attribute')
-    scoring, requires_y = import_scorer(scoring)
+        requires_y = False
+    else:
+        scoring, requires_y = import_scorer(scoring)
     if requires_y:
         model._score = _score_one_model_with_y_true(model,
                                                     scoring,

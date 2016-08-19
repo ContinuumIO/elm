@@ -1,5 +1,6 @@
 import array
-from collections import defaultdict, OrderedDict, namedtuple
+from collections import (defaultdict, OrderedDict,
+                         namedtuple, Sequence)
 import copy
 from functools import partial
 import logging
@@ -26,7 +27,8 @@ DEFAULT_PERCENTILES = (0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
 EVO_FIELDS = ['toolbox',
               'individual_to_new_config',
               'deap_params',
-              'param_grid_name',]
+              'param_grid_name',
+              'history_file']
 EvoParams = namedtuple('EvoParams', EVO_FIELDS)
 
 OK_PARAM_FIRST_KEYS = ['transform',
@@ -36,6 +38,8 @@ OK_PARAM_FIRST_KEYS = ['transform',
                        'data_sources',
                        'sklearn_preprocessing',
                        'sample_pipeline',]
+
+DEFAULT_MAX_BOUNDS_RETRIES = 1000
 
 def _check_key(train_config, transform_config,
               train_step_name, transform_step_name,
@@ -56,7 +60,6 @@ def _check_key(train_config, transform_config,
         transform_config = {}
 
     def get_train_transform(k):
-        print(k, default_kwargs, default_transform_kwargs, len(k))
         if k[-1] in default_kwargs:
             if len(k) == 2:
                 if k[0] != train_step_name:
@@ -69,7 +72,6 @@ def _check_key(train_config, transform_config,
             return ('transform', transform_step_name, 'model_init_kwargs', k[-1])
 
     def make_check_tuple_keys(k, v):
-        print(make_check_tuple_keys, k, v)
         if len(k) == 1:
             tt = get_train_transform(k)
             if tt:
@@ -112,9 +114,7 @@ def parse_param_grid_items(param_grid_name, train_config, transform_config,
                           make_check_tuple_keys, param_grid):
     transform_config = transform_config or {}
     def switch_types(current_key, obj):
-        print('c,o', current_key, obj)
         if isinstance(obj, (list, tuple)):
-            print('c, o2', current_key, obj)
             yield (current_key, obj)
         elif isinstance(obj, dict):
             for idx, (key, value) in enumerate(obj.items()):
@@ -133,7 +133,6 @@ def parse_param_grid_items(param_grid_name, train_config, transform_config,
             continue
         unwound = tuple(switch_types((k,), v))[0]
         k2, v2 = make_check_tuple_keys(*unwound)
-        print('k2,v2', k2, v2)
         param_grid_parsed[k2] = v2
         param_order.append(k2)
     param_grid_parsed['param_order'] = param_order
@@ -184,7 +183,6 @@ def get_param_grid(config, step):
 
 
 def _to_param_meta(param_grid):
-    print(param_grid)
     low = []
     up = []
     is_int = []
@@ -211,7 +209,14 @@ def _to_param_meta(param_grid):
     return param_meta
 
 
-def wrap_mutate(method, individual, **kwargs):
+def out_of_bounds(params, choices):
+    for p, choice in zip(params, choices):
+        if p < 0 or p >= len(choice):
+            return True
+    return False
+
+
+def wrap_mutate(method, choices, max_bounds_retries, individual, **kwargs):
     mut = getattr(tools, method, None)
     if not mut:
         raise ValueError('In wrap_mutate, method - {} is not in deap.tools'.format(method))
@@ -220,8 +225,11 @@ def wrap_mutate(method, individual, **kwargs):
     if len(required_args) > 1:
         for a in required_args[1:]:
             args.append(kwargs[a])
-    params = mut(*args)
-    return params,
+    for retries in range(max_bounds_retries):
+        params = mut(*args)
+        if not out_of_bounds(params[0], choices):
+            return params
+    raise ValueError('wrap_mutate could not find a set of parameters that is within the given choices for the param_grid')
 
 
 def init_Individual(icls, content):
@@ -268,7 +276,7 @@ def crossover(toolbox, method, ind1, ind2, **kwargs):
     return (child1, child2)
 
 
-def wrap_select(method, individuals, **kwargs):
+def wrap_select(method, individuals, k, **kwargs):
     '''wraps a selection method such as selNSGA2 from deap.tools
 
     Parameters:
@@ -286,9 +294,9 @@ def wrap_select(method, individuals, **kwargs):
     if not sel:
         raise ValueError('Expected {} to be an attribute of deap.tools'.format(method))
     required_args, _, _ = get_args_kwargs_defaults(sel)
-    args = [individuals]
-    if len(required_args) > 1:
-        for a in required_args[1:]:
+    args = [individuals, k]
+    if len(required_args) > 2:
+        for a in required_args[2:]:
             if not a in kwargs:
                 raise ValueError('Expected control kwargs {} to have {} for method {}'.format(kwargs, a, method))
             args.append(kwargs[a])
@@ -304,6 +312,7 @@ def _set_from_keys(config_dict, keys, value):
 
 def individual_to_new_config(config, deap_params, ind):
 
+    logger.debug('individual_to_new_config ind: {}'.format(ind))
     zipped = zip(deap_params['param_order'],
                  deap_params['choices'],
                  ind)
@@ -325,16 +334,20 @@ def individual_to_new_config(config, deap_params, ind):
     return new_config
 
 
-def _configure_toolbox(toolbox, **kwargs):
+def _configure_toolbox(toolbox, deap_params, config, **kwargs):
+    max_bounds_retries = getattr(config, 'MAX_BOUNDS_RETRIES', DEFAULT_MAX_BOUNDS_RETRIES)
     toolbox.register('mate', partial(crossover, toolbox,
                                      kwargs['crossover_method'],
                                      **kwargs))
     toolbox.register('mutate', partial(wrap_mutate,
                                        kwargs['mutate_method'],
+                                       deap_params['choices'],
+                                       max_bounds_retries,
                                        **kwargs))
     toolbox.register('select', partial(wrap_select,
                                        kwargs['select_method'],
-                                       **kwargs))
+                                       **{k:v for k, v in kwargs.items()
+                                          if not k == 'k'}))
     toolbox.register('individual_guess',
                      init_Individual,
                      creator.Individual)
@@ -392,12 +405,13 @@ def evolve_setup(config):
                          toolbox.indices)
         toolbox.register('population', tools.initRepeat, list, toolbox.individual)
         evo_params =  EvoParams(
-               toolbox=_configure_toolbox(toolbox, **kwargs),
+               toolbox=_configure_toolbox(toolbox, deap_params, config, **kwargs),
                individual_to_new_config=partial(individual_to_new_config,
                                                 config,
                                                 deap_params),
                deap_params=deap_params,
                param_grid_name=param_grid_name,
+               history_file='{}.csv'.format(param_grid_name),
         )
         evo_params_dict[idx] = evo_params
     return evo_params_dict
@@ -411,7 +425,15 @@ def evo_init_func(evo_params):
     return pop
 
 
-def evo_general(toolbox, pop, cxpb, mutpb, ngen):
+def assign_fitnesses(invalid_ind, fitnesses, history_file_object):
+    for ind, fit in zip(invalid_ind, fitnesses):
+        fit = list(fit) if isinstance(fit, Sequence) else [fit]
+        ind.fitness.values = fit
+        row = ','.join(map(str, tuple(ind) + tuple(fit)))
+        history_file_object.write(row + '\n')
+
+
+def evo_general(toolbox, history_file_object, pop, cxpb, mutpb, ngen, k):
     '''This is a general evolutionary algorithm based
     on an NSGA2 example from deap:
 
@@ -426,18 +448,14 @@ def evo_general(toolbox, pop, cxpb, mutpb, ngen):
         mu:      population size
     '''
     yield None # dummy to initialize
-    stats = tools.Statistics(lambda ind: ind.fitness.values)
-    stats.register('avg', np.mean, axis=0)
-    stats.register('std', np.std, axis=0)
-    stats.register('min', np.min, axis=0)
-    stats.register('max', np.max, axis=0)
-    logbook = tools.Logbook()
-    logbook.header = ('gen', 'evals', 'std', 'min', 'avg', 'max')
-    for gen in range(1, ngen): # starts at 1 because it assumes
-                               # already evaluated once
+    # This is just to assign the crowding distance to the individuals
+    # no actual selection is done
+    assert all(ind.fitness.valid for ind in pop)
+    pop = toolbox.select(pop, len(pop))
+    for gen in range(1, ngen):
         logger.info('Generation {} out of {} in evolutionary '
                     'algorithm'.format(gen + 1, ngen))
-        offspring = toolbox.select(pop)
+        offspring = tools.selTournamentDCD(pop, len(pop))
         offspring = [toolbox.clone(ind) for ind in offspring]
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
             if random.random() <= cxpb:
@@ -449,24 +467,19 @@ def evo_general(toolbox, pop, cxpb, mutpb, ngen):
 
         # Expect the fitnesses to be sent here
         # with ea_gen.send(fitnesses)
-
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-        fitnesses = (yield (pop, invalid_ind, None, None))
+        fitnesses = (yield (pop, invalid_ind))
 
         logger.info('Fitnesses {}'.format(fitnesses))
         # Assign the fitnesses to the invalid_ind
         # evaluated
-        for ind, fit in zip(invalid_ind, fitnesses):
-            ind.fitness.values = fit
-
+        assign_fitnesses(invalid_ind, fitnesses, history_file_object)
         # Select the next generation population
-        pop = toolbox.select(pop + offspring)
-        record = stats.compile(pop)
-        logbook.record(gen=gen, evals=len(invalid_ind), **record)
-        logger.info(logbook.stream)
+        pop = toolbox.select(pop + offspring, len(pop))
+        #logger.info(logbook.stream)
     # Yield finally the record and logbook
     # The caller knows when not to .send again
     # based on the None in 2nd position below
     logger.info('Evolutionary algorithm finished')
-    yield (pop, None, record, logbook)
+    yield (pop, None,)
 

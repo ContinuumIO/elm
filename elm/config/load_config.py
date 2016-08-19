@@ -389,6 +389,14 @@ class ConfigParser(object):
                                  'function {}'.format(name, model_init_class, t['get_sample_weight']))
         return has_fit_func, requires_y, no_selection
 
+    def _is_transform_major_pipeline_step(self, transform_name):
+        pipeline = self.config.get('pipeline') or {}
+        self._validate_type(pipeline, 'pipeline', (list, tuple))
+        for idx, step in enumerate(pipeline):
+            self._validate_type(step, 'pipeline step:{}'.format(idx), dict)
+            if step.get('transform') == transform_name:
+                return True
+        return False
 
     def _validate_one_train_or_transform_entry(self, train_or_transform, name, t):
         '''Validate one dict within "train" or "transform" section of config'''
@@ -416,26 +424,32 @@ class ConfigParser(object):
             else:
                 raise ElmConfigError('In {}:{} model_scoring must be defined if model_selection is used'.format(train_or_transform, name))
         data_source = t.get('data_source')
+        if train_or_transform == 'transform':
+            is_major_step = self._is_transform_major_pipeline_step(name)
+        else:
+            is_major_step = True
         if not data_source in self.data_sources:
-            raise ElmConfigError('{} dict at key {} refers '
-                                   'to a data_source {} that is '
-                                   'not defined in '
-                                   '"data_sources"'.format(train_or_transform, name, repr(data_source)))
-        data_source = self.data_sources[data_source]
-        if requires_y:
-            self._validate_custom_callable(data_source.get('get_y_func'),
-                                           True,
-                                           '{}:get_y_func (required with '
-                                           '{})'.format(train_or_transform,
-                                                        repr(t.get('model_init_class'))))
-        output_tag = t.get('output_tag')
-        self._validate_type(output_tag, 'train:output_tag', str)
-        band_specs = data_source['band_specs']
-        t['band_names'] = [x[-1] for x in band_specs]
-        ensemble = t.get('ensemble')
-        if not ensemble or not ensemble in self.ensembles:
-            raise ElmConfigError('Each train or transform dict must have an '
-                                 '"ensemble" key that is also a key in "ensembles"')
+            if train_or_transform == 'train':
+                raise ElmConfigError('{} dict at key {} refers '
+                                       'to a data_source {} that is '
+                                       'not defined in '
+                                       '"data_sources"'.format(train_or_transform, name, repr(data_source)))
+        if is_major_step:
+            data_source = self.data_sources[data_source]
+            if requires_y:
+                self._validate_custom_callable(data_source.get('get_y_func'),
+                                               True,
+                                               '{}:get_y_func (required with '
+                                               '{})'.format(train_or_transform,
+                                                            repr(t.get('model_init_class'))))
+            output_tag = t.get('output_tag')
+            self._validate_type(output_tag, 'train:output_tag', str)
+            band_specs = data_source['band_specs']
+            t['band_names'] = [x[-1] for x in band_specs]
+            ensemble = t.get('ensemble')
+            if not ensemble or not ensemble in self.ensembles:
+                raise ElmConfigError('Each train or transform dict must have an '
+                                     '"ensemble" key that is also a key in "ensembles"')
         self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
 
     def _validate_train_or_transform(self, train_or_transform):

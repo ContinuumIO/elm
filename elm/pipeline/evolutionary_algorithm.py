@@ -2,7 +2,8 @@ from functools import partial
 
 from elm.config import import_callable
 from elm.model_selection.evolve import (evo_general,
-                                        evo_init_func)
+                                        evo_init_func,
+                                        assign_fitnesses)
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.executor_util import wait_for_futures
 from elm.pipeline.transform import get_new_or_saved_transform_model
@@ -21,9 +22,6 @@ def next_model_tag():
     LAST_TAG_IDX += 1
     return model_name
 
-def serialize_deap_outputs(final_pop, record, logbook):
-    # TODO dump these to pickle
-    return True
 
 def _on_each_ind(individual_to_new_config, step, train_or_transform,
                  config, transform_model, ind):
@@ -58,13 +56,13 @@ def on_each_evo_yield(individual_to_new_config,
 
 
 def _fit_invalid_ind(individual_to_new_config,
-                     invalid_ind,
                      transform_model,
                      step,
                      train_or_transform,
                      config,
                      map_function,
-                     get_results):
+                     get_results,
+                     invalid_ind):
     args_kwargs = tuple(on_each_evo_yield(individual_to_new_config,
                                           step,
                                           train_or_transform,
@@ -96,27 +94,37 @@ def evolutionary_algorithm(executor,
     control = evo_params.deap_params['control']
     pop = evo_init_func(evo_params)
     required_args, _, _ = get_args_kwargs_defaults(evo_general)
-    evo_args = [evo_params.toolbox, pop]
-    for a in required_args[2:]:
-        if a not in control:
-            raise ValueError('Expected {} in {} (control kwargs '
-                             'to evolutionary '
-                             'algorithm)'.format(a, control))
-        evo_args.append(control[a])
-    ea_gen = evo_general(*evo_args)
-    next(ea_gen) # dummy
-    invalid_ind = pop
-    while invalid_ind:
-        models, fitnesses = _fit_invalid_ind(evo_params.individual_to_new_config,
-                                            invalid_ind,
-                                            transform_model,
-                                            step,
-                                            train_or_transform,
-                                            config,
-                                            map_function,
-                                            get_results)
-        (pop, invalid_ind, record, logbook) = ea_gen.send(fitnesses)
-    serialize_models(models, **ensemble_kwargs)
-    serialize_deap_outputs(pop, record, logbook)
+    history_file = open(evo_params.history_file, 'w')
+    evo_args = [evo_params.toolbox, history_file, pop]
+    fit_one_generation = partial(_fit_invalid_ind,
+                                 evo_params.individual_to_new_config,
+                                 transform_model,
+                                 step,
+                                 train_or_transform,
+                                 config,
+                                 map_function,
+                                 get_results)
+    try:
+        for a in required_args[3:]:
+            if a not in control:
+                raise ValueError('Expected {} in {} (control kwargs '
+                                 'to evolutionary '
+                                 'algorithm)'.format(a, control))
+            evo_args.append(control[a])
+        ea_gen = evo_general(*evo_args)
+        next(ea_gen) # dummy
+        models, fitnesses = fit_one_generation(pop)
+        assign_fitnesses(pop, fitnesses, history_file)
+        invalid_ind = True
+        for idx in range(evo_params.deap_params['control']['ngen']):
+            # on last generation invalid_ind becomes None
+            # and breaks this loop
+            if idx > 0:
+                models, fitnesses = fit_one_generation(invalid_ind)
+            (pop, invalid_ind,) = ea_gen.send(fitnesses)
+            if not invalid_ind:
+                break # If there are no new solutions to try, break
+        serialize_models(models, **ensemble_kwargs)
+    finally:
+        history_file.close()
     return models
-

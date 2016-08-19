@@ -13,21 +13,21 @@ from elm.pipeline import pipeline
 logger = logging.getLogger(__name__)
 
 
-def cli(args=None, parse_this_str=None):
+def cli(args=None, sys_argv=None):
     if args:
         return args
     parser = ArgumentParser(description="Pipeline classifier / predictor using ensemble and partial_fit methods")
     parser = add_config_file_argument(parser)
     parser.add_argument('--echo-config', action='store_true',
                         help='Output running config as it is parsed')
-    if parse_this_str:
-        return parser.parse_args(parse_this_str)
+    if sys_argv:
+        return parser.parse_args(sys_argv)
     return parser.parse_args()
 
 
-def main(args=None, parse_this_str=None):
+def main(args=None, sys_argv=None):
     started = datetime.datetime.now()
-    args = cli(args=args, parse_this_str=parse_this_str)
+    args = cli(args=args, sys_argv=sys_argv)
     err = None
     try:
         config = ConfigParser(args.config)

@@ -19,6 +19,7 @@ import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
 from elm.sample_util.util import bands_as_columns
 from elm.sample_util.elm_store import ElmStore
+from elm.scripts.main import main as elm_main
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
 old_transform = elmtransform.transform_sample_pipeline_step
@@ -88,6 +89,7 @@ def example_get_y_func_binary(flat_sample):
     ret[col_means > med] = 1
     return ret
 
+
 @bands_as_columns
 def example_get_y_func_continuous(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
@@ -103,15 +105,18 @@ def example_custom_continuous_scorer(y_true, y_pred):
 class ExpectedFuncCalledError(ValueError):
     pass
 
+
 @bands_as_columns
 def get_y_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('From get_y_func')
 
+
 @bands_as_columns
 def get_weight_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('from get_weight_func')
+
 
 def test_one_config(config=None, cwd=None):
 
@@ -120,24 +125,24 @@ def test_one_config(config=None, cwd=None):
     with open(config_filename, 'w') as f:
         f.write(config_str)
     env = copy.deepcopy(os.environ)
+    if 'ELM_LOGGING_LEVEL' in env:
+        old_val = env['ELM_LOGGING_LEVEL']
+    else:
+        old_val = None
     env['ELM_LOGGING_LEVEL'] = 'DEBUG'
-    proc = sp.Popen(['elm-main',
-                      '--config',
-                      config_filename,
-                      '--echo-config'],
-                     cwd=cwd,
-                     stdout=sp.PIPE,
-                     stderr=sp.STDOUT,
-                     env=env)
-    r = proc.wait()
-    log = proc.stdout.read().decode()
-    print(log)
-    if r != 0:
-        raise ValueError('Error: Bad return code: {}'.format(r))
-    assert 'elm.scripts.main - ok' in log
-    return log
+    sys_argv = ['--config', config_filename, '--echo-config']
+    try:
+        ret_val = elm_main(sys_argv=sys_argv)
+    finally:
+        if old_val is not None:
+            os.environ['ELM_LOGGING_LEVEL'] = old_val
+    return ret_val
 
-def random_elm_store(bands, mn=0, mx=1, height=100, width=80):
+
+def random_elm_store(bands, mn=0, mx=1, height=100, width=80, **kwargs):
+    if isinstance(bands[0], (list, tuple)):
+        # it is actually band_specs
+        bands = [_[-1] for _ in bands]
     val = np.random.uniform(mn,
                             mx,
                             width * height * len(bands)).reshape((height * width,len(bands)))
@@ -152,6 +157,8 @@ def random_elm_store(bands, mn=0, mx=1, height=100, width=80):
                 attrs=attrs)},
             attrs=attrs)
     return es
+
+
 def remove_pipeline_transforms(config):
     config['pipeline'] = [_ for _ in config['pipeline'] if not 'transform' in _]
 

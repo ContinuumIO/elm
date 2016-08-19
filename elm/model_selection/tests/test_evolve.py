@@ -1,4 +1,5 @@
 import copy
+from io import StringIO
 
 import pytest
 import yaml
@@ -10,7 +11,8 @@ from elm.model_selection.evolve import (get_param_grid,
                                         EvoParams,
                                         evolve_setup,
                                         evo_init_func,
-                                        evo_general)
+                                        evo_general,
+                                        assign_fitnesses)
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 
 def _setup():
@@ -38,7 +40,7 @@ def test_parse_param_grid():
     metadata about parameters is extracted'''
     config, param_grid = _setup()
     k, v = tuple(param_grid.items())[0]
-    assert k == 'pca_kmeans'
+    assert k == 'pca_kmeans_small'
     for k2 in ('is_int', 'low', 'up', 'choices',):
         assert isinstance(v[k2], list)
     assert all(isinstance(vi, list) for vi in v['choices'])
@@ -53,7 +55,7 @@ def test_individual_to_new_config():
     config, param_grid = _setup()
     minimal = config.sample_pipelines['minimal']
     top_n = config.sample_pipelines['top_n']
-    param_grid_item = param_grid['pca_kmeans']
+    param_grid_item = param_grid['pca_kmeans_small']
     ind = [0,] * len(param_grid_item['choices'])
     new_config = individual_to_new_config(config, param_grid_item, ind)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 3
@@ -69,7 +71,7 @@ def test_individual_to_new_config():
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 40
 
 
-def test__get_evolve_meta():
+def test_get_evolve_meta():
     '''Tests param_grid metadata'''
     (config,
      step_name_to_param_grid_name,
@@ -94,7 +96,7 @@ def tst_evo_setup_evo_init_func(config=None):
     evo_params = eps[0]
     assert isinstance(evo_params, EvoParams)
     pop = evo_init_func(evo_params)
-    assert len(pop) == 24
+    assert len(pop) == config.param_grids['pca_kmeans_small']['control']['mu']
     for ind in pop:
         for item, choices in zip(ind, evo_params.deap_params['choices']):
             assert item < len(choices) and item >= 0
@@ -123,22 +125,27 @@ def test_evo_general(fitnesses, score_weights):
     '''
     config = yaml.load(CONFIG_STR)
     config['model_scoring']['testing_model_scoring']['score_weights'] = score_weights
-    config, evo_params, pop = tst_evo_setup_evo_init_func()
+    config, evo_params, pop = tst_evo_setup_evo_init_func(config=ConfigParser(config=config))
     control = evo_params.deap_params['control']
+    dummy_file = StringIO()
     ea_gen = evo_general(evo_params.toolbox,
+                         dummy_file,
                          pop,
                          control['cxpb'],
                          control['mutpb'],
-                         control['ngen'])
+                         control['ngen'],
+                         control['k'])
+
     assert next(ea_gen) is None # dummy call to next
     invalid_ind = pop
-    assert len(pop) == 24
+    assert len(pop) == control['mu']
     original_pop = copy.deepcopy(pop)
-    best = original_pop[1]  # in this synthetic data,
+    best = fitnesses[1]  # in this synthetic data,
                             # the 2nd param set is always best
+    assign_fitnesses(pop, fitnesses, dummy_file)
     while invalid_ind:
-        (pop, invalid_ind, record, logbook) = ea_gen.send(fitnesses)
-    matches_best = tuple(ind for ind in pop if ind == best)
+        (pop, invalid_ind,) = ea_gen.send(fitnesses)
+    matches_best = tuple(ind for ind in pop if ind.fitness.values == best)
     assert matches_best
     assert original_pop != pop
 

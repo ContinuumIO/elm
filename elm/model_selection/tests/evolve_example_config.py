@@ -1,4 +1,16 @@
 CONFIG_STR = '''
+transform: {
+  pca: {
+    model_init_class: "sklearn.decomposition:IncrementalPCA",
+    model_init_kwargs: {"n_components": 2},
+    ensemble: no_ensemble,
+    model_selection: Null,
+    model_scoring: Null,
+    data_source: synthetic,
+    param_grid: pca_kmeans_small,
+  }
+}
+
 sklearn_preprocessing: {
   standard: {
     method: StandardScaler,
@@ -57,13 +69,13 @@ param_grids: {
       cxpb:  0.3,
       ngen:  2,
       mu:    4,
-      k:     12,
+      k:     4,
     }
   }
 }
 
 data_sources:
-  NPP_DSRF1KD_L2GD:
+  synthetic:
     band_specs:
     - [long_name, 'Band 1 ', band_1]
     - [long_name, 'Band 2 ', band_2]
@@ -84,7 +96,7 @@ data_sources:
     reader: hdf4-eos
     sample_args_generator: iter_files_recursively
     sample_args_generator_kwargs: {extension: .hdf, top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
-    sample_from_args_func: elm.sample_util.samplers:image_selection
+    sample_from_args_func: 'elm.pipeline.tests.util:random_elm_store'
     selection_kwargs:
       data_filter: null
       filename_filter: null
@@ -104,7 +116,7 @@ train: {
     model_init_kwargs: {},
     ensemble: no_ensemble,
     output_tag: kmeans,
-    data_source: NPP_DSRF1KD_L2GD,
+    data_source: synthetic,
     keep_columns: [],
     model_scoring: testing_model_scoring,
   }
