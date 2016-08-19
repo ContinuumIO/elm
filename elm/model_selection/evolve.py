@@ -5,6 +5,7 @@ from functools import partial
 import logging
 import numbers
 import random
+import warnings
 
 from deap import base
 from deap import creator
@@ -39,16 +40,23 @@ OK_PARAM_FIRST_KEYS = ['transform',
 def _check_key(train_config, transform_config,
               train_step_name, transform_step_name,
               config):
-    klass = import_callable(train_config['model_init_class'])
-    _, default_kwargs, _ = get_args_kwargs_defaults(klass)
+    if train_config:
+        klass = import_callable(train_config['model_init_class'])
+        _, default_kwargs, _ = get_args_kwargs_defaults(klass)
+        train_or_transform = 'train'
+    else:
+        train_or_transform = 'transform'
+        train_config = {}
+        default_kwargs = {}
     if transform_config:
         klass = import_callable(transform_config['model_init_class'])
         _, default_transform_kwargs, _ = get_args_kwargs_defaults(klass)
     else:
         default_transform_kwargs = {}
+        transform_config = {}
 
     def get_train_transform(k):
-        print(get_train_transform, k)
+        print(k, default_kwargs, default_transform_kwargs, len(k))
         if k[-1] in default_kwargs:
             if len(k) == 2:
                 if k[0] != train_step_name:
@@ -75,8 +83,13 @@ def _check_key(train_config, transform_config,
                 if tt:
                     return (tt, v)
                 raise ElmConfigError('param_grid key: {} uses __ but left '
-                                     'side of __ is not in "train" or '
-                                     '"transform" part of config'.format(k))
+                              'side of __ is not in "train" or '
+                              '"transform" keys of config (or '
+                              'the left side of __ is not part of '
+                              '{} step {} in config\'s '
+                              'pipeline'.format(k,
+                                                train_or_transform,
+                                                train_step_name or transform_step_name))
             elif k[0] == 'sample_pipeline':
                 return (('sample_pipeline_variable',), v)
             else:
@@ -119,7 +132,6 @@ def parse_param_grid_items(param_grid_name, train_config, transform_config,
             param_grid_parsed[k] = v
             continue
         unwound = tuple(switch_types((k,), v))[0]
-        print(unwound)
         k2, v2 = make_check_tuple_keys(*unwound)
         print('k2,v2', k2, v2)
         param_grid_parsed[k2] = v2
@@ -133,20 +145,25 @@ def get_param_grid(config, step):
     if not param_grid_name:
         return None
     train_step_name = step.get('train')
+    transform_step_name = step.get('transform')
     if train_step_name:
         train_config = config.train[train_step_name]
-    else:
-        train_config = None
-    if 'sample_pipeline' in step:
-        sample_pipeline = step['sample_pipeline']
-        steps = [step for step in sample_pipeline if 'transform' in step]
-        transform_names = set(step.get('transform') for step in steps)
-        assert len(transform_names) == 1
-        transform_step_name = tuple(transform_names)[0]
-        transform_config = config.transform[transform_step_name]
-    else:
-        transform_step_name = None
         transform_config = None
+    elif transform_step_name:
+        transform_config = config.transform[transform_step_name]
+        train_config = None
+    else:
+        raise ValueError('Expected param_grid to be used with a "train" '
+                         'or "transform" step of a pipeline, but found param_grid '
+                         'was used in step {}'.format(step))
+    if 'sample_pipeline' in step and transform_step_name is None:
+        sample_pipeline = step['sample_pipeline']
+        transform_steps = [_ for _ in sample_pipeline if 'transform' in _]
+        transform_names = set(_.get('transform') for _ in transform_steps)
+        assert len(transform_names) <= 1
+        if transform_names:
+            transform_step_name = tuple(transform_names)[0]
+            transform_config = config.transform[transform_step_name]
 
     param_grid = config.param_grids[param_grid_name]
     make_check_tuple_keys = _check_key(train_config,
@@ -418,6 +435,8 @@ def evo_general(toolbox, pop, cxpb, mutpb, ngen):
     logbook.header = ('gen', 'evals', 'std', 'min', 'avg', 'max')
     for gen in range(1, ngen): # starts at 1 because it assumes
                                # already evaluated once
+        logger.info('Generation {} out of {} in evolutionary '
+                    'algorithm'.format(gen + 1, ngen))
         offspring = toolbox.select(pop)
         offspring = [toolbox.clone(ind) for ind in offspring]
         for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
@@ -448,5 +467,6 @@ def evo_general(toolbox, pop, cxpb, mutpb, ngen):
     # Yield finally the record and logbook
     # The caller knows when not to .send again
     # based on the None in 2nd position below
+    logger.info('Evolutionary algorithm finished')
     yield (pop, None, record, logbook)
 

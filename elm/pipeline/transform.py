@@ -62,8 +62,7 @@ def _get_saved_transform_models(action, config, **kwargs):
     logger.info('Load pickled transform_models from {} {}'.format(config.ELM_TRANSFORM_PATH, tag))
     transform_models, meta = load_models_from_tag(config.ELM_TRANSFORM_PATH, tag)
     assert len(transform_models) == 1 and len(transform_models[0]) == 2
-    name, transform_model = transform_models[0]
-    return [(name, transform_model)]
+    return transform_models
 
 
 def init_saved_transform_models(config, step):
@@ -82,6 +81,7 @@ def init_saved_transform_models(config, step):
 
 def get_new_or_saved_transform_model(config, step):
     transform_model = None
+    train_or_transform = 'train' if 'train' in step else 'transform'
     sample_pipeline = step.get('sample_pipeline') or []
     for item in sample_pipeline:
         if 'transform' in item:
@@ -91,7 +91,10 @@ def get_new_or_saved_transform_model(config, step):
             if 'fit' not in method:
                 return init_saved_transform_models(config, step)
             else:
-                model_args = _make_model_args_from_config(config, config.transform[step['transform']], step)
+                model_args = _make_model_args_from_config(config,
+                                                          config.transform[item['transform']],
+                                                          step,
+                                                          train_or_transform)
                 model = model_args.model_init_class(**model_args.model_init_kwargs)
                 return [('tag_0', model)]
     return None

@@ -307,7 +307,7 @@ def final_on_sample_step(fitter,
         fit_kwargs['classes'] = classes
     if 'batch_size' in model.get_params():
         logger.debug('set batch_size {}'.format(X.sample.values.shape[0]))
-        model.set_params(batch_size = X.sample.values.shape[0])
+        model.set_params(batch_size=X.sample.values.shape[0])
     return fit_args, fit_kwargs
 
 def flatten_cube(elm_store):

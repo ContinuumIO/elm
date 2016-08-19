@@ -64,13 +64,20 @@ def fit(model,
                                                     flatten=True,
                                                     sample_y=sample_y,
                                                     sample_weight=sample_weight)
-        model = fitter(*fit_args, **fit_kwargs)
+        print(fitter)
+        assert model
+        out = fitter(*fit_args, **fit_kwargs)
+        if out is not None: # allow fitter func to modify in place
+                            # or return a fitted model
+            model = out
+        assert model
         if scoring:
             kw = copy.deepcopy(scoring_kwargs or {})
             kw.update(fit_kwargs)
             kw = {k: v for k,v in kw.items()
                   if not k in ('scoring',)}
             model = score_one_model(model, scoring, *fit_args, **kw)
+            assert model
         iter_offset += getattr(model, 'n_iter', 1)
     return model
 

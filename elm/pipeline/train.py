@@ -31,16 +31,16 @@ def _train_or_transform_step(train_or_transform,
     '''
     from elm.pipeline.transform import get_new_or_saved_transform_model
     evo_params = kwargs.get('evo_params') or None
-    if evo_params is not None:
-        return evolutionary_algorithm(executor,
-                                      config,
-                                      step,
-                                      evo_params,
-                                      transform_dict,
-                                      **ensemble_kwargs)
     model_args, ensemble_kwargs = make_model_args_from_config(config,
                                                               step,
                                                               train_or_transform)
+    if evo_params is not None:
+        return evolutionary_algorithm(executor,
+                                      step,
+                                      train_or_transform,
+                                      evo_params,
+                                      kwargs.get('transform_model') or None,
+                                      **ensemble_kwargs)
     transform_model = kwargs.get('transform_model') or None
     if transform_model is None:
         transform_model = get_new_or_saved_transform_model(config, step)

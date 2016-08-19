@@ -27,6 +27,7 @@ for step in config['pipeline']:
         DEFAULT_PREDICT_KEY = step['predict']
         DEFAULT_PREDICT = config['train'][step['predict']]
 
+
 def test_default_config():
     tag = 'run-with-default-config'
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
@@ -73,7 +74,10 @@ def get_type(model_init_class):
     return MODELS_WITH_PREDICT_ESTIMATOR_TYPES[model_init_class]
 
 
-def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
+def tst_sklearn_method(model_init_class,
+                       c,
+                       n_rows,
+                       use_transform=True):
     '''This func can test almost all sklearn clusterers, regressors,
     or classifiers as they are used in the config / pipeline system
 
@@ -192,6 +196,7 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                                                if not 'transform' in item2]
                 if data_source.get('get_y_func'):
                     item['sample_pipeline'] += [{'get_y': True}]
+
             if not has_predict:
                 config['pipeline'] = [_ for _ in config['pipeline'] if not 'predict' in _]
             config['data_sources'][DEFAULT_DS_KEY] = data_source
@@ -249,4 +254,6 @@ def test_sklearn_methods_fast(model_init_class, func):
     Does not use PCA transform
     '''
     tst_sklearn_method(model_init_class, func, 500, use_transform=False)
+
+
 
