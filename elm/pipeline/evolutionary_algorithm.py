@@ -137,6 +137,7 @@ def _fit_invalid_ind(individual_to_new_config,
                                           train_or_transform,
                                           invalid_ind,
                                           config,
+                                          ensemble_kwargs,
                                           transform_model=transform_model))
     model_names = [next_model_tag() for _ in range(len(invalid_ind))]
     models = _fit_list_of_models(args_kwargs,
