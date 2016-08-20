@@ -72,7 +72,10 @@ class ConfigParser(object):
         self.config = copy.deepcopy(DEFAULTS)
         for k, v in copy.deepcopy(self.raw_config).items():
             if isinstance(v, dict):
-                self.config[k].update(v)
+                if k in self.config:
+                    self.config[k].update(v)
+                else:
+                    self.config[k] = v
             else:
                 self.config[k] = v
         self._update_for_env()
