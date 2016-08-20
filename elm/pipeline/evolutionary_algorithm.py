@@ -17,6 +17,7 @@ from elm.pipeline.util import (_validate_ensemble_members,
 
 LAST_TAG_IDX = 0
 def next_model_tag():
+    '''Gives names like tag_0, tag_1, tag_2 sequentially'''
     global LAST_TAG_IDX
     model_name =  'tag_{}'.format(LAST_TAG_IDX)
     LAST_TAG_IDX += 1
@@ -24,7 +25,27 @@ def next_model_tag():
 
 
 def _on_each_ind(individual_to_new_config, step, train_or_transform,
-                 config, transform_model, ind):
+                 config, ensemble_kwargs, transform_model, ind):
+    '''Returns model, fit args, fit kwargs for Individual
+    whose fitness must be solved
+
+    Parameters:
+        individual_to_new_config: Function taking Individual, returns
+                                  elm.config.ConfigParser instance
+        step:                     Dictionary step of pipeline
+        train_or_transform:       "train" or "transform" (type of step
+                                  in pipeline)
+        config:                   from elm.config.ConfigParser
+        ensemble_kwargs:           Dict with at least
+                                   "batches_per_gen": int key/value
+        transform_model:          None or list of 1 model name, model, e.g.:
+                                  [('tag_0', IncrementalPCA(....))]
+                                  (None if sample_pipeline doesn't use
+                                   a transform)
+        ind:                      Individual to evaluate
+    Returns:
+        tuple of (args, kwargs) that go to elm.pipeline.fit.fit
+    '''
     new_config = individual_to_new_config(ind)
     model_args, _ = make_model_args_from_config(new_config,
                                                 step,
@@ -32,7 +53,9 @@ def _on_each_ind(individual_to_new_config, step, train_or_transform,
     if transform_model is None:
         transform_model = get_new_or_saved_transform_model(config, step)
 
-    fit_kwargs = _prepare_fit_kwargs(model_args, transform_model)
+    fit_kwargs = _prepare_fit_kwargs(model_args,
+                                     transform_model,
+                                     ensemble_kwargs)
     model_init_kwargs = model_args.model_init_kwargs or {}
     model = import_callable(model_args.model_init_class)(**model_init_kwargs)
     return ((model,) + tuple(model_args.fit_args), fit_kwargs)
@@ -43,13 +66,36 @@ def on_each_evo_yield(individual_to_new_config,
                       train_or_transform,
                       invalid_ind,
                       config,
+                      ensemble_kwargs,
                       transform_model=None):
+    '''Run this on each yield from evo_general, which
+    includes "invalid_ind", the Individuals whose fitness
+    needs to be evaluated
+
+    Parameters:
+        individual_to_new_config:  Function taking Individual, returns
+                                   elm.config.ConfigParser instance
+        step:                      Dictionary step from config's "pipeline"
+        train_or_transform:        "train" or "transform"
+        invalid_ind:               Individuals to evaluate
+        config:                    Original elm.config.ConfigParser instance
+        ensemble_kwargs:           Dict with at least
+                                   "batches_per_gen": int key/value
+        transform_model:           None or list of 1 model name, model, e.g.:
+                                   [('tag_0', IncrementalPCA(....))]
+                                   (None if sample_pipeline doesn't use
+                                   a transform)
+    Returns:
+        List of tuples where each tuple is (args, kwargs) for
+        elm.pipeline.fit.fit
+    '''
     args_kwargs = [] # args are (model, other needed args)
                      # kwargs are fit_kwargs
     on_each_ind = partial(_on_each_ind,
                           individual_to_new_config,
                           step, train_or_transform,
-                          config, transform_model)
+                          config, ensemble_kwargs,
+                          transform_model)
 
     args_kwargs = map(on_each_ind, invalid_ind)
     return args_kwargs
@@ -60,9 +106,32 @@ def _fit_invalid_ind(individual_to_new_config,
                      step,
                      train_or_transform,
                      config,
+                     ensemble_kwargs,
                      map_function,
                      get_results,
                      invalid_ind):
+    '''
+    Parameters:
+        individual_to_new_config:  Function taking Individual, returns
+                                   elm.config.ConfigParser instance
+        transform_model:           None or list of 1 model name, model, e.g.:
+                                   [('tag_0', IncrementalPCA(....))]
+                                   (None if sample_pipeline doesn't use
+                                   a transform)
+        step:                      Dictionary step from config's "pipeline"
+        train_or_transform:        "train" or "transform"
+        config:                    Original elm.config.ConfigParser instance
+        ensemble_kwargs:           Dict with at least
+                                   "batches_per_gen": int key/value
+        map_function:              Python's map or Executor's map
+        get_results:               Wrapper around map_function such as ProgressBar
+        invalid_ind:               Individuals to evaluate
+    Returns:
+        tuple of (models, fitnesses) where:
+            models is a list of (name, model) tuples
+            fitnesses are the model scores for optimization
+    '''
+
     args_kwargs = tuple(on_each_evo_yield(individual_to_new_config,
                                           step,
                                           train_or_transform,
@@ -102,6 +171,7 @@ def evolutionary_algorithm(executor,
                                  step,
                                  train_or_transform,
                                  config,
+                                 ensemble_kwargs,
                                  map_function,
                                  get_results)
     try:

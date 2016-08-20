@@ -32,3 +32,4 @@ def test_sklearn_methods_evolutionary():
     '''
     config = copy.deepcopy(DEFAULT_CONFIG)
     run_one_config(config, 'test_sklearn_methods_evolutionary')
+

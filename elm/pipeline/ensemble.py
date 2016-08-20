@@ -56,7 +56,7 @@ def ensemble(executor,
                                     **ensemble_kwargs)
     models = _validate_ensemble_members(models)
     model_selection_func = _get_model_selection_func(model_args)
-    fit_kwargs = _prepare_fit_kwargs(model_args, transform_model)
+    fit_kwargs = _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs)
     model_names = [name for name, model in models]
     for generation in range(n_generations):
         logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))

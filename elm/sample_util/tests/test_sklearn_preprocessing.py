@@ -11,7 +11,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      BANDS)
 from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
-transform_models = [('tag_0', PCA(n_components=3))]
+transform_model = [('tag_0', PCA(n_components=3))]
 def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sample_pipeline'):
     config = copy.deepcopy(DEFAULTS)
     train_or_predict_dict = copy.deepcopy(config['train']['kmeans'])
@@ -27,9 +27,8 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
         action_data = get_sample_pipeline_action_data(train_or_predict_dict,
                                      config,
                                      step)
-        transform_dict = {transform_name: transform_models}
         sample, sample_y, sample_weight = run_sample_pipeline(action_data, sample=es,
-                                     transform_dict=transform_dict)
+                                     transform_model=transform_model)
         return sample
     else:
         transform_name = config['pipeline'][0]['transform']

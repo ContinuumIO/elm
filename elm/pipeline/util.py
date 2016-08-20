@@ -126,12 +126,13 @@ def _validate_ensemble_members(models):
     return models
 
 
-def _prepare_fit_kwargs(model_args, transform_model):
+def _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs):
     fit_kwargs = copy.deepcopy(model_args.fit_kwargs)
     fit_kwargs['scoring'] = model_args.model_scoring
     fit_kwargs['scoring_kwargs'] = model_args.model_scoring_kwargs
     fit_kwargs['transform_model'] = transform_model
     fit_kwargs['fit_method'] = model_args.fit_method
+    fit_kwargs['batches_per_gen'] = ensemble_kwargs.get('batches_per_gen') or 1
     return fit_kwargs
 
 
