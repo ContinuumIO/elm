@@ -70,7 +70,11 @@ class ConfigParser(object):
                                    'config_file_name or config '
                                    '(dict) as keyword arguments')
         self.config = copy.deepcopy(DEFAULTS)
-        self.config.update(copy.deepcopy(self.raw_config))
+        for k, v in copy.deepcopy(self.raw_config).items():
+            if isinstance(v, dict):
+                self.config[k].update(v)
+            else:
+                self.config[k] = v
         self._update_for_env()
         self._interpolate_env_vars()
         self.validate()
@@ -570,8 +574,8 @@ class ConfigParser(object):
                         match = SAMPLE_PIPELINE_ACTIONS[match]
                         if not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
                             raise ElmConfigError('sample_pipeline item {0} is of type '
-                                                 '{1} and refers to a key that is not in '
-                                                 '"{1}" dict of config'.format(item, match))
+                                                 '{1} and refers to a key ({2}) that is not in '
+                                                 '"{1}" dict of config'.format(item, match, item[k]))
                 if not ok:
                     raise ElmConfigError('sample_pipeline item {} does not '
                                          'have a key that is in the set {}'
