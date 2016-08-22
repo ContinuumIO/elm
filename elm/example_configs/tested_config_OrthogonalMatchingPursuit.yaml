@@ -61,8 +61,8 @@ data_sources:
     sample_from_args_func: elm.sample_util.samplers:image_selection
     selection_kwargs: {}
 ensembles:
-  no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, n_generations: 1, saved_ensemble_size: 1}
-  small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, n_generations: 4, saved_ensemble_size: 4}
+  no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, ngen: 1, saved_ensemble_size: 1}
+  small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, ngen: 4, saved_ensemble_size: 4}
 feature_selection:
   select_all:
     choices: all
@@ -110,7 +110,7 @@ train:
   kmeans:
     data_source: NPP_DSRF1KD_L2GD
     ensemble: no_ensemble
-    ensemble_kwargs: {batches_per_gen: 1, init_ensemble_size: 2, n_generations: 1,
+    ensemble_kwargs: {batches_per_gen: 1, init_ensemble_size: 2, ngen: 1,
       saved_ensemble_size: 1}
     fit_kwargs: {}
     fit_method: fit

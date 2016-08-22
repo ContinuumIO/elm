@@ -1,13 +1,18 @@
 CONFIG_STR = '''
+ensembles: {
+    save_one: {
+        saved_ensemble_size: 1,
+    }
+}
 transform: {
   pca: {
     model_init_class: "sklearn.decomposition:IncrementalPCA",
     model_init_kwargs: {"n_components": 2},
-    ensemble: no_ensemble,
+    ensemble: save_one,
     model_selection: Null,
     model_scoring: Null,
     data_source: synthetic,
-    param_grid: pca_kmeans_small,
+    param_grid: example_param_grid,
   }
 }
 
@@ -31,12 +36,12 @@ sklearn_preprocessing: {
 }
 
 feature_selection: {
-    top_n: {
-        selection: "sklearn.feature_selection:SelectPercentile",
-        kwargs: {percentile: 80},
-        scoring: f_classif,
-        choices: all,
-    }
+  top_n: {
+    selection: "sklearn.feature_selection:SelectPercentile",
+    kwargs: {percentile: 80},
+    scoring: f_classif,
+    choices: all,
+  }
 }
 
 sample_pipelines: {
@@ -51,10 +56,11 @@ sample_pipelines: {
     {feature_selection: top_n},
     {transform: pca, method: fit_transform},
   ],
+  nothing: [],
 }
 
 param_grids: {
-  pca_kmeans_small: {
+  example_param_grid: {
     kmeans__n_clusters: [3,4,5,6,7,8],
     pca__n_components: [2,3,4,5],
     sample_pipeline: [minimal, top_n],
@@ -62,59 +68,42 @@ param_grids: {
     control: {
       select_method: selNSGA2,
       crossover_method: cxTwoPoint,
-      mutate_method: mutShuffleIndexes,
+      mutate_method: mutUniformInt,
       init_pop: random,
-      indpb: 0.2,
-      mutpb: 0.4,
+      indpb: 0.5,
+      mutpb: 0.9,
       cxpb:  0.3,
+      eta:   20,
       ngen:  2,
       mu:    4,
       k:     4,
+      early_stop: {abs_change: [10], agg: all},
+      # alternatively early_stop: {percent_change: [10], agg: all}
+      # alternatively early_stop: {threshold: [10], agg: any}
     }
   }
 }
 
-data_sources:
-  synthetic:
-    band_specs:
-    - [long_name, 'Band 1 ', band_1]
-    - [long_name, 'Band 2 ', band_2]
-    - [long_name, 'Band 3 ', band_3]
-    - [long_name, 'Band 4 ', band_4]
-    - [long_name, 'Band 5 ', band_5]
-    - [long_name, 'Band 7 ', band_7]
-    - [long_name, 'Band 8 ', band_8]
-    - [long_name, 'Band 10 ', band_10]
-    - [long_name, 'Band 11 ', band_11]
-    batch_size: 1440000
-    file_pattern: '*.hdf'
-    get_weight_func: null
-    get_weight_kwargs: {}
-    get_y_func: null
-    get_y_kwargs: {}
-    keep_columns: []
-    reader: hdf4-eos
-    sample_args_generator: iter_files_recursively
-    sample_args_generator_kwargs: {extension: .hdf, top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
-    sample_from_args_func: 'elm.pipeline.tests.util:random_elm_store'
-    selection_kwargs:
-      data_filter: null
-      filename_filter: null
-      geo_filters:
-        exclude_polys: []
-        include_polys: []
-      metadata_filter: null
-model_scoring: {
-    testing_model_scoring: {
-        score_weights: [-1],
-    }
+data_sources: {
+  synthetic: {
+    sample_from_args_func: 'elm.pipeline.tests.util:random_elm_store',
+    sampler_args: [],
+  }
 }
+
+model_scoring: {
+  testing_model_scoring: {
+    score_weights: [-1],
+    scoring: 'elm.model_selection.kmeans:ensemble_kmeans_scoring',
+  }
+}
+
 train: {
   kmeans: {
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
     fit_kwargs: {},
     model_init_kwargs: {},
-    ensemble: no_ensemble,
+    ensemble: save_one,
     output_tag: kmeans,
     data_source: synthetic,
     keep_columns: [],
@@ -124,7 +113,7 @@ train: {
 
 pipeline:
 - train: kmeans
-  param_grid: pca_kmeans_small
+  param_grid: example_param_grid
   sample_pipeline: minimal
 
 '''

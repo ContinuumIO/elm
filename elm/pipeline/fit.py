@@ -56,7 +56,7 @@ def fit(model,
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
         sample, sample_y, sample_weight = run_sample_pipeline(action_data, transform_model=transform_model)
-        fitter = getattr(model, fit_method)
+        fitter = getattr(model, fit_method, getattr(model, 'fit'))
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
@@ -64,20 +64,16 @@ def fit(model,
                                                     flatten=True,
                                                     sample_y=sample_y,
                                                     sample_weight=sample_weight)
-        print(fitter)
-        assert model
         out = fitter(*fit_args, **fit_kwargs)
         if out is not None: # allow fitter func to modify in place
                             # or return a fitted model
             model = out
-        assert model
         if scoring or scoring_kwargs:
             kw = copy.deepcopy(scoring_kwargs or {})
             kw.update(fit_kwargs)
             kw = {k: v for k,v in kw.items()
                   if not k in ('scoring',)}
             model = score_one_model(model, scoring, *fit_args, **kw)
-            assert model
         iter_offset += getattr(model, 'n_iter', 1)
     return model
 

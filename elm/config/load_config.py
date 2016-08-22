@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Iterable, Sequence
 import copy
 import logging
 import numbers
@@ -164,34 +164,39 @@ class ConfigParser(object):
 
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        reader = ds.get('reader')
-        if not reader in self.readers:
-            raise ElmConfigError('Data source config dict {} '
-                                   'refers to a "reader" {} that is not defined in '
-                                   '"readers"'.format(reader, self.readers))
-        download = ds.get('download', '') or ''
-        if download and not download in self.downloads:
-            raise ElmConfigError('data_source {} refers to a '
-                                   '"download" {} not defined in "downloads"'
-                                   ' section'.format(ds, download))
-        self._validate_band_specs(ds.get('band_specs'), name)
-        s = ds.get('sample_args_generator')
-        if not s in self.sample_args_generators:
-            raise ElmConfigError('Expected data_source: '
-                                 'sample_args_generator {} to be in '
-                                 'sample_args_generators.keys()')
-        sample_args_generator = self.sample_args_generators[s]
-        self._validate_custom_callable(sample_args_generator,
-                                True,
-                                'train:{} sample_args_generator'.format(name))
         sample_from_args_func = ds.get('sample_from_args_func')
         self._validate_custom_callable(sample_from_args_func,
                                 True,
                                 'train:{} sample_from_args_func'.format(name))
-        self._validate_selection_kwargs(ds, name)
-        keep_columns = ds.get('keep_columns') or []
-        self._validate_type(keep_columns, 'keep_columns', (tuple, list))
-        ds['keep_columns'] = keep_columns
+        if sample_from_args_func:
+            logger.info('data_source:{} uses '
+                        'sample_from_args_func (validation is '
+                        'limited)'.format(name))
+        else:
+            reader = ds.get('reader')
+            if not reader in self.readers:
+                raise ElmConfigError('Data source config dict {} '
+                                       'refers to a "reader" {} that is not defined in '
+                                       '"readers"'.format(reader, self.readers))
+            download = ds.get('download', '') or ''
+            if download and not download in self.downloads:
+                raise ElmConfigError('data_source {} refers to a '
+                                       '"download" {} not defined in "downloads"'
+                                       ' section'.format(ds, download))
+            self._validate_band_specs(ds.get('band_specs'), name)
+            s = ds.get('sample_args_generator')
+            if not s in self.sample_args_generators:
+                raise ElmConfigError('Expected data_source: '
+                                     'sample_args_generator {} to be in '
+                                     'sample_args_generators.keys()')
+            sample_args_generator = self.sample_args_generators[s]
+            self._validate_custom_callable(sample_args_generator,
+                                    True,
+                                    'train:{} sample_args_generator'.format(name))
+            self._validate_selection_kwargs(ds, name)
+            keep_columns = ds.get('keep_columns') or []
+            self._validate_type(keep_columns, 'keep_columns', (tuple, list))
+            ds['keep_columns'] = keep_columns
 
 
     def _validate_data_sources(self):
@@ -439,8 +444,8 @@ class ConfigParser(object):
                                        'to a data_source {} that is '
                                        'not defined in '
                                        '"data_sources"'.format(train_or_transform, name, repr(data_source)))
+        data_source = self.data_sources.get(data_source) or {}
         if is_major_step:
-            data_source = self.data_sources[data_source]
             if requires_y:
                 self._validate_custom_callable(data_source.get('get_y_func'),
                                                True,
@@ -449,8 +454,11 @@ class ConfigParser(object):
                                                             repr(t.get('model_init_class'))))
             output_tag = t.get('output_tag')
             self._validate_type(output_tag, 'train:output_tag', str)
-            band_specs = data_source['band_specs']
-            t['band_names'] = [x[-1] for x in band_specs]
+        band_specs = data_source.get('band_specs') or None
+        band_names = data_source.get('band_names') or None
+        if band_specs:
+            t['band_names'] = [(x[-1] if isinstance(x, Sequence) else x)
+                               for x in band_specs]
             ensemble = t.get('ensemble')
             if not ensemble or not ensemble in self.ensembles:
                 raise ElmConfigError('Each train or transform dict must have an '
@@ -493,7 +501,7 @@ class ConfigParser(object):
         '''Validate the "ensembles" section of config'''
         self.ensembles = self.config.get('ensembles') or {}
         self._validate_type(self.ensembles, 'config - ensembles', dict)
-        for f in ('saved_ensemble_size', 'n_generations',
+        for f in ('saved_ensemble_size', 'ngen',
                   'init_ensemble_size', 'batches_per_gen'):
             for k in self.ensembles:
                 self._validate_positive_int(self.ensembles[k].get(f), f)

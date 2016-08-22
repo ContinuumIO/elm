@@ -110,7 +110,7 @@ def tst_sklearn_method(model_init_class,
         default_ensemble =  {
                               'init_ensemble_size': 2,  # how many models to initialize at start
                               'saved_ensemble_size': 1, # how many models to serialize as "best"
-                              'n_generations': 1,       # how many model train/select generations
+                              'ngen': 1,       # how many model train/select generations
                               'batches_per_gen': 1,     # how many partial_fit calls per train/select generation
                             }
         ks = set(c().get_params())

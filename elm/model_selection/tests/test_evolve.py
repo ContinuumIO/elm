@@ -9,10 +9,10 @@ from elm.model_selection.evolve import (get_param_grid,
                                         individual_to_new_config,
                                         _get_evolve_meta,
                                         EvoParams,
-                                        evolve_setup,
+                                        ea_setup,
                                         evo_init_func,
-                                        evo_general,
-                                        assign_fitnesses)
+                                        ea_general,
+                                        assign_check_fitness)
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 
 def _setup():
@@ -40,7 +40,7 @@ def test_parse_param_grid():
     metadata about parameters is extracted'''
     config, param_grid = _setup()
     k, v = tuple(param_grid.items())[0]
-    assert k == 'pca_kmeans_small'
+    assert k == 'example_param_grid'
     for k2 in ('is_int', 'low', 'up', 'choices',):
         assert isinstance(v[k2], list)
     assert all(isinstance(vi, list) for vi in v['choices'])
@@ -55,7 +55,7 @@ def test_individual_to_new_config():
     config, param_grid = _setup()
     minimal = config.sample_pipelines['minimal']
     top_n = config.sample_pipelines['top_n']
-    param_grid_item = param_grid['pca_kmeans_small']
+    param_grid_item = param_grid['example_param_grid']
     ind = [0,] * len(param_grid_item['choices'])
     new_config = individual_to_new_config(config, param_grid_item, ind)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 3
@@ -91,22 +91,16 @@ def tst_evo_setup_evo_init_func(config=None):
     (config,
      step_name_to_param_grid_name,
      param_grid_name_to_deap) = _setup_pg(config=config)
-    eps = evolve_setup(config)
+    eps = ea_setup(config)
     assert isinstance(eps, dict) and len(eps) == 1
     evo_params = eps[0]
     assert isinstance(evo_params, EvoParams)
-    pop = evo_init_func(evo_params)
-    assert len(pop) == config.param_grids['pca_kmeans_small']['control']['mu']
-    for ind in pop:
-        for item, choices in zip(ind, evo_params.deap_params['choices']):
-            assert item < len(choices) and item >= 0
-    assert len(set(map(tuple, pop))) > 1
-    return config, evo_params, pop
+    return config, evo_params
 
 
 test_evo_setup_evo_init_func = tst_evo_setup_evo_init_func
 
-# The following are test data to test_evo_general
+# The following are test data to test_ea_general
 min_fitnesses = [(50,), (0,)] + [(100,)] * 22
 max_fitnesses = [(50,), (1000,)] + [(100,)] * 22
 min_max_fitnesses = [(50, 100), (0, 1000)] + [(100, 50)] * 22
@@ -115,9 +109,9 @@ zipped_tst_args = zip((min_fitnesses, max_fitnesses, min_max_fitnesses),
                       score_weights)
 
 @pytest.mark.parametrize('fitnesses, score_weights', zipped_tst_args)
-def test_evo_general(fitnesses, score_weights):
-    '''This test ensures that evo_general, a general
-    evolutionary algorithm can minimize, maximize or
+def test_ea_general(fitnesses, score_weights):
+    '''This test ensures that ea_general, a general
+    EA can minimize, maximize or
     handle multiple objectives.  In each of the fitnesses
     sequences passed in, the 2nd individual is known
     to be the most fit (given corresponding score_weights
@@ -125,27 +119,51 @@ def test_evo_general(fitnesses, score_weights):
     '''
     config = yaml.load(CONFIG_STR)
     config['model_scoring']['testing_model_scoring']['score_weights'] = score_weights
-    config, evo_params, pop = tst_evo_setup_evo_init_func(config=ConfigParser(config=config))
+    config['param_grids']['example_param_grid']['control']['early_stop'] = {'abs_change': [100,] * len(score_weights)}
+    config, evo_params = tst_evo_setup_evo_init_func(config=ConfigParser(config=config))
     control = evo_params.deap_params['control']
-    dummy_file = StringIO()
-    ea_gen = evo_general(evo_params.toolbox,
-                         dummy_file,
-                         pop,
-                         control['cxpb'],
-                         control['mutpb'],
-                         control['ngen'],
-                         control['k'])
+    param_history = []
+    ea_gen = ea_general(evo_params,
+                        control['cxpb'],
+                        control['mutpb'],
+                        control['ngen'],
+                        control['k'])
 
-    assert next(ea_gen) is None # dummy call to next
+    pop, _, _ = next(ea_gen)
+    for ind in pop:
+        assert isinstance(ind, list)
     invalid_ind = pop
     assert len(pop) == control['mu']
     original_pop = copy.deepcopy(pop)
     best = fitnesses[1]  # in this synthetic data,
                             # the 2nd param set is always best
-    assign_fitnesses(pop, fitnesses, dummy_file)
+    assign_check_fitness(pop, fitnesses,
+                     param_history, evo_params.deap_params['choices'],
+                     evo_params.score_weights)
     while invalid_ind:
-        (pop, invalid_ind,) = ea_gen.send(fitnesses)
+        (pop, invalid_ind, param_history) = ea_gen.send(fitnesses)
     matches_best = tuple(ind for ind in pop if ind.fitness.values == best)
     assert matches_best
     assert original_pop != pop
 
+
+def test_bad_config():
+    config = yaml.load(CONFIG_STR)
+    not_dicts = (9, [], (), 9.1, None, [2,3])
+    not_int = ({},[], 9.1, [1,3])
+    control_key = ('param_grids', 'example_param_grid', 'control')
+    keys = (
+        control_key,
+        control_key + ('early_stop',)
+        control_key[:1],
+        control_key[:2],
+
+    )
+    for key, nd in zip(keys, not_dicts):
+        d = config
+        for k in key[:-1]:
+            d = d[k]
+        d[key[-1]] = nd
+    with pytest.raises(ElmConfigError):
+        ConfigParser(config=config)
+    control_key + ('ngen'),

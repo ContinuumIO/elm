@@ -2,12 +2,14 @@ import array
 from collections import namedtuple
 import copy
 import inspect
+from itertools import product
 
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.metrics import silhouette_samples
 from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
@@ -16,15 +18,21 @@ from elm.sample_util.elm_store import ElmStore
 from elm.sample_util.util import bands_as_columns
 
 
+def distance_matrix(cen):
+    dist = np.empty((cen.shape[0],) * 2)
+    r = range(cen.shape[0])
+    for (i, j) in product(r, r):
+        dist[i, j] = np.sum((cen[i, :] - cen[j, :]) ** 2.0) ** 0.5
+    return dist
+
+
 def ensemble_kmeans_scoring(model,
                             x,
                             y_true=None,
                             scoring=None,
                             **kwargs):
-
-    model.partial_fit(x)
-    return np.sqrt(np.sum(model.transform(x)))
-
+    cen = model.cluster_centers_
+    return (model.inertia_ * cen.shape[0])
 
 
 def kmeans_model_averaging(models, best_idxes=None, **kwargs):
@@ -33,7 +41,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     drop_n = kwargs['drop_n']
     evolve_n = kwargs['evolve_n']
     init_n = kwargs['init_n']
-    last_gen = kwargs['n_generations'] - 1 == kwargs['generation']
+    last_gen = kwargs['ngen'] - 1 == kwargs['generation']
     if last_gen:
         # To avoid attempting to predict
         # when the model has not been fit

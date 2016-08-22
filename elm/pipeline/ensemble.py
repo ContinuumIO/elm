@@ -30,7 +30,7 @@ def ensemble(executor,
                         been "fit".  If using "fit" or "fit_transform" in
                         "sample_pipeline" then this transform_model has no
                         effect.
-        ensemble_kwargs: kwargs such as "ensemble_size" and "n_generations"
+        ensemble_kwargs: kwargs such as "ensemble_size" and "ngen"
                     which control the ensemble size and number of
                     generations in the ensemble (calls to model_selection_func)
         '''
@@ -41,7 +41,7 @@ def ensemble(executor,
     get_results = partial(wait_for_futures, executor=executor)
     model_selection_kwargs = model_args.model_selection_kwargs or {}
     ensemble_size = ensemble_kwargs['init_ensemble_size']
-    n_generations = ensemble_kwargs['n_generations']
+    ngen = ensemble_kwargs['ngen']
     model_names = ensemble_kwargs.get('model_names', None)
     ensemble_init_func = ensemble_kwargs.get('ensemble_init_func') or None
     model_init_kwargs = model_args.model_init_kwargs
@@ -58,8 +58,8 @@ def ensemble(executor,
     model_selection_func = _get_model_selection_func(model_args)
     fit_kwargs = _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs)
     model_names = [name for name, model in models]
-    for generation in range(n_generations):
-        logger.info('Ensemble generation {} of {}'.format(generation + 1, n_generations))
+    for generation in range(ngen):
+        logger.info('Ensemble generation {} of {}'.format(generation + 1, ngen))
         args_kwargs = tuple(((model,) + tuple(model_args.fit_args), fit_kwargs)
                             for name, model in models)
         logger.debug('fit args_kwargs {}'.format(args_kwargs))
@@ -70,7 +70,7 @@ def ensemble(executor,
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,
                                                model_args,
-                                               n_generations,
+                                               ngen,
                                                generation,
                                                fit_kwargs,
                                                models)

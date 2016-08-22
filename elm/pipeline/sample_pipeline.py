@@ -8,6 +8,7 @@ from sklearn.utils import check_array as _check_array
 
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
+from elm.model_selection.util import filter_kwargs_to_func
 from elm.sample_util.elm_store import ElmStore
 from elm.readers.util import row_col_to_xy
 
@@ -73,6 +74,9 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         func = import_callable(func_str, True, func_str)
         if sample is None:
             logger.debug('sample create sample_pipeline step')
+            required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
+            if not var_keyword:
+                kwargs = filter_kwargs_to_func(func, kwargs)
             sample = func(*args, **kwargs)
         elif 'get_y' in args:
             logger.debug('get_y sample_pipeline step')
@@ -122,21 +126,37 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
     data_source = config.data_sources[d['data_source']]
     s = d.get('sample_args_generator',
                                   data_source.get('sample_args_generator'))
-    if not s:
-        raise ValueError('Expected a sample_args_generator callable')
-    sample_args_generator = config.sample_args_generators[s]
-    sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
+    if s:
+        sample_args_generator = config.sample_args_generators[s]
+        sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
+    else:
+        sample_args_generator = None
     sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
                                          data_source.get('sample_args_generator_kwargs') or {})
     sample_args_generator_kwargs['data_source'] = data_source
     sampler_func = data_source['sample_from_args_func'] # TODO: this needs to be
                                                         # added to ConfigParser
                                                         # validation (sample_from_args_func requirement)
-    sampler_args = (data_source['band_specs'],)
-    sampler_kwargs = {'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))}
-    reader = config.readers[data_source['reader']]
-    load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
-    load_array = import_callable(reader['load_array'], True, reader['load_array'])
+    band_specs = data_source.get('band_specs') or None
+    sampler_args = data_source.get('sampler_args') or ()
+    sampler_kwargs = data_source.get('sampler_kwargs') or {}
+    # TODO the usage of sampler_args in config needs
+    # to be validated
+    if band_specs:
+        sampler_args = (band_specs,)
+    if sample_args_generator:
+        sampler_kwargs.update({'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))})
+    elif sampler_args:
+        sampler_kwargs.update({'generated_args': sampler_args})
+    else:
+        pass # going with sampler_kwargs as given
+    reader_name = data_source.get('reader') or None
+    if reader_name:
+        reader = config.readers[reader_name]
+        load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
+        load_array = import_callable(reader['load_array'], True, reader['load_array'])
+    else:
+        reader = load_array = load_meta = None
     selection_kwargs = data_source.get('selection_kwargs') or {}
     selection_kwargs.update({
         'data_filter':     selection_kwargs.get('data_filter') or None,

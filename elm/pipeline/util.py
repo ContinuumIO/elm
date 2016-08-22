@@ -145,10 +145,10 @@ def _get_model_selection_func(model_args):
 
 
 def _run_model_selection_func(model_selection_func, model_args,
-                              n_generations, generation,
+                              ngen, generation,
                               fit_kwargs, models):
     model_selection_kwargs = copy.deepcopy(model_args.model_selection_kwargs)
-    model_selection_kwargs['n_generations'] = n_generations
+    model_selection_kwargs['ngen'] = ngen
     model_selection_kwargs['generation'] = generation
     score_weights = fit_kwargs['scoring_kwargs'].get('score_weights') or None
     sort_fitness = model_args.model_scoring_kwargs.get('sort_fitness', model_selection_kwargs.get('sort_fitness')) or None

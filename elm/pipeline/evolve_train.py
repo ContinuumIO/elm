@@ -1,9 +1,13 @@
+from collections import Sequence
 from functools import partial
 
+import numpy as np
+import pandas as pd
+
 from elm.config import import_callable
-from elm.model_selection.evolve import (evo_general,
+from elm.model_selection.evolve import (ea_general,
                                         evo_init_func,
-                                        assign_fitnesses)
+                                        assign_check_fitness)
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.executor_util import wait_for_futures
 from elm.pipeline.transform import get_new_or_saved_transform_model
@@ -14,14 +18,6 @@ from elm.pipeline.util import (_validate_ensemble_members,
                                serialize_models,
                                _fit_list_of_models,
                                make_model_args_from_config)
-
-LAST_TAG_IDX = 0
-def next_model_tag():
-    '''Gives names like tag_0, tag_1, tag_2 sequentially'''
-    global LAST_TAG_IDX
-    model_name =  'tag_{}'.format(LAST_TAG_IDX)
-    LAST_TAG_IDX += 1
-    return model_name
 
 
 def _on_each_ind(individual_to_new_config, step, train_or_transform,
@@ -68,7 +64,7 @@ def on_each_evo_yield(individual_to_new_config,
                       config,
                       ensemble_kwargs,
                       transform_model=None):
-    '''Run this on each yield from evo_general, which
+    '''Run this on each yield from ea_general, which
     includes "invalid_ind", the Individuals whose fitness
     needs to be evaluated
 
@@ -131,7 +127,6 @@ def _fit_invalid_ind(individual_to_new_config,
             models is a list of (name, model) tuples
             fitnesses are the model scores for optimization
     '''
-
     args_kwargs = tuple(on_each_evo_yield(individual_to_new_config,
                                           step,
                                           train_or_transform,
@@ -139,21 +134,23 @@ def _fit_invalid_ind(individual_to_new_config,
                                           config,
                                           ensemble_kwargs,
                                           transform_model=transform_model))
-    model_names = [next_model_tag() for _ in range(len(invalid_ind))]
+    model_names = [ind.name for ind in invalid_ind]
     models = _fit_list_of_models(args_kwargs,
                                  map_function,
                                  get_results,
                                  model_names)
     fitnesses = [model._score for name, model in models]
+    fitnesses = [(item if isinstance(item, Sequence) else [item])
+                 for item in fitnesses]
     return models, fitnesses
 
 
-def evolutionary_algorithm(executor,
-                           step,
-                           train_or_transform,
-                           evo_params,
-                           transform_model,
-                           **ensemble_kwargs):
+def _evolve_train_or_transform(train_or_transform,
+                               executor,
+                               step,
+                               evo_params,
+                               transform_model,
+                               **ensemble_kwargs):
 
     if hasattr(executor, 'map'):
         map_function = executor.map
@@ -162,10 +159,8 @@ def evolutionary_algorithm(executor,
     config = ensemble_kwargs['config']
     get_results = partial(wait_for_futures, executor=executor)
     control = evo_params.deap_params['control']
-    pop = evo_init_func(evo_params)
-    required_args, _, _ = get_args_kwargs_defaults(evo_general)
-    history_file = open(evo_params.history_file, 'w')
-    evo_args = [evo_params.toolbox, history_file, pop]
+    required_args, _, _ = get_args_kwargs_defaults(ea_general)
+    evo_args = [evo_params,]
     fit_one_generation = partial(_fit_invalid_ind,
                                  evo_params.individual_to_new_config,
                                  transform_model,
@@ -176,26 +171,58 @@ def evolutionary_algorithm(executor,
                                  map_function,
                                  get_results)
     try:
-        for a in required_args[3:]:
+        param_history = []
+        for a in required_args[1:]:
             if a not in control:
                 raise ValueError('Expected {} in {} (control kwargs '
                                  'to evolutionary '
                                  'algorithm)'.format(a, control))
             evo_args.append(control[a])
-        ea_gen = evo_general(*evo_args)
-        next(ea_gen) # dummy
+        ea_gen = ea_general(*evo_args)
+        pop, _, _ = next(ea_gen)
         models, fitnesses = fit_one_generation(pop)
-        assign_fitnesses(pop, fitnesses, history_file)
+        assign_check_fitness(pop,
+                         fitnesses,
+                         param_history,
+                         evo_params.deap_params['choices'],
+                         evo_params.score_weights)
         invalid_ind = True
-        for idx in range(evo_params.deap_params['control']['ngen']):
+        fitted_models = dict(models)
+        ngen = evo_params.deap_params['control'].get('ngen') or None
+        if not ngen and not evo_params.early_stop:
+            raise ValueError('param_grids: pg_name: control: has neither '
+                             'ngen or early_stop keys')
+        elif not ngen:
+            ngen = 1000000
+        for idx in range(ngen):
             # on last generation invalid_ind becomes None
             # and breaks this loop
             if idx > 0:
                 models, fitnesses = fit_one_generation(invalid_ind)
-            (pop, invalid_ind,) = ea_gen.send(fitnesses)
+                fitted_models.update(dict(models))
+            (pop, invalid_ind, param_history) = ea_gen.send(fitnesses)
+            pop_names = [ind.name for ind in pop]
+            fitted_models = {k: v for k, v in fitted_models.items()
+                             if k in pop_names}
             if not invalid_ind:
                 break # If there are no new solutions to try, break
+        pop = evo_params.toolbox.select(pop, ensemble_kwargs['saved_ensemble_size'])
+        pop_names = [ind.name for ind in pop]
+        models = [(k, v) for k, v in fitted_models.items()
+                  if k in pop_names]
         serialize_models(models, **ensemble_kwargs)
     finally:
-        history_file.close()
+        columns = ['_'.join(p) for p in evo_params.deap_params['param_order']]
+        columns += ['objective_{}_{}'.format(idx, 'min' if sw == -1 else 'max')
+                    for idx, sw in enumerate(evo_params.score_weights)]
+        if param_history:
+            assert len(columns) == len(param_history[0])
+            param_history = pd.DataFrame(np.array(param_history),
+                                         columns=columns)
+            param_history.to_csv(evo_params.history_file,
+                                 index_label='parameter_set')
     return models
+
+
+evolve_train = partial(_evolve_train_or_transform, 'train')
+evolve_transform = partial(_evolve_train_or_transform, 'transform')

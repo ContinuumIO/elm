@@ -11,8 +11,10 @@ import yaml
 import numpy as np
 import pandas as pd
 import xarray as xr
+from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
+from elm.model_selection.util import filter_kwargs_to_func
 import elm.pipeline.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
@@ -20,6 +22,7 @@ import elm.pipeline.transform as elmtransform
 from elm.sample_util.util import bands_as_columns
 from elm.sample_util.elm_store import ElmStore
 from elm.scripts.main import main as elm_main
+
 old_ensemble = elmtrain.ensemble
 old_predict_step = predict.predict_step
 old_transform = elmtransform.transform_sample_pipeline_step
@@ -132,14 +135,15 @@ def test_one_config(config=None, cwd=None):
     env['ELM_LOGGING_LEVEL'] = 'DEBUG'
     sys_argv = ['--config', config_filename, '--echo-config']
     try:
-        ret_val = elm_main(sys_argv=sys_argv)
+        ret_val = elm_main(sys_argv=sys_argv, return_0_if_ok=False)
     finally:
         if old_val is not None:
             os.environ['ELM_LOGGING_LEVEL'] = old_val
     return ret_val
 
 
-def random_elm_store(bands, mn=0, mx=1, height=100, width=80, **kwargs):
+def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
+    bands = bands or ['band_{}'.format(idx + 1) for idx in range(width)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
@@ -156,6 +160,29 @@ def random_elm_store(bands, mn=0, mx=1, height=100, width=80, **kwargs):
                 dims=['space', 'band'],
                 attrs=attrs)},
             attrs=attrs)
+    return es
+
+
+def make_blobs_elm_store(**make_blobs_kwargs):
+    '''sklearn.datasets.make_blobs - but return ElmStore
+    Parameters:
+        as_2d_or_3d:       int - 2 or 3 for num dimensions
+        make_blobs_kwargs: kwargs for make_blobs, such as:
+                           n_samples=100,
+                           n_features=2,
+                           centers=3,
+                           cluster_std=1.0,
+                           center_box=(-10.0, 10.0),
+                           shuffle=True,
+                           random_state=None'''
+    kwargs = filter_kwargs_to_func(make_blobs, **make_blobs_kwargs)
+    arr  = make_blobs(**kwargs)[0]
+    band = ['band_{}'.format(idx) for idx in range(arr.shape[1])]
+    es = ElmStore({'sample': xr.DataArray(arr,
+                  coords=[('space', np.arange(arr.shape[0])),
+                          ('band', band)],
+                  dims=['space', 'band'],
+                  attrs={'make_blobs': make_blobs_kwargs})})
     return es
 
 

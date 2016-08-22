@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-from elm.model_selection.evolve import evolve_setup
+from elm.model_selection.evolve import ea_setup
 from elm.pipeline.train import train_step
 from elm.pipeline.predict import predict_step
 from elm.pipeline.transform import transform_pipeline_step
@@ -24,7 +24,7 @@ def pipeline(config, executor):
     '''Run all steps of a config's "pipeline"'''
     return_values = defaultdict(lambda: {})
     transform_dict = {}
-    evo_params_dict = evolve_setup(config)
+    evo_params_dict = ea_setup(config)
     for idx, step in enumerate(config.pipeline):
         models = None
         if 'predict' in step and 'train' in return_values:

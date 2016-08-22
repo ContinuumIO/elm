@@ -8,7 +8,7 @@ int_fields_specs:
   required: False
   }
  - {
-  name: MAX_BOUNDS_RETRIES,
+  name: MAX_PARAM_RETRIES,
   required: False
 }
 str_fields_specs:
