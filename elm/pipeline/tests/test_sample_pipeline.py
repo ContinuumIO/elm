@@ -52,7 +52,7 @@ def test_sample_pipeline_feature_selection():
                 action_data = sample_pipeline.get_sample_pipeline_action_data(config2.train[train_name], config2, action)
                 transform_models = None
                 for repeats in range(5):
-                    s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_dict=None)
+                    s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_model=None)
                     assert s.sample.shape[1] < 40
                     assert set(s.sample.band.values) < set(BANDS)
 

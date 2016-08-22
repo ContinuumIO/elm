@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import datetime
 import logging
 import os
+import warnings
 
 from dask.diagnostics import ProgressBar
 
@@ -12,21 +13,22 @@ from elm.pipeline import pipeline
 
 logger = logging.getLogger(__name__)
 
-def cli(args=None, parse_this_str=None):
+
+def cli(args=None, sys_argv=None):
     if args:
         return args
     parser = ArgumentParser(description="Pipeline classifier / predictor using ensemble and partial_fit methods")
     parser = add_config_file_argument(parser)
     parser.add_argument('--echo-config', action='store_true',
                         help='Output running config as it is parsed')
-    if parse_this_str:
-        return parser.parse_args(parse_this_str)
+    if sys_argv:
+        return parser.parse_args(sys_argv)
     return parser.parse_args()
 
 
-def main(args=None, parse_this_str=None):
+def main(args=None, sys_argv=None, return_0_if_ok=True):
     started = datetime.datetime.now()
-    args = cli(args=args, parse_this_str=parse_this_str)
+    args = cli(args=args, sys_argv=sys_argv)
     err = None
     try:
         config = ConfigParser(args.config)
@@ -34,8 +36,12 @@ def main(args=None, parse_this_str=None):
             logger.info(str(config))
         dask_executor = getattr(config, 'DASK_EXECUTOR', 'SERIAL')
         dask_scheduler = getattr(config, 'DASK_SCHEDULER', None)
-        with executor_context(dask_executor, dask_scheduler) as executor:
-            return_values = pipeline(config, executor)
+        with warnings.catch_warnings():
+            # scikit-learn has a number
+            # of deprecation warnings for kmeans
+            warnings.simplefilter("ignore")
+            with executor_context(dask_executor, dask_scheduler) as executor:
+                return_values = pipeline(config, executor)
     except Exception as e:
         err = e
         raise
@@ -45,6 +51,8 @@ def main(args=None, parse_this_str=None):
                     'seconds)'.format(started, ended,
                                       (ended - started).total_seconds()))
         logger.info('There were errors {}'.format(repr(err)) if err else 'ok')
+    if return_0_if_ok:
+        return 0
     return return_values
 
 if __name__ == "__main__":

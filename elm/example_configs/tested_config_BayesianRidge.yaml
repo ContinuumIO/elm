@@ -61,8 +61,8 @@ data_sources:
     sample_from_args_func: elm.sample_util.samplers:image_selection
     selection_kwargs: {}
 ensembles:
-  no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, n_generations: 1, saved_ensemble_size: 1}
-  small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, n_generations: 4, saved_ensemble_size: 4}
+  no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, ngen: 1, saved_ensemble_size: 1}
+  small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, ngen: 4, saved_ensemble_size: 4}
 feature_selection:
   select_all:
     choices: all
@@ -79,9 +79,9 @@ masks: {}
 model_scoring:
   accuracy_score_cv: {greater_is_better: true, needs_proba: false, needs_threshold: false,
     scoring: accuracy_score, scoring_agg: 'numpy:median'}
-  ensemble_kmeans_scoring:
+  kmeans_aic:
     score_weights: [-1]
-    scoring: elm.model_selection.kmeans:ensemble_kmeans_scoring
+    scoring: elm.model_selection.kmeans:kmeans_aic
 model_selection:
   kmeans_model_averaging:
     func: elm.model_selection.kmeans:kmeans_model_averaging
@@ -89,17 +89,26 @@ model_selection:
   select_top_n:
     func: elm.model_selection.base:select_top_n_models
     kwargs: {top_n: 1}
+param_grids:
+  pca_kmeans:
+    control: {crossover_method: cxTwoPoint, indpb: 0.2, init_pop: random, mu: 24,
+      mutate_method: mutShuffleIndexes, mutpb: 0.4, select_method: selNSGA2}
+    feature_selection:
+      top_80_percent:
+        kwargs:
+          percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9]
+    kmeans__n_clusters: [3, 4, 5, 6, 7, 8]
+    pca__n_components: [2, 3, 4, 5]
+    sample_pipeline: [standardize_log10_var_top_80_inter_trans, standardize_log10_var_top_80_trans]
 pipeline:
 - method: fit
   sample_pipeline:
   - {feature_selection: select_all}
-  - {random_sample: 500}
   - {get_y: true}
   train: kmeans
 - predict: kmeans
   sample_pipeline:
   - {feature_selection: select_all}
-  - {random_sample: 500}
   - {get_y: true}
 polys: {}
 predict:
@@ -123,9 +132,15 @@ sample_pipelines:
   standardize_log10_var_top_80:
   - {sample_pipeline: standardize_log10}
   - {feature_selection: top_80_percent}
-  standardize_log10_var_top_80_interactions:
+  standardize_log10_var_top_80_inter:
   - {sample_pipeline: standardize_log10_var_top_80}
   - {sklearn_preprocessing: poly_2nd_interactions_only}
+  standardize_log10_var_top_80_inter_trans:
+  - {sample_pipeline: standardize_log10_var_top_80_inter}
+  - {method: fit_transform, transform: pca}
+  standardize_log10_var_top_80_trans:
+  - {sample_pipeline: standardize_log10_var_top_80}
+  - {method: fit_transform, transform: pca}
 sklearn_preprocessing:
   log: {func: 'numpy:log', method: FunctionTransformer, validate: true}
   log10: {func: 'numpy:log10', method: FunctionTransformer, validate: true}
@@ -146,8 +161,7 @@ train:
   kmeans:
     data_source: NPP_DSRF1KD_L2GD
     ensemble: no_ensemble
-    ensemble_kwargs: {batches_per_gen: 1, init_ensemble_size: 2, n_generations: 1,
-      saved_ensemble_size: 1}
+    ensemble_kwargs: {batches_per_gen: 1, init_ensemble_size: 2, ngen: 1, saved_ensemble_size: 1}
     fit_kwargs: {}
     fit_method: fit
     keep_columns: []
@@ -156,8 +170,7 @@ train:
     model_scoring: null
     model_selection: null
     output_tag: kmeans
-    param_grid:
-      n_clusters: [3, 4, 5, 6, 7, 8]
+    param_grid: pca_kmeans
 transform:
   pca:
     data_source: NPP_DSRF1KD_L2GD
@@ -166,3 +179,4 @@ transform:
     model_init_kwargs: {n_components: 2}
     model_scoring: null
     model_selection: null
+    param_grid: pca_kmeans

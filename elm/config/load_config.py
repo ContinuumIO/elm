@@ -1,4 +1,4 @@
-from collections import Iterable
+from collections import Iterable, Sequence
 import copy
 import logging
 import numbers
@@ -70,7 +70,12 @@ class ConfigParser(object):
                                    'config_file_name or config '
                                    '(dict) as keyword arguments')
         self.config = copy.deepcopy(DEFAULTS)
-        self.config.update(copy.deepcopy(self.raw_config))
+        for k, v in copy.deepcopy(self.raw_config).items():
+            if isinstance(self.config.get(k), dict):
+                self._validate_type(v, k, dict)
+                self.config[k].update(v)
+            else:
+                self.config[k] = v
         self._update_for_env()
         self._interpolate_env_vars()
         self.validate()
@@ -159,34 +164,39 @@ class ConfigParser(object):
 
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        reader = ds.get('reader')
-        if not reader in self.readers:
-            raise ElmConfigError('Data source config dict {} '
-                                   'refers to a "reader" {} that is not defined in '
-                                   '"readers"'.format(reader, self.readers))
-        download = ds.get('download', '') or ''
-        if download and not download in self.downloads:
-            raise ElmConfigError('data_source {} refers to a '
-                                   '"download" {} not defined in "downloads"'
-                                   ' section'.format(ds, download))
-        self._validate_band_specs(ds.get('band_specs'), name)
-        s = ds.get('sample_args_generator')
-        if not s in self.sample_args_generators:
-            raise ElmConfigError('Expected data_source: '
-                                 'sample_args_generator {} to be in '
-                                 'sample_args_generators.keys()')
-        sample_args_generator = self.sample_args_generators[s]
-        self._validate_custom_callable(sample_args_generator,
-                                True,
-                                'train:{} sample_args_generator'.format(name))
         sample_from_args_func = ds.get('sample_from_args_func')
         self._validate_custom_callable(sample_from_args_func,
                                 True,
                                 'train:{} sample_from_args_func'.format(name))
-        self._validate_selection_kwargs(ds, name)
-        keep_columns = ds.get('keep_columns') or []
-        self._validate_type(keep_columns, 'keep_columns', (tuple, list))
-        ds['keep_columns'] = keep_columns
+        if sample_from_args_func:
+            logger.info('data_source:{} uses '
+                        'sample_from_args_func (validation is '
+                        'limited)'.format(name))
+        else:
+            reader = ds.get('reader')
+            if not reader in self.readers:
+                raise ElmConfigError('Data source config dict {} '
+                                       'refers to a "reader" {} that is not defined in '
+                                       '"readers"'.format(reader, self.readers))
+            download = ds.get('download', '') or ''
+            if download and not download in self.downloads:
+                raise ElmConfigError('data_source {} refers to a '
+                                       '"download" {} not defined in "downloads"'
+                                       ' section'.format(ds, download))
+            self._validate_band_specs(ds.get('band_specs'), name)
+            s = ds.get('sample_args_generator')
+            if not s in self.sample_args_generators:
+                raise ElmConfigError('Expected data_source: '
+                                     'sample_args_generator {} to be in '
+                                     'sample_args_generators.keys()')
+            sample_args_generator = self.sample_args_generators[s]
+            self._validate_custom_callable(sample_args_generator,
+                                    True,
+                                    'train:{} sample_args_generator'.format(name))
+            self._validate_selection_kwargs(ds, name)
+            keep_columns = ds.get('keep_columns') or []
+            self._validate_type(keep_columns, 'keep_columns', (tuple, list))
+            ds['keep_columns'] = keep_columns
 
 
     def _validate_data_sources(self):
@@ -250,7 +260,7 @@ class ConfigParser(object):
                 self._validate_custom_callable(f, True,
                                                'selection_kwargs:{} - {}'.format(name, filter_name))
             else:
-                selection_kwargs.pop(filter_name)
+                selection_kwargs[filter_name] = None
         self.data_sources[name]['selection_kwargs'] = selection_kwargs
 
 
@@ -324,6 +334,7 @@ class ConfigParser(object):
 
     def _validate_one_model_scoring(self, key, value):
         '''Validate one model_scoring key-value (one scoring configuration)'''
+        logger.info(repr((key, value)))
         from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:
@@ -335,14 +346,12 @@ class ConfigParser(object):
             greater_is_better = value.get('greater_is_better') or None
             score_weights = value.get('score_weights') or None
             err_msg = 'In {}, expected either one of "greater_is_better", "score_weights"'
-            if greater_is_better is not None and score_weights is not None:
-                raise ElmConfigError(err_msg)
-            elif greater_is_better is not None:
+            if greater_is_better is not None:
                 self._validate_type(greater_is_better, context + '(greater_is_better)', bool)
                 self.config['model_scoring'][key]['score_weights'] = [-1 if not greater_is_better else 1]
-            elif score_weights is not None:
+            if score_weights is not None:
                 self._validate_type(score_weights, context + '(score_weights)', Iterable)
-            else:
+            if greater_is_better is None and score_weights is None:
                 raise ElmConfigError(err_msg)
         else:
             # I think there is little validation
@@ -390,6 +399,14 @@ class ConfigParser(object):
                                  'function {}'.format(name, model_init_class, t['get_sample_weight']))
         return has_fit_func, requires_y, no_selection
 
+    def _is_transform_major_pipeline_step(self, transform_name):
+        pipeline = self.config.get('pipeline') or {}
+        self._validate_type(pipeline, 'pipeline', (list, tuple))
+        for idx, step in enumerate(pipeline):
+            self._validate_type(step, 'pipeline step:{}'.format(idx), dict)
+            if step.get('transform') == transform_name:
+                return True
+        return False
 
     def _validate_one_train_or_transform_entry(self, train_or_transform, name, t):
         '''Validate one dict within "train" or "transform" section of config'''
@@ -417,26 +434,35 @@ class ConfigParser(object):
             else:
                 raise ElmConfigError('In {}:{} model_scoring must be defined if model_selection is used'.format(train_or_transform, name))
         data_source = t.get('data_source')
+        if train_or_transform == 'transform':
+            is_major_step = self._is_transform_major_pipeline_step(name)
+        else:
+            is_major_step = True
         if not data_source in self.data_sources:
-            raise ElmConfigError('{} dict at key {} refers '
-                                   'to a data_source {} that is '
-                                   'not defined in '
-                                   '"data_sources"'.format(train_or_transform, name, repr(data_source)))
-        data_source = self.data_sources[data_source]
-        if requires_y:
-            self._validate_custom_callable(data_source.get('get_y_func'),
-                                           True,
-                                           '{}:get_y_func (required with '
-                                           '{})'.format(train_or_transform,
-                                                        repr(t.get('model_init_class'))))
-        output_tag = t.get('output_tag')
-        self._validate_type(output_tag, 'train:output_tag', str)
-        band_specs = data_source['band_specs']
-        t['band_names'] = [x[-1] for x in band_specs]
-        ensemble = t.get('ensemble')
-        if not ensemble or not ensemble in self.ensembles:
-            raise ElmConfigError('Each train or transform dict must have an '
-                                 '"ensemble" key that is also a key in "ensembles"')
+            if train_or_transform == 'train':
+                raise ElmConfigError('{} dict at key {} refers '
+                                       'to a data_source {} that is '
+                                       'not defined in '
+                                       '"data_sources"'.format(train_or_transform, name, repr(data_source)))
+        data_source = self.data_sources.get(data_source) or {}
+        if is_major_step:
+            if requires_y:
+                self._validate_custom_callable(data_source.get('get_y_func'),
+                                               True,
+                                               '{}:get_y_func (required with '
+                                               '{})'.format(train_or_transform,
+                                                            repr(t.get('model_init_class'))))
+            output_tag = t.get('output_tag')
+            self._validate_type(output_tag, 'train:output_tag', str)
+        band_specs = data_source.get('band_specs') or None
+        band_names = data_source.get('band_names') or None
+        if band_specs:
+            t['band_names'] = [(x[-1] if isinstance(x, Sequence) else x)
+                               for x in band_specs]
+            ensemble = t.get('ensemble')
+            if not ensemble or not ensemble in self.ensembles:
+                raise ElmConfigError('Each train or transform dict must have an '
+                                     '"ensemble" key that is also a key in "ensembles"')
         self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
 
     def _validate_train_or_transform(self, train_or_transform):
@@ -475,7 +501,7 @@ class ConfigParser(object):
         '''Validate the "ensembles" section of config'''
         self.ensembles = self.config.get('ensembles') or {}
         self._validate_type(self.ensembles, 'config - ensembles', dict)
-        for f in ('saved_ensemble_size', 'n_generations',
+        for f in ('saved_ensemble_size', 'ngen',
                   'init_ensemble_size', 'batches_per_gen'):
             for k in self.ensembles:
                 self._validate_positive_int(self.ensembles[k].get(f), f)
@@ -512,6 +538,12 @@ class ConfigParser(object):
         has_seen = set()
         sp = step.get('sample_pipeline') or []
         err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
+        if isinstance(sp, str):
+            if not sp in config.sample_pipelines:
+                raise ElmConfigError('Pipeline step refers to a '
+                                     'sample_pipeline ({}) that is not in '
+                                     'config\'s sample_pipeline section'.format(sp))
+            return config.sample_pipelines[sp]
         def clean(sp, has_seen):
             sample_pipeline = []
             for item in sp:
@@ -551,8 +583,8 @@ class ConfigParser(object):
                         match = SAMPLE_PIPELINE_ACTIONS[match]
                         if not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
                             raise ElmConfigError('sample_pipeline item {0} is of type '
-                                                 '{1} and refers to a key that is not in '
-                                                 '"{1}" dict of config'.format(item, match))
+                                                 '{1} and refers to a key ({2}) that is not in '
+                                                 '"{1}" dict of config'.format(item, match, item[k]))
                 if not ok:
                     raise ElmConfigError('sample_pipeline item {} does not '
                                          'have a key that is in the set {}'
@@ -564,6 +596,19 @@ class ConfigParser(object):
             if 'sample_pipeline' in step:
                 step['sample_pipeline'] = self._get_sample_pipeline(self, step)
 
+    def _validate_param_grids(self):
+        from elm.model_selection.evolve import get_param_grid
+        self.param_grids = self.config.get('param_grids') or {}
+        self._validate_type(self.param_grids, 'param_grids', dict)
+        for k, v in self.param_grids.items():
+            steps = [step for step in self.pipeline
+                     if step.get('param_grid')]
+            for step in steps:
+                if not step['param_grid'] in self.param_grids:
+                    raise ElmConfigError('Pipeline step {} refers to '
+                                         'a param_grid which is not defined '
+                                         'in param_grids ({})'.format(step, step['param_grid']))
+                get_param_grid(self, step)
 
     def _validate_change_detection(self):
         raise NotImplementedError()
@@ -593,7 +638,6 @@ class ConfigParser(object):
         step['sample_pipeline'] = sample_pipeline
         step['transform'] = transform
         return step
-
 
     def _validate_pipeline_predict(self, step):
         '''Validate a "predict" step within config's "pipeline"'''

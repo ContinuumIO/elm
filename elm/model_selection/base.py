@@ -71,7 +71,7 @@ def select_top_n_models(models, best_idxes, **kwargs):
     on final generation take "top_n" models (top_n from kwargs)'''
     top_n = kwargs['top_n']
     logger.debug('Enter select_top_n with {} models and best_idxes {}'.format(len(models), best_idxes))
-    if kwargs['generation'] < kwargs['n_generations'] - 1:
+    if kwargs['generation'] < kwargs['ngen'] - 1:
         pass
     else:
         models = [models[b] for b in best_idxes[:top_n]]

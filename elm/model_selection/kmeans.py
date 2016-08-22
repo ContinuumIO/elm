@@ -2,12 +2,14 @@ import array
 from collections import namedtuple
 import copy
 import inspect
+from itertools import product
 
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
+from sklearn.metrics import silhouette_samples
 from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
@@ -16,15 +18,24 @@ from elm.sample_util.elm_store import ElmStore
 from elm.sample_util.util import bands_as_columns
 
 
-def ensemble_kmeans_scoring(model,
-                            x,
-                            y_true=None,
-                            scoring=None,
-                            **kwargs):
+def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
+    '''AIC (Akaike Information Criterion) for k-means for model selection
 
-    model.partial_fit(x)
-    return np.sqrt(np.sum(model.transform(x)))
+    Parameters:
+        model:  Typically KMeans or IncrementalKmeans instance from sklearn.cluster
+        x:      The X data that were just given to "fit", or "partial_fit"
+        y:      None (placeholder)
+        scoring:None (placeholder)
+        kwargs: ignored
+    Returns:
+        aic float
 
+    '''
+    k, m = model.cluster_centers_.shape
+    n = x.shape[0]
+    d = model.inertia_
+    aic =  d + 2 * m * k
+    return aic
 
 
 def kmeans_model_averaging(models, best_idxes=None, **kwargs):
@@ -33,7 +44,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     drop_n = kwargs['drop_n']
     evolve_n = kwargs['evolve_n']
     init_n = kwargs['init_n']
-    last_gen = kwargs['n_generations'] - 1 == kwargs['generation']
+    last_gen = kwargs['ngen'] - 1 == kwargs['generation']
     if last_gen:
         # To avoid attempting to predict
         # when the model has not been fit

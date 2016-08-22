@@ -19,7 +19,6 @@ def expected_fit_kwargs(data_source, train_dict, ensemble):
             'get_y_kwargs': data_source.get('get_y_kwargs'),
             'get_weight_func': data_source.get('get_weight_func'),
             'get_weight_kwargs': data_source.get('get_weight_kwargs'),
-            'batches_per_gen': ensemble.get('batches_per_gen'),
             'fit_kwargs': train_dict['fit_kwargs'],
         }
     return fit_kwargs
@@ -33,8 +32,10 @@ def test_train_makes_args_kwargs_ok():
                 break
         train_dict = config.train[step['train']]
         args, kwargs = elmtrain.train_step(config, step, None)
-        (executor,
-         model_init_class,
+        (executor, model_args, transform_model) = args
+        for k, v in config.ensembles[train_dict['ensemble']].items():
+            assert kwargs[k] == v
+        (model_init_class,
          model_init_kwargs,
          fit_method,
          fit_args,
@@ -43,8 +44,8 @@ def test_train_makes_args_kwargs_ok():
          model_scoring_kwargs,
          model_selection_func,
          model_selection_kwargs,
-         transform_dict) = args
-        assert kwargs == config.ensembles[train_dict['ensemble']]
+         step_type,
+         step_name) = model_args
         assert executor is None
         assert callable(model_init_class)   # model init func
         assert "KMeans" in repr(model_init_class)
@@ -52,7 +53,8 @@ def test_train_makes_args_kwargs_ok():
         for k,v in train_dict['model_init_kwargs'].items():
             assert model_init_kwargs[k] == v
         # check model init kwargs include the defaults for the method
-        defaults = {k: v.default for k,v in inspect.signature(args[1]).parameters.items()}
+        sig = inspect.signature(model_init_class)
+        defaults = {k: v.default for k,v in sig.parameters.items()}
         for k, v in defaults.items():
             if not k in (set(train_dict['model_init_kwargs']) | {'batch_size'}):
                 assert model_init_kwargs.get(k) == v
@@ -73,6 +75,7 @@ def test_train_makes_args_kwargs_ok():
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))
         if any('transform' in step for step in config.pipeline):
-            assert transform_dict is not None
+            assert transform_model is not None
         else:
-            assert transform_dict is None
+            assert transform_model is None
+

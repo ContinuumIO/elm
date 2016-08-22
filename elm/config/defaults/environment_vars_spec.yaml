@@ -7,6 +7,10 @@ int_fields_specs:
   name: DASK_PROCESSES,
   required: False
   }
+ - {
+  name: MAX_PARAM_RETRIES,
+  required: False
+}
 str_fields_specs:
  - {name: DASK_EXECUTOR,
     default: SERIAL,

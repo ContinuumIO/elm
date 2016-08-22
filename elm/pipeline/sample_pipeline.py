@@ -8,6 +8,7 @@ from sklearn.utils import check_array as _check_array
 
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
+from elm.model_selection.util import filter_kwargs_to_func
 from elm.sample_util.elm_store import ElmStore
 from elm.readers.util import row_col_to_xy
 
@@ -45,15 +46,15 @@ def check_action_data(action_data):
                              'to be a dict (kwargs to {}).  Got {}'.format(pformat(func), pformat(kwargs)))
     return True
 
-def run_sample_pipeline(action_data, sample=None, transform_dict=None):
+
+def run_sample_pipeline(action_data, sample=None, transform_model=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
     Params:
         action_data:     list from get_sample_pipeline_action_data typically
         sample:          None if the sample is not already taken
-        transform_dict:  dict of transform models, e.g. PCA, with names.
-                         An example:
-                            {'pca': [('tag_0', PCA(.....))]}
+        transform_model: An example:
+                             [('tag_0', PCA(.....))]
     '''
     sample_y, sample_weight = None, None
     check_action_data(action_data)
@@ -69,11 +70,13 @@ def run_sample_pipeline(action_data, sample=None, transform_dict=None):
         if func_str.endswith('transform_sample_pipeline_step'):
             logger.debug('transform sample_pipeline step')
             samp_pipeline_step = args[0]
-            transform_models = transform_dict[samp_pipeline_step['transform']]
-            args = tuple(args) + (transform_models,)
+            args = tuple(args) + (transform_model,)
         func = import_callable(func_str, True, func_str)
         if sample is None:
             logger.debug('sample create sample_pipeline step')
+            required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
+            if not var_keyword:
+                kwargs = filter_kwargs_to_func(func, kwargs)
             sample = func(*args, **kwargs)
         elif 'get_y' in args:
             logger.debug('get_y sample_pipeline step')
@@ -123,21 +126,37 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
     data_source = config.data_sources[d['data_source']]
     s = d.get('sample_args_generator',
                                   data_source.get('sample_args_generator'))
-    if not s:
-        raise ValueError('Expected a sample_args_generator callable')
-    sample_args_generator = config.sample_args_generators[s]
-    sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
+    if s:
+        sample_args_generator = config.sample_args_generators[s]
+        sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
+    else:
+        sample_args_generator = None
     sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
                                          data_source.get('sample_args_generator_kwargs') or {})
     sample_args_generator_kwargs['data_source'] = data_source
     sampler_func = data_source['sample_from_args_func'] # TODO: this needs to be
                                                         # added to ConfigParser
                                                         # validation (sample_from_args_func requirement)
-    sampler_args = (data_source['band_specs'],)
-    sampler_kwargs = {'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))}
-    reader = config.readers[data_source['reader']]
-    load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
-    load_array = import_callable(reader['load_array'], True, reader['load_array'])
+    band_specs = data_source.get('band_specs') or None
+    sampler_args = data_source.get('sampler_args') or ()
+    sampler_kwargs = data_source.get('sampler_kwargs') or {}
+    # TODO the usage of sampler_args in config needs
+    # to be validated
+    if band_specs:
+        sampler_args = (band_specs,)
+    if sample_args_generator:
+        sampler_kwargs.update({'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))})
+    elif sampler_args:
+        sampler_kwargs.update({'generated_args': sampler_args})
+    else:
+        pass # going with sampler_kwargs as given
+    reader_name = data_source.get('reader') or None
+    if reader_name:
+        reader = config.readers[reader_name]
+        load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
+        load_array = import_callable(reader['load_array'], True, reader['load_array'])
+    else:
+        reader = load_array = load_meta = None
     selection_kwargs = data_source.get('selection_kwargs') or {}
     selection_kwargs.update({
         'data_filter':     selection_kwargs.get('data_filter') or None,
@@ -308,7 +327,7 @@ def final_on_sample_step(fitter,
         fit_kwargs['classes'] = classes
     if 'batch_size' in model.get_params():
         logger.debug('set batch_size {}'.format(X.sample.values.shape[0]))
-        model.set_params(batch_size = X.sample.values.shape[0])
+        model.set_params(batch_size=X.sample.values.shape[0])
     return fit_args, fit_kwargs
 
 def flatten_cube(elm_store):

@@ -11,7 +11,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      BANDS)
 from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
-transform_models = [('tag_0', PCA(n_components=3))]
+transform_model = [('tag_0', PCA(n_components=3))]
 def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sample_pipeline'):
     config = copy.deepcopy(DEFAULTS)
     train_or_predict_dict = copy.deepcopy(config['train']['kmeans'])
@@ -27,9 +27,8 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
         action_data = get_sample_pipeline_action_data(train_or_predict_dict,
                                      config,
                                      step)
-        transform_dict = {transform_name: transform_models}
         sample, sample_y, sample_weight = run_sample_pipeline(action_data, sample=es,
-                                     transform_dict=transform_dict)
+                                     transform_model=transform_model)
         return sample
     else:
         transform_name = config['pipeline'][0]['transform']
@@ -63,7 +62,7 @@ def test_standard_scaler_and_interactions():
     assert mean < 0.1 and mean > -0.1
     std = np.std(scaled.sample.values)
     assert std > 0.9 and std < 1.1
-    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_interactions'}]
+    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
     scaled2 = tst_one_sample_pipeline(sp, es)
     assert scaled2.sample.shape[1] > es.sample.shape[1]
 
@@ -72,10 +71,10 @@ def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [
           {'get_y': True},
-          {'sample_pipeline': 'standardize_log10_var_top_80_interactions'},
+          {'sample_pipeline': 'standardize_log10_var_top_80_inter'},
     ]
     tst_one_sample_pipeline(sp, es,
                             run_it=True,
-                            tag='standardize_log10_var_top_80_interactions')
+                            tag='standardize_log10_var_top_80_inter')
 
 
