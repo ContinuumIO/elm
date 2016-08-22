@@ -35,12 +35,15 @@ else:
     NETCDF_FILES = []
 
 def assertions_on_metadata(meta, is_band_specific=False):
-    required_keys = ('GeoTransform',
-                     'MetaData',
-                     'Bounds',
+    required_keys = ('MetaData',
                      'Height',
                      'Width')
     if not is_band_specific:
         required_keys += ('BandMetaData',)
     for key in required_keys:
         assert key in meta
+
+def assertions_on_band_metadata(band_meta):
+    required_keys = ('GeoTransform', 'Bounds')
+    for key in required_keys:
+        assert key in band_meta

@@ -1,3 +1,5 @@
+from collections import OrderedDict
+import copy
 import gc
 import logging
 import os
@@ -8,8 +10,10 @@ import xarray as xr
 
 from elm.sample_util.band_selection import match_meta
 from elm.readers.util import (geotransform_to_dims,
+                              geotransform_to_bounds,
                               bands_share_coords,
-                              SPATIAL_KEYS)
+                              SPATIAL_KEYS,
+                              raster_as_2d)
 from elm.sample_util.elm_store import ElmStore
 logger = logging.getLogger(__name__)
 
@@ -78,33 +82,24 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
     if not len(band_order_info):
         raise ValueError('No matching bands with '
                          'band_specs {}'.format(band_specs))
+    native_dims = ('y', 'x')
+    elm_store_dict = OrderedDict()
+    meta['BandOrder'] = []
+    for idx, filename, band_name in band_order_info:
+        band_meta = copy.deepcopy({k: v for k, v in meta.items()
+                                   if k not in ('BandOrderInfo', 'BandOrder')})
+        handle, raster = open_prefilter(filename)
+        raster = raster_as_2d(raster)
+        coords_x, coords_y = geotransform_to_dims(handle.width, handle.height, meta['GeoTransform'])
+        band_meta['Bounds'] = geotransform_to_bounds(handle.width,
+                                                     handle.height,
+                                                     band_meta['GeoTransform'])
+        elm_store_dict[band_name] = xr.DataArray(raster,
+                                                 coords=[('y', coords_y),
+                                                         ('x', coords_x),],
+                                                 dims=native_dims,
+                                                 attrs=band_meta)
 
-    idx, filename, band_name = band_order_info[0]
-    handle, raster = open_prefilter(filename)
-    if len(raster.shape) == 3:
-        if raster.shape[0] == 1:
-            yx_shape = raster.shape[1:]
-        else:
-            raise ValueError('Did not expect 3-d TIF unless singleton in 0 or 2 dimension')
-    shp = (len(band_specs),) + yx_shape
-    store = np.empty(shp, dtype=raster.dtype)
-    store[0, :, :] = raster
-    del raster
+        meta['BandOrder'].append(band_name)
     gc.collect()
-    if len(band_order_info) > 1:
-        for idx, filename, band_name in band_order_info[1:]:
-            handle, raster = open_prefilter(filename)
-            store[idx, :, :] = raster
-            del raster
-            gc.collect()
-    band_labels = [_[-1] for _ in band_specs]
-    coords_x, coords_y = geotransform_to_dims(handle.width, handle.height, meta['GeoTransform'])
-    band_data = xr.DataArray(store,
-                           coords=[('band', band_labels),
-                                   ('y', coords_y),
-                                   ('x', coords_x),
-                                   ],
-                           dims=['band','y','x',],
-                           attrs=meta)
-
-    return ElmStore({'sample': band_data}, attrs=meta)
+    return ElmStore(elm_store_dict, attrs=meta)

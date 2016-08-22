@@ -44,3 +44,13 @@ def bands_share_coords(band_metas, raise_error=False):
                              'Height, Width, and GeoTransform')
         return False
     return True
+
+def raster_as_2d(raster):
+    if len(raster.shape) == 3:
+        if raster.shape[0] == 1:
+            return raster[0, :, :]
+        else:
+            raise ValueError('Did not expect 3-d TIF unless singleton in 0 or 2 dimension')
+    elif len(raster.shape) != 2:
+        raise ValueError('Expected a raster with shape (y, x) or (1, y, x)')
+    return raster

@@ -12,7 +12,8 @@ from elm.readers.tif import (load_dir_of_tifs_meta,
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH,
                                     TIF_FILES,
-                                    assertions_on_metadata)
+                                    assertions_on_metadata,
+                                    assertions_on_band_metadata)
 
 TIF_DIR = os.path.dirname(TIF_FILES[0])
 print(TIF_FILES, file=sys.stderr)
@@ -55,15 +56,17 @@ def test_read_meta():
                reason='elm-data repo has not been cloned')
 def test_read_array():
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs)
-    sample = load_dir_of_tifs_array(TIF_DIR, meta, band_specs)['sample']
-    mean_y = np.mean(sample.y)
-    mean_x = np.mean(sample.x)
-    band_names = np.array([b[-1] for b in band_specs])
-    assert sorted((mean_x,
-            sample.Bounds.left,
-            sample.Bounds.right))[1] == mean_x
-    assert sorted((mean_y,
-            sample.Bounds.top,
-            sample.Bounds.bottom))[1] == mean_y
-    assert np.all(band_names == sample.band)
-
+    es = load_dir_of_tifs_array(TIF_DIR, meta, band_specs)
+    for var in es.data_vars:
+        sample = getattr(es, var)
+        mean_y = np.mean(sample.y)
+        mean_x = np.mean(sample.x)
+        band_names = np.array([b[-1] for b in band_specs])
+        assert sorted((mean_x,
+                sample.Bounds.left,
+                sample.Bounds.right))[1] == mean_x
+        assert sorted((mean_y,
+                sample.Bounds.top,
+                sample.Bounds.bottom))[1] == mean_y
+        assert np.all(band_names == es.BandOrder)
+        assertions_on_band_metadata(sample.attrs)
