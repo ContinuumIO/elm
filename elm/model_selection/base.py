@@ -61,7 +61,6 @@ def base_selection(models,
             raise ValueError('Length of score_weights {} does '
                              'not match scores.shape[1] {}'.format(scores.shape[1], len(score_weights)))
         best_idxes = sort_fitness(score_weights, scores)
-
         models = model_selection_func(models, best_idxes, **model_selection_kwargs)
     else:
         models = model_selection_func(models, **model_selection_kwargs)
@@ -72,7 +71,7 @@ def select_top_n_models(models, best_idxes, **kwargs):
     on final generation take "top_n" models (top_n from kwargs)'''
     top_n = kwargs['top_n']
     logger.debug('Enter select_top_n with {} models and best_idxes {}'.format(len(models), best_idxes))
-    if kwargs['generation'] < kwargs['n_generations'] - 1:
+    if kwargs['generation'] < kwargs['ngen'] - 1:
         pass
     else:
         models = [models[b] for b in best_idxes[:top_n]]

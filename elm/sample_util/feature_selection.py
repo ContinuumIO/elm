@@ -6,8 +6,14 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.pipeline.sample_pipeline import (flatten_cube,
-                                          flattened_to_cube,)
+                                          flattened_to_cube,
+                                          check_array)
+from elm.sample_util.util import bands_as_columns
+from elm.sample_util.elm_store import ElmStore
+from elm.model_selection.util import get_args_kwargs_defaults
 
+
+@bands_as_columns
 def feature_selection_base(sample_x,
                           selection_dict,
                           sample_y=None,
@@ -28,11 +34,6 @@ def feature_selection_base(sample_x,
         sample_x: dataframe subset of selection's chosen columns
                    among choices
     '''
-    if len(sample_x.sample.shape) == 3:
-        sample_x = flatten_cube(sample_x)
-        reshape_needed = True
-    else:
-        reshape_needed = False
     feature_selection = selection_dict['selection']
     if feature_selection == 'all':
         return sample_x
@@ -58,15 +59,23 @@ def feature_selection_base(sample_x,
     band_idx = np.array([idx for idx, band in enumerate(sample_x.sample.band)
                          if band in feature_choices])
     subset = sample_x.sample[:, band_idx]
+    check_array(subset.values, 'feature_selection:{} X subset'.format(selection))
+
+    required_args, _, _ = get_args_kwargs_defaults(selection.fit)
+    if ('y' in required_args or 'Y' in required_args):
+        msg = ('feature_selection [{}] requires '
+               'Y data but the sample_pipeline has not '
+               'positioned a {{"get_y": True}} action before '
+               'feature_selection'.format(feature_selection,))
+        check_array(sample_y, msg, ensure_2d=False)
+
     selection.fit(subset.values, y=sample_y)
     ml_columns = selection.get_support(indices=True)
-    sample_x_dropped_bands =  xr.Dataset({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
+    sample_x_dropped_bands =  ElmStore({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
                                               coords=[('space', sample_x.sample.space),
                                                       ('band', sample_x.sample.band[band_idx[ml_columns]])],
                                               dims=('space','band'),
                                               attrs=sample_x.sample.attrs)},
                                           attrs=sample_x.attrs)
     del sample_x
-    if reshape_needed:
-        return flattened_to_cube(sample_x_dropped_bands)
     return sample_x_dropped_bands

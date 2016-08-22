@@ -63,7 +63,7 @@ def test_bad_train_config():
         bad_config = tst_bad_config(bad_config)
         bad_config['ensembles'][k]['saved_ensemble_size'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['ensembles'][k]['n_generations'] = item
+        bad_config['ensembles'][k]['ngen'] = item
         bad_config = tst_bad_config(bad_config)
         bad_config['ensembles'][k]['batches_per_gen'] = item
         bad_config = tst_bad_config(bad_config)

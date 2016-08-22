@@ -27,18 +27,18 @@ def fit(model,
         get_y_kwargs=None,
         get_weight_func=None,
         get_weight_kwargs=None,
-        batches_per_gen=2,
+        batches_per_gen=None,
         fit_kwargs=None,
         scoring=None,
         scoring_kwargs=None,
-        transform_dict=None,
+        transform_model=None,
         fit_method='partial_fit'):
     '''fit calls partial_fit or fit on a model after running the sample_pipeline
 
     Params:
 
         model:  instantiated model like MiniBatchKmeans()
-        action_data: from elm.pipeline.sample_pipeline:all_sample_ops
+        action_data: from elm.pipeline.sample_pipeline:get_sample_pipeline_action_data
                      (list of tuples of 3 items: (func, args, kwargs))
         get_y_func: function which returns a Y sample for an X sample dataframe
         get_y_kwargs: kwargs for get_y_func
@@ -55,25 +55,25 @@ def fit(model,
     for idx in range(batches_per_gen):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
-        samp = run_sample_pipeline(action_data, transform_dict=transform_dict)
-        fitter = getattr(model, fit_method)
-        fit_args, fit_kwargs = final_on_sample_step(fitter, model, samp,
+        sample, sample_y, sample_weight = run_sample_pipeline(action_data, transform_model=transform_model)
+        fitter = getattr(model, fit_method, getattr(model, 'fit'))
+        fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
-                                                    classes=None,
+                                                    classes=None, # TODO these need to be passed in some cases
                                                     flatten=True,
-                                                    get_y_func=get_y_func,
-                                                    get_y_kwargs=get_y_kwargs,
-                                                    get_weight_func=get_weight_func,
-                                                    get_weight_kwargs=get_weight_kwargs,
-                                                )
-
-        model = fitter(*fit_args, **fit_kwargs)
-        if scoring:
-            fit_kwargs.update(scoring_kwargs or {})
-            kw = {k:v for k,v in fit_kwargs.items() if not k in ('scoring',)}
+                                                    sample_y=sample_y,
+                                                    sample_weight=sample_weight)
+        out = fitter(*fit_args, **fit_kwargs)
+        if out is not None: # allow fitter func to modify in place
+                            # or return a fitted model
+            model = out
+        if scoring or scoring_kwargs:
+            kw = copy.deepcopy(scoring_kwargs or {})
+            kw.update(fit_kwargs)
+            kw = {k: v for k,v in kw.items()
+                  if not k in ('scoring',)}
             model = score_one_model(model, scoring, *fit_args, **kw)
         iter_offset += getattr(model, 'n_iter', 1)
     return model
-
 

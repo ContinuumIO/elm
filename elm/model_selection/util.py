@@ -1,4 +1,18 @@
+from collections import namedtuple
 import inspect
+
+MODEL_FIELDS = ['model_init_class',
+                'model_init_kwargs',
+                'fit_method',
+                'fit_args',
+                'fit_kwargs',
+                'model_scoring',
+                'model_scoring_kwargs',
+                'model_selection_func',
+                'model_selection_kwargs',
+                'step_type',
+                'step_name',]
+
 
 def get_args_kwargs_defaults(func):
     '''Get the default kwargs spec of a function '''
@@ -28,4 +42,7 @@ def filter_kwargs_to_func(func, **kwargs):
         new[takes_variable_keywords] = {k: v for k,v in kwargs.items()
                                         if not k in new}
     return new
+
+
+ModelArgs = namedtuple('ModelArgs', MODEL_FIELDS)
 

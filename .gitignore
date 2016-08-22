@@ -60,3 +60,10 @@ target/
 
 #Ipython Notebook
 .ipynb_checkpoints
+
+# OSX specific
+.DS_Store
+
+# elm logs
+logfile.txt
+elapsed_time_test.txt

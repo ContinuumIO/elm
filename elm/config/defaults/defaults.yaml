@@ -36,7 +36,7 @@ data_sources: {
       include_polys: [],
       exclude_polys: [],
     },
-   },
+  },
   get_y_func: Null,
   get_y_kwargs: {},
   get_weight_func: Null,
@@ -49,6 +49,7 @@ data_sources: {
   sample_args_generator_kwargs: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH"
   },
+
   selection_kwargs: {},
   reader: dir_of_tifs_reader,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
@@ -98,6 +99,12 @@ feature_selection: {
     scoring_kwargs: {},
     kwargs: {},
     choices: all,
+  },
+  top_80_percent: {
+    selection: "sklearn.feature_selection:SelectPercentile",
+    kwargs: {percentile: 80},
+    scoring: f_classif,
+    choices: all,
   }
 }
 model_scoring: {
@@ -108,8 +115,8 @@ model_scoring: {
     needs_proba: False,
     needs_threshold: False,
   },
-  ensemble_kmeans_scoring: {
-    scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
+  kmeans_aic: {
+    scoring: "elm.model_selection.kmeans:kmeans_aic",
     score_weights: [-1],
   }
 }
@@ -133,13 +140,13 @@ ensembles: {
   no_ensemble: {
     init_ensemble_size: 1,  # how many models to initialize at start
     saved_ensemble_size: 1, # how many models to serialize as "best"
-    n_generations: 1,       # how many model train/select generations
+    ngen: 1,       # how many model train/select generations
     batches_per_gen: 1,     # how many partial_fit calls per train/select generation
   },
   small_ensemble: {
     init_ensemble_size: 16,  # how many models to initialize at start
     saved_ensemble_size: 4, # how many models to serialize as "best"
-    n_generations: 4,       # how many model train/select generations
+    ngen: 4,       # how many model train/select generations
     batches_per_gen: 4,     # how many partial_fit calls per train/select generation
   }
 }
@@ -151,11 +158,98 @@ transform: {
     data_source: NPP_DSRF1KD_L2GD,
     ensemble: no_ensemble,
     model_selection: Null,
-    model_scoring: Null
-
+    model_scoring: Null,
+    param_grid: pca_kmeans,
   }
 }
 
+sklearn_preprocessing: {
+  min_max: {
+    method: minmax_scale,
+    feature_range: [0, 1],
+    axis: 0,
+    copy: False,
+  },
+  standard: {
+    method: StandardScaler,
+    copy: False,
+    with_mean: True,
+    with_std: True,
+  },
+  poly_2nd_interactions_only: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: True,
+    include_bias: True,
+  },
+  poly_2nd: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: False,
+    include_bias: True,
+  },
+  log: {
+    method: FunctionTransformer,
+    func: "numpy:log",
+    validate: True,
+  },
+  log10: {
+    method: FunctionTransformer,
+    func: "numpy:log10",
+    validate: True,
+  },
+  require_positive: {
+    method: FunctionTransformer,
+    func: "elm.sample_util.encoding_scaling:require_positive",
+    func_kwargs: {small_num: 0.0001},
+  },
+}
+
+sample_pipelines: {
+  log10: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+  ],
+  standardize_log10: [
+    {sample_pipeline: log10},
+    {sklearn_preprocessing: standard},
+  ],
+  standardize_log10_var_top_80: [
+    {sample_pipeline: standardize_log10},
+    {feature_selection: top_80_percent},
+  ],
+  standardize_log10_var_top_80_inter: [
+    {sample_pipeline: standardize_log10_var_top_80},
+    {sklearn_preprocessing: poly_2nd_interactions_only},
+  ],
+  standardize_log10_var_top_80_trans: [
+    {sample_pipeline: standardize_log10_var_top_80},
+    {transform: pca, method: fit_transform},
+  ],
+  standardize_log10_var_top_80_inter_trans: [
+    {sample_pipeline: standardize_log10_var_top_80_inter},
+    {transform: pca, method: fit_transform},
+  ],
+}
+param_grids: {
+  pca_kmeans: {
+    kmeans__n_clusters: [3,4,5,6,7,8],
+    pca__n_components: [2,3,4,5],
+    sample_pipeline: [standardize_log10_var_top_80_inter_trans,
+                      standardize_log10_var_top_80_trans],
+    feature_selection: {top_80_percent: {kwargs: {percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9],}}},
+    # data_sources: {selection_kwargs: {some_kwarg: [1,2,3,5,6]}}
+    control: {
+      select_method: selNSGA2,
+      crossover_method: cxTwoPoint,
+      mutate_method: mutShuffleIndexes,
+      init_pop: random,
+      indpb: 0.2,
+      mutpb: 0.4,
+      mu:    24,
+    }
+  }
+}
 train: {
   kmeans: {
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
@@ -168,8 +262,9 @@ train: {
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    model_scoring: ensemble_kmeans_scoring,
+    model_scoring: kmeans_aic,
     model_selection: kmeans_model_averaging,
+    param_grid: pca_kmeans
   }
 }
 

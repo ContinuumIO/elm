@@ -5,12 +5,23 @@ import sklearn.metrics as sk_metrics
 from elm.config.util import  import_callable
 from elm.model_selection.util import filter_kwargs_to_func
 from elm.model_selection.metrics import METRICS
-def make_scorer(scoring, **scoring_kwargs):
+from elm.model_selection.util import get_args_kwargs_defaults
+
+
+
+def import_scorer(scoring):
     if not hasattr(scoring, 'fit'):
         if scoring in METRICS:
             scoring = import_callable(METRICS[scoring])
+            requires_y = True
         else:
             scoring = import_callable(scoring)
+            required_args, kwargs, has_var_kwargs = get_args_kwargs_defaults(scoring)
+            requires_y = 'y_true' in required_args
+    return (scoring, requires_y)
+
+
+def make_scorer(scoring, **scoring_kwargs):
     func_kwargs = filter_kwargs_to_func(scoring, **scoring_kwargs)
     scorer = sk_metrics.make_scorer(scoring,
                                  greater_is_better=scoring_kwargs.get('greater_is_better', True),
@@ -49,10 +60,10 @@ def _score_one_model_no_y_true(model,
     kwargs_to_scoring = copy.deepcopy(kwargs)
     kwargs_to_scoring['sample_weight'] = sample_weight
     if scoring is None:
-        return model.score(x, **kwargs_to_scoring)
-    else:
-        kwargs_to_scoring = filter_kwargs_to_func(scoring,
-                                                **kwargs_to_scoring)
+        kwargs = filter_kwargs_to_func(model.score, **kwargs_to_scoring)
+        return model.score(x, **kwargs)
+    kwargs_to_scoring = filter_kwargs_to_func(scoring,
+                                            **kwargs_to_scoring)
 
     return scoring(model, x, **kwargs_to_scoring)
 
@@ -68,7 +79,10 @@ def score_one_model(model,
         if not hasattr(model, 'score') or not callable(model.score):
             raise ValueError('Cannot score model.  No scoring given and '
                              'model has no "score" callable attribute')
-    if y is not None:
+        requires_y = False
+    else:
+        scoring, requires_y = import_scorer(scoring)
+    if requires_y:
         model._score = _score_one_model_with_y_true(model,
                                                     scoring,
                                                     x,
@@ -76,8 +90,6 @@ def score_one_model(model,
                                                     sample_weight=None,
                                                     **kwargs)
     else:
-        if scoring is not None:
-            scoring = import_callable(scoring)
         model._score = _score_one_model_no_y_true(model,
                         scoring,
                         x,

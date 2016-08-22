@@ -27,6 +27,7 @@ for step in config['pipeline']:
         DEFAULT_PREDICT_KEY = step['predict']
         DEFAULT_PREDICT = config['train'][step['predict']]
 
+
 def test_default_config():
     tag = 'run-with-default-config'
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
@@ -73,7 +74,10 @@ def get_type(model_init_class):
     return MODELS_WITH_PREDICT_ESTIMATOR_TYPES[model_init_class]
 
 
-def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
+def tst_sklearn_method(model_init_class,
+                       c,
+                       n_rows,
+                       use_transform=True):
     '''This func can test almost all sklearn clusterers, regressors,
     or classifiers as they are used in the config / pipeline system
 
@@ -106,7 +110,7 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
         default_ensemble =  {
                               'init_ensemble_size': 2,  # how many models to initialize at start
                               'saved_ensemble_size': 1, # how many models to serialize as "best"
-                              'n_generations': 1,       # how many model train/select generations
+                              'ngen': 1,       # how many model train/select generations
                               'batches_per_gen': 1,     # how many partial_fit calls per train/select generation
                             }
         ks = set(c().get_params())
@@ -160,7 +164,7 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                 kwargs['model_scoring'] = None
                 kwargs['model_selection'] = None
         if 'MiniBatchKMeans' in model_init_class:
-            kwargs['model_scoring'] = "ensemble_kmeans_scoring"
+            kwargs['model_scoring'] = "kmeans_aic"
             kwargs['model_selection'] = "kmeans_model_averaging"
             kwargs['get_y_func'] = None
         if 'OrthogonalMatchingPursuit' in model_init_class:
@@ -190,6 +194,9 @@ def tst_sklearn_method(model_init_class, c, n_rows, use_transform=True):
                 if not use_transform:
                     item['sample_pipeline'] = [item2 for item2 in item.get('sample_pipeline', [])
                                                if not 'transform' in item2]
+                if data_source.get('get_y_func'):
+                    item['sample_pipeline'] += [{'get_y': True}]
+
             if not has_predict:
                 config['pipeline'] = [_ for _ in config['pipeline'] if not 'predict' in _]
             config['data_sources'][DEFAULT_DS_KEY] = data_source
@@ -247,4 +254,6 @@ def test_sklearn_methods_fast(model_init_class, func):
     Does not use PCA transform
     '''
     tst_sklearn_method(model_init_class, func, 500, use_transform=False)
+
+
 
