@@ -164,7 +164,7 @@ def tst_sklearn_method(model_init_class,
                 kwargs['model_scoring'] = None
                 kwargs['model_selection'] = None
         if 'MiniBatchKMeans' in model_init_class:
-            kwargs['model_scoring'] = "ensemble_kmeans_scoring"
+            kwargs['model_scoring'] = "kmeans_aic"
             kwargs['model_selection'] = "kmeans_model_averaging"
             kwargs['get_y_func'] = None
         if 'OrthogonalMatchingPursuit' in model_init_class:

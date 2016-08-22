@@ -1,10 +1,11 @@
 import copy
 from io import StringIO
+from itertools import product
 
 import pytest
 import yaml
 
-from elm.config import ConfigParser
+from elm.config import ConfigParser, ElmConfigError
 from elm.model_selection.evolve import (get_param_grid,
                                         individual_to_new_config,
                                         _get_evolve_meta,
@@ -147,23 +148,47 @@ def test_ea_general(fitnesses, score_weights):
     assert original_pop != pop
 
 
-def test_bad_config():
-    config = yaml.load(CONFIG_STR)
-    not_dicts = (9, [], (), 9.1, None, [2,3])
-    not_int = ({},[], 9.1, [1,3])
-    control_key = ('param_grids', 'example_param_grid', 'control')
-    keys = (
+def set_key_tst_bad_config_once(key, bad):
+    config2 = yaml.load(CONFIG_STR)
+    d = config2
+    for k in key[:-1]:
+        d = d[k]
+    d[key[-1]] = bad
+    with pytest.raises(ElmConfigError):
+        print('new config!!!!!\n\n\n', key, bad, d, config2)
+        ConfigParser(config=config2)
+
+# Below are parameters that are zipped
+# together to form examples of bad
+# configs. (key to set in config, value to set there)
+control_key = ('param_grids', 'example_param_grid', 'control')
+dict_keys = (
         control_key,
-        control_key + ('early_stop',)
+        control_key + ('early_stop',),
         control_key[:1],
         control_key[:2],
-
     )
-    for key, nd in zip(keys, not_dicts):
-        d = config
-        for k in key[:-1]:
-            d = d[k]
-        d[key[-1]] = nd
-    with pytest.raises(ElmConfigError):
-        ConfigParser(config=config)
-    control_key + ('ngen'),
+
+bad_param = [
+        ('pca_n_components'), # not double underline after pca
+        'kmeans__not_in_init_kwargs', # not a valid init arg to kmeans
+        9,
+        [],
+        ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
+        ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
+        ]
+not_dicts = (9, [], (), 9.1, None, [2,3])
+not_int = ({},[], 9.1, [1,3])
+bad_control = [{}, [], 9, None, 'cant be string', [9]]
+int_keys = tuple(control_key + (k,)
+                 for k in ('mu', 'k', 'ngen'))
+not_int = (9.2, None,  [2], [], {}, {7:2})
+tst_params = list(zip(int_keys, not_int)) + list(zip(dict_keys, not_dicts)) + \
+             list(zip((control_key,) * len(bad_control), bad_control))
+tst_params = [t for t in tst_params
+              if not ('early_stop' in t[0] and not t[1])]
+@pytest.mark.parametrize('key, value', tst_params)
+def test_bad_param_grid_config(key, value):
+    set_key_tst_bad_config_once(key, value)
+
+

@@ -74,9 +74,9 @@ masks: {}
 model_scoring:
   accuracy_score_cv: {greater_is_better: true, needs_proba: false, needs_threshold: false,
     scoring: accuracy_score, scoring_agg: 'numpy:median'}
-  ensemble_kmeans_scoring:
+  kmeans_aic:
     score_weights: [-1]
-    scoring: elm.model_selection.kmeans:ensemble_kmeans_scoring
+    scoring: elm.model_selection.kmeans:kmeans_aic
 model_selection:
   kmeans_model_averaging:
     func: elm.model_selection.kmeans:kmeans_model_averaging

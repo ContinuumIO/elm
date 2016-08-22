@@ -601,12 +601,6 @@ class ConfigParser(object):
         self.param_grids = self.config.get('param_grids') or {}
         self._validate_type(self.param_grids, 'param_grids', dict)
         for k, v in self.param_grids.items():
-            self._validate_type(v, 'param_grids:{}'.format(k), dict)
-            for k2, v2 in v.items():
-                self._validate_type(v2, 'param_grids:{} - {}'.format(k, k2),
-                                    (str, list, tuple, dict))
-            if not 'control' in v:
-                raise ElmConfigError('TODO help on the "control" part of a param_grid')
             steps = [step for step in self.pipeline
                      if step.get('param_grid')]
             for step in steps:

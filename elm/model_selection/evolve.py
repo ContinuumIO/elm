@@ -44,6 +44,22 @@ OK_PARAM_FIRST_KEYS = ['transform',
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
 LAST_TAG_IDX = 0
+
+REQUIRED_CONTROL_KEYS_TYPES = {
+    'select_method': str,
+    'crossover_method': str,
+    'mutate_method': str,
+    'init_pop': str,
+    'indpb': float,
+    'mutpb': float,
+    'cxpb':  float,
+    'eta':   int,
+    'ngen':  int,
+    'mu':    int,
+    'k':     int,
+}
+EARLY_STOP_KEYS = ['abs_change', 'percent_change', 'threshold']
+
 def next_model_tag():
     '''Gives names like tag_0, tag_1, tag_2 sequentially'''
     global LAST_TAG_IDX
@@ -199,19 +215,33 @@ def get_param_grid(config, step):
         transform_config = config.transform[transform_step_name]
         train_config = None
     else:
-        raise ValueError('Expected param_grid to be used with a "train" '
+        raise ElmConfigError('Expected param_grid to be used with a "train" '
                          'or "transform" step of a pipeline, but found param_grid '
                          'was used in step {}'.format(step))
     if 'sample_pipeline' in step and transform_step_name is None:
         sample_pipeline = step['sample_pipeline']
         transform_steps = [_ for _ in sample_pipeline if 'transform' in _]
         transform_names = set(_.get('transform') for _ in transform_steps)
-        assert len(transform_names) <= 1
+        if len(transform_names) > 1:
+            raise ElmConfigError('Expected a single transform model but got {}'.format(transform_names))
         if transform_names:
             transform_step_name = tuple(transform_names)[0]
             transform_config = config.transform[transform_step_name]
 
     param_grid = config.param_grids[param_grid_name]
+
+    if not isinstance(param_grid, dict):
+        raise ElmConfigError('Expected param_grids: {} to be a dict '
+                             'but found {}'.format(param_grid_name, param_grid))
+    control = param_grid.get('control') or {}
+    if not isinstance(control, dict):
+        raise ElmConfigError('Expected param_grids: {} - "control" to be a dict'.format(control))
+    for required_key, typ in REQUIRED_CONTROL_KEYS_TYPES.items():
+        item = control.get(required_key) or None
+        if not isinstance(item, typ):
+            raise ElmConfigError('Expected params_grids:{} '
+                                 '"control" to have key {} with '
+                                 'type {}'.format(param_grid_name, required_key, typ))
     make_cfg_replace_keys = _make_cfg_replace_keys(train_config,
                                        transform_config,
                                        train_step_name,

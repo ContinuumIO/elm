@@ -115,8 +115,8 @@ model_scoring: {
     needs_proba: False,
     needs_threshold: False,
   },
-  ensemble_kmeans_scoring: {
-    scoring: "elm.model_selection.kmeans:ensemble_kmeans_scoring",
+  kmeans_aic: {
+    scoring: "elm.model_selection.kmeans:kmeans_aic",
     score_weights: [-1],
   }
 }
@@ -262,7 +262,7 @@ train: {
     output_tag: kmeans,
     data_source: NPP_DSRF1KD_L2GD,
     keep_columns: [],
-    model_scoring: ensemble_kmeans_scoring,
+    model_scoring: kmeans_aic,
     model_selection: kmeans_model_averaging,
     param_grid: pca_kmeans
   }

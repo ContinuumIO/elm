@@ -94,7 +94,7 @@ data_sources: {
 model_scoring: {
   testing_model_scoring: {
     score_weights: [-1],
-    scoring: 'elm.model_selection.kmeans:ensemble_kmeans_scoring',
+    scoring: 'elm.model_selection.kmeans:kmeans_aic',
   }
 }
 

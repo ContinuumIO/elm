@@ -18,21 +18,24 @@ from elm.sample_util.elm_store import ElmStore
 from elm.sample_util.util import bands_as_columns
 
 
-def distance_matrix(cen):
-    dist = np.empty((cen.shape[0],) * 2)
-    r = range(cen.shape[0])
-    for (i, j) in product(r, r):
-        dist[i, j] = np.sum((cen[i, :] - cen[j, :]) ** 2.0) ** 0.5
-    return dist
+def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
+    '''AIC (Akaike Information Criterion) for k-means for model selection
 
+    Parameters:
+        model:  Typically KMeans or IncrementalKmeans instance from sklearn.cluster
+        x:      The X data that were just given to "fit", or "partial_fit"
+        y:      None (placeholder)
+        scoring:None (placeholder)
+        kwargs: ignored
+    Returns:
+        aic float
 
-def ensemble_kmeans_scoring(model,
-                            x,
-                            y_true=None,
-                            scoring=None,
-                            **kwargs):
-    cen = model.cluster_centers_
-    return (model.inertia_ * cen.shape[0])
+    '''
+    k, m = model.cluster_centers_.shape
+    n = x.shape[0]
+    d = model.inertia_
+    aic =  d + 2 * m * k
+    return aic
 
 
 def kmeans_model_averaging(models, best_idxes=None, **kwargs):
