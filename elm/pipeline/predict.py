@@ -44,7 +44,7 @@ def _predict_one_sample(action_data, serialize, model,
                                  sample=sample,
                                  transform_model=transform_model)
     sample_flat = flatten_data_arrays(sample)
-    prediction1 = model.predict(sample_flat.sample.values)[:, np.newaxis]
+    prediction1 = model.predict(sample_flat.flat.values)[:, np.newaxis]
     attrs = copy.deepcopy(sample.attrs)
     attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
     prediction = ElmStore({'sample': xr.DataArray(prediction1,

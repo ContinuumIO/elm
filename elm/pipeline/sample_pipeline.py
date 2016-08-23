@@ -311,7 +311,7 @@ def final_on_sample_step(fitter,
     else:
         fit_args = (X.flat.values,)
         logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
-    check_array(X.flat.values, "final_on_sample_step - X.sample.values")
+    check_array(X.flat.values, "final_on_sample_step - X.flat.values")
     if Y is not None:
         check_array(Y, "final_on_sample_step - Y")
     if sample_weight is not None:

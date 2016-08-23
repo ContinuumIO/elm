@@ -79,11 +79,12 @@ def flatten_data_arrays(es, ravel_order='F'):
     band_names = [band for idx, band in enumerate(es.BandOrder)]
     old_shapes = []
     old_dims = []
-    if all(b == 'flat' for b in es.BandOrder) and len(es.BandOrder) == 1:
+    if hasattr(es, 'flat') and es.flat.values.ndim == 2:
         return es
-    for idx, band in enumerate(es.BandOrder):
-        print(idx, band)
-        band_arr = getattr(es, band)
+    for idx, band in enumerate(band_names):
+        band_arr = getattr(es, band, None)
+        if band_arr is None:
+            raise ValueError(repr(es.data_vars))
         old_shapes.append(band_arr.values.shape)
         old_dims.append(band_arr.dims)
         if store is None:
@@ -91,7 +92,7 @@ def flatten_data_arrays(es, ravel_order='F'):
             # of assume fixed size, but that
             # makes reverse transform harder (is that important?)
             store = np.empty((band_arr.values.size,
-                              len(es.data_vars)))
+                              len(es.data_vars))) * np.NaN
         if band_arr.values.ndim == 1:
             # its already flat
             new_values = band_arr.values
@@ -105,8 +106,8 @@ def flatten_data_arrays(es, ravel_order='F'):
     attrs.update(copy.deepcopy(es.attrs))
     attrs.update(es.attrs)
     flat = ElmStore({'flat': xr.DataArray(store,
-                        coords=[np.arange(store.shape[0]),
-                                band_names],
+                        coords=[('space', np.arange(store.shape[0])),
+                                ('band', band_names)],
                         dims=('space',
                               'band'),
                         attrs=attrs)},
@@ -164,9 +165,9 @@ def flattened_to_data_arrays(flat, **attrs):
 
     row = space // attrs['Width']
     col = space - attrs['Width'] * row
-    for band in range(flat.sample.values.shape[1]):
+    for band in range(flat.flat.values.shape[1]):
         shp = filled[band, row, col].shape
-        reshp = flat.sample.values[:, band].reshape(shp)
+        reshp = flat.flat.values[:, band].reshape(shp)
         filled[band, row, col] = reshp
     x, y =  row_col_to_xy(np.arange(attrs['Height']),
                   np.arange(attrs['Width']),

@@ -87,7 +87,6 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
     assert len(kmeans) == 1
     assert len(kmeans[0]) == 2
     kmeans = kmeans[0][1]
-    print('kmeans_____', kmeans)
     best_n_clusters = kmeans.get_params()['n_clusters']
     assert best_n_clusters == n_clusters
     assert os.path.exists(pfile)

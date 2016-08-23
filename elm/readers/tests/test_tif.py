@@ -16,7 +16,6 @@ from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     assertions_on_band_metadata)
 
 TIF_DIR = os.path.dirname(TIF_FILES[0])
-print(TIF_FILES, file=sys.stderr)
 band_specs = [
     ['name', '_B1.TIF', 'band_1'],
     ['name', '_B2.TIF', 'band_2'],

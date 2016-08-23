@@ -22,7 +22,7 @@ def gen(*args, **kwargs):
 
 def sampler():
     es = random_elm_store(BANDS)
-    es.sample.values[:, len(BANDS) // 2:] *= 1e-7
+    es.flat.values[:, len(BANDS) // 2:] *= 1e-7
     return es
 
 BASE['data_source'] = {'sample_args_generator': gen,
@@ -53,8 +53,8 @@ def test_sample_pipeline_feature_selection():
                 transform_models = None
                 for repeats in range(5):
                     s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_model=None)
-                    assert s.sample.shape[1] < 40
-                    assert set(s.sample.band.values) < set(BANDS)
+                    assert s.flat.shape[1] < 40
+                    assert set(s.flat.band.values) < set(BANDS)
 
 
 def test_elm_store_to_flat_to_elm_store():
@@ -68,17 +68,17 @@ def test_elm_store_to_flat_to_elm_store():
                     dims=['band', 'y', 'x'], attrs=attrs)}, attrs=attrs)
     flat = sample_pipeline.flatten_data_arrays(samp)
     samp2 = sample_pipeline.flattened_to_data_arrays(flat)
-    assert np.all(samp.sample.values == samp2.sample.values)
+    assert np.all(samp.flat.values == samp2.flat.values)
     assert samp2.attrs.get('dropped_points') == 0
-    values = samp.sample.values.copy()
+    values = samp.flat.values.copy()
     values[:, 0, 2] = np.NaN
     values[:, 1, 3] = np.NaN
-    samp.sample.values = values
+    samp.flat.values = values
     flat_smaller = sample_pipeline.flatten_data_arrays(samp)
-    assert flat_smaller.sample.values.shape[0] == samp.sample.values.shape[1] * samp.sample.values.shape[2] - 2
+    assert flat_smaller.flat.values.shape[0] == samp.flat.values.shape[1] * samp.flat.values.shape[2] - 2
     samp2 = sample_pipeline.flattened_to_data_arrays(flat_smaller)
-    v = samp.sample.values
-    v2 = samp2.sample.values
+    v = samp.flat.values
+    v2 = samp2.flat.values
     assert v[np.isnan(v)].size == v2[np.isnan(v2)].size
     v = v[~np.isnan(v)]
     v2 = v2[~np.isnan(v2)]

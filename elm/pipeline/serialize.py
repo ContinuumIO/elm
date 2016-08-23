@@ -87,7 +87,7 @@ def predict_to_pickle(prediction, fname_base):
 
 def predict_to_netcdf(prediction, fname_base):
     mkdir_p(fname_base)
-    prediction.sample.values = prediction.sample.values.astype('i4')
+    #prediction.sample.values = prediction.values.astype('i4')
     drop_some_attrs(prediction)
     prediction.to_netcdf(fname_base + '.nc')
 
@@ -109,7 +109,6 @@ def band_to_tif(band, filename):
         kwargs['crs'] = band.attrs['MetaData']['crs']
     kwargs['transform'] = band.attrs['GeoTransform']
     mkdir_p(filename)
-    print(filename)
     with rio.drivers():
         with rio.open(filename, 'w', **kwargs) as f:
             data = band.astype(rio.float32)

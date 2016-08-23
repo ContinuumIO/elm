@@ -97,7 +97,7 @@ def example_get_y_func_binary(flat_sample):
 @data_arrays_as_columns
 def example_get_y_func_continuous(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
-    col_means = np.mean(flat_sample.sample.values, axis=1)
+    col_means = np.mean(flat_sample.flat.values, axis=1)
     return col_means
 
 

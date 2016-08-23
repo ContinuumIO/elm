@@ -65,7 +65,6 @@ def test_individual_to_new_config():
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 30
     ind = [1,] * len(param_grid_item['choices'])
     new_config = individual_to_new_config(config, param_grid_item, ind)
-    print(new_config.pipeline)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 4
     assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 3
     assert new_config.pipeline[0]['sample_pipeline'] == top_n
@@ -155,7 +154,6 @@ def set_key_tst_bad_config_once(key, bad):
         d = d[k]
     d[key[-1]] = bad
     with pytest.raises(ElmConfigError):
-        print('new config!!!!!\n\n\n', key, bad, d, config2)
         ConfigParser(config=config2)
 
 # Below are parameters that are zipped

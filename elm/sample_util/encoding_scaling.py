@@ -43,7 +43,7 @@ def _update_elm_store_for_changes(es, new_array, new_names=None):
         inds = range(old_shp[1], new_array.shape[1])
         new_names = list(es.flat.band) + ['band_{}'.format(idx) for idx in inds]
         return ElmStore({'sample': xr.DataArray(new_array,
-                                        coords=[(es.flat.dims[0], getattr(es.flat, es.sample.dims[0])),
+                                        coords=[(es.flat.dims[0], getattr(es.flat, es.flat.dims[0])),
                                                 ('band', new_names)],
                                         dims=es.flat.dims,
                                         attrs=copy.deepcopy(es.flat.attrs))},
