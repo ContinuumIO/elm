@@ -9,11 +9,12 @@ import rasterio as rio
 import xarray as xr
 
 from elm.sample_util.band_selection import match_meta
-from elm.readers.util import (geotransform_to_dims,
+from elm.readers.util import (geotransform_to_coords,
                               geotransform_to_bounds,
                               bands_share_coords,
                               SPATIAL_KEYS,
-                              raster_as_2d)
+                              raster_as_2d,
+                              add_band_order)
 from elm.sample_util.elm_store import ElmStore
 logger = logging.getLogger(__name__)
 
@@ -90,7 +91,7 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
                                    if k not in ('BandOrderInfo', 'BandOrder')})
         handle, raster = open_prefilter(filename)
         raster = raster_as_2d(raster)
-        coords_x, coords_y = geotransform_to_dims(handle.width, handle.height, meta['GeoTransform'])
+        coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, meta['GeoTransform'])
         band_meta['Bounds'] = geotransform_to_bounds(handle.width,
                                                      handle.height,
                                                      band_meta['GeoTransform'])

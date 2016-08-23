@@ -9,8 +9,10 @@ from sklearn.utils import check_array as _check_array
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.model_selection.util import filter_kwargs_to_func
-from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.elm_store import (ElmStore, flatten_data_arrays)
+
 from elm.readers.util import row_col_to_xy
+
 
 logger = logging.getLogger(__name__)
 
@@ -102,10 +104,8 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         if not isinstance(sample, ElmStore) and hasattr(sample, 'sample'):
             raise ValueError('Expected the return value of {} to be an '
                              'elm.sample_util.elm_store:ElmStore'.format(func))
-        check_array(sample.sample.values,
-                    'sample_pipeline - after calling {} with args: {}  and kwargs: {}'.format(func, args, kwargs),
-                    allow_nd=True)
-        logger.debug('sample.shape {}'.format(sample.sample.shape))
+
+
     return (sample, sample_y, sample_weight)
 
 
@@ -290,9 +290,9 @@ def final_on_sample_step(fitter,
     fit_kwargs = copy.deepcopy(fit_kwargs)
 
     if flatten:
-        X = flatten_cube(s)
+        X = flatten_data_arrays(s)
     if flatten_y:
-        Y = flatten_cube(sample_y)
+        Y = flatten_data_arrays(sample_y)
     else:
         Y = sample_y
     if sample_weight is not None:
@@ -306,12 +306,12 @@ def final_on_sample_step(fitter,
                          'argument but config\'s train section '
                          'get_y_func is not a callable'.format(fitter))
     if Y is not None:
-        fit_args = (X.sample.values, Y)
+        fit_args = (X.flat.values, Y)
         logger.debug('fit to X (shape {}) and Y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))
     else:
-        fit_args = (X.sample.values,)
+        fit_args = (X.flat.values,)
         logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
-    check_array(X.sample.values, "final_on_sample_step - X.sample.values")
+    check_array(X.flat.values, "final_on_sample_step - X.sample.values")
     if Y is not None:
         check_array(Y, "final_on_sample_step - Y")
     if sample_weight is not None:
@@ -326,70 +326,7 @@ def final_on_sample_step(fitter,
             classes = np.unique(Y)
         fit_kwargs['classes'] = classes
     if 'batch_size' in model.get_params():
-        logger.debug('set batch_size {}'.format(X.sample.values.shape[0]))
-        model.set_params(batch_size=X.sample.values.shape[0])
+        logger.debug('set batch_size {}'.format(X.flat.values.shape[0]))
+        model.set_params(batch_size=X.flat.values.shape[0])
     return fit_args, fit_kwargs
-
-def flatten_cube(elm_store):
-    '''Given an ElmStore with dims (band, y, x) return ElmStore
-    with shape (space, band) where space is a flattening of x,y
-
-    Params:
-        elm_store:  3-d ElmStore (band, y, x)
-
-    Returns:
-        elm_store:  2-d ElmStore (space, band)
-    '''
-    es = elm_store['sample']
-    if len(es.shape) == 2:
-        # its already flat
-        return elm_store
-    flat = xr.DataArray(np.array(tuple(es.values[idx, :, :].ravel()
-                              for idx in range(es.shape[0]))).T,
-                        coords=[np.arange(np.prod(es.shape[1:])),
-                                es.band.values],
-                        dims=('space',
-                              es.dims[0]),
-                        attrs=es.attrs)
-    flat_dropped = flat.dropna(dim='space')
-    flat_dropped.attrs.update(flat.attrs)
-    flat_dropped.attrs['dropped_points'] = flat.shape[0] - flat_dropped.shape[0]
-    return ElmStore({'sample': flat_dropped}, attrs=flat_dropped.attrs)
-
-
-def flattened_to_cube(flat, **attrs):
-    '''Given an ElmStore that has been flattened to (space, band) dims,
-    return a 3-d ElmStore with dims (band, y, x).  Requires that metadata
-    about x,y dims were preserved when the 2-d input ElmStore was created
-
-    Params:
-        flat: a 2-d ElmStore (space, band)
-        attrs: attribute dict to update the dict of the returned ElmStore
-
-    Returns:
-        es:  ElmStore (band, y, x)
-    '''
-    if len(flat.sample.shape) == 3:
-        # it's not actually flat
-        return flat
-    attrs2 = flat.attrs
-    attrs2.update(copy.deepcopy(attrs))
-    attrs = attrs2
-    filled = np.empty((flat.band.size, attrs['Height'], attrs['Width'])) * np.NaN
-    size = attrs['Height'] * attrs['Width']
-    space = np.intersect1d(np.arange(size), flat.space)
-    row = space // attrs['Width']
-    col = space - attrs['Width'] * row
-    for band in range(flat.sample.values.shape[1]):
-        shp = filled[band, row, col].shape
-        reshp = flat.sample.values[:, band].reshape(shp)
-        filled[band, row, col] = reshp
-    x, y =  row_col_to_xy(np.arange(attrs['Height']),
-                  np.arange(attrs['Width']),
-                  attrs['GeoTransform'])
-    coords = [('band', flat.band), ('y', y), ('x', x)]
-    filled = xr.DataArray(filled,
-                          coords=coords,
-                          dims=['band', 'y', 'x'])
-    return ElmStore({'sample': filled}, attrs=attrs)
 

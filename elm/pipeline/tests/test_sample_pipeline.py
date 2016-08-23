@@ -66,17 +66,17 @@ def test_elm_store_to_flat_to_elm_store():
     samp_np = np.random.uniform(2,3,4*2*5).reshape(4,2,5)
     samp = xr.Dataset({'sample': xr.DataArray(samp_np,
                     dims=['band', 'y', 'x'], attrs=attrs)}, attrs=attrs)
-    flat = sample_pipeline.flatten_cube(samp)
-    samp2 = sample_pipeline.flattened_to_cube(flat)
+    flat = sample_pipeline.flatten_data_arrays(samp)
+    samp2 = sample_pipeline.flattened_to_data_arrays(flat)
     assert np.all(samp.sample.values == samp2.sample.values)
     assert samp2.attrs.get('dropped_points') == 0
     values = samp.sample.values.copy()
     values[:, 0, 2] = np.NaN
     values[:, 1, 3] = np.NaN
     samp.sample.values = values
-    flat_smaller = sample_pipeline.flatten_cube(samp)
+    flat_smaller = sample_pipeline.flatten_data_arrays(samp)
     assert flat_smaller.sample.values.shape[0] == samp.sample.values.shape[1] * samp.sample.values.shape[2] - 2
-    samp2 = sample_pipeline.flattened_to_cube(flat_smaller)
+    samp2 = sample_pipeline.flattened_to_data_arrays(flat_smaller)
     v = samp.sample.values
     v2 = samp2.sample.values
     assert v[np.isnan(v)].size == v2[np.isnan(v2)].size

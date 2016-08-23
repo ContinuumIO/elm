@@ -4,7 +4,7 @@ import xarray as xr
 import netCDF4 as nc
 from affine import Affine
 
-from elm.readers.util import (geotransform_to_bounds)
+from elm.readers.util import (geotransform_to_bounds, add_band_order)
 from elm.sample_util.elm_store import ElmStore
 from elm.sample_util.band_selection import match_meta
 
@@ -43,7 +43,7 @@ def _get_bandmeta(nc_dataset):
 def _get_geotransform(nc_info):
 
     # rotation not taken into account
-    x_range = (float(nc_info['WestBoundingCoordinate']), float(nc_info['EastBoundingCoordinate'])) 
+    x_range = (float(nc_info['WestBoundingCoordinate']), float(nc_info['EastBoundingCoordinate']))
     y_range = (float(nc_info['SouthBoundingCoordinate']), float(nc_info['NorthBoundingCoordinate']))
 
     aform = Affine(float(nc_info['LongitudeResolution']), 0.0, x_range[0],
@@ -78,8 +78,8 @@ def _normalize_coords(ds):
     if y_coord is None:
         raise ValueError('y coordinate not found within input dataset')
 
-    coords = dict(x=ds[x_coord], y=ds[y_coord]) 
-    return coords 
+    coords = dict(x=ds[x_coord], y=ds[y_coord])
+    return coords
 
 
 def load_netcdf_meta(datafile):
@@ -119,7 +119,7 @@ def load_netcdf_array(datafile, meta, variables):
     Parameters
     ----------
     datafile - str: Path on disk to NetCDF file
-    meta - dict: netcdf metadata object 
+    meta - dict: netcdf metadata object
     variables - dict<str:str>, list<str>: list of variables to load
 
     Returns
@@ -133,7 +133,6 @@ def load_netcdf_array(datafile, meta, variables):
 
     if isinstance(variables, (list, tuple)):
         data = { v: ds[v] for v in variables }
-
-    return ElmStore(data, 
+    return add_band_order(ElmStore(data,
                     coords=_normalize_coords(ds),
-                    attrs=meta) #  TODO: does this need a `sample` property?
+                    attrs=meta)) #  TODO: does this need a `sample` property?

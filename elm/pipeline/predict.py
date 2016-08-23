@@ -13,15 +13,15 @@ from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.executor_util import (wait_for_futures,
                                         no_executor_submit)
-from elm.pipeline.sample_pipeline import (get_sample_pipeline_action_data,
-                                          flatten_cube,
-                                          flattened_to_cube)
+from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.serialize import (predict_to_netcdf,
                                     predict_to_pickle,
                                     load_models_from_tag,
                                     predict_file_name)
 from elm.pipeline.sample_pipeline import run_sample_pipeline
-from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.elm_store import (flatten_data_arrays,
+                                       flattened_to_data_arrays,
+                                       ElmStore,)
 
 logger = logging.getLogger(__name__)
 
@@ -34,6 +34,7 @@ def predict_file_name(elm_predict_path, tag, bounds):
                                    bounds.right,
                                    bounds.top))
 
+
 def _predict_one_sample(action_data, serialize, model,
                         return_serialized=True, to_cube=True,
                         sample=None, transform_model=None):
@@ -42,7 +43,7 @@ def _predict_one_sample(action_data, serialize, model,
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                  sample=sample,
                                  transform_model=transform_model)
-    sample_flat = flatten_cube(sample)
+    sample_flat = flatten_data_arrays(sample)
     prediction1 = model.predict(sample_flat.sample.values)[:, np.newaxis]
     attrs = copy.deepcopy(sample.attrs)
     attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
@@ -52,7 +53,7 @@ def _predict_one_sample(action_data, serialize, model,
                           attrs=attrs)},
                         attrs=attrs)
     if to_cube:
-        prediction = flattened_to_cube(prediction, **attrs)
+        prediction = flattened_to_data_arrays(prediction, **attrs)
     if return_serialized:
         return serialize(prediction, sample)
     return prediction

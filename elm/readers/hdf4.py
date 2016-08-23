@@ -8,7 +8,7 @@ import xarray as xr
 
 from elm.config import delayed
 from elm.readers.util import (geotransform_to_bounds,
-                              geotransform_to_dims,
+                              geotransform_to_coords,
                               row_col_to_xy,
                               raster_as_2d)
 
@@ -62,7 +62,7 @@ def load_hdf4_array(datafile, meta, band_specs=None):
         dat0 = gdal.Open(s[0], GA_ReadOnly)
         raster = raster_as_2d(dat0.ReadAsArray())
         band_meta['GeoTransform'] = dat0.GetGeoTransform()
-        coord_x, coord_y = geotransform_to_dims(dat0.RasterXSize,
+        coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
                                             dat0.RasterYSize,
                                             band_meta['GeoTransform'])
         band_meta['Bounds'] = geotransform_to_bounds(dat0.RasterXSize,

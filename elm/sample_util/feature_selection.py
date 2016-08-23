@@ -5,15 +5,15 @@ import sklearn.feature_selection as skfeat
 import xarray as xr
 
 from elm.config import import_callable
-from elm.pipeline.sample_pipeline import (flatten_cube,
-                                          flattened_to_cube,
-                                          check_array)
-from elm.sample_util.util import bands_as_columns
-from elm.sample_util.elm_store import ElmStore
+from elm.pipeline.sample_pipeline import check_array
+from elm.sample_util.elm_store import (data_arrays_as_columns,
+                                       ElmStore,
+                                       flatten_data_arrays,
+                                       flattened_to_data_arrays)
 from elm.model_selection.util import get_args_kwargs_defaults
 
 
-@bands_as_columns
+@data_arrays_as_columns
 def feature_selection_base(sample_x,
                           selection_dict,
                           sample_y=None,
