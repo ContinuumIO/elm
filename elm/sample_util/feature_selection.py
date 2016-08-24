@@ -5,11 +5,11 @@ import sklearn.feature_selection as skfeat
 import xarray as xr
 
 from elm.config import import_callable
-from elm.pipeline.sample_pipeline import check_array
-from elm.sample_util.elm_store import (data_arrays_as_columns,
+from elm.sample_util.sample_pipeline import check_array
+from elm.readers import (data_arrays_as_columns,
                                        ElmStore,
-                                       flatten_data_arrays,
-                                       flattened_to_data_arrays)
+                                       flatten,
+                                       inverse_flatten)
 from elm.model_selection.util import get_args_kwargs_defaults
 
 

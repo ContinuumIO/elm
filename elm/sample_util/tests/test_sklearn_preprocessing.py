@@ -9,7 +9,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      tmp_dirs_context,
                                      test_one_config as tst_one_config,
                                      BANDS)
-from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
+from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
 transform_model = [('tag_0', PCA(n_components=3))]
 def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sample_pipeline'):

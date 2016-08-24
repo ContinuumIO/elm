@@ -12,10 +12,6 @@ from sklearn.cluster import KMeans, MiniBatchKMeans
 from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
-from elm.pipeline.sample_pipeline import flatten_data_arrays
-from elm.sample_util.elm_store import (ElmStore,
-                                       data_arrays_as_columns)
-
 
 
 def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):

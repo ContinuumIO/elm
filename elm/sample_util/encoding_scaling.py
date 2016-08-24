@@ -6,8 +6,7 @@ import sklearn.preprocessing as sklearn_pre
 import xarray as xr
 
 from elm.config import import_callable
-from elm.sample_util.elm_store import (data_arrays_as_columns,
-                                       ElmStore)
+from elm.readers import ElmStore
 from elm.model_selection.util import get_args_kwargs_defaults
 
 DIR_SKPRE = dir(sklearn_pre)
@@ -42,7 +41,7 @@ def _update_elm_store_for_changes(es, new_array, new_names=None):
                              'matrix)'.format(es.flat.shape[1], new_names))
         inds = range(old_shp[1], new_array.shape[1])
         new_names = list(es.flat.band) + ['band_{}'.format(idx) for idx in inds]
-        return ElmStore({'sample': xr.DataArray(new_array,
+        return ElmStore({'flat': xr.DataArray(new_array,
                                         coords=[(es.flat.dims[0], getattr(es.flat, es.flat.dims[0])),
                                                 ('band', new_names)],
                                         dims=es.flat.dims,
@@ -73,7 +72,7 @@ def _scale_with_sklearn_func(X, scaler, **scaler_kwargs):
                                          scaled,
                                          new_names=scaler_kwargs.get('new_names'))
 
-@data_arrays_as_columns
+
 def sklearn_preprocessing(X, scaler, **scaler_kwargs):
     '''Run an sklearn preprocessing step
     Params:

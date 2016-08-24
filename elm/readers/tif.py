@@ -14,18 +14,24 @@ from elm.readers.util import (geotransform_to_coords,
                               bands_share_coords,
                               SPATIAL_KEYS,
                               raster_as_2d,
-                              add_band_order)
-from elm.sample_util.elm_store import ElmStore
+                              add_es_meta)
+from elm.readers import ElmStore
 logger = logging.getLogger(__name__)
+
+
+__all__ = ['load_tif_meta',
+          'load_dir_of_tifs_meta',
+          'load_dir_of_tifs_array',]
+
 
 def load_tif_meta(filename):
     r = rio.open(filename)
-    meta = {'MetaData': r.meta}
-    meta['GeoTransform'] = r.get_transform()
-    meta['Bounds'] = r.bounds
-    meta['Height'] = r.height
-    meta['Width'] = r.width
-    meta['Name'] = filename
+    meta = {'meta': r.meta}
+    meta['geo_transform'] = r.get_transform()
+    meta['bounds'] = r.bounds
+    meta['height'] = r.height
+    meta['width'] = r.width
+    meta['name'] = filename
     return r, meta
 
 def ls_tif_files(dir_of_tiffs):
@@ -35,7 +41,7 @@ def ls_tif_files(dir_of_tiffs):
 
 def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
     tifs = ls_tif_files(dir_of_tiffs)
-    meta = {'MetaData': meta}
+    meta = {'meta': meta}
     band_order_info = []
     band_metas = []
     for tif in tifs:
@@ -55,10 +61,10 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
     band_order_info.sort(key=lambda x:x[0])
     band_metas.sort(key=lambda x:x[0])
     band_metas = [b[1] for b in band_metas]
-    meta['BandMetaData'] = band_metas
-    meta['BandOrderInfo'] = band_order_info
+    meta['band_meta'] = band_metas
+    meta['band_order_info'] = band_order_info
     if bands_share_coords(band_metas, raise_error=False):
-        meta['MetaData'].update(band_metas[0]['MetaData'])
+        meta['meta'].update(band_metas[0]['meta'])
         for key in SPATIAL_KEYS:
             meta[key] = band_metas[0][key]
     return meta
@@ -75,32 +81,32 @@ def open_prefilter(filename):
         raise
 
 def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
-    band_order_info = meta['BandOrderInfo']
+    band_order_info = meta['band_order_info']
     tifs = ls_tif_files(dir_of_tiffs)
     logger.info('Load tif files from {}'.format(dir_of_tiffs))
-    bands_share_coords(meta['BandMetaData'], raise_error=True)
+    bands_share_coords(meta['band_meta'], raise_error=True)
 
     if not len(band_order_info):
         raise ValueError('No matching bands with '
                          'band_specs {}'.format(band_specs))
     native_dims = ('y', 'x')
     elm_store_dict = OrderedDict()
-    meta['BandOrder'] = []
+    meta['band_order'] = []
     for idx, filename, band_name in band_order_info:
         band_meta = copy.deepcopy({k: v for k, v in meta.items()
-                                   if k not in ('BandOrderInfo', 'BandOrder')})
+                                   if k not in ('band_order_info', 'band_order')})
         handle, raster = open_prefilter(filename)
         raster = raster_as_2d(raster)
-        coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, meta['GeoTransform'])
-        band_meta['Bounds'] = geotransform_to_bounds(handle.width,
+        coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, meta['geo_transform'])
+        band_meta['bounds'] = geotransform_to_bounds(handle.width,
                                                      handle.height,
-                                                     band_meta['GeoTransform'])
+                                                     band_meta['geo_transform'])
         elm_store_dict[band_name] = xr.DataArray(raster,
                                                  coords=[('y', coords_y),
                                                          ('x', coords_x),],
                                                  dims=native_dims,
                                                  attrs=band_meta)
 
-        meta['BandOrder'].append(band_name)
+        meta['band_order'].append(band_name)
     gc.collect()
-    return ElmStore(elm_store_dict, attrs=meta)
+    return add_es_meta(ElmStore(elm_store_dict, attrs=meta))

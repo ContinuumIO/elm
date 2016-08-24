@@ -7,8 +7,8 @@ import numpy as np
 from sklearn.cross_validation import cross_val_score
 
 from elm.config.dask_settings import delayed, SERIAL_EVAL
-from elm.pipeline.sample_pipeline import run_sample_pipeline
-from elm.pipeline.sample_pipeline import final_on_sample_step
+from elm.sample_util.sample_pipeline import run_sample_pipeline
+from elm.sample_util.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import (score_one_model,
@@ -38,7 +38,7 @@ def fit(model,
     Params:
 
         model:  instantiated model like MiniBatchKmeans()
-        action_data: from elm.pipeline.sample_pipeline:get_sample_pipeline_action_data
+        action_data: from elm.sample_util.sample_pipeline:get_sample_pipeline_action_data
                      (list of tuples of 3 items: (func, args, kwargs))
         get_y_func: function which returns a Y sample for an X sample dataframe
         get_y_kwargs: kwargs for get_y_func

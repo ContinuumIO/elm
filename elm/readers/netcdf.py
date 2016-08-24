@@ -4,10 +4,11 @@ import xarray as xr
 import netCDF4 as nc
 from affine import Affine
 
-from elm.readers.util import (geotransform_to_bounds, add_band_order)
-from elm.sample_util.elm_store import ElmStore
+from elm.readers.util import (geotransform_to_bounds, add_es_meta)
+from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
 
+__all__ = ['load_netcdf_array', 'load_netcdf_array']
 
 def _nc_str_to_dict(nc_str):
     str_list = [g.split('=') for g in nc_str.split(';\n')]
@@ -100,14 +101,14 @@ def load_netcdf_meta(datafile):
     x_size = ras.dimensions['lon'].size  # TODO: remove hardcoded lon variable name
     y_size = ras.dimensions['lat'].size  # TODO: remove hardcoded lat variable name
 
-    meta = {'MetaData': attrs,
-            'BandMetaData': _get_bandmeta(ras),
-            'GeoTransform': geotrans,
-            'SubDatasets': _get_subdatasets(ras),
-            'Bounds': geotransform_to_bounds(x_size, y_size, geotrans),
-            'Height': y_size,
-            'Width': x_size,
-            'Name': datafile,
+    meta = {'meta': attrs,
+            'band_meta': _get_bandmeta(ras),
+            'geo_transform': geotrans,
+            'sub_datasets': _get_subdatasets(ras),
+            'bounds': geotransform_to_bounds(x_size, y_size, geotrans),
+            'height': y_size,
+            'width': x_size,
+            'name': datafile,
             }
     return meta
 
@@ -133,6 +134,9 @@ def load_netcdf_array(datafile, meta, variables):
 
     if isinstance(variables, (list, tuple)):
         data = { v: ds[v] for v in variables }
-    return add_band_order(ElmStore(data,
+    new_es = ElmStore(data,
                     coords=_normalize_coords(ds),
-                    attrs=meta)) #  TODO: does this need a `sample` property?
+                    attrs=meta)
+    for band in new_es.data_vars:
+        getattr(new_es, band).attrs['geo_transform'] = meta['geo_transform']
+    return new_es

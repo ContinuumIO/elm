@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import contextlib
 import copy
 import datetime
@@ -15,13 +16,13 @@ from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
-import elm.pipeline.sample_pipeline as sample_pipeline
+import elm.sample_util.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
-from elm.sample_util.elm_store import (data_arrays_as_columns,
+from elm.readers import (data_arrays_as_columns,
                                        ElmStore)
-from elm.readers.util import add_band_order
+from elm.readers.util import add_es_meta
 from elm.scripts.main import main as elm_main
 
 old_ensemble = elmtrain.ensemble
@@ -84,7 +85,7 @@ def tmp_dirs_context(tag):
             f.write('{} {} {} seconds\n'.format(tag, status, etime))
 
 
-@data_arrays_as_columns
+
 def example_get_y_func_binary(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.flat.values, axis=1)
@@ -94,7 +95,6 @@ def example_get_y_func_binary(flat_sample):
     return ret
 
 
-@data_arrays_as_columns
 def example_get_y_func_continuous(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.flat.values, axis=1)
@@ -110,13 +110,11 @@ class ExpectedFuncCalledError(ValueError):
     pass
 
 
-@data_arrays_as_columns
 def get_y_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('From get_y_func')
 
 
-@data_arrays_as_columns
 def get_weight_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('from get_weight_func')
@@ -153,15 +151,23 @@ def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
                             width * height * len(bands)).reshape((height * width,len(bands)))
     attrs = {'Width': width,
              'Height': height,
-             'GeoTransform': GEO}
-
-    es = ElmStore({'flat': xr.DataArray(val,
-                coords=[('space', np.arange(width * height)),
-                        ('band', bands)],
-                dims=['space', 'band'],
-                attrs=attrs)},
-            attrs=attrs)
-    return add_band_order(es)
+             'geo_transform': GEO}
+    if kwargs.get('flat'):
+        return ElmStore({'flat': xr.DataArray(val,
+                    coords=[('space', np.arange(width * height)),
+                            ('band', bands)],
+                    dims=['space', 'band'],
+                    attrs=attrs)},
+                attrs=attrs)
+    else:
+        es_dict = OrderedDict()
+        for idx, band in enumerate(bands):
+            es_dict[band] = xr.DataArray(val[:, idx].reshape(height, width),
+                                         coords=[('y', np.arange(height)),
+                                                 ('x', np.arange(width))],
+                                         dims=('y', 'x'),
+                                         attrs=attrs)
+    return ElmStore(es_dict)
 
 
 def make_blobs_elm_store(**make_blobs_kwargs):
@@ -184,7 +190,7 @@ def make_blobs_elm_store(**make_blobs_kwargs):
                           ('band', band)],
                   dims=['space', 'band'],
                   attrs={'make_blobs': make_blobs_kwargs})})
-    return add_band_order(es)
+    return es
 
 
 def remove_pipeline_transforms(config):

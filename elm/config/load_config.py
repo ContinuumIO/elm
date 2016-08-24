@@ -19,6 +19,7 @@ from elm.acquire.ladsweb_meta import validate_ladsweb_data_source
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 
+
 logger = logging.getLogger(__name__)
 
 def sample_args_generator_from_list(some_list, *args, **kwargs):
@@ -38,7 +39,7 @@ SAMPLE_PIPELINE_ACTIONS = ('transform',
                            'random_sample',
                            'sample_pipeline',
                            'get_y',
-                           'get_weight',)
+                           'get_weight',) # others too from change_coords
 REQUIRES_METHOD = ('train', 'predict', 'transform')
 class ConfigParser(object):
     # The list below reflects the order
@@ -568,6 +569,7 @@ class ConfigParser(object):
 
     def _validate_sample_pipelines(self):
         '''Validate the "sample_pipelines" section of config'''
+        from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
         self.sample_pipelines = self.config.get('sample_pipelines') or {}
         self._validate_type(self.sample_pipelines, 'sample_pipelines', dict)
         for k, v in self.sample_pipelines.items():
@@ -576,12 +578,22 @@ class ConfigParser(object):
             for item in v:
                 self._validate_type(item, msg + ' - {}'.format(item), dict)
                 ok = False
-                for k in SAMPLE_PIPELINE_ACTIONS:
+                ok_words = SAMPLE_PIPELINE_ACTIONS + CHANGE_COORDS_ACTIONS
+                for k in ok_words:
                     if k in item:
                         ok = True
-                        match = SAMPLE_PIPELINE_ACTIONS.index(k)
-                        match = SAMPLE_PIPELINE_ACTIONS[match]
-                        if not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
+                        match = ok_words.index(k)
+                        match = ok_words[match]
+                        if match in CHANGE_COORDS_ACTIONS:
+                            val = item[match]
+                            if match == 'change_coords':
+                                self._validate_custom_callable(item[match], True,
+                                        'sample_pipelines:{} - {} ({})'.format(k, match, item[match]))
+                            if match == 'flatten':
+                                self._validate_type(val, 'flatten:{}'.format(val), str)
+                                if not val in ('F', 'C'):
+                                    raise ElmConfigError('Expected flatten:{} to be a string "F" or "C" for flatten order'.format(val))
+                        elif not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
                             raise ElmConfigError('sample_pipeline item {0} is of type '
                                                  '{1} and refers to a key ({2}) that is not in '
                                                  '"{1}" dict of config'.format(item, match, item[k]))

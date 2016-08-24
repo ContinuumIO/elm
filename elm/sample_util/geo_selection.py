@@ -9,7 +9,7 @@ from elm.config import delayed
 
 logger = logging.getLogger(__name__)
 
-SpatialBounds = namedtuple('SpatialBounds', 'north south east west')
+Spatialbounds = namedtuple('Spatialbounds', 'north south east west')
 
 @njit('int32(float64, float64, float64[:, :])',nogil=True)
 def point_in_poly(x, y, poly):

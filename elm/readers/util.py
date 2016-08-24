@@ -1,14 +1,20 @@
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
+import logging
+
 import gdal
 import numpy as np
 import ogr
 from rasterio.coords import BoundingBox
 import scipy.interpolate as spi
 
+__all__ = ['Canvas', 'CANVAS_FIELDS', 'xy_to_row_col', 'row_col_to_xy',
+           'geotransform_to_coords', 'geotransform_to_bounds',
+           'canvas_to_coords']
+logger = logging.getLogger(__name__)
 
-SPATIAL_KEYS = ('Height', 'Width', 'GeoTransform', 'Bounds')
+SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
 
-CANVAS_FIELDS = ('GeoTransform',
+CANVAS_FIELDS = ('geo_transform',
                  'ysize',
                  'xsize',
                  'zsize',
@@ -17,6 +23,7 @@ CANVAS_FIELDS = ('GeoTransform',
                  'ravel_order',
                  'zbounds',
                  'tbounds')
+
 Canvas = namedtuple('Canvas', CANVAS_FIELDS)
 
 
@@ -48,15 +55,15 @@ def bands_share_coords(band_metas, raise_error=False):
     heights = set()
     widths = set()
     for band_meta in band_metas:
-        geo_trans.add(tuple(band_meta['GeoTransform']))
-        heights.add(int(band_meta['Height']))
-        widths.add(int(band_meta['Width']))
+        geo_trans.add(tuple(band_meta['geo_transform']))
+        heights.add(int(band_meta['height']))
+        widths.add(int(band_meta['width']))
 
     if len(geo_trans) > 1 or len(heights) > 1 or len(widths) > 1:
         if raise_error:
             raise ValueError('Cannot build xarray data structure when '
                              'bands in bands_specs do not all have the same '
-                             'Height, Width, and GeoTransform')
+                             'height, width, and geo_transform')
         return False
     return True
 
@@ -73,7 +80,7 @@ def raster_as_2d(raster):
 
 def canvas_to_coords(canvas):
     x, y = geotransform_to_coords(canvas.xsize, canvas.ysize,
-                                          canvas.GeoTransform)
+                                          canvas.geo_transform)
     dims = canvas.dims
 
     coords = [('y', y), ('x', x)]
@@ -94,15 +101,71 @@ def canvas_to_coords(canvas):
     coords = dict(coords)
     if not all(d in coords for d in dims):
         raise ValueError()
-    coords = [(d, coords[d]) for d in dims]
+    coords = dict((d, coords[d]) for d in dims)
+
     if any(coords[d] is None for d in dims):
         raise ValueError()
     return coords
 
 
-def add_band_order(es):
-    band_order = getattr(es, 'BandOrder', sorted(es.data_vars))
-    es.attrs['BandOrder'] = band_order
-    return es
+def add_es_meta(es):
+    band_order = getattr(es, 'band_order', sorted(es.data_vars))
+    es.attrs['band_order'] = band_order
+    if tuple(es.data_vars.keys()) != ('flat',):
+        _add_canvases(es)
 
+
+def _add_canvases(es):
+
+    canvas_hashes = set()
+
+    for band in es.data_vars:
+        #print('add canvas to ', band)
+        if band == 'flat':
+            continue
+        band_arr = getattr(es, band)
+        x = getattr(band_arr, 'x', None)
+        y = getattr(band_arr, 'y', None)
+        z = getattr(band_arr, 'z', None)
+        t = getattr(band_arr, 't', None)
+        if x is not None:
+            xsize = x.size
+        else:
+            xsize = None
+        if y is not None:
+            ysize = y.size
+        else:
+            ysize = None
+        if z is not None:
+            zsize = z.size
+            zbounds = [np.min(z), np.max(z)]
+        else:
+            zsize = zbounds = None
+        if t is not None:
+            tsize = t.size
+            tbounds = [np.min(t), np.max(t)]
+        else:
+            tsize = tbounds = None
+        geo_transform = es.geo_transform
+        band_arr.attrs['canvas'] = Canvas(**OrderedDict((
+            ('geo_transform', geo_transform),
+            ('ysize', ysize),
+            ('xsize', xsize),
+            ('zsize', zsize),
+            ('tsize', tsize),
+            ('dims', band_arr.dims),
+            ('ravel_order',getattr(es, 'ravel_order', 'F')),
+            ('zbounds', zbounds),
+            ('tbounds', tbounds),
+             )))
+        #print('canvas', band_arr.attrs['canvas'])
+        canvas_hashes.add(hash((tuple(x) if isinstance(x, Sequence) else x)
+                                     for x in band_arr.attrs['canvas']))
+        #print('attrs', band_arr.attrs)
+        band_arr.attrs['bounds'] = geotransform_to_bounds(xsize, ysize, band_arr.canvas.geo_transform)
+
+    if len(canvas_hashes) == 1:
+        es.attrs['canvas'] = band_arr.canvas
+        logger.info('Bands share coordinates')
+    #print('esattrs',es.attrs)
 

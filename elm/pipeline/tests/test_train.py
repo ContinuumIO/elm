@@ -3,7 +3,7 @@ import inspect
 
 from elm.config import DEFAULTS, ConfigParser, import_callable
 from elm.pipeline.tests.util import patch_ensemble_predict
-from elm.pipeline.sample_pipeline import check_action_data
+from elm.sample_util.sample_pipeline import check_action_data
 
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',

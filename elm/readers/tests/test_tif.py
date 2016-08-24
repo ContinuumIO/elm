@@ -28,21 +28,21 @@ band_specs = [
     ['name', '_B10.TIF', 'band_10'],
     ['name', '_B11.TIF', 'band_11'],
 ]
-
+@pytest.mark.parametrize('tif', TIF_FILES or [])
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
-def test_read_meta():
-    for tif in TIF_FILES:
-        raster, meta = load_tif_meta(tif)
-        assert hasattr(raster, 'read')
-        assert hasattr(raster, 'width')
-        assertions_on_metadata(meta, is_band_specific=True)
+def test_read_meta(tif):
+
+    raster, meta = load_tif_meta(tif)
+    assert hasattr(raster, 'read')
+    assert hasattr(raster, 'width')
+    assertions_on_metadata(meta, is_band_specific=True)
     band_specs_with_band_8 = band_specs + [['name', '_B8.TIF', 'band_8']]
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs_with_band_8)
-    for band_meta in meta['BandMetaData']:
+    for band_meta in meta['band_meta']:
         assertions_on_metadata(band_meta, is_band_specific=True)
-    band_meta = meta['BandMetaData']
-    heights_names = [(m['Height'], m['Name']) for m in band_meta]
+    band_meta = meta['band_meta']
+    heights_names = [(m['height'], m['name']) for m in band_meta]
     # band 8 is panchromatic with 15 m resolution
     # other bands have 30 m resolution.  They
     # have the same bounds, so band 8 has 2 times
@@ -62,10 +62,10 @@ def test_read_array():
         mean_x = np.mean(sample.x)
         band_names = np.array([b[-1] for b in band_specs])
         assert sorted((mean_x,
-                sample.Bounds.left,
-                sample.Bounds.right))[1] == mean_x
+                sample.bounds.left,
+                sample.bounds.right))[1] == mean_x
         assert sorted((mean_y,
-                sample.Bounds.top,
-                sample.Bounds.bottom))[1] == mean_y
-        assert np.all(band_names == es.BandOrder)
+                sample.bounds.top,
+                sample.bounds.bottom))[1] == mean_y
+        assert np.all(band_names == es.band_order)
         assertions_on_band_metadata(sample.attrs)

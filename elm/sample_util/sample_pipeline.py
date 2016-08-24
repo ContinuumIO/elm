@@ -9,10 +9,10 @@ from sklearn.utils import check_array as _check_array
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.model_selection.util import filter_kwargs_to_func
-from elm.sample_util.elm_store import (ElmStore, flatten_data_arrays)
-
+from elm.readers import (ElmStore, flatten as _flatten)
+from elm.sample_util.change_coords import (change_coords_action,
+                                           CHANGE_COORDS_ACTIONS)
 from elm.readers.util import row_col_to_xy
-
 
 logger = logging.getLogger(__name__)
 
@@ -100,10 +100,11 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
             kw['sample_y'] = sample_y
             sample = func(sample, *args, **kw)
         else:
+            print('ak', args, kwargs)
             sample = func(sample, *args, **kwargs)
         if not isinstance(sample, ElmStore) and hasattr(sample, 'sample'):
             raise ValueError('Expected the return value of {} to be an '
-                             'elm.sample_util.elm_store:ElmStore'.format(func))
+                             'elm.readers:ElmStore'.format(func))
 
 
     return (sample, sample_y, sample_weight)
@@ -231,6 +232,9 @@ def make_sample_pipeline_func(config, step):
             args = ('get_weight',)
             kwargs = data_source.get('get_weight_kwargs') or {}
             item = (func, args, kwargs)
+        elif any(k in CHANGE_COORDS_ACTIONS for k in action):
+            func, args, kwargs = change_coords_action(config, step, action)
+            item = (func, args, kwargs)
         else:
             # add items to actions of the form:
             # (
@@ -266,7 +270,7 @@ def final_on_sample_step(fitter,
                          sample_y=None,
                          sample_weight=None,
                          classes=None,
-                         flatten=True,
+                         flatten=False,
                          flatten_y=False,
                       ):
     '''This is the final function called on a sample_pipeline
@@ -290,9 +294,9 @@ def final_on_sample_step(fitter,
     fit_kwargs = copy.deepcopy(fit_kwargs)
 
     if flatten:
-        X = flatten_data_arrays(s)
+        X = _flatten(s)
     if flatten_y:
-        Y = flatten_data_arrays(sample_y)
+        Y = _flatten(sample_y)
     else:
         Y = sample_y
     if sample_weight is not None:

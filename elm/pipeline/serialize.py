@@ -80,7 +80,7 @@ def load_models_from_tag(elm_train_path, tag):
 def drop_some_attrs(prediction):
     # I couldn't get it it to dump to netcdf
     # without dropping almost all the metadata
-    prediction.attrs = {'GeoTransform': np.array(prediction.attrs['GeoTransform'])}
+    prediction.attrs = {'geo_transform': np.array(prediction.attrs['geo_transform'])}
 
 def predict_to_pickle(prediction, fname_base):
     dump(prediction, fname_base + '.xr')
@@ -107,7 +107,7 @@ def band_to_tif(band, filename):
                               'indefinitely')
     if 'crs' in band.attrs['MetaData']:
         kwargs['crs'] = band.attrs['MetaData']['crs']
-    kwargs['transform'] = band.attrs['GeoTransform']
+    kwargs['transform'] = band.attrs['geo_transform']
     mkdir_p(filename)
     with rio.drivers():
         with rio.open(filename, 'w', **kwargs) as f:

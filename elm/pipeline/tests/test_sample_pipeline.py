@@ -5,8 +5,8 @@ import pandas as pd
 import xarray as xr
 from sklearn.decomposition import IncrementalPCA
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
-import elm.pipeline.sample_pipeline as sample_pipeline
-from elm.sample_util.elm_store import ElmStore
+import elm.sample_util.sample_pipeline as sample_pipeline
+from elm.readers import ElmStore
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      random_elm_store,
                                      BANDS,
@@ -60,23 +60,23 @@ def test_sample_pipeline_feature_selection():
 def test_elm_store_to_flat_to_elm_store():
     attrs = {'Height': 2,
              'Width': 5,
-             'GeoTransform': (-10007554.677, 926.625433055833,
+             'geo_transform': (-10007554.677, 926.625433055833,
                               0.0, 4447802.078667,
                               0.0, -926.6254330558334)}
     samp_np = np.random.uniform(2,3,4*2*5).reshape(4,2,5)
     samp = xr.Dataset({'sample': xr.DataArray(samp_np,
                     dims=['band', 'y', 'x'], attrs=attrs)}, attrs=attrs)
-    flat = sample_pipeline.flatten_data_arrays(samp)
-    samp2 = sample_pipeline.flattened_to_data_arrays(flat)
+    flat = sample_pipeline.flatten(samp)
+    samp2 = sample_pipeline.inverse_flatten(flat)
     assert np.all(samp.flat.values == samp2.flat.values)
     assert samp2.attrs.get('dropped_points') == 0
     values = samp.flat.values.copy()
     values[:, 0, 2] = np.NaN
     values[:, 1, 3] = np.NaN
     samp.flat.values = values
-    flat_smaller = sample_pipeline.flatten_data_arrays(samp)
+    flat_smaller = sample_pipeline.flatten(samp)
     assert flat_smaller.flat.values.shape[0] == samp.flat.values.shape[1] * samp.flat.values.shape[2] - 2
-    samp2 = sample_pipeline.flattened_to_data_arrays(flat_smaller)
+    samp2 = sample_pipeline.inverse_flatten(flat_smaller)
     v = samp.flat.values
     v2 = samp2.flat.values
     assert v[np.isnan(v)].size == v2[np.isnan(v2)].size

@@ -7,7 +7,7 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.pipeline.serialize import load_models_from_tag
-from elm.sample_util.elm_store import data_arrays_as_columns
+from elm.readers import data_arrays_as_columns
 from elm.pipeline.util import _make_model_args_from_config
 
 logger = logging.getLogger(__name__)
@@ -19,7 +19,6 @@ def transform_pipeline_step(*args, **kwargs):
     return _train_or_transform_step('transform', *args, **kwargs)
 
 
-@data_arrays_as_columns
 def transform_sample_pipeline_step(sample_x,
                                    action,
                                    config,

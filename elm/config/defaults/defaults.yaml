@@ -230,6 +230,10 @@ sample_pipelines: {
     {sample_pipeline: standardize_log10_var_top_80_inter},
     {transform: pca, method: fit_transform},
   ],
+  flatten_example: [
+    {flatten: 'F'},
+    {drop_na_rows: True},
+  ],
 }
 param_grids: {
   pca_kmeans: {
@@ -285,16 +289,19 @@ pipeline:
   - {transform: pca,
      method: partial_fit,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
     ]}
   - {train: kmeans,
      method: partial_fit,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
       {transform: pca, method: transform},
     ]}
   - {predict: kmeans,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
       {transform: pca, method: transform},
       ]

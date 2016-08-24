@@ -11,7 +11,7 @@ from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
 from elm.pipeline.fit import fit
-from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data
+from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.serialize import save_models_with_meta
 
 logger = logging.getLogger(__name__)
