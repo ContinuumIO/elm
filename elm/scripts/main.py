@@ -32,7 +32,7 @@ def main(args=None, sys_argv=None, return_0_if_ok=True):
     args = cli(args=args, sys_argv=sys_argv)
     err = None
     try:
-        config = ConfigParser(config=args.config, cmd_args=cmd_args)
+        config = ConfigParser(args.config, cmd_args=args)
         if args.echo_config:
             logger.info(str(config))
         dask_executor = getattr(config, 'DASK_EXECUTOR', 'SERIAL')

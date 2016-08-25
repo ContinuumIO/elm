@@ -99,7 +99,8 @@ class ConfigParser(object):
     def _update_for_cmd_args(self, cmd_args=None):
         self.cmd_args = {} if not cmd_args else dict(vars(cmd_args))
         for k, v in self.cmd_args.items():
-            setattr(self, k, v)
+            if k not in ('config', 'raw_config', 'defaults'):
+                setattr(self, k, v)
 
     def _update_for_env(self):
         '''Update the config based on environment vars'''
