@@ -9,7 +9,7 @@ import scipy.interpolate as spi
 
 __all__ = ['Canvas', 'CANVAS_FIELDS', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
-           'canvas_to_coords']
+           'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -22,11 +22,18 @@ CANVAS_FIELDS = ('geo_transform',
                  'dims',
                  'ravel_order',
                  'zbounds',
-                 'tbounds')
+                 'tbounds',
+                 'bounds')
 
 Canvas = namedtuple('Canvas', CANVAS_FIELDS)
 
+VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
+VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
 
+#def serialize_canvas(canvas):
+#    vals = [item if not isinstance(item, Sequence) else list(item)
+#            for item in canvas]
+#
 def xy_to_row_col(x, y, geo_transform):
     ''' Get row and column idx's from x and y where
     x and y are the coordinates matching the upper left
@@ -82,8 +89,16 @@ def canvas_to_coords(canvas):
     x, y = geotransform_to_coords(canvas.xsize, canvas.ysize,
                                           canvas.geo_transform)
     dims = canvas.dims
-
-    coords = [('y', y), ('x', x)]
+    dims2 = []
+    for d in dims:
+        if d.lower() in VALID_X_NAMES:
+            label_x = d
+            break
+    for d in dims:
+        if d.lower() in VALID_Y_NAMES:
+            label_y = d
+            break
+    coords = [(label_y, y), (label_x, x)]
     if canvas.zbounds is not None and canvas.zsize is not None:
         z = np.linspace(zbounds[0], zbounds[1], zsize)
     elif canvas.zbounds is None and canvas.zsize is None:
@@ -99,12 +114,11 @@ def canvas_to_coords(canvas):
         raise ValueError()
     coords += [('z', z), ('t', t)]
     coords = dict(coords)
-    if not all(d in coords for d in dims):
-        raise ValueError()
     coords = dict((d, coords[d]) for d in dims)
 
     if any(coords[d] is None for d in dims):
-        raise ValueError()
+        raise ValueError('coords.keys(): {} is not '
+                         'inclusive of all dims'.format(coords.keys(), dims))
     return coords
 
 
@@ -113,6 +127,26 @@ def add_es_meta(es):
     es.attrs['band_order'] = band_order
     if tuple(es.data_vars.keys()) != ('flat',):
         _add_canvases(es)
+
+
+def _extract_valid_xy(band_arr):
+    x = None
+    for name in VALID_X_NAMES:
+        x = getattr(band_arr, name, getattr(band_arr, name.lower(), None))
+        if x is not None:
+            break
+    if x is None:
+        raise ValueError('Band DataArray does not have an X dimension with a name in {}'.format(VALID_X_NAMES))
+    xname = name
+    y = None
+    for name in VALID_Y_NAMES:
+        y = getattr(band_arr, name, None)
+        if y is not None:
+            break
+    if y is None:
+        raise ValueError('Band DataArray does not have an Y dimension with a name in {}'.format(VALID_Y_NAMES))
+    yname = name
+    return x, name, y, yname
 
 
 def _add_canvases(es):
@@ -124,8 +158,7 @@ def _add_canvases(es):
         if band == 'flat':
             continue
         band_arr = getattr(es, band)
-        x = getattr(band_arr, 'x', None)
-        y = getattr(band_arr, 'y', None)
+        x, xname, y, yname = _extract_valid_xy(band_arr)
         z = getattr(band_arr, 'z', None)
         t = getattr(band_arr, 't', None)
         if x is not None:
@@ -146,7 +179,11 @@ def _add_canvases(es):
             tbounds = [np.min(t), np.max(t)]
         else:
             tsize = tbounds = None
-        geo_transform = es.geo_transform
+        canvas = getattr(band_arr, 'canvas', None)
+        if canvas is not None:
+            geo_transform = canvas.geo_transform
+        else:
+            geo_transform = getattr(band_arr, 'geo_transform', getattr(es, 'geo_transform'))
         band_arr.attrs['canvas'] = Canvas(**OrderedDict((
             ('geo_transform', geo_transform),
             ('ysize', ysize),
@@ -157,15 +194,15 @@ def _add_canvases(es):
             ('ravel_order',getattr(es, 'ravel_order', 'F')),
             ('zbounds', zbounds),
             ('tbounds', tbounds),
-             )))
+            ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
+        )))
         #print('canvas', band_arr.attrs['canvas'])
         canvas_hashes.add(hash((tuple(x) if isinstance(x, Sequence) else x)
                                      for x in band_arr.attrs['canvas']))
-        #print('attrs', band_arr.attrs)
-        band_arr.attrs['bounds'] = geotransform_to_bounds(xsize, ysize, band_arr.canvas.geo_transform)
 
     if len(canvas_hashes) == 1:
         es.attrs['canvas'] = band_arr.canvas
         logger.info('Bands share coordinates')
+        es.attrs['bounds'] = band_arr.canvas.bounds
     #print('esattrs',es.attrs)
 

@@ -1,4 +1,5 @@
 from collections import OrderedDict
+import copy
 import gc
 
 import gdal
@@ -42,6 +43,7 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     from elm.readers import ElmStore
     from elm.sample_util.band_selection import match_meta
     f = gdal.Open(datafile, GA_ReadOnly)
+
     sds = meta['sub_datasets']
     band_metas = meta['band_meta']
     band_order_info = []
@@ -62,27 +64,29 @@ def load_hdf4_array(datafile, meta, band_specs=None):
                            for idx, (band_meta, s) in enumerate(zip(band_metas, sds))]
     native_dims = ('y', 'x')
     elm_store_data = OrderedDict()
-    meta['band_order'] = []
+
+    band_order = []
     for _, band_meta, s, name in band_order_info:
+        attrs = copy.deepcopy(meta)
+        attrs.update(copy.deepcopy(band_meta))
         dat0 = gdal.Open(s[0], GA_ReadOnly)
         raster = raster_as_2d(dat0.ReadAsArray())
-        band_meta['geo_transform'] = dat0.GetGeoTransform()
+        attrs['geo_transform'] = dat0.GetGeoTransform()
         coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
                                             dat0.RasterYSize,
-                                            band_meta['geo_transform'])
-        band_meta['bounds'] = geotransform_to_bounds(dat0.RasterXSize,
-                                                     dat0.RasterYSize,
-                                                     band_meta['geo_transform'])
-
+                                            attrs['geo_transform'])
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),
                                        ('x', coord_x),
                                        ],
                                dims=native_dims,
-                               attrs=band_meta)
-        meta['band_order'].append(name)
+                               attrs=attrs)
+
+        band_order.append(name)
     del dat0
+    attrs = copy.deepcopy(attrs)
+    attrs['band_order'] = band_order
     gc.collect()
-    return ElmStore(elm_store_data, attrs=meta)
+    return ElmStore(elm_store_data, attrs=attrs)
 
 

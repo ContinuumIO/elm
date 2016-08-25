@@ -231,6 +231,7 @@ sample_pipelines: {
     {transform: pca, method: fit_transform},
   ],
   flatten_example: [
+    {select_canvas: band_1},
     {flatten: 'F'},
     {drop_na_rows: True},
   ],
@@ -241,7 +242,7 @@ param_grids: {
     pca__n_components: [2,3,4,5],
     sample_pipeline: [standardize_log10_var_top_80_inter_trans,
                       standardize_log10_var_top_80_trans],
-    feature_selection: {top_80_percent: {kwargs: {percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9],}}},
+    feature_selection: {top_80_percent: {kwargs: {percentile: [30, 40, 50, 60, 70, 80, 90],}}},
     # data_sources: {selection_kwargs: {some_kwarg: [1,2,3,5,6]}}
     control: {
       select_method: selNSGA2,

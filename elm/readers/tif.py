@@ -109,4 +109,4 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
 
         meta['band_order'].append(band_name)
     gc.collect()
-    return add_es_meta(ElmStore(elm_store_dict, attrs=meta))
+    return ElmStore(elm_store_dict, attrs=meta)

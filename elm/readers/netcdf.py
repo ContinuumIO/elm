@@ -4,11 +4,12 @@ import xarray as xr
 import netCDF4 as nc
 from affine import Affine
 
-from elm.readers.util import (geotransform_to_bounds, add_es_meta)
+from elm.readers.util import (geotransform_to_bounds, add_es_meta,
+                              VALID_X_NAMES, VALID_Y_NAMES)
 from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
 
-__all__ = ['load_netcdf_array', 'load_netcdf_array']
+__all__ = ['load_netcdf_meta', 'load_netcdf_array']
 
 def _nc_str_to_dict(nc_str):
     str_list = [g.split('=') for g in nc_str.split(';\n')]
@@ -68,11 +69,8 @@ def _normalize_coords(ds):
 
     coord_names = [k for k in ds.coords.keys()]
 
-    valid_x_names = ('lon','longitude', 'x')
-    valid_y_names = ('lat','latitude', 'y')
-
-    x_coord = next((c for c in coord_names if c.lower() in valid_x_names), None)
-    y_coord = next((c for c in coord_names if c.lower() in valid_y_names), None)
+    x_coord = next((c for c in coord_names if c.lower() in VALID_X_NAMES), None)
+    y_coord = next((c for c in coord_names if c.lower() in VALID_Y_NAMES), None)
 
     if x_coord is None:
         raise ValueError('x coordinate not found within input dataset')
@@ -105,7 +103,6 @@ def load_netcdf_meta(datafile):
             'band_meta': _get_bandmeta(ras),
             'geo_transform': geotrans,
             'sub_datasets': _get_subdatasets(ras),
-            'bounds': geotransform_to_bounds(x_size, y_size, geotrans),
             'height': y_size,
             'width': x_size,
             'name': datafile,

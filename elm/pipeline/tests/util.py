@@ -32,7 +32,7 @@ old_init_transform = elmtransform.get_new_or_saved_transform_model
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
-GEO = (-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995)
+GEO = [-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995]
 
 @contextlib.contextmanager
 def patch_ensemble_predict():
@@ -143,14 +143,16 @@ def test_one_config(config=None, cwd=None):
 
 def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
     bands = bands or ['band_{}'.format(idx + 1) for idx in range(width)]
+    if isinstance(bands, int):
+        bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
     val = np.random.uniform(mn,
                             mx,
                             width * height * len(bands)).reshape((height * width,len(bands)))
-    attrs = {'Width': width,
-             'Height': height,
+    attrs = {'width': width,
+             'height': height,
              'geo_transform': GEO}
     if kwargs.get('flat'):
         return ElmStore({'flat': xr.DataArray(val,
@@ -167,7 +169,8 @@ def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
                                                  ('x', np.arange(width))],
                                          dims=('y', 'x'),
                                          attrs=attrs)
-    return ElmStore(es_dict)
+        attrs['band_order'] = bands
+    return ElmStore(es_dict, attrs)
 
 
 def make_blobs_elm_store(**make_blobs_kwargs):

@@ -1,12 +1,13 @@
 from elm.config import ElmConfigError
-from elm.readers import (canvas_select_elm_store,
-                                       drop_na_rows as _drop_na_rows,
-                                       ElmStore,
-                                       flatten as _flatten,
-                                       inverse_flatten as _inverse_flatten,
-                                       )
+from elm.readers import (select_canvas_elm_store,
+                         drop_na_rows as _drop_na_rows,
+                         ElmStore,
+                         flatten as _flatten,
+                         inverse_flatten as _inverse_flatten,
+                         Canvas
+                       )
 '''
-canvas_select: example_canvas
+select_canvas: example_canvas
 flatten: True # to [space, band] dims
 drop_na_rows: True
 inverse_flatten: True
@@ -15,7 +16,7 @@ change_coords: "elm.sample_util.util:example_2d_agg"
 
 
 CHANGE_COORDS_ACTIONS = (
-    'canvas_select',
+    'select_canvas',
     'flatten',
     'drop_na_rows',
     'inverse_flatten',
@@ -26,9 +27,13 @@ CHANGE_COORDS_ACTIONS = (
 OK_DIMS = set(('y', 'x', 'z', 't'))
 
 
-def canvas_select(es, key, value, **kwargs):
-    new_canvas = Canvas(**config.canvases[value])
-    new_es = canvas_select_elm_store(es, new_canvas)
+def select_canvas(es, key, value, **kwargs):
+    band = value
+    band_arr = getattr(es, band, None)
+    if band_arr is None:
+        raise ValueError('Argument to select_canvas should be a band name, e.g. "band_1" (found {})'.format(band))
+    new_canvas = band_arr.canvas
+    new_es = select_canvas_elm_store(es, new_canvas)
     return new_es
 
 

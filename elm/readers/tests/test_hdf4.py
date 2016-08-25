@@ -50,11 +50,11 @@ def test_read_array(hdf):
         mean_x = np.mean(sample.x)
         band_names = np.array([b[-1] for b in band_specs])
         assert sorted((mean_x,
-                sample.bounds.left,
-                sample.bounds.right))[1] == mean_x
+                sample.canvas.bounds.left,
+                sample.canvas.bounds.right))[1] == mean_x
         assert sorted((mean_y,
-                sample.bounds.top,
-                sample.bounds.bottom))[1] == mean_y
+                sample.canvas.bounds.top,
+                sample.canvas.bounds.bottom))[1] == mean_y
         assert sample.y.size == 1200
         assert sample.x.size == 1200
         assert len(es.data_vars) == len(band_specs)
@@ -62,3 +62,4 @@ def test_read_array(hdf):
         assertions_on_band_metadata(sample.attrs)
     es2 = load_hdf4_array(hdf, meta, band_specs=None)
     assert len(es2.data_vars) > len(es.data_vars)
+

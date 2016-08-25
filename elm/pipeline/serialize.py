@@ -77,17 +77,23 @@ def load_models_from_tag(elm_train_path, tag):
         models.append((k, load(v)))
     return (models, load(paths['meta']))
 
+
+
 def drop_some_attrs(prediction):
     # I couldn't get it it to dump to netcdf
     # without dropping almost all the metadata
-    prediction.attrs = {'geo_transform': np.array(prediction.attrs['geo_transform'])}
+    for band in prediction.data_vars:
+        band_arr = getattr(prediction, band)
+        prediction.attrs = band_arr.attrs = {
+            'geo_transform': np.array(prediction.attrs['geo_transform']),
+            }
+
 
 def predict_to_pickle(prediction, fname_base):
     dump(prediction, fname_base + '.xr')
 
 def predict_to_netcdf(prediction, fname_base):
     mkdir_p(fname_base)
-    #prediction.sample.values = prediction.values.astype('i4')
     drop_some_attrs(prediction)
     prediction.to_netcdf(fname_base + '.nc')
 
