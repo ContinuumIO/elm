@@ -45,7 +45,8 @@ def test_train_makes_args_kwargs_ok():
          model_selection_func,
          model_selection_kwargs,
          step_type,
-         step_name) = model_args
+         step_name,
+         classes) = model_args
         assert executor is None
         assert callable(model_init_class)   # model init func
         assert "KMeans" in repr(model_init_class)

@@ -9,8 +9,26 @@ import re
 from elm.config import delayed
 from elm.readers.hdf4 import load_hdf4_array, load_hdf4_meta
 from elm.model_selection.util import get_args_kwargs_defaults
+from elm.sample_util.util import InvalidSample
 
 logger = logging.getLogger(__name__)
+
+DAY_NIGHT_WORDS = ('day', 'night')
+FLAG_WORDS = ('flag', 'indicator')
+DAY_NIGHT = []
+for f in FLAG_WORDS:
+    w1 = "".join(DAY_NIGHT_WORDS)
+    w2 = "".join(DAY_NIGHT_WORDS[::-1])
+    w3, w4 = DAY_NIGHT_WORDS
+    for w in (w1, w2, w3, w4):
+        w5, w6 = f + w, w + f
+        DAY_NIGHT.extend((w5, w6,))
+
+def _strip_key(k):
+    if isinstance(k, str):
+        for delim in ('.', '_', '-', ' '):
+            k = k.lower().replace(delim,'')
+    return k
 
 def match_meta(meta, band_spec):
     search_key, search_value, name = band_spec
@@ -19,6 +37,28 @@ def match_meta(meta, band_spec):
             if bool(re.search(search_value, meta[mkey], re.IGNORECASE)):
                 return name
     return False
+
+
+def example_meta_is_day(filename, d):
+
+    dicts = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            dicts.append(v)
+            continue
+        key2 = _strip_key(k)
+        if key2 in DAY_NIGHT:
+            dayflag = 'day' in key2
+            nightflag = 'night' in key2
+            if dayflag and nightflag:
+                value2 = _strip_key(v)
+                return 'day' in value2
+            elif dayflag or nightflag:
+                return bool(v)
+    if dicts:
+        return any(example_meta_is_day(filename, d2) for d2 in dicts)
+    return False
+
 
 def get_bands(handle, ds, *band_specs):
     for ds_name, label in ds:
@@ -47,7 +87,6 @@ def _select_from_file_base(filename,
                          **kwargs):
     from elm.sample_util.geo_selection import _filter_band_data
     from elm.sample_util.filename_selection import _filename_filter
-
     keep_file = _filename_filter(filename,
                                  search=filename_search,
                                  func=filename_filter)
@@ -58,8 +97,9 @@ def _select_from_file_base(filename,
         meta = load_meta(filename, band_specs)
     if metadata_filter is not None:
         keep_file = metadata_filter(filename, meta)
-        if not keep_file:
-            return False
+        if dry_run:
+           return keep_file
+
     # TODO rasterio filter / resample / aggregate
     if dry_run:
         return True

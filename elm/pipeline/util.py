@@ -136,6 +136,7 @@ def _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs):
     fit_kwargs['transform_model'] = transform_model
     fit_kwargs['fit_method'] = model_args.fit_method
     fit_kwargs['batches_per_gen'] = ensemble_kwargs.get('batches_per_gen') or 1
+    fit_kwargs['classes'] = model_args.classes
     return fit_kwargs
 
 

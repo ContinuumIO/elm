@@ -25,13 +25,12 @@ data_sources: {
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
   sample_args_generator: iter_files_recursively,
-  sample_args_generator_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    extension: ".hdf"
-  },
   selection_kwargs: {
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+    extension: ".hdf",
+
     data_filter: Null,
-    metadata_filter: Null,
+    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
     filename_filter: Null,
     geo_filters: {
       include_polys: [],
@@ -51,7 +50,9 @@ data_sources: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH"
   },
 
-  selection_kwargs: {},
+  selection_kwargs: {
+    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+  },
   reader: dir_of_tifs_reader,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[name, "_B1.TIF", band_1],

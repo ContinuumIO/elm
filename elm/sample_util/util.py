@@ -1,1 +1,3 @@
+class InvalidSample(ValueError):
+    pass
 

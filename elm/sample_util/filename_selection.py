@@ -16,14 +16,11 @@ def _filename_filter(filename, search=None, func=None):
         return func(filename) and keep
 
 
-def include_file(filename, band_specs, no_file_open=True, **selection_kwargs):
-    if no_file_open:
-        return _filename_filter(filename)
-    if no_file_open:
-        selection_kwargs['dry_run'] = True
+def include_file(filename, band_specs, **selection_kwargs):
+    selection_kwargs['dry_run'] = True
     return _select_from_file_base(filename, band_specs, **selection_kwargs)
 
-def get_generated_args(filenames_gen, band_specs, no_file_open=True, **selection_kwargs):
-    return tuple(f for f in filenames_gen()
+def get_generated_args(filenames_gen, band_specs, no_file_open=False, **selection_kwargs):
+    return tuple(f for f in filenames_gen(**selection_kwargs)
                  if include_file(f, band_specs, no_file_open=no_file_open, **selection_kwargs))
 

@@ -52,26 +52,6 @@ def select_canvas_elm_store(es, new_canvas):
                 shp_order.append(old_dims.index(nd))
             index_to_make = xr.Dataset(new_coords)
             data_arr = data_arr.reindex_like(index_to_make, method='nearest')
-            '''old_coords_d = dict(old_coords)
-            new_coords_d = dict(new_coords)
-            new_coords_in_order_of_old = [(k, new_coords_d[old_dims[k]]) for k in shp_order]
-            es_new_dict = OrderedDict()
-            attrs['canvas'] = new_canvas
-            old_args = np.meshgrid(*[old_coords_d[name] for name in old_dims])
-            old_args = np.array([_.ravel() for _ in old_args]).T
-            interp_args = [arr for name, arr in new_coords_in_order_of_old]
-            import os
-            if not os.path.exists('check.pkl'):
-                with open('check.pkl', 'wb') as f:
-                    import pickle
-                    pickle.dump({'old_args': old_args, 'interp_args': interp_args, 'da': data_arr.values}, f)
-            interp = DEFAULT_INTERPOLATOR(old_args, data_arr.values.ravel(), np.NaN)
-            new_values = interp(*interp_args).transpose(shp_order)
-            new_arr = xr.DataArray(new_values,
-                                   coords=new_coords,
-                                   dims=new_dims,
-                                   attrs=attrs)'''
-
         es_new_dict[band] = data_arr
     attrs = copy.deepcopy(es.attrs)
     attrs['canvas'] = new_canvas
@@ -146,7 +126,7 @@ def flatten(es, ravel_order='F'):
 
 
 def filled_flattened(na_dropped):
-    check_is_flat(na_dropped)
+    assert na_dropped.is_flat()
     shp = getattr(na_dropped, 'shape_before_drop_na_rows', None)
     if not shp:
         return na_dropped
@@ -173,7 +153,6 @@ def check_is_flat(flat, raise_err=True):
         if raise_err:
             raise ValueError(msg)
         else:
-            logger.info(msg)
             return False
     return True
 

@@ -58,7 +58,7 @@ def feature_selection_base(sample_x,
         feature_choices = list(sample_x.flat.band)
     band_idx = np.array([idx for idx, band in enumerate(sample_x.flat.band)
                          if band in feature_choices])
-    subset = sample_x.sample[:, band_idx]
+    subset = sample_x.flat[:, band_idx]
     check_array(subset.values, 'feature_selection:{} X subset'.format(selection))
 
     required_args, _, _ = get_args_kwargs_defaults(selection.fit)
@@ -71,7 +71,7 @@ def feature_selection_base(sample_x,
 
     selection.fit(subset.values, y=sample_y)
     ml_columns = selection.get_support(indices=True)
-    sample_x_dropped_bands =  ElmStore({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
+    sample_x_dropped_bands =  ElmStore({'sample': xr.DataArray(sample_x.flat[:, band_idx[ml_columns]].copy(),
                                               coords=[('space', sample_x.flat.space),
                                                       ('band', sample_x.flat.band[band_idx[ml_columns]])],
                                               dims=('space','band'),

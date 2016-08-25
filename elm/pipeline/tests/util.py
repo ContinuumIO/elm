@@ -101,6 +101,10 @@ def example_get_y_func_binary(flat_sample):
 def example_get_y_func_continuous(flat_sample):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.flat.values, axis=1)
+    inds = np.arange(col_means.size)
+    np.random.shuffle(inds)
+    col_means[inds[:3]] += np.random.uniform(0, 0.01, 3)
+    col_means[inds[-3:]] += np.random.uniform(0, 0.01, 3)
     return col_means
 
 
