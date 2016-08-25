@@ -50,7 +50,7 @@ class ConfigParser(object):
     config_keys = CONFIG_KEYS
     defaults = DEFAULTS
     all_words = ('all', ['all'],)
-    def __init__(self, config_file_name=None, config=None):
+    def __init__(self, config_file_name=None, config=None, cmd_args=None):
         '''Parses a config structure
 
         Params:
@@ -78,6 +78,7 @@ class ConfigParser(object):
             else:
                 self.config[k] = v
         self._update_for_env()
+        self._update_for_cmd_args(cmd_args=cmd_args)
         self._interpolate_env_vars()
         self.validate()
 
@@ -94,6 +95,11 @@ class ConfigParser(object):
                                                 getattr(elm_dask_settings,
                                                         env_var['name']))
         self.config = yaml.load(config_str)
+
+    def _update_for_cmd_args(self, cmd_args=None):
+        self.cmd_args = {} if not cmd_args else dict(vars(cmd_args))
+        for k, v in self.cmd_args.items():
+            setattr(self, k, v)
 
     def _update_for_env(self):
         '''Update the config based on environment vars'''
@@ -335,7 +341,6 @@ class ConfigParser(object):
 
     def _validate_one_model_scoring(self, key, value):
         '''Validate one model_scoring key-value (one scoring configuration)'''
-        logger.info(repr((key, value)))
         from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:

@@ -100,13 +100,13 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
             kw['sample_y'] = sample_y
             sample = func(sample, *args, **kw)
         else:
-            print('ak', args, kwargs)
             sample = func(sample, *args, **kwargs)
-        if not isinstance(sample, ElmStore) and hasattr(sample, 'sample'):
+
+        if not isinstance(sample, ElmStore):
             raise ValueError('Expected the return value of {} to be an '
                              'elm.readers:ElmStore'.format(func))
 
-
+        logger.debug('Shapes {}'.format(tuple(getattr(sample, b).values.shape for b in sample.data_vars)))
     return (sample, sample_y, sample_weight)
 
 
@@ -264,14 +264,12 @@ def check_array(arr, msg, **kwargs):
         raise ValueError('check_array ({}) failed with {}'.format(msg, repr(e)))
 
 def final_on_sample_step(fitter,
-                         model, s,
+                         model, X,
                          iter_offset,
                          fit_kwargs,
                          sample_y=None,
                          sample_weight=None,
-                         classes=None,
-                         flatten=False,
-                         flatten_y=False,
+                         classes=None
                       ):
     '''This is the final function called on a sample_pipeline
     or a simple sample that is input to training.  It ensures
@@ -282,9 +280,9 @@ def final_on_sample_step(fitter,
     Params:
        fitter:  a model attribute like "fit" or "partial_fit"
        model:   a sklearn model like MiniBatchKmeans()
-       s:       an ElmStore or xarray.Dataset with 'sample' DataArray
+       X:       an ElmStore or xarray.Dataset with 'flat' DataArray
        fit_kwargs: kwargs to fit_func from config
-       sample_y: numpy array (same row count as s) or None
+       Y: numpy array (same row count as s) or None
        sample_weight: numpy array (same row count as s) or None
        classes:  if using classification, all possible classes as iterable
                  or array of integers
@@ -292,13 +290,8 @@ def final_on_sample_step(fitter,
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
+    Y = sample_y
 
-    if flatten:
-        X = _flatten(s)
-    if flatten_y:
-        Y = _flatten(sample_y)
-    else:
-        Y = sample_y
     if sample_weight is not None:
         fit_kwargs['sample_weight'] = sample_weight
     if 'iter_offset' in kwargs:

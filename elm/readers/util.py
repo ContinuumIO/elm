@@ -155,7 +155,6 @@ def _add_canvases(es):
     canvas_hashes = set()
 
     for band in es.data_vars:
-        #print('add canvas to ', band)
         if band == 'flat':
             continue
         band_arr = getattr(es, band)
@@ -199,7 +198,6 @@ def _add_canvases(es):
             ('tbounds', tbounds),
             ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
         )))
-        #print('canvas', band_arr.attrs['canvas'])
         canvas_hashes.add(hash((tuple(x) if isinstance(x, Sequence) else x)
                                      for x in band_arr.attrs['canvas']))
 
@@ -207,7 +205,6 @@ def _add_canvases(es):
         es.attrs['canvas'] = band_arr.canvas
         logger.info('Bands share coordinates')
         es.attrs['bounds'] = band_arr.canvas.bounds
-    #print('esattrs',es.attrs)
 
 def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='F'):
     return Canvas(**OrderedDict((

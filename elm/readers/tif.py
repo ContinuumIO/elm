@@ -96,7 +96,6 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
     elm_store_dict = OrderedDict()
     meta['band_order'] = []
     for idx, filename, band_name in band_order_info:
-        print(idx, filename, band_name)
         band_meta = copy.deepcopy({k: v for k, v in meta.items()
                                    if k not in ('band_order_info', 'band_order')})
         handle, raster = open_prefilter(filename)

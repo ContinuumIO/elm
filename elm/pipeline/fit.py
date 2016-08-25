@@ -62,9 +62,9 @@ def fit(model,
                                                     iter_offset,
                                                     fit_kwargs,
                                                     classes=classes, # TODO these need to be passed in some cases
-                                                    flatten=True,
                                                     sample_y=sample_y,
                                                     sample_weight=sample_weight)
+        logger.debug('fit_args {} fit_kwargs {}'.format(fit_args, fit_kwargs))
         out = fitter(*fit_args, **fit_kwargs)
         if out is not None: # allow fitter func to modify in place
                             # or return a fitted model

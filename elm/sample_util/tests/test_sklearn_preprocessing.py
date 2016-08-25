@@ -45,24 +45,26 @@ def test_func_scaler():
     es2 = es.copy()
     values = es.flat.values.copy()
     values[values <= 0] = 0.0001
-    sp = [{'sample_pipeline': 'log10'}]
+    sp = [{'sample_pipeline': 'log10'},{'flatten': True}]
     log10_changed = tst_one_sample_pipeline(sp, es, tag='test_func_scaler')
     assert np.all(log10_changed.flat.values == np.log10(values))
-    sp2 = [{'sklearn_preprocessing': 'require_positive'},
-           {'sklearn_preprocessing': 'log10'},]
+    sp2 = [{'flatten': True},
+           {'sklearn_preprocessing': 'require_positive'},
+           {'sklearn_preprocessing': 'log10'},
+           ]
     log10_changed2 = tst_one_sample_pipeline(sp2, es2, tag='test_func_scaler2')
     assert np.all(log10_changed2.flat.values == log10_changed.flat.values)
 
 def test_standard_scaler_and_interactions():
     es = random_elm_store(BANDS)
     es.flat.values = np.random.lognormal(100, 1, np.prod(es.flat.shape)).reshape(es.flat.shape)
-    sp = [{'sample_pipeline': 'standardize_log10'}]
+    sp = [{'flatten': True},{'sample_pipeline': 'standardize_log10'}]
     scaled = tst_one_sample_pipeline(sp, es, tag='test_standard_scaler_and_interactions')
     mean = np.mean(scaled.flat.values)
     assert mean < 0.1 and mean > -0.1
     std = np.std(scaled.flat.values)
     assert std > 0.9 and std < 1.1
-    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
+    sp = [{'flatten': True},{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
     scaled2 = tst_one_sample_pipeline(sp, es)
     assert scaled2.flat.shape[1] > es.flat.shape[1]
 
@@ -70,6 +72,7 @@ def test_standard_scaler_and_interactions():
 def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [
+          {'flatten': True},
           {'get_y': True},
           {'sample_pipeline': 'standardize_log10_var_top_80_inter'},
     ]

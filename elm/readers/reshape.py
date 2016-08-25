@@ -33,7 +33,6 @@ if os.environ.get('DEFAULT_INTERPOLATOR'):
 def select_canvas_elm_store(es, new_canvas):
     assert not es.is_flat()
     es_new_dict = OrderedDict()
-    print(new_canvas)
     for band in es.data_vars:
         data_arr = getattr(es, band)
         if all(c1 == c2 for c1, c2 in zip(data_arr.canvas, new_canvas)):
@@ -42,7 +41,6 @@ def select_canvas_elm_store(es, new_canvas):
         else:
             new_coords = canvas_to_coords(new_canvas)
             old_coords = canvas_to_coords(data_arr.canvas)
-            print(new_canvas, data_arr.canvas)
             old_dims = data_arr.canvas.dims
             new_dims = new_canvas.dims
             shp_order = []
@@ -106,7 +104,6 @@ def flatten(es, ravel_order='F'):
     '''
     if es.is_flat():
         return es
-    print(dir(es))
     if not es.get_shared_canvas():
         raise ValueError('es.select_canvas should be called before flatten when, as in this case, the bands do not all have the same Canvas')
     store = None
