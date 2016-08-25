@@ -91,6 +91,10 @@ def example_get_y_func_binary(flat_sample):
     med = np.median(col_means)
     ret = np.zeros(col_means.shape, dtype=np.float32)
     ret[col_means > med] = 1
+    inds = np.arange(col_means.size)
+    np.random.shuffle(inds)
+    ret[inds[:3]] = 1
+    ret[inds[-3:]] = 0
     return ret
 
 

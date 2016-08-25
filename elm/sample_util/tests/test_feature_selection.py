@@ -47,7 +47,7 @@ for k in set(SELECTORS):
 def sample(ncols):
     bands = ['band_{}'.format(idx + 1) for idx in range(ncols)]
 
-    es = random_elm_store(bands, height=10, width=10)
+    es = random_elm_store(bands, height=10, width=10).flatten()
     nrows = es.flat.values.shape[0]
     samp_y = np.ones(es.flat.space.size)
     samp_y[:samp_y.size // 2] = 0

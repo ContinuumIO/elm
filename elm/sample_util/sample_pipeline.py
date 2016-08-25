@@ -315,12 +315,7 @@ def final_on_sample_step(fitter,
         check_array(sample_weight, 'final_on_sample_step - sample_weight')
     if 'classes' in kwargs:
         if classes is None:
-            # TODO test that classes (the integer classes known
-            # ahead of time) can be specified in the config
-            # rather than just np.unique
-            # if it happens that a given sample does not have
-            # all classes represented, then the np.unique is wrong
-            classes = np.unique(Y)
+            raise ValueError('With model {} expected "classes" (unique classes int\'s) to be passed in config\'s "train" or "transform" dictionary')
         fit_kwargs['classes'] = classes
     if 'batch_size' in model.get_params():
         logger.debug('set batch_size {}'.format(X.flat.values.shape[0]))

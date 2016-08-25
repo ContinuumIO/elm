@@ -1,8 +1,10 @@
 from __future__ import print_function
-import xarray as xr
 
-import netCDF4 as nc
+import logging
+
 from affine import Affine
+import netCDF4 as nc
+import xarray as xr
 
 from elm.readers.util import (geotransform_to_bounds, add_es_meta,
                               VALID_X_NAMES, VALID_Y_NAMES)
@@ -10,6 +12,8 @@ from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
 
 __all__ = ['load_netcdf_meta', 'load_netcdf_array']
+
+logger = logging.getLogger(__name__)
 
 def _nc_str_to_dict(nc_str):
     str_list = [g.split('=') for g in nc_str.split(';\n')]
@@ -124,6 +128,7 @@ def load_netcdf_array(datafile, meta, variables):
     -------
     ElmStore xarray.Dataset
     '''
+    logger.debug('load_netcdf_array: {}'.format(datafile))
     ds = xr.open_dataset(datafile)
 
     if isinstance(variables, dict):

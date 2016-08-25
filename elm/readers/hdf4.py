@@ -1,6 +1,7 @@
 from collections import OrderedDict
 import copy
 import gc
+import logging
 
 import gdal
 from gdalconst import GA_ReadOnly
@@ -18,6 +19,8 @@ __all__ = [
     'load_hdf4_meta',
     'load_hdf4_array',
 ]
+
+logger = logging.getLogger(__name__)
 
 def load_hdf4_meta(datafile):
     f = gdal.Open(datafile, GA_ReadOnly)
@@ -40,8 +43,10 @@ def load_hdf4_meta(datafile):
 
 
 def load_hdf4_array(datafile, meta, band_specs=None):
+
     from elm.readers import ElmStore
     from elm.sample_util.band_selection import match_meta
+    logger.debug('load_hdf4_array: {}'.format(datafile))
     f = gdal.Open(datafile, GA_ReadOnly)
 
     sds = meta['sub_datasets']

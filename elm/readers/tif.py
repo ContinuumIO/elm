@@ -85,6 +85,7 @@ def open_prefilter(filename):
         raise
 
 def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
+    logger.debug('load_dir_of_tifs_array: {}'.format(dir_of_tiffs))
     band_order_info = meta['band_order_info']
     tifs = ls_tif_files(dir_of_tiffs)
     logger.info('Load tif files from {}'.format(dir_of_tiffs))
