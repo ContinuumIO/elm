@@ -6,14 +6,11 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.sample_util.sample_pipeline import check_array
-from elm.readers import (data_arrays_as_columns,
-                                       ElmStore,
-                                       flatten,
-                                       inverse_flatten)
+from elm.readers import *
 from elm.model_selection.util import get_args_kwargs_defaults
 
 
-@data_arrays_as_columns
+
 def feature_selection_base(sample_x,
                           selection_dict,
                           sample_y=None,
@@ -71,7 +68,7 @@ def feature_selection_base(sample_x,
 
     selection.fit(subset.values, y=sample_y)
     ml_columns = selection.get_support(indices=True)
-    sample_x_dropped_bands =  ElmStore({'sample': xr.DataArray(sample_x.flat[:, band_idx[ml_columns]].copy(),
+    sample_x_dropped_bands =  ElmStore({'flat': xr.DataArray(sample_x.flat[:, band_idx[ml_columns]].copy(),
                                               coords=[('space', sample_x.flat.space),
                                                       ('band', sample_x.flat.band[band_idx[ml_columns]])],
                                               dims=('space','band'),
