@@ -157,6 +157,7 @@ def tst_sklearn_method(model_init_class,
                 kwargs['model_scoring'] = 'accuracy_score_cv'
                 kwargs['model_selection'] = 'select_top_n'
                 kwargs['model_selection_kwargs'] = {'top_n': 1}
+                kwargs['classes'] = [0, 1]
                 if 'LogisticRegression' in model_init_class:
                     kwargs['model_scoring'] = kwargs['model_selection'] = None
             else:

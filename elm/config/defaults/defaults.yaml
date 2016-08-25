@@ -21,6 +21,7 @@ data_sources: {
   [long_name, "Band 5 ", band_5],
   [long_name, "Band 7 ", band_7],
   [long_name, "Band 8 ", band_8],
+  [long_name, "Band 9 ", band_9],
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
   sample_args_generator: iter_files_recursively,

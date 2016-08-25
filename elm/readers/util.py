@@ -9,7 +9,8 @@ import scipy.interpolate as spi
 
 __all__ = ['Canvas', 'CANVAS_FIELDS', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
-           'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES']
+           'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
+           'xy_canvas']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -179,11 +180,13 @@ def _add_canvases(es):
             tbounds = [np.min(t), np.max(t)]
         else:
             tsize = tbounds = None
-        canvas = getattr(band_arr, 'canvas', None)
+        canvas = getattr(band_arr, 'canvas', getattr(es, 'canvas', None))
         if canvas is not None:
             geo_transform = canvas.geo_transform
         else:
-            geo_transform = getattr(band_arr, 'geo_transform', getattr(es, 'geo_transform'))
+            geo_transform = band_arr.attrs.get('geo_transform', None)
+            if geo_transform is None:
+                geo_transform = getattr(band_arr, 'geo_transform', getattr(es, 'geo_transform'))
         band_arr.attrs['canvas'] = Canvas(**OrderedDict((
             ('geo_transform', geo_transform),
             ('ysize', ysize),
@@ -206,3 +209,16 @@ def _add_canvases(es):
         es.attrs['bounds'] = band_arr.canvas.bounds
     #print('esattrs',es.attrs)
 
+def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='F'):
+    return Canvas(**OrderedDict((
+        ('geo_transform', geo_transform),
+        ('ysize', ysize),
+        ('xsize', xsize),
+        ('zsize', None),
+        ('tsize', None),
+        ('dims', dims),
+        ('ravel_order', ravel_order),
+        ('zbounds', None),
+        ('tbounds', None),
+        ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
+    )))

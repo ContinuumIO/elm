@@ -29,6 +29,7 @@ def fit(model,
         get_weight_kwargs=None,
         batches_per_gen=None,
         fit_kwargs=None,
+        classes=None,
         scoring=None,
         scoring_kwargs=None,
         transform_model=None,
@@ -60,7 +61,7 @@ def fit(model,
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
-                                                    classes=None, # TODO these need to be passed in some cases
+                                                    classes=classes, # TODO these need to be passed in some cases
                                                     flatten=True,
                                                     sample_y=sample_y,
                                                     sample_weight=sample_weight)

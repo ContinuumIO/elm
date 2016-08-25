@@ -31,7 +31,7 @@ if os.environ.get('DEFAULT_INTERPOLATOR'):
 
 
 def select_canvas_elm_store(es, new_canvas):
-    assert not es.is_flat
+    assert not es.is_flat()
     es_new_dict = OrderedDict()
     print(new_canvas)
     for band in es.data_vars:
@@ -83,7 +83,7 @@ def select_canvas_elm_store(es, new_canvas):
 
 
 def drop_na_rows(flat):
-    assert flat.is_flat
+    assert flat.is_flat()
     flat_dropped = flat.flat.dropna(dim='space')
     flat_dropped.attrs.update(flat.attrs)
     flat_dropped.attrs['drop_na_rows'] = flat.flat.values.shape[0] - flat_dropped.shape[0]
@@ -104,12 +104,15 @@ def flatten(es, ravel_order='F'):
     Returns:
         elm_store:  2-d ElmStore (space, band)
     '''
+    if es.is_flat():
+        return es
+    print(dir(es))
+    if not es.get_shared_canvas():
+        raise ValueError('es.select_canvas should be called before flatten when, as in this case, the bands do not all have the same Canvas')
     store = None
     band_names = [band for idx, band in enumerate(es.band_order)]
     old_canvases = []
     old_dims = []
-    if es.is_flat:
-        return es
     for idx, band in enumerate(band_names):
         data_arr = getattr(es, band, None)
         if data_arr is None:
@@ -130,6 +133,7 @@ def flatten(es, ravel_order='F'):
             new_values = data_arr.values.ravel(order=ravel_order)
         store[:, idx] = new_values
     attrs = {}
+    attrs['canvas'] = es.get_shared_canvas()
     attrs['old_canvases'] = old_canvases
     attrs['old_dims'] = old_dims
     attrs['flatten_data_array'] = True
@@ -197,6 +201,7 @@ def inverse_flatten(flat, **attrs):
     band_list = list(flat.flat.band_order)
     old_dims = tuple(c.dims for c in old_canvases)
     es_new_dict = OrderedDict()
+    attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
     zipped = zip(old_canvases, old_dims, band_list)
     for idx, (old_canvas, dims, band) in enumerate(zipped):
         new_arr = flat.flat.values[:, idx]

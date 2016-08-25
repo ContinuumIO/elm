@@ -44,8 +44,7 @@ def test_read_meta():
         heights_names = [(m['height'], m['name']) for m in band_meta]
         # band 8 is panchromatic with 15 m resolution
         # other bands have 30 m resolution.  They
-        # have the same bounds, so band 8 has 2 times
-        # the pixel height, width
+        # have the same bounds, so band 8 has 4 times as many pixels
         heights_names.sort(key=lambda x:x[0])
         assert heights_names[-1][-1].endswith('_B8.TIF')
 

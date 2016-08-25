@@ -34,7 +34,7 @@ def _setup(ftype, fnames_list):
     es = load_array(fname, meta, bs)
     return es
 
-
+@pytest.mark.slow
 @pytest.mark.parametrize('ftype,fnames_list', sorted(FILES.items()))
 def test_reshape(ftype, fnames_list):
     old_shapes = {}
@@ -46,8 +46,6 @@ def test_reshape(ftype, fnames_list):
             assert hasattr(band_arr, 'canvas')
             assert hasattr(band_arr, 'geo_transform')
             assert hasattr(band_arr.canvas, 'xsize')
-            assert hasattr(band_arr, 'width')
-            assert hasattr(band_arr, 'height')
             assert hasattr(band_arr, 'y')
             assert hasattr(band_arr, 'x')
             assert hasattr(band_arr.canvas, 'bounds')
@@ -61,7 +59,6 @@ def test_reshape(ftype, fnames_list):
         assert hasattr(flat, 'flat')
         assert hasattr(flat, 'old_canvases')
         assert hasattr(flat.flat, 'old_canvases')
-        assert hasattr(flat, 'geo_transform')
         assert hasattr(flat, 'band_order')
         assert hasattr(flat, 'old_dims')
         assert hasattr(flat.old_canvases[0], 'bounds')
@@ -76,7 +73,12 @@ def test_reshape(ftype, fnames_list):
     filled = filled_flattened(na_dropped)
     assert hasattr(filled, 'flat')
     assert filled.flat.values.shape == flat.flat.values.shape
-    es_new = inverse_flatten(filled)
+    canvas = es.get_shared_canvas()
+    if canvas is None:
+        for band in es_new.band_vars:
+            canvas = getattr(es_new, band).canvas
+            break
+    es_new = inverse_flatten(es.select_canvas(canvas).flatten())
     assert hasattr(es_new, 'band_order')
     assert not hasattr(es_new, 'flat')
     for cv, dims, band in zip(old_canvases, old_dims, es_new.band_order):
@@ -84,7 +86,7 @@ def test_reshape(ftype, fnames_list):
         assert band_arr.canvas == cv
         assert band_arr.dims == dims
         assert hasattr(band_arr, 'canvas')
-        assert hasattr(band_arr, 'geo_transform')
+        assert hasattr(band_arr.canvas, 'geo_transform')
         assert hasattr(band_arr.canvas, 'bounds')
         if band in old_shapes:
             assert old_shapes[band] == band_arr.values.shape

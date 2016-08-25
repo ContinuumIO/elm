@@ -20,8 +20,7 @@ import elm.sample_util.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
-from elm.readers import (data_arrays_as_columns,
-                                       ElmStore)
+from elm.readers import *
 from elm.readers.util import add_es_meta
 from elm.scripts.main import main as elm_main
 
@@ -142,35 +141,28 @@ def test_one_config(config=None, cwd=None):
 
 
 def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
-    bands = bands or ['band_{}'.format(idx + 1) for idx in range(width)]
+    bands = bands or ['band_{}'.format(idx + 1) for idx in range(3)]
     if isinstance(bands, int):
         bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
-    val = np.random.uniform(mn,
+    get_val = lambda: np.random.uniform(mn,
                             mx,
-                            width * height * len(bands)).reshape((height * width,len(bands)))
+                            width * height).reshape((height, width))
     attrs = {'width': width,
              'height': height,
-             'geo_transform': GEO}
-    if kwargs.get('flat'):
-        return ElmStore({'flat': xr.DataArray(val,
-                    coords=[('space', np.arange(width * height)),
-                            ('band', bands)],
-                    dims=['space', 'band'],
-                    attrs=attrs)},
-                attrs=attrs)
-    else:
-        es_dict = OrderedDict()
-        for idx, band in enumerate(bands):
-            es_dict[band] = xr.DataArray(val[:, idx].reshape(height, width),
-                                         coords=[('y', np.arange(height)),
-                                                 ('x', np.arange(width))],
-                                         dims=('y', 'x'),
-                                         attrs=attrs)
-        attrs['band_order'] = bands
-    return ElmStore(es_dict, attrs)
+             'geo_transform': GEO,
+             'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
+    es_dict = OrderedDict()
+    for idx, band in enumerate(bands):
+        es_dict[band] = xr.DataArray(get_val(),
+                                     coords=[('y', np.arange(height)),
+                                             ('x', np.arange(width))],
+                                     dims=('y', 'x'),
+                                     attrs=attrs)
+    attrs['band_order'] = bands
+    return ElmStore(es_dict, attrs=attrs)
 
 
 def make_blobs_elm_store(**make_blobs_kwargs):
