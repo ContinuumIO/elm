@@ -174,7 +174,6 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
         kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
         generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
-                                            no_file_open=False,
                                             **kw)
         sampler_kwargs['generated_args'] = generated_args
     sampler_kwargs.update(selection_kwargs)
