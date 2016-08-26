@@ -20,7 +20,8 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
 
     if not run_it:
         for item in config['pipeline']:
-            item['sample_pipeline'] += sample_pipeline
+            tsteps = [s for s in item['sample_pipeline'] if 'transform' in s]
+            item['sample_pipeline'] = sample_pipeline + tsteps
         step = config['pipeline'][0]
         config = ConfigParser(config=config)
         transform_name = [s for s in config.pipeline if 'transform' in step][0]['transform']
@@ -41,14 +42,14 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
             assert len(os.listdir(predict_path))
 
 def test_func_scaler():
-    es = random_elm_store(BANDS)
+    es = random_elm_store(BANDS).flatten()
     es2 = es.copy()
     values = es.flat.values.copy()
     values[values <= 0] = 0.0001
-    sp = [{'sample_pipeline': 'log10'},{'flatten': True}]
+    sp = [{'sample_pipeline': 'log10'},{'flatten': 'C'}]
     log10_changed = tst_one_sample_pipeline(sp, es, tag='test_func_scaler')
     assert np.all(log10_changed.flat.values == np.log10(values))
-    sp2 = [{'flatten': True},
+    sp2 = [{'flatten': 'C'},
            {'sklearn_preprocessing': 'require_positive'},
            {'sklearn_preprocessing': 'log10'},
            ]
@@ -56,15 +57,15 @@ def test_func_scaler():
     assert np.all(log10_changed2.flat.values == log10_changed.flat.values)
 
 def test_standard_scaler_and_interactions():
-    es = random_elm_store(BANDS)
+    es = random_elm_store(BANDS).flatten()
     es.flat.values = np.random.lognormal(100, 1, np.prod(es.flat.shape)).reshape(es.flat.shape)
-    sp = [{'flatten': True},{'sample_pipeline': 'standardize_log10'}]
+    sp = [{'flatten': 'C'},{'sample_pipeline': 'standardize_log10'}]
     scaled = tst_one_sample_pipeline(sp, es, tag='test_standard_scaler_and_interactions')
     mean = np.mean(scaled.flat.values)
     assert mean < 0.1 and mean > -0.1
     std = np.std(scaled.flat.values)
     assert std > 0.9 and std < 1.1
-    sp = [{'flatten': True},{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
+    sp = [{'flatten': 'C'},{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
     scaled2 = tst_one_sample_pipeline(sp, es)
     assert scaled2.flat.shape[1] > es.flat.shape[1]
 
@@ -72,7 +73,7 @@ def test_standard_scaler_and_interactions():
 def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [
-          {'flatten': True},
+          {'flatten': 'C'},
           {'get_y': True},
           {'sample_pipeline': 'standardize_log10_var_top_80_inter'},
     ]

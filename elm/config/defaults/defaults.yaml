@@ -234,7 +234,7 @@ sample_pipelines: {
   ],
   flatten_example: [
     {select_canvas: band_1},
-    {flatten: 'F'},
+    {flatten: 'C'},
     {drop_na_rows: True},
   ],
 }

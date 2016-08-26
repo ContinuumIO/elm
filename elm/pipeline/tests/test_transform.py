@@ -12,7 +12,7 @@ from elm.pipeline.tests.util import (tmp_dirs_context,
                                      test_one_config as tst_one_config)
 from elm.model_selection import DECOMP_MODEL_STR
 
-flatten = {'flatten': 'F'}
+flatten = {'flatten': 'C'}
 def tst_once(tag, config):
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         out = tst_one_config(config=config, cwd=cwd)

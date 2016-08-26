@@ -193,7 +193,7 @@ def _add_canvases(es):
             ('zsize', zsize),
             ('tsize', tsize),
             ('dims', band_arr.dims),
-            ('ravel_order',getattr(es, 'ravel_order', 'F')),
+            ('ravel_order',getattr(es, 'ravel_order', 'C')),
             ('zbounds', zbounds),
             ('tbounds', tbounds),
             ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),

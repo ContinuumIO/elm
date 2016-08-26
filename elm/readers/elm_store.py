@@ -28,7 +28,7 @@ class ElmStore(xr.Dataset):
         assert self.is_flat()
         return drop_na_rows(self)
 
-    def flatten(self, ravel_order='F'):
+    def flatten(self, ravel_order='C'):
         from elm.readers.reshape import flatten
         flat = flatten(self, ravel_order=ravel_order)
         assert flat.is_flat()

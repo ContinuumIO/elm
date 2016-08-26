@@ -72,7 +72,7 @@ def drop_na_rows(flat):
     return no_na
 
 
-def flatten(es, ravel_order='F'):
+def flatten(es, ravel_order='C'):
     '''Given an ElmStore with dims (band, y, x) return ElmStore
     with shape (space, band) where space is a flattening of x,y
 
@@ -180,6 +180,8 @@ def inverse_flatten(flat, **attrs):
     attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
     zipped = zip(old_canvases, old_dims, band_list)
     for idx, (old_canvas, dims, band) in enumerate(zipped):
+        if idx >= flat.flat.values.shape[1]:
+            break
         new_arr = flat.flat.values[:, idx]
         new_coords = canvas_to_coords(old_canvas)
         shp = tuple(new_coords[k].size for k in dims)
