@@ -20,8 +20,8 @@ from elm.pipeline.serialize import (predict_to_netcdf,
                                     predict_file_name)
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.readers import (flatten,
-                                       inverse_flatten,
-                                       ElmStore,)
+                         inverse_flatten,
+                         ElmStore,)
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ def _predict_one_sample(action_data, serialize, model,
                                      attrs=attrs)},
                              attrs=attrs)
     if to_cube:
-        new_es = inverse_flatten(prediction)
+        new_es = inverse_flatten(prediction, canvas.dims)
     else:
         new_es = prediction
     if return_serialized:

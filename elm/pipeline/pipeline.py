@@ -4,7 +4,6 @@ from elm.model_selection.evolve import ea_setup
 from elm.pipeline.train import train_step
 from elm.pipeline.predict import predict_step
 from elm.pipeline.transform import transform_pipeline_step
-from elm.pipeline.download_data_sources import download_data_sources_step
 from elm.pipeline.util import get_transform_name_for_sample_pipeline
 
 def on_step(*args, **kwargs):

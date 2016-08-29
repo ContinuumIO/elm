@@ -87,10 +87,11 @@ def raster_as_2d(raster):
 
 
 def canvas_to_coords(canvas):
-    x, y = geotransform_to_coords(canvas.xsize, canvas.ysize,
-                                          canvas.geo_transform)
     dims = canvas.dims
+    x, y = geotransform_to_coords(canvas.xsize, canvas.ysize,
+                                  canvas.geo_transform)
     dims2 = []
+    label_y, label_x = 'y', 'x'
     for d in dims:
         if d.lower() in VALID_X_NAMES:
             label_x = d
@@ -115,8 +116,8 @@ def canvas_to_coords(canvas):
         raise ValueError()
     coords += [('z', z), ('t', t)]
     coords = dict(coords)
-    coords = dict((d, coords[d]) for d in dims)
-
+    coords = OrderedDict((d, coords[d]) for d in dims)
+    print(coords)
     if any(coords[d] is None for d in dims):
         raise ValueError('coords.keys(): {} is not '
                          'inclusive of all dims'.format(coords.keys(), dims))
@@ -131,22 +132,24 @@ def add_es_meta(es):
 
 
 def _extract_valid_xy(band_arr):
-    x = None
+    x = xname = None
     for name in VALID_X_NAMES:
         x = getattr(band_arr, name, getattr(band_arr, name.lower(), None))
         if x is not None:
             break
-    if x is None:
-        raise ValueError('Band DataArray does not have an X dimension with a name in {}'.format(VALID_X_NAMES))
-    xname = name
-    y = None
+    #if x is None:
+     #   raise ValueError('Band DataArray does not have an X dimension with a name in {}'.format(VALID_X_NAMES))
+    if x is not None:
+        xname = name
+    y = yname = None
     for name in VALID_Y_NAMES:
         y = getattr(band_arr, name, None)
         if y is not None:
             break
-    if y is None:
-        raise ValueError('Band DataArray does not have an Y dimension with a name in {}'.format(VALID_Y_NAMES))
-    yname = name
+    #if y is None:
+     #   raise ValueError('Band DataArray does not have an Y dimension with a name in {}'.format(VALID_Y_NAMES))
+    if y is not None:
+        yname = name
     return x, name, y, yname
 
 
@@ -206,7 +209,7 @@ def _add_canvases(es):
         logger.info('Bands share coordinates')
         es.attrs['bounds'] = band_arr.canvas.bounds
 
-def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='F'):
+def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='C'):
     return Canvas(**OrderedDict((
         ('geo_transform', geo_transform),
         ('ysize', ysize),

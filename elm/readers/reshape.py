@@ -12,10 +12,12 @@ import scipy.interpolate as spi
 import xarray as xr
 
 from elm.config import import_callable
-from elm.readers.elm_store import ElmStore
-from elm.readers.util import canvas_to_coords
+from elm.readers import ElmStore, Canvas
+from elm.readers.util import canvas_to_coords, VALID_X_NAMES, VALID_Y_NAMES
 
 logger = logging.getLogger(__name__)
+
+AGG_METHODS = tuple('all any argmax argmin max mean median min prod sum std var'.split())
 
 __all__ = ['select_canvas_elm_store',
            'drop_na_rows',
@@ -23,11 +25,39 @@ __all__ = ['select_canvas_elm_store',
            'filled_flattened',
            'check_is_flat',
            'inverse_flatten',
+           'aggregate_simple',
+           'transpose',
            ]
 
-DEFAULT_INTERPOLATOR = import_callable('scipy.interpolate.interpnd:LinearNDInterpolator')
-if os.environ.get('DEFAULT_INTERPOLATOR'):
-    DEFAULT_INTERPOLATOR = import_callable(os.environ['DEFAULT_INTERPOLATOR'])
+def transpose(es, new_dims):
+    trans = OrderedDict()
+    for band in es.data_vars:
+        data_arr = getattr(es, band)
+        if not len(set(new_dims) & set(data_arr.dims)) == len(new_dims):
+            raise ValueError('At least one of new_dims is not an existing dim (new_dims {}, existing {})'.format(new_dims, data_arr.dims))
+        trans[band] = data_arr.transpose(*new_dims)
+        canvas = trans[band].canvas._asdict()
+        canvas['dims'] = new_dims
+        trans[band].attrs['canvas'] = Canvas(**canvas)
+    return ElmStore(trans, attrs=es.attrs)
+
+
+def aggregate_simple(es, **kwargs):
+    func = kwargs['func']
+    if not func in AGG_METHODS:
+        raise ValueError('Expected an agg "func" among: {}'.format(AGG_METHODS))
+
+    kw = {k: v for k, v in kwargs.items()
+          if k not in ('func',)}
+    dim = kwargs.get('dim')
+    axis = kwargs.get('axis')
+    if isinstance(axis, int) and dim or (not isinstance(axis, int) and not dim):
+        raise ValueError('kwargs given to aggregate_simple must include *one* of "dim" or "axis"')
+    agged = OrderedDict()
+    for band in es.data_vars:
+        data_arr = getattr(es, band)
+        agged[band] = getattr(data_arr, func)(**kw)
+    return ElmStore(agged, attrs=es.attrs, add_canvas=False)
 
 
 def select_canvas_elm_store(es, new_canvas):
@@ -35,7 +65,7 @@ def select_canvas_elm_store(es, new_canvas):
     es_new_dict = OrderedDict()
     for band in es.data_vars:
         data_arr = getattr(es, band)
-        if all(c1 == c2 for c1, c2 in zip(data_arr.canvas, new_canvas)):
+        if data_arr.canvas == new_canvas:
             new_arr = data_arr
             attrs = data_arr.attrs
         else:
@@ -157,7 +187,7 @@ def check_is_flat(flat, raise_err=True):
     return True
 
 
-def inverse_flatten(flat, **attrs):
+def inverse_flatten(flat, new_dims, **attrs):
     '''Given an ElmStore that has been flattened to (space, band) dims,
     return a 3-d ElmStore with dims (band, y, x).  Requires that metadata
     about x,y dims were preserved when the 2-d input ElmStore was created
@@ -173,22 +203,21 @@ def inverse_flatten(flat, **attrs):
     attrs2 = copy.deepcopy(flat.attrs)
     attrs2.update(copy.deepcopy(attrs))
     attrs = attrs2
-    old_canvases = flat.old_canvases
     band_list = list(flat.flat.band_order)
-    old_dims = tuple(c.dims for c in old_canvases)
     es_new_dict = OrderedDict()
     attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
-    zipped = zip(old_canvases, old_dims, band_list)
-    for idx, (old_canvas, dims, band) in enumerate(zipped):
+    new_coords = canvas_to_coords(attrs['canvas'])
+    print('new_dims', new_dims)
+    for idx, band in enumerate(band_list):
         if idx >= flat.flat.values.shape[1]:
             break
         new_arr = flat.flat.values[:, idx]
-        new_coords = canvas_to_coords(old_canvas)
-        shp = tuple(new_coords[k].size for k in dims)
-        new_arr = new_arr.reshape(shp)
+        shp = tuple(new_coords[k].size for k in new_dims)
+        new_arr = new_arr.reshape(shp, order='C')
         data_arr = xr.DataArray(new_arr,
                                 coords=new_coords,
-                                dims=dims,
+                                dims=new_dims,
                                 attrs=attrs)
         es_new_dict[band] = data_arr
     return ElmStore(es_new_dict, attrs=attrs)
+

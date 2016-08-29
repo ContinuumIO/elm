@@ -133,19 +133,8 @@ def test_one_config(config=None, cwd=None):
     config_filename = os.path.join(cwd, 'config.yaml')
     with open(config_filename, 'w') as f:
         f.write(config_str)
-    env = copy.deepcopy(os.environ)
-    if 'ELM_LOGGING_LEVEL' in env:
-        old_val = env['ELM_LOGGING_LEVEL']
-    else:
-        old_val = None
-    env['ELM_LOGGING_LEVEL'] = 'DEBUG'
-    sys_argv = ['--config', config_filename, '--echo-config']
-    try:
-        ret_val = elm_main(sys_argv=sys_argv, return_0_if_ok=False)
-    finally:
-        if old_val is not None:
-            os.environ['ELM_LOGGING_LEVEL'] = old_val
-    return ret_val
+    sys_argv = ['--config', config_filename, '--echo-config', '--elm-logging-level', 'DEBUG']
+    return elm_main(sys_argv=sys_argv, return_0_if_ok=False)
 
 
 def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):

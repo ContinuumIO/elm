@@ -15,7 +15,6 @@ from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.acquire.ladsweb_meta import validate_ladsweb_data_source
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 
@@ -100,7 +99,8 @@ class ConfigParser(object):
         self.cmd_args = {} if not cmd_args else dict(vars(cmd_args))
         for k, v in self.cmd_args.items():
             if k not in ('config', 'raw_config', 'defaults'):
-                setattr(self, k, v)
+                if v:
+                    setattr(self, k.upper().replace('-', '_'), v)
 
     def _update_for_env(self):
         '''Update the config based on environment vars'''
@@ -597,8 +597,8 @@ class ConfigParser(object):
                                         'sample_pipelines:{} - {} ({})'.format(k, match, item[match]))
                             if match == 'flatten':
                                 self._validate_type(val, 'flatten:{}'.format(val), str)
-                                if not val in ('F', 'C'):
-                                    raise ElmConfigError('Expected flatten:{} to be a string "F" or "C" for flatten order'.format(val))
+                                if not val == 'C':
+                                    raise ElmConfigError('Expected flatten:{} to be "C" for flatten order (more options may be there over time)'.format(val))
                         elif not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
                             raise ElmConfigError('sample_pipeline item {0} is of type '
                                                  '{1} and refers to a key ({2}) that is not in '

@@ -46,20 +46,20 @@ feature_selection: {
 
 sample_pipelines: {
   minimal: [
-    {flatten: F},
+    {flatten: C},
     {sklearn_preprocessing: require_positive},
     {sklearn_preprocessing: log10},
     {sklearn_preprocessing: standard},
     {transform: pca, method: fit_transform},
   ],
   top_n: [
-    {flatten: F},
+    {flatten: C},
     {sample_pipeline: minimal},
     {feature_selection: top_n},
     {transform: pca, method: fit_transform},
 
   ],
-  nothing: [{flatten: F},],
+  nothing: [{flatten: C},],
 }
 
 param_grids: {

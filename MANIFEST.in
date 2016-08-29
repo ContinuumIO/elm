@@ -1,3 +1,4 @@
 include elm/config/defaults/*.yaml
 include elm/acquire/metadata/*
 include elm/examples/*.yaml
+include elm/example_configs/*.yaml

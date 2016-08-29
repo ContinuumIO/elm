@@ -1,7 +1,10 @@
 from collections import defaultdict
+import glob
 import os
 
 from elm.config.env import parse_env_vars
+
+EXAMPLE_CONFIGS = glob.glob(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'example_configs', '*.yaml'))
 
 env = parse_env_vars()
 

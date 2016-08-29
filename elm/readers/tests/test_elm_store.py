@@ -54,6 +54,9 @@ def test_reshape(ftype, fnames_list):
         assert hasattr(es, 'canvas')
         assert hasattr(es, 'geo_transform')
         assert hasattr(es, 'bounds')
+        for band in es.data_vars:
+            band_arr = getattr(es, band)
+            break
     flat = flatten(es)
     def assert_once(flat):
         assert hasattr(flat, 'flat')
@@ -78,16 +81,10 @@ def test_reshape(ftype, fnames_list):
         for band in es_new.band_vars:
             canvas = getattr(es_new, band).canvas
             break
-    es_new = inverse_flatten(es.select_canvas(canvas).flatten())
+    es_new = inverse_flatten(es.select_canvas(canvas).flatten(), band_arr.dims)
     assert hasattr(es_new, 'band_order')
-    assert not hasattr(es_new, 'flat')
     for cv, dims, band in zip(old_canvases, old_dims, es_new.band_order):
         band_arr = getattr(es_new, band)
-        assert band_arr.canvas == cv
-        assert band_arr.dims == dims
-        assert hasattr(band_arr, 'canvas')
-        assert hasattr(band_arr.canvas, 'geo_transform')
-        assert hasattr(band_arr.canvas, 'bounds')
         if band in old_shapes:
             assert old_shapes[band] == band_arr.values.shape
 
@@ -97,6 +94,7 @@ def test_elm_store_methods(ftype, fnames_list):
     es = _setup(ftype, fnames_list)
     bands = tuple(es.data_vars)
     assert bands == tuple(es.band_order)
+    old_band_arr = getattr(es, bands[0])
     flat = es.flatten()
     assert hasattr(flat, 'flat')
     assert len(flat.flat.values.shape) == 2
@@ -106,7 +104,8 @@ def test_elm_store_methods(ftype, fnames_list):
     na_dropped = flat.drop_na_rows()
     assert hasattr(na_dropped, 'flat')
     assert na_dropped.flat.values.shape[0] == flat.flat.values.shape[0] - 3
-    es_new = na_dropped.inverse_flatten()
+
+    es_new = na_dropped.inverse_flatten(old_band_arr.dims)
     assert tuple(es_new.band_order) == bands
     assert tuple(es_new.data_vars) == bands
     for band in es_new.data_vars:
@@ -135,11 +134,11 @@ def test_canvas_select(ftype, fnames_list):
     new_canvas = Canvas(**canvas_dict)
     sel2 = es.select_canvas(new_canvas)
     for band2 in sel2.data_vars:
-        band_arr2 = getattr(sel2, band)
+        band_arr2 = getattr(sel2, band2)
         xidx = [idx for idx, x in enumerate(band_arr2.dims)
-                if any(v in x.lower() for v in VALID_X_NAMES)][0]
+                if x.lower() in VALID_X_NAMES][0]
         yidx = [idx for idx, y in enumerate(band_arr2.dims)
-                if any(v in y.lower() for v in VALID_Y_NAMES)][0]
+                if y.lower() in VALID_Y_NAMES][0]
         assert band_arr2.values.shape[xidx] == band_arr.values.shape[xidx] // 2
         assert band_arr2.values.shape[yidx] == band_arr.values.shape[yidx] // 4
         break

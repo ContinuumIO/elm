@@ -1,4 +1,6 @@
-from elm.config import ElmConfigError
+import numpy as np
+
+from elm.config import ElmConfigError, import_callable
 from elm.readers import (select_canvas_elm_store,
                          drop_na_rows as _drop_na_rows,
                          ElmStore,
@@ -10,21 +12,23 @@ from elm.readers import (select_canvas_elm_store,
 select_canvas: example_canvas
 flatten: True # to [space, band] dims
 drop_na_rows: True
-inverse_flatten: True
-change_coords: "elm.sample_util.util:example_2d_agg"
+inverse_flatten: ['y', 'x']
+change_coords:
+modify_sample: {func: "elm.sample_util.util:example_2d_agg", kwargs: {}},
+transpose: {new_dims: ['x', 'y']},
+agg: {dim: y, func: "numpy:median"} # or axis in place of dim
 '''
-
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
     'flatten',
     'drop_na_rows',
     'inverse_flatten',
-    'change_coords',
+    'modify_coords',
+    'transpose',
+    'agg',
 )
 
-
-OK_DIMS = set(('y', 'x', 'z', 't'))
 
 
 def select_canvas(es, key, value, **kwargs):
@@ -38,32 +42,40 @@ def select_canvas(es, key, value, **kwargs):
 
 
 def flatten(es, key, value, **kwargs):
-    if not value in ('F', 'C'):
-        raise ElmConfigError('flatten order argument {} not in ("F", "C", None) - None defaults to "F"')
+    if value != 'C':
+        raise ElmConfigError('flatten order argument {} != "C"')
     flat_es = _flatten(es, ravel_order=value)
     return flat_es
 
 
 def drop_na_rows(es, key, value, **kwargs):
-    if not hasattr(es, 'flat'):
+    if not es.is_flat():
         raise ElmConfigError('"flatten" must be called before "drop_na_rows"')
     return _drop_na_rows(es)
 
 
 def inverse_flatten(es, key, value, **kwargs):
-    return _inverse_flatten(es)
+    return _inverse_flatten(es, value)
 
 
-def change_coords(es, key, value, **kwargs):
+def modify_coords(es, key, value, **kwargs):
     func = import_callable(value)
-    es = func(es, **kwargs)
-    return es
+    return func(es, **kwargs)
+
+
+def transpose(es, key, value, **kwargs):
+    return es._transpose(value)
+
+def agg(es, key, value, **kwargs):
+    return es.agg(**value)
+
 
 def _check_change_coords_action(config, step, sample_pipeline_step):
     matches = [k for k in sample_pipeline_step if k in CHANGE_COORDS_ACTIONS]
     if not matches or len(matches) > 1:
         raise ElmConfigError('A sample_pipeline step may have exactly 1 key among {}'.format(CHANGE_COORDS_ACTIONS))
     return matches[0]
+
 
 def change_coords_action(config, step, sample_pipeline_step):
     key = _check_change_coords_action(config, step, sample_pipeline_step)

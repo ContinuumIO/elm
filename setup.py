@@ -27,7 +27,9 @@ setup(name='elm',
                   ('elm.acquire',
                    glob.glob(os.path.join('elm', 'acquire', 'metadata', '*'))),
                   ('elm.config',
-                   glob.glob(os.path.join('elm', 'config', 'defaults', '*.yaml')))
+                   glob.glob(os.path.join('elm', 'config', 'defaults', '*.yaml'))),
+                  ('elm.example_data',
+                    glob.glob(os.path.join('elm', 'example_configs', '*.yaml'))),
                  ],
       entry_points={
         'console_scripts': [
