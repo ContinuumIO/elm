@@ -85,7 +85,7 @@ def tmp_dirs_context(tag):
 
 
 
-def example_get_y_func_binary(flat_sample):
+def example_get_y_func_binary(flat_sample, **kwargs):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.flat.values, axis=1)
     med = np.median(col_means)
@@ -98,7 +98,7 @@ def example_get_y_func_binary(flat_sample):
     return ret
 
 
-def example_get_y_func_continuous(flat_sample):
+def example_get_y_func_continuous(flat_sample, **kwargs):
     '''For use in testing supervised methods which need a get_y_func'''
     col_means = np.mean(flat_sample.flat.values, axis=1)
     inds = np.arange(col_means.size)

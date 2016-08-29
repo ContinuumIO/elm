@@ -55,7 +55,8 @@ def _update_elm_store_for_changes(es, new_array, new_names=None):
 
 def _filter_kwargs(**scaler_kwargs):
     return {k: v for k, v in scaler_kwargs.items()
-            if not k in ('new_names', 'func_kwargs', 'method',)}
+            if not k in ('new_names', 'func_kwargs', 'method',
+                         'sample_y', 'sample_weight')}
 
 def _scale_with_sklearn_pre_class(X, scaler, requires_classes=False, **scaler_kwargs):
     '''Use a class from sklearn.preprocessing'''

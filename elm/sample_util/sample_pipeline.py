@@ -50,6 +50,22 @@ def check_action_data(action_data):
     return True
 
 
+def _split_pipeline_output(output, sample, sample_y,
+                           sample_weight, context):
+    if not isinstance(output, (tuple, list)):
+        return output, sample_y, sample_weight
+    if len(output) == 1:
+        return output, sample_y, sample_weight
+    elif len(output) == 2:
+        return tuple(output) + (sample_weight,)
+    elif len(output) == 3:
+        return tuple(output)
+    else:
+        raise ValueError('{} sample_pipeline func returned '
+                         'more than 3 outputs in a '
+                         'tuple/list'.format(context))
+
+
 def run_sample_pipeline(action_data, sample=None, transform_model=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
@@ -69,18 +85,25 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         start_idx = 0
     for action in action_data[start_idx:]:
         sample_pipeline_step, func_str, args, kwargs = action
+        kwargs = kwargs.copy()
+        kwargs['sample_y'] = sample_y
+        kwargs['sample_weight'] = sample_weight
         logger.debug('On sample_pipeline step: {}'.format(sample_pipeline_step))
         if func_str.endswith('transform_sample_pipeline_step'):
             logger.debug('transform sample_pipeline step')
             samp_pipeline_step = args[0]
             args = tuple(args) + (transform_model,)
         func = import_callable(func_str, True, func_str)
+        func_out = None
         if sample is None:
             logger.debug('sample create sample_pipeline step')
             required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
             if not var_keyword:
                 kwargs = filter_kwargs_to_func(func, kwargs)
-            sample = func(*args, **kwargs)
+            output = func(*args, **kwargs)
+            sample, sample_y, sample_weight = _split_pipeline_output(output,
+                                               sample, sample_y,
+                                               sample_weight, repr(func))
         elif 'get_y' in args:
             logger.debug('get_y sample_pipeline step')
             sample_y = func(sample, **kwargs)
@@ -99,10 +122,13 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
             logger.debug('feature_selection sample_pipeline step')
             kw = copy.deepcopy(kwargs)
             kw['sample_y'] = sample_y
-            sample = func(sample, *args, **kw)
+            kw.pop('sample_weight')
+            func_out = func(sample, *args, **kw)
         else:
-            sample = func(sample, *args, **kwargs)
-
+            func_out = func(sample, *args, **kwargs)
+        if func_out is not None:
+            sample, sample_y, sample_weight = _split_pipeline_output(func_out, sample, sample_y,
+                                                   sample_weight, repr(func))
         if not isinstance(sample, ElmStore):
             raise ValueError('Expected the return value of {} to be an '
                              'elm.readers:ElmStore'.format(func))

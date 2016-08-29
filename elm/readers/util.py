@@ -117,7 +117,6 @@ def canvas_to_coords(canvas):
     coords += [('z', z), ('t', t)]
     coords = dict(coords)
     coords = OrderedDict((d, coords[d]) for d in dims)
-    print(coords)
     if any(coords[d] is None for d in dims):
         raise ValueError('coords.keys(): {} is not '
                          'inclusive of all dims'.format(coords.keys(), dims))

@@ -207,7 +207,6 @@ def inverse_flatten(flat, new_dims, **attrs):
     es_new_dict = OrderedDict()
     attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
     new_coords = canvas_to_coords(attrs['canvas'])
-    print('new_dims', new_dims)
     for idx, band in enumerate(band_list):
         if idx >= flat.flat.values.shape[1]:
             break

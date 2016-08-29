@@ -14,7 +14,8 @@ from elm.model_selection.util import get_args_kwargs_defaults
 def feature_selection_base(sample_x,
                           selection_dict,
                           sample_y=None,
-                          keep_columns=None):
+                          keep_columns=None,
+                          **kwargs):
     '''feature_selection_base returns indices of columns to keep
     Params:
         sample:  a data frame sample with column names used in the
