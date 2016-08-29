@@ -82,7 +82,6 @@ def test_transpose():
         if 'inv' in name:
             assert es.band_1.values.shape == new_es.band_1.values.shape
             diff = es.band_1.values - new_es.band_1.values
-            print(name)
             assert np.all(np.abs(diff) < 1e-5)
 
 
@@ -90,4 +89,26 @@ def test_modify_coords():
     modify = [{'flatten': 'C'}, {'modify_coords': 'elm.readers.reshape:inverse_flatten', 'new_dims': ['y', 'x']}]
     es, new_es = tst_one_sample_pipeline(modify)
     assert np.all(es.band_1.values == new_es.band_1.values)
+
+
+def test_agg_inverse_flatten():
+    for idx, dims in enumerate((['x', 'y'], ['y', 'x'])):
+        for agg_dim in ('x', 'y'):
+            agg = {'agg': {'dim': agg_dim, 'func': 'median'}}
+            sample_pipeline = [{'transpose': dims},
+                               {'flatten': 'C'},
+                               {'inverse_flatten': dims}]
+            es, new_es = tst_one_sample_pipeline(sample_pipeline)
+            if idx == 0:
+                assert new_es.band_1.shape == es.band_1.values.T.shape
+            es, new_es = tst_one_sample_pipeline(sample_pipeline + [agg])
+            x1, x2 = (getattr(s.band_1, 'x', None) for s in (es, new_es))
+            y1, y2 = (getattr(s.band_1, 'y', None) for s in (es, new_es))
+            if agg_dim == 'x':
+                assert x1 is not None and x2 is None
+                assert y1 is not None and y2 is not None
+            else:
+                assert y1 is not None and y2 is None
+                assert x1 is not None and x2 is not None
+
 
