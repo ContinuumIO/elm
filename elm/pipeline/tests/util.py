@@ -147,10 +147,13 @@ def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
     get_val = lambda: np.random.uniform(mn,
                             mx,
                             width * height).reshape((height, width))
-    attrs = {'width': width,
-             'height': height,
-             'geo_transform': GEO,
-             'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
+    if kwargs.get('attrs'):
+        attrs = kwargs['attrs']
+    else:
+        attrs = {'width': width,
+                 'height': height,
+                 'geo_transform': GEO,
+                 'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
     es_dict = OrderedDict()
     for idx, band in enumerate(bands):
         es_dict[band] = xr.DataArray(get_val(),

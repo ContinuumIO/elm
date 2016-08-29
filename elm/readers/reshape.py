@@ -203,19 +203,19 @@ def inverse_flatten(flat, new_dims, **attrs):
     attrs2 = copy.deepcopy(flat.attrs)
     attrs2.update(copy.deepcopy(attrs))
     attrs = attrs2
-    band_list = list(flat.flat.band_order)
+    band_list = zip(flat.flat.band_order, flat.old_dims)
     es_new_dict = OrderedDict()
-    attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
+    #attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
     new_coords = canvas_to_coords(attrs['canvas'])
-    for idx, band in enumerate(band_list):
+    for idx, (band, dims) in enumerate(band_list):
         if idx >= flat.flat.values.shape[1]:
             break
         new_arr = flat.flat.values[:, idx]
-        shp = tuple(new_coords[k].size for k in new_dims)
+        shp = tuple(new_coords[k].size for k in dims)
         new_arr = new_arr.reshape(shp, order='C')
         data_arr = xr.DataArray(new_arr,
                                 coords=new_coords,
-                                dims=new_dims,
+                                dims=dims,
                                 attrs=attrs)
         es_new_dict[band] = data_arr
     return ElmStore(es_new_dict, attrs=attrs)

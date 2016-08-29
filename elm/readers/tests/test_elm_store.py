@@ -142,3 +142,16 @@ def test_canvas_select(ftype, fnames_list):
         assert band_arr2.values.shape[xidx] == band_arr.values.shape[xidx] // 2
         assert band_arr2.values.shape[yidx] == band_arr.values.shape[yidx] // 4
         break
+
+def test_flatten_inverse_flatten():
+    ftype, fnames_list = sorted(f for f in FILES.items()
+                         if f[0] == 'hdf')[0]
+    es = _setup(ftype, fnames_list)
+    flat = es.flatten()
+    inv = flat.inverse_flatten(('y', 'x'))
+    flat2 = inv.flatten()
+    flat3 = flat2.drop_na_rows()
+    inv2 = flat3.inverse_flatten(('y', 'x'))
+    inv3 = inv2.transpose('x', 'y')
+    assert np.all(inv3.band_1.values == es.band_1.transpose('x', 'y').values)
+

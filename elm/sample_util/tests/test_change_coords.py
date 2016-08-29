@@ -6,9 +6,11 @@ from elm.pipeline.util import make_model_args_from_config
 from elm.pipeline.tests.util import (random_elm_store,
                                      test_one_config as tst_one_config,
                                      tmp_dirs_context)
+from elm.readers import *
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 n_components = 3
-data_source = {'sample_from_args_func': random_elm_store}
+data_source = {'sample_from_args_func': random_elm_store,
+               'sampler_kwargs': {'attrs': {}}}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
          'data_source': 'synthetic',
@@ -40,7 +42,7 @@ def tst_one_sample_pipeline(sample_pipeline):
 
 
 def test_flat_and_inverse():
-    flat = [{'flatten': 'C'}, {'inverse_flatten': ['y', 'x']}]
+    flat = [{'flatten': 'C'}, {'inverse_flatten': True}, {'transpose': ['y', 'x']}]
     es, new_es = tst_one_sample_pipeline(flat)
     assert np.all(new_es.band_1.values == es.band_1.values)
 
@@ -67,10 +69,11 @@ def test_transpose():
         'inv': [{'flatten': 'C'},
          {'transpose': ['band', 'space']},
          {'transpose': ['space', 'band']},
-         {'inverse_flatten': ['y', 'x']},
+         {'inverse_flatten': True},
+         {'transpose': ['y', 'x']},
         ]
     }
-    transpose_examples['fl'] = transpose_examples['xy'] + [{'flatten': 'C'}, {'inverse_flatten': ['x', 'y']}]
+    transpose_examples['fl'] = transpose_examples['xy'] + [{'flatten': 'C'}, {'inverse_flatten': True}, ]
     for name, sample_pipeline in sorted(transpose_examples.items()):
         es, new_es = tst_one_sample_pipeline(sample_pipeline)
         if name == 'fl':
@@ -84,9 +87,15 @@ def test_transpose():
             diff = es.band_1.values - new_es.band_1.values
             assert np.all(np.abs(diff) < 1e-5)
 
+def modify_coords_example(es, *args, **kwargs):
+    for band in es.data_vars:
+        band_arr = getattr(es, band)
+        band_arr.values /= band_arr.values.mean(axis=0)
+    return es
+
 
 def test_modify_coords():
-    modify = [{'flatten': 'C'}, {'modify_coords': 'elm.readers.reshape:inverse_flatten', 'new_dims': ['y', 'x']}]
+    modify = [{'modify_coords': 'elm.sample_util.tests.test_change_coords:modify_coords_example'}]
     es, new_es = tst_one_sample_pipeline(modify)
     assert np.all(es.band_1.values == new_es.band_1.values)
 
@@ -97,7 +106,8 @@ def test_agg_inverse_flatten():
             agg = {'agg': {'dim': agg_dim, 'func': 'median'}}
             sample_pipeline = [{'transpose': dims},
                                {'flatten': 'C'},
-                               {'inverse_flatten': dims}]
+                               {'inverse_flatten': True},
+                               {'transpose': dims}]
             es, new_es = tst_one_sample_pipeline(sample_pipeline)
             if idx == 0:
                 assert new_es.band_1.shape == es.band_1.values.T.shape
@@ -110,5 +120,6 @@ def test_agg_inverse_flatten():
             else:
                 assert y1 is not None and y2 is None
                 assert x1 is not None and x2 is not None
+
 
 
