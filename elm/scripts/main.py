@@ -15,7 +15,7 @@ from elm.config import (DEFAULTS, ConfigParser,
                         executor_context, ElmConfigError,
                         parse_env_vars)
 from elm.pipeline import pipeline
-from elm.pipeline.executor_util import wait_for_futures
+from elm.config.dask_settings import wait_for_futures
 
 logger = logging.getLogger(__name__)
 
@@ -86,7 +86,7 @@ def _run_one_config_of_many(fname, **kwargs):
     return run_one_config(**kw)
 
 
-def run_many_configs(args=None, sys_argv=None, return_0_if_ok=None,
+def run_many_configs(args=None, sys_argv=None, return_0_if_ok=True,
                      started=None):
     started = started or datetime.datetime.now()
     env_cmd_line = Namespace(**{k: v for k, v in d.items()
@@ -119,7 +119,7 @@ def main(args=None, sys_argv=None, return_0_if_ok=True):
     if args.config_dir is not None and args.config is not None:
         raise ElmConfigError('Expected --config-dir or --config, not both args')
     elif args.config_dir:
-        return run_many_configs(args, started=started)
+        return run_many_configs(args, started=started, return_0_if_ok=return_0_if_ok)
     return run_one_config(args=args, sys_argv=sys_argv,
                           return_0_if_ok=return_0_if_ok,
                           started=started)

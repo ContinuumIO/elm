@@ -9,7 +9,7 @@ from elm.model_selection.evolve import (ea_general,
                                         evo_init_func,
                                         assign_check_fitness)
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.pipeline.executor_util import wait_for_futures
+from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.transform import get_new_or_saved_transform_model
 from elm.pipeline.util import (_validate_ensemble_members,
                                _prepare_fit_kwargs,

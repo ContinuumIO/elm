@@ -2,7 +2,6 @@ from collections import namedtuple
 import pandas as pd
 import numpy as np
 
-from elm.config import delayed, import_callable
 from elm.sample_util.filename_selection import get_generated_args
 from elm.sample_util.band_selection import select_from_file
 from elm.sample_util.util import InvalidSample

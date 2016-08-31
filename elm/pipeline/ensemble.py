@@ -3,7 +3,7 @@ import logging
 from functools import partial
 
 from elm.config import import_callable
-from elm.pipeline.executor_util import wait_for_futures
+from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.util import (_fit_list_of_models,
                                _prepare_fit_kwargs,
                                serialize_models,

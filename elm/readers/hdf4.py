@@ -8,7 +8,6 @@ from gdalconst import GA_ReadOnly
 import numpy as np
 import xarray as xr
 
-from elm.config import delayed
 from elm.readers.util import (geotransform_to_bounds,
                               geotransform_to_coords,
                               row_col_to_xy,

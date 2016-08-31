@@ -11,7 +11,7 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.pipeline.executor_util import (wait_for_futures,
+from elm.config.dask_settings import (wait_for_futures,
                                         no_executor_submit)
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.serialize import (predict_to_netcdf,

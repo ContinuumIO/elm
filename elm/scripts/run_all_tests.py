@@ -28,10 +28,12 @@ def print_status(s, context):
 
 def run_all_example_configs(env, path):
     assert os.path.exists(path), 'Define the environment variable ELM_CONFIGS_PATH (directory of yaml configs)'
-    test_configs = glob.glob(os.path.join(env['ELM_CONFIGS_PATH'], '*.yaml'))
+    test_configs = glob.glob(os.path.join(path, '*.yaml'))
     for fname in test_configs:
         with env_patch(**env) as new_env:
-            args = Namespace(config=os.path.abspath(fname))
+            args = Namespace(config=os.path.abspath(fname),
+                             config_dir=None,
+                             echo_config=False)
             ret_val = main(args=args, sys_argv=None, return_0_if_ok=True)
             print_status(ret_val, fname)
 
@@ -66,8 +68,10 @@ def run_all_tests():
     parser.add_argument('--dask-executors', choices=choices, nargs='+',
                         help='Dask executor(s) to test: %(choices)s')
     parser.add_argument('--dask-scheduler', help='Dask scheduler URL')
-    parser.add_argument('--skip-pytest', help='Do not run py.test (default is run py.test as well as configs)')
+    parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
+
     args = parser.parse_args()
+    args.config_dir = None
     if not args.dask_scheduler:
         args.dask_scheduler = env.get('DASK_SCHEDULER', '10.0.0.10:8786')
     if not args.dask_executors or 'ALL' in args.dask_executors:
@@ -75,7 +79,7 @@ def run_all_tests():
     print('Running run_all_tests with args: {}'.format(args))
     assert os.path.exists(args.repo_dir)
     for executor in args.dask_executors:
-        new_env = {'DASK_SCHEDULER': args.dask_scheduler,
+        new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
                    'DASK_EXECUTOR': executor}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,

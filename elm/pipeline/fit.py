@@ -6,7 +6,6 @@ import numbers
 import numpy as np
 from sklearn.cross_validation import cross_val_score
 
-from elm.config.dask_settings import delayed, SERIAL_EVAL
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.sample_util.sample_pipeline import final_on_sample_step
 from elm.config import import_callable

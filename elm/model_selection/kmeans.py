@@ -9,7 +9,6 @@ from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
-from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
 
@@ -32,6 +31,7 @@ def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
     n = x.shape[0]
     d = model.inertia_
     aic =  d + 2 * m * k
+    model.labels_ = None
     return aic
 
 

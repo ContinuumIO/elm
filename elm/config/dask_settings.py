@@ -2,6 +2,7 @@ import contextlib
 import dask.array as da
 import os
 
+from concurrent.futures import as_completed
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Pool
 
@@ -27,20 +28,30 @@ def executor_context(dask_executor, dask_scheduler):
     else:
         raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_executor))
     if dask_executor in ("PROCESS_POOL", "THREAD_POOL"):
-        with da.set_options(pool=executor):
+        with da.set_options(pool=dask_executor):
             yield pool
     else:
         yield executor
 
-@curry
-def delayed(func, **dec_kwargs):
-    def new_func(*args, **kwargs):
-        if not SERIAL_EVAL: # SERIAL_EVAL is set in the globals()
-                        # of this module when elm.config.load_config.ConfigParser
-                        # is called
-            return dask_delayed(func, **dec_kwargs)(*args, **kwargs)
-        else:
-            return func(*args, **kwargs)
-    return new_func
 
-__all__ = ['delayed', 'executor_context', ]
+def wait_for_futures(futures, executor=None):
+    '''Abstraction of waiting for mapped results
+    that works for any type of executor or no executor'''
+    if not executor:
+        results = list(futures)
+    elif hasattr(executor, 'gather'): # distributed
+        from distributed import progress
+        progress(futures)
+        results = executor.gather(futures)
+    else:
+        results = []
+        for fut in as_completed(futures):
+            if fut.exception():
+                raise ValueError(fut.exception())
+            results.append(fut.result())
+    return results
+
+def no_executor_submit(func, *args, **kwargs):
+    return func(*args, **kwargs)
+
+__all__ = ['no_executor_submit', 'executor_context', 'wait_for_futures']

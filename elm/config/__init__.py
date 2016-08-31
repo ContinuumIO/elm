@@ -1,6 +1,6 @@
 
 from elm.config.load_config import ConfigParser, PIPELINE_ACTIONS
-from elm.config.dask_settings import delayed, executor_context
+from elm.config.dask_settings import executor_context
 from elm.config.env import parse_env_vars
 from elm.config.defaults import *
 from elm.config.util import (ElmConfigError,

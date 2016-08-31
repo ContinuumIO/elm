@@ -1,7 +1,7 @@
 from argparse import Namespace
 import calendar
 import datetime
-from elm.config import delayed, import_callable
+from elm.config import  import_callable
 
 def get_download(config, name):
     func = config.downloads[name]
