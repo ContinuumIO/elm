@@ -40,7 +40,7 @@ def add_local_dataset_options(parser):
 
 def add_config_file_argument(parser=None):
     parser.add_argument('--config', type=str, help="Path to yaml config")
-
+    parser.add_argument('--config-dir', type=str, help='Path to a directory of yaml configs')
 
 def add_sample_ladsweb_options(parser):
     parser.add_argument('--product_numbers', type=str, nargs='+', help='Limit to these product_numbers or None for all product numbers')

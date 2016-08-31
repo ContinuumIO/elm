@@ -68,7 +68,7 @@ def _predict_one_sample(action_data, serialize, model,
                                      attrs=attrs)},
                              attrs=attrs)
     if to_cube:
-        new_es = inverse_flatten(prediction, canvas.dims)
+        new_es = inverse_flatten(prediction)
     else:
         new_es = prediction
     if return_serialized:

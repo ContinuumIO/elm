@@ -1,4 +1,5 @@
 import numpy as np
+import xarray as xr
 
 from sklearn.decomposition import PCA
 from elm.config import ConfigParser
@@ -87,18 +88,30 @@ def test_transpose():
             diff = es.band_1.values - new_es.band_1.values
             assert np.all(np.abs(diff) < 1e-5)
 
-def modify_coords_example(es, *args, **kwargs):
+def modify_sample_example(es, *args, **kwargs):
+
+    new_es = {}
     for band in es.data_vars:
         band_arr = getattr(es, band)
-        band_arr.values /= band_arr.values.mean(axis=0)
-    return es
+        v = band_arr.values / band_arr.values.mean(axis=0)
+        new_es[band] = xr.DataArray(v, coords=band_arr.coords, dims=band_arr.dims)
+        v2 = (band_arr.T.values / band_arr.values.mean(axis=1)).T
+        new_es[band + '_new'] = xr.DataArray(v2, coords=band_arr.coords, dims=band_arr.dims)
+    return ElmStore(new_es, attrs=es.attrs)
 
 
-def test_modify_coords():
-    modify = [{'modify_coords': 'elm.sample_util.tests.test_change_coords:modify_coords_example'}]
+def test_modify_sample():
+    modify = [{'modify_sample': 'elm.sample_util.tests.test_change_coords:modify_sample_example'}]
     es, new_es = tst_one_sample_pipeline(modify)
-    assert np.all(es.band_1.values == new_es.band_1.values)
-
+    assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
+    new_names = set(es.band_order) - set(new_es.band_order)
+    assert all('new' in n for n in new_names)
+    flat = new_es.flatten()
+    assert not len(set(tuple(flat.flat.band.values)) ^ set(new_es.band_order))
+    inv = flat.inverse_flatten()
+    for band in inv.data_vars:
+        band_arr = getattr(inv, band)
+        assert band_arr.values.shape == getattr(new_es, band).values.shape
 
 def test_agg_inverse_flatten():
     for idx, dims in enumerate((['x', 'y'], ['y', 'x'])):

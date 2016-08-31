@@ -33,8 +33,6 @@ setup(name='elm',
                  ],
       entry_points={
         'console_scripts': [
-            'elm-download-ladsweb = elm.acquire.ladsweb_ftp:main',
             'elm-main = elm.scripts.main:main',
-            'elm-collect-ladsweb-metadata = elm.acquire.ladsweb_ftp:get_sample_main',
-
+            'elm-run-all-tests = elm.scripts.run_all_tests:run_all_tests',
         ]},)

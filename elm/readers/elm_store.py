@@ -40,10 +40,10 @@ class ElmStore(xr.Dataset):
         assert self.is_flat()
         return filled_flattened(self)
 
-    def inverse_flatten(self, new_dims, **attrs):
+    def inverse_flatten(self, **attrs):
         from elm.readers.reshape import inverse_flatten, check_is_flat
         assert self.is_flat()
-        inverse = inverse_flatten(self, new_dims, **attrs)
+        inverse = inverse_flatten(self, **attrs)
         assert not check_is_flat(inverse, raise_err=False)
         return inverse
 
@@ -74,6 +74,15 @@ class ElmStore(xr.Dataset):
     def _transpose(self, new_dims):
         from elm.readers.reshape import transpose
         return transpose(self, new_dims)
+
+    def add_band_order(self):
+        '''Ensure es.band_order is consistent with es.data_vars'''
+        new = []
+        old = getattr(self, 'band_order', None) or []
+        for band in self.data_vars:
+            if band not in old:
+                new.append(band)
+        self.attrs['band_order'] = old + new
 
     def __str__(self):
         return "ElmStore:\n" + super().__str__()

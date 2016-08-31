@@ -6,25 +6,14 @@ from elm.readers import (select_canvas_elm_store,
                          ElmStore,
                          flatten as _flatten,
                          inverse_flatten as _inverse_flatten,
-                         Canvas
-                       )
-'''
-select_canvas: example_canvas
-flatten: True # to [space, band] dims
-drop_na_rows: True
-inverse_flatten: ['y', 'x']
-change_coords:
-modify_sample: {func: "elm.sample_util.util:example_2d_agg", kwargs: {}},
-transpose: {new_dims: ['x', 'y']},
-agg: {dim: y, func: "numpy:median"} # or axis in place of dim
-'''
+                         Canvas)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
     'flatten',
     'drop_na_rows',
     'inverse_flatten',
-    'modify_coords',
+    'modify_sample',
     'transpose',
     'agg',
 )
@@ -55,13 +44,18 @@ def drop_na_rows(es, key, value, **kwargs):
 
 
 def inverse_flatten(es, key, value, **kwargs):
-    return _inverse_flatten(es, value)
+    return _inverse_flatten(es)
 
 
-def modify_coords(es, key, value, **kwargs):
+
+def modify_sample(es, key, value, **kwargs):
     func = import_callable(value)
-    return func(es, **kwargs)
-
+    out = func(es, **kwargs)
+    if isinstance(out, (list, tuple)):
+        [o.add_band_order()  for o in out]
+    else:
+        out.add_band_order()
+    return out
 
 def transpose(es, key, value, **kwargs):
     return es._transpose(value)

@@ -221,5 +221,3 @@ def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='C'):
         ('tbounds', None),
         ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
     )))
-
-
