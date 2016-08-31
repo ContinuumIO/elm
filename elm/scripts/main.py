@@ -46,8 +46,6 @@ def try_finally_log_etime(started):
         logger.info('Ran from {} to {} ({} '
                     'seconds)'.format(started, ended,
                                       (ended - started).total_seconds()))
-        logger.info('There were errors {}'.format(repr(err)) if err else 'ok')
-
 
 
 def run_one_config(args=None, sys_argv=None,
@@ -78,6 +76,7 @@ def run_one_config(args=None, sys_argv=None,
     return return_values
 
 def _run_one_config_of_many(fname, **kwargs):
+    print('Run config', fname)
     args = copy.deepcopy(kwargs['args'])
     args.config = fname
     args.config_dir = None

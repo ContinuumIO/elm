@@ -120,9 +120,7 @@ class ConfigParser(object):
             val = getattr(self, int_var['name'], None)
             setattr(elm_dask_settings, int_var['name'], val)
         elm_dask_settings.SERIAL_EVAL = self.SERIAL_EVAL = self.config['DASK_EXECUTOR'] == 'SERIAL'
-        logger.info('Running with DASK_EXECUTOR={} '
-                    'DASK_SCHEDULER={}'.format(elm_dask_settings.DASK_EXECUTOR,
-                                               elm_dask_settings.DASK_SCHEDULER))
+
 
     def _validate_custom_callable(self, func_or_not, required, context):
         '''Validate a callable given like "numpy:mean" can be imported'''
@@ -176,11 +174,7 @@ class ConfigParser(object):
         self._validate_custom_callable(sample_from_args_func,
                                 True,
                                 'train:{} sample_from_args_func'.format(name))
-        if sample_from_args_func:
-            logger.info('data_source:{} uses '
-                        'sample_from_args_func (validation is '
-                        'limited)'.format(name))
-        else:
+        if not sample_from_args_func:
             reader = ds.get('reader')
             if not reader in self.readers:
                 raise ElmConfigError('Data source config dict {} '

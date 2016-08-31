@@ -51,11 +51,9 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     if drop_n > len(models):
         raise ValueError('All models would be dropped by drop_n {} '
                          'with len(models) {}'.format(drop_n, len(models)))
-    if drop_n - evolve_n - init_n != 0:
-        raise ValueError('Length of models should stay the same (drop_n - evolve_n - init_n === 0)')
-
     dropped = models[drop_n:]
-    models = models[:-drop_n]
+    if drop_n:
+        models = models[:-drop_n]
     centroids = np.concatenate(tuple(m.cluster_centers_ for name, m in models))
     name_idx = 0
     new_models = []

@@ -59,7 +59,7 @@ def ensemble(executor,
     fit_kwargs = _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs)
     model_names = [name for name, model in models]
     for generation in range(ngen):
-        logger.info('Ensemble generation {} of {}'.format(generation + 1, ngen))
+        logger.info('Ensemble generation {} of {} ({} models)'.format(generation + 1, ngen, len(models)))
         args_kwargs = tuple(((model,) + tuple(model_args.fit_args), fit_kwargs)
                             for name, model in models)
         logger.debug('fit args_kwargs {}'.format(args_kwargs))

@@ -135,6 +135,8 @@ def tst_sklearn_method(model_init_class,
                   'model_selection': 'no_selection',
                   'ensemble_kwargs': default_ensemble,
                   'model_init_kwargs': models_defaults}
+        if 'BernoulliRBM' in model_init_class:
+            kwargs['model_init_kwargs']['n_components'] = 2
         if not hasattr(c, 'predict'):
             # TODO: handle models with "fit_transform"
             # or "transform" methods (ones without a "predict")

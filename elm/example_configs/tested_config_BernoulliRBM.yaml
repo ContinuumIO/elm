@@ -168,7 +168,7 @@ train:
     fit_method: partial_fit
     keep_columns: []
     model_init_class: sklearn.neural_network:BernoulliRBM
-    model_init_kwargs: {}
+    model_init_kwargs: {n_components: 2}
     model_scoring: null
     model_selection: no_selection
     output_tag: kmeans
