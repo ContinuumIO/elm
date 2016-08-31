@@ -21,16 +21,16 @@ data_sources: {
   [long_name, "Band 5 ", band_5],
   [long_name, "Band 7 ", band_7],
   [long_name, "Band 8 ", band_8],
+  [long_name, "Band 9 ", band_9],
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
   sample_args_generator: iter_files_recursively,
-  sample_args_generator_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    extension: ".hdf"
-  },
   selection_kwargs: {
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+    extension: ".hdf",
+
     data_filter: Null,
-    metadata_filter: Null,
+    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
     filename_filter: Null,
     geo_filters: {
       include_polys: [],
@@ -50,7 +50,9 @@ data_sources: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH"
   },
 
-  selection_kwargs: {},
+  selection_kwargs: {
+    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+  },
   reader: dir_of_tifs_reader,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[name, "_B1.TIF", band_1],
@@ -230,6 +232,11 @@ sample_pipelines: {
     {sample_pipeline: standardize_log10_var_top_80_inter},
     {transform: pca, method: fit_transform},
   ],
+  flatten_example: [
+    {select_canvas: band_1},
+    {flatten: 'C'},
+    {drop_na_rows: True},
+  ],
 }
 param_grids: {
   pca_kmeans: {
@@ -237,7 +244,7 @@ param_grids: {
     pca__n_components: [2,3,4,5],
     sample_pipeline: [standardize_log10_var_top_80_inter_trans,
                       standardize_log10_var_top_80_trans],
-    feature_selection: {top_80_percent: {kwargs: {percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9],}}},
+    feature_selection: {top_80_percent: {kwargs: {percentile: [30, 40, 50, 60, 70, 80, 90],}}},
     # data_sources: {selection_kwargs: {some_kwarg: [1,2,3,5,6]}}
     control: {
       select_method: selNSGA2,
@@ -285,16 +292,19 @@ pipeline:
   - {transform: pca,
      method: partial_fit,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
     ]}
   - {train: kmeans,
      method: partial_fit,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
       {transform: pca, method: transform},
     ]}
   - {predict: kmeans,
      sample_pipeline: [
+      {sample_pipeline: flatten_example},
       {feature_selection: select_all},
       {transform: pca, method: transform},
       ]

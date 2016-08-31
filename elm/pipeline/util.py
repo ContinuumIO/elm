@@ -11,8 +11,9 @@ from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
 from elm.pipeline.fit import fit
-from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data
+from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.serialize import save_models_with_meta
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +21,7 @@ def _make_model_args_from_config(config, train_or_trans_dict,
                                  step, train_or_transform):
     from elm.config.util import import_callable
     from elm.model_selection.util import get_args_kwargs_defaults
+    classes = train_or_trans_dict.get('classes', None)
     action_data = get_sample_pipeline_action_data(train_or_trans_dict, config, step)
     data_source = config.data_sources[train_or_trans_dict.get('data_source')]
     if train_or_trans_dict.get('model_scoring'):
@@ -74,6 +76,7 @@ def _make_model_args_from_config(config, train_or_trans_dict,
                            model_selection_kwargs,
                            train_or_transform,
                            step[train_or_transform],
+                           classes,
                     )
     return model_args
 
@@ -133,6 +136,7 @@ def _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs):
     fit_kwargs['transform_model'] = transform_model
     fit_kwargs['fit_method'] = model_args.fit_method
     fit_kwargs['batches_per_gen'] = ensemble_kwargs.get('batches_per_gen') or 1
+    fit_kwargs['classes'] = model_args.classes
     return fit_kwargs
 
 

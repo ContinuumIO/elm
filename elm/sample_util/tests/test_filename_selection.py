@@ -10,21 +10,11 @@ EXAMPLE_BAND_SPECS = [['long_name', 'Band 1 ', 'band_1',],
 @pytest.mark.needs_examples
 def test_get_generated_args():
 
-    def filenames_gen():
+    def filenames_gen(**kwargs):
         for f in EXAMPLE_FILES['hdf']:
             yield f
-    for no_file_open in (True, False):
-        files = get_generated_args(filenames_gen,
-                                       EXAMPLE_BAND_SPECS,
-                                       no_file_open=no_file_open,
-                                       load_meta=load_hdf4_meta,
-                                       load_array=load_hdf4_array)
-    assert sorted(files) == sorted(EXAMPLE_FILES['hdf'])
-    nothing_matches = [['nothing_matches'] * 3 for _ in range(8)]
-    with pytest.raises(ValueError):
-        files = get_generated_args(filenames_gen,
-                                       nothing_matches,
-                                       no_file_open=False,
-                                       load_meta=load_hdf4_meta,
-                                       load_array=load_hdf4_array)
-
+    files = get_generated_args(filenames_gen,
+                               EXAMPLE_BAND_SPECS,
+                               load_meta=load_hdf4_meta,
+                               load_array=load_hdf4_array)
+    assert files

@@ -67,7 +67,7 @@ def import_callable(func_or_not, required=True, context=''):
     except Exception as e:
         tb = traceback.format_exc()
         raise ElmConfigError('{}xpected module {} to be '
-                               'imported but failed:\n{}'.format(context,func_or_not, tb))
+                             'imported but failed:\n{}'.format(context,func_or_not, tb))
     func = getattr(mod, func, None)
     if not callable(func):
         raise ElmConfigError('{}xpected {} to be callable - '

@@ -11,6 +11,8 @@ from elm.model_selection.sklearn_support import DECOMP_MODEL_STR
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      test_one_config as tst_one_config)
 from elm.model_selection import DECOMP_MODEL_STR
+
+flatten = {'flatten': 'C'}
 def tst_once(tag, config):
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         out = tst_one_config(config=config, cwd=cwd)
@@ -44,9 +46,9 @@ def tst_transform(model_init_class, is_slow):
                             }
                 }
     if is_slow:
-        sp = [{'transform': 'tested', 'method': 'transform'}]
+        sp = [flatten, {'transform': 'tested', 'method': 'transform'}]
     else:
-        sp = [{'random_sample': batch_size}]
+        sp = [flatten, {'random_sample': batch_size}]
     pipeline = [{'transform': 'tested',
                  'method': 'fit',
                  'sample_pipeline': sp}

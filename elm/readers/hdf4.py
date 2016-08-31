@@ -1,4 +1,7 @@
+from collections import OrderedDict
+import copy
 import gc
+import logging
 
 import gdal
 from gdalconst import GA_ReadOnly
@@ -7,9 +10,17 @@ import xarray as xr
 
 from elm.config import delayed
 from elm.readers.util import (geotransform_to_bounds,
-                              geotransform_to_dims,
-                              row_col_to_xy)
+                              geotransform_to_coords,
+                              row_col_to_xy,
+                              raster_as_2d,
+                              add_es_meta)
 
+__all__ = [
+    'load_hdf4_meta',
+    'load_hdf4_array',
+]
+
+logger = logging.getLogger(__name__)
 
 def load_hdf4_meta(datafile):
     f = gdal.Open(datafile, GA_ReadOnly)
@@ -20,67 +31,67 @@ def load_hdf4_meta(datafile):
     for s in sds:
         f2 = gdal.Open(s[0], GA_ReadOnly)
         band_metas.append(f2.GetMetadata())
-    geo_transform = dat0.GetGeoTransform()
-    bounds = geotransform_to_bounds(dat0.RasterXSize,
-                                    dat0.RasterYSize,
-                                    geo_transform)
     meta = {
-             'MetaData': f.GetMetadata(),
-             'BandMetaData': band_metas,
-             'GeoTransform':geo_transform,
-             'SubDatasets': sds,
-             'Bounds': bounds,
-             'Height': dat0.RasterYSize,
-             'Width':  dat0.RasterXSize,
-             'Name': datafile,
+             'meta': f.GetMetadata(),
+             'band_meta': band_metas,
+             'sub_datasets': sds,
+             'height': dat0.RasterYSize,
+             'width':  dat0.RasterXSize,
+             'name': datafile,
             }
     return meta
 
 
-def load_hdf4_array(datafile, meta, band_specs):
-    from elm.sample_util.elm_store import ElmStore
+def load_hdf4_array(datafile, meta, band_specs=None):
+
+    from elm.readers import ElmStore
     from elm.sample_util.band_selection import match_meta
+    logger.debug('load_hdf4_array: {}'.format(datafile))
     f = gdal.Open(datafile, GA_ReadOnly)
-    sds = meta['SubDatasets']
-    band_metas = meta['BandMetaData']
+
+    sds = meta['sub_datasets']
+    band_metas = meta['band_meta']
     band_order_info = []
+    if band_specs:
+        for band_meta, s in zip(band_metas, sds):
+            for idx, band_spec in enumerate(band_specs):
+                name = match_meta(band_meta, band_spec)
+                if name:
+                    band_order_info.append((idx, band_meta, s, name))
+                    break
 
-    for band_meta, s in zip(band_metas, sds):
-        for idx, band_spec in enumerate(band_specs):
-            name = match_meta(band_meta, band_spec)
-            if name:
-                band_order_info.append((idx, band_meta, s, name))
-                break
+        band_order_info.sort(key=lambda x:x[0])
+        if not len(band_order_info):
+            raise ValueError('No matching bands with '
+                             'band_specs {}'.format(band_specs))
+    else:
+        band_order_info = [(idx, band_meta, s, 'band_{}'.format(idx))
+                           for idx, (band_meta, s) in enumerate(zip(band_metas, sds))]
+    native_dims = ('y', 'x')
+    elm_store_data = OrderedDict()
 
-    band_order_info.sort(key=lambda x:x[0])
-    if not len(band_order_info):
-        raise ValueError('No matching bands with '
-                         'band_specs {}'.format(band_specs))
-
-    dat0 = gdal.Open(s[0], GA_ReadOnly)
-    raster = dat0.ReadAsArray()
-    shp = (len(band_specs),) + raster.shape
-    _, band_meta, s, _ = band_order_info[0]
-    store = np.empty(shp, dtype = raster.dtype)
-    store[0, :, :] = raster
-    del raster
-    gc.collect()
-    if len(band_order_info) > 1:
-        for idx, _, s, _ in band_order_info[1:]:
-            dat = gdal.Open(s[0], GA_ReadOnly).ReadAsArray()
-            store[idx, :, :] = dat
-            del dat
-            gc.collect()
-    band_labels = [_[-1] for _ in band_specs]
-    coord_x, coord_y = geotransform_to_dims(dat0.RasterXSize,
+    band_order = []
+    for _, band_meta, s, name in band_order_info:
+        attrs = copy.deepcopy(meta)
+        attrs.update(copy.deepcopy(band_meta))
+        dat0 = gdal.Open(s[0], GA_ReadOnly)
+        raster = raster_as_2d(dat0.ReadAsArray())
+        attrs['geo_transform'] = dat0.GetGeoTransform()
+        coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
                                             dat0.RasterYSize,
-                                            meta['GeoTransform'])
-    band_data = xr.DataArray(store,
-                           coords=[('band', band_labels),
-                                   ('y', coord_y),
-                                   ('x', coord_x),
-                                   ],
-                           dims=['band','y','x',],
-                           attrs=meta)
+                                            attrs['geo_transform'])
+        elm_store_data[name] = xr.DataArray(raster,
+                               coords=[('y', coord_y),
+                                       ('x', coord_x),
+                                       ],
+                               dims=native_dims,
+                               attrs=attrs)
 
-    return ElmStore({'sample': band_data}, attrs=meta)
+        band_order.append(name)
+    del dat0
+    attrs = copy.deepcopy(attrs)
+    attrs['band_order'] = band_order
+    gc.collect()
+    return ElmStore(elm_store_data, attrs=attrs)
+
+

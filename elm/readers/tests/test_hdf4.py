@@ -9,7 +9,8 @@ from elm.readers.hdf4 import (load_hdf4_meta,
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH,
                                     HDF4_FILES,
-                                    assertions_on_metadata)
+                                    assertions_on_metadata,
+                                    assertions_on_band_metadata)
 
 HDF4_DIR = os.path.dirname(HDF4_FILES[0])
 
@@ -25,34 +26,40 @@ band_specs = [
     ['long_name', 'Band 11 ', 'band_11'],
 ]
 
-
+@pytest.mark.parametrize('hdf', HDF4_FILES or [])
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
-def test_read_meta():
-    for hdf in HDF4_FILES:
-        meta = load_hdf4_meta(hdf)
-        assertions_on_metadata(meta, is_band_specific=False)
-        assert 'GranuleBeginningDateTime' in meta['MetaData']
-        for band_meta in meta['BandMetaData']:
-            assert 'GranuleBeginningDateTime' in band_meta
+def test_read_meta(hdf):
+    meta = load_hdf4_meta(hdf)
+    assertions_on_metadata(meta, is_band_specific=False)
+    assert 'GranuleBeginningDateTime' in meta['meta']
+    for band_meta in meta['band_meta']:
+        assert 'GranuleBeginningDateTime' in band_meta
 
 
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                    reason='elm-data repo has not been cloned')
-def test_read_array():
-    for hdf in HDF4_FILES:
-        meta = load_hdf4_meta(hdf)
-        sample = load_hdf4_array(hdf, meta, band_specs)['sample']
+@pytest.mark.parametrize('hdf', HDF4_FILES or [])
+def test_read_array(hdf):
+
+    meta = load_hdf4_meta(hdf)
+    es = load_hdf4_array(hdf, meta, band_specs)
+    for band in es.data_vars:
+        sample = getattr(es, band)
         mean_y = np.mean(sample.y)
         mean_x = np.mean(sample.x)
         band_names = np.array([b[-1] for b in band_specs])
         assert sorted((mean_x,
-                sample.Bounds.left,
-                sample.Bounds.right))[1] == mean_x
+                sample.canvas.bounds.left,
+                sample.canvas.bounds.right))[1] == mean_x
         assert sorted((mean_y,
-                sample.Bounds.top,
-                sample.Bounds.bottom))[1] == mean_y
+                sample.canvas.bounds.top,
+                sample.canvas.bounds.bottom))[1] == mean_y
         assert sample.y.size == 1200
         assert sample.x.size == 1200
-        assert sample.band.size == len(band_specs)
-        assert np.all(band_names == sample.band)
+        assert len(es.data_vars) == len(band_specs)
+        assert np.all(es.band_order == [x[-1] for x in band_specs])
+        assertions_on_band_metadata(sample.attrs)
+    es2 = load_hdf4_array(hdf, meta, band_specs=None)
+    assert len(es2.data_vars) > len(es.data_vars)
+

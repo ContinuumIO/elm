@@ -23,21 +23,27 @@ if ELM_HAS_EXAMPLES:
                                         '*.HDF5'))
     HDF4_FILES = glob.glob(os.path.join(ELM_EXAMPLE_DATA_PATH,
                                         'hdf4',
-                                        '*.hdf'
-                                        ))
+                                        '*.hdf'))
+    NETCDF_FILES = glob.glob(os.path.join(ELM_EXAMPLE_DATA_PATH,
+                                          'netcdf',
+                                          '*.nc'))
 else:
     ELM_EXAMPLE_DATA_PATH = None
     TIF_FILES = []
     HDF5_FILES = []
     HDF4_FILES = []
+    NETCDF_FILES = []
 
 def assertions_on_metadata(meta, is_band_specific=False):
-    required_keys = ('GeoTransform',
-                     'MetaData',
-                     'Bounds',
-                     'Height',
-                     'Width')
+    required_keys = ('meta',
+                     'height',
+                     'width')
     if not is_band_specific:
-        required_keys += ('BandMetaData',)
+        required_keys += ('band_meta',)
     for key in required_keys:
         assert key in meta
+
+def assertions_on_band_metadata(band_meta):
+    required_keys = ('geo_transform', 'canvas')
+    for key in required_keys:
+        assert key in band_meta

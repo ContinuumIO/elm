@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import contextlib
 import copy
 import datetime
@@ -15,12 +16,12 @@ from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
-import elm.pipeline.sample_pipeline as sample_pipeline
+import elm.sample_util.sample_pipeline as sample_pipeline
 import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
-from elm.sample_util.util import bands_as_columns
-from elm.sample_util.elm_store import ElmStore
+from elm.readers import *
+from elm.readers.util import add_es_meta
 from elm.scripts.main import main as elm_main
 
 old_ensemble = elmtrain.ensemble
@@ -30,7 +31,7 @@ old_init_transform = elmtransform.get_new_or_saved_transform_model
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
-GEO = (-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995)
+GEO = [-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995]
 
 @contextlib.contextmanager
 def patch_ensemble_predict():
@@ -83,20 +84,27 @@ def tmp_dirs_context(tag):
             f.write('{} {} {} seconds\n'.format(tag, status, etime))
 
 
-@bands_as_columns
-def example_get_y_func_binary(flat_sample):
+
+def example_get_y_func_binary(flat_sample, **kwargs):
     '''For use in testing supervised methods which need a get_y_func'''
-    col_means = np.mean(flat_sample.sample.values, axis=1)
+    col_means = np.mean(flat_sample.flat.values, axis=1)
     med = np.median(col_means)
     ret = np.zeros(col_means.shape, dtype=np.float32)
     ret[col_means > med] = 1
+    inds = np.arange(col_means.size)
+    np.random.shuffle(inds)
+    ret[inds[:3]] = 1
+    ret[inds[-3:]] = 0
     return ret
 
 
-@bands_as_columns
-def example_get_y_func_continuous(flat_sample):
+def example_get_y_func_continuous(flat_sample, **kwargs):
     '''For use in testing supervised methods which need a get_y_func'''
-    col_means = np.mean(flat_sample.sample.values, axis=1)
+    col_means = np.mean(flat_sample.flat.values, axis=1)
+    inds = np.arange(col_means.size)
+    np.random.shuffle(inds)
+    col_means[inds[:3]] += np.random.uniform(0, 0.01, 3)
+    col_means[inds[-3:]] += np.random.uniform(0, 0.01, 3)
     return col_means
 
 
@@ -109,13 +117,11 @@ class ExpectedFuncCalledError(ValueError):
     pass
 
 
-@bands_as_columns
 def get_y_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('From get_y_func')
 
 
-@bands_as_columns
 def get_weight_func_that_raises(flat_sample):
 
     raise ExpectedFuncCalledError('from get_weight_func')
@@ -127,40 +133,36 @@ def test_one_config(config=None, cwd=None):
     config_filename = os.path.join(cwd, 'config.yaml')
     with open(config_filename, 'w') as f:
         f.write(config_str)
-    env = copy.deepcopy(os.environ)
-    if 'ELM_LOGGING_LEVEL' in env:
-        old_val = env['ELM_LOGGING_LEVEL']
-    else:
-        old_val = None
-    env['ELM_LOGGING_LEVEL'] = 'DEBUG'
-    sys_argv = ['--config', config_filename, '--echo-config']
-    try:
-        ret_val = elm_main(sys_argv=sys_argv, return_0_if_ok=False)
-    finally:
-        if old_val is not None:
-            os.environ['ELM_LOGGING_LEVEL'] = old_val
-    return ret_val
+    sys_argv = ['--config', config_filename, '--echo-config', '--elm-logging-level', 'DEBUG']
+    return elm_main(sys_argv=sys_argv, return_0_if_ok=False)
 
 
 def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
-    bands = bands or ['band_{}'.format(idx + 1) for idx in range(width)]
+    bands = bands or ['band_{}'.format(idx + 1) for idx in range(3)]
+    if isinstance(bands, int):
+        bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
-    val = np.random.uniform(mn,
+    get_val = lambda: np.random.uniform(mn,
                             mx,
-                            width * height * len(bands)).reshape((height * width,len(bands)))
-    attrs = {'Width': width,
-             'Height': height,
-             'GeoTransform': GEO}
-
-    es = ElmStore({'sample': xr.DataArray(val,
-                coords=[('space', np.arange(width * height)),
-                        ('band', bands)],
-                dims=['space', 'band'],
-                attrs=attrs)},
-            attrs=attrs)
-    return es
+                            width * height).reshape((height, width))
+    if kwargs.get('attrs'):
+        attrs = kwargs['attrs']
+    else:
+        attrs = {'width': width,
+                 'height': height,
+                 'geo_transform': GEO,
+                 'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
+    es_dict = OrderedDict()
+    for idx, band in enumerate(bands):
+        es_dict[band] = xr.DataArray(get_val(),
+                                     coords=[('y', np.arange(height)),
+                                             ('x', np.arange(width))],
+                                     dims=('y', 'x'),
+                                     attrs=attrs)
+    attrs['band_order'] = bands
+    return ElmStore(es_dict, attrs=attrs)
 
 
 def make_blobs_elm_store(**make_blobs_kwargs):
@@ -178,7 +180,7 @@ def make_blobs_elm_store(**make_blobs_kwargs):
     kwargs = filter_kwargs_to_func(make_blobs, **make_blobs_kwargs)
     arr  = make_blobs(**kwargs)[0]
     band = ['band_{}'.format(idx) for idx in range(arr.shape[1])]
-    es = ElmStore({'sample': xr.DataArray(arr,
+    es = ElmStore({'flat': xr.DataArray(arr,
                   coords=[('space', np.arange(arr.shape[0])),
                           ('band', band)],
                   dims=['space', 'band'],
@@ -192,3 +194,4 @@ def remove_pipeline_transforms(config):
     for item in config['pipeline']:
         if 'sample_pipeline' in item:
             item['sample_pipeline'] = [_ for _ in item['sample_pipeline'] if not 'transform' in _]
+

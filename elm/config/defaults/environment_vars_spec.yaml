@@ -44,4 +44,11 @@ str_fields_specs:
     default: ~/elm-predict-path,
     required: True,
     expanduser: True}
+ - {name: ELM_LOGGING_LEVEL,
+    default: INFO,
+    choices: [INFO, DEBUG]}
+ - {name: ELM_CONFIGS_PATH,
+    default: ~/elm-configs-path,
+    expanduser: True,
+    required: False}
 

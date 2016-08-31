@@ -178,7 +178,7 @@ def get_sample_main(args=None, parse_this=None):
     '''This is a console entry point for getting a sample of each ladsweb data source'''
     if args is None:
         parser = ArgumentParser(description='Collect metadata on each product on ladsweb')
-        parser = add_sample_ladsweb_options(parser)
+        add_sample_ladsweb_options(parser)
         if parse_this:
             args = parser.parse_args(parse_this)
         else:
@@ -247,9 +247,9 @@ def download(yr, day, config,
 
 def main(args=None, parse_this_str=None, config=None):
     parser = ArgumentParser(description="Download util for {}".format(LADSWEB_FTP))
-    parser = add_local_dataset_options(parser)
+    add_local_dataset_options(parser)
     if config is None:
-        parser = add_config_file_argument(parser)
+        add_config_file_argument(parser)
     if args is None:
         if not parse_this_str:
             args = parser.parse_args()

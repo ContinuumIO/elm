@@ -15,8 +15,8 @@ from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.acquire.ladsweb_meta import validate_ladsweb_data_source
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
+
 
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ SAMPLE_PIPELINE_ACTIONS = ('transform',
                            'random_sample',
                            'sample_pipeline',
                            'get_y',
-                           'get_weight',)
+                           'get_weight',) # others too from change_coords
 REQUIRES_METHOD = ('train', 'predict', 'transform')
 class ConfigParser(object):
     # The list below reflects the order
@@ -49,7 +49,7 @@ class ConfigParser(object):
     config_keys = CONFIG_KEYS
     defaults = DEFAULTS
     all_words = ('all', ['all'],)
-    def __init__(self, config_file_name=None, config=None):
+    def __init__(self, config_file_name=None, config=None, cmd_args=None):
         '''Parses a config structure
 
         Params:
@@ -77,6 +77,7 @@ class ConfigParser(object):
             else:
                 self.config[k] = v
         self._update_for_env()
+        self._update_for_cmd_args(cmd_args=cmd_args)
         self._interpolate_env_vars()
         self.validate()
 
@@ -93,6 +94,13 @@ class ConfigParser(object):
                                                 getattr(elm_dask_settings,
                                                         env_var['name']))
         self.config = yaml.load(config_str)
+
+    def _update_for_cmd_args(self, cmd_args=None):
+        self.cmd_args = {} if not cmd_args else dict(vars(cmd_args))
+        for k, v in self.cmd_args.items():
+            if k not in ('config', 'raw_config', 'defaults'):
+                if v:
+                    setattr(self, k.upper().replace('-', '_'), v)
 
     def _update_for_env(self):
         '''Update the config based on environment vars'''
@@ -334,7 +342,6 @@ class ConfigParser(object):
 
     def _validate_one_model_scoring(self, key, value):
         '''Validate one model_scoring key-value (one scoring configuration)'''
-        logger.info(repr((key, value)))
         from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:
@@ -568,6 +575,7 @@ class ConfigParser(object):
 
     def _validate_sample_pipelines(self):
         '''Validate the "sample_pipelines" section of config'''
+        from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
         self.sample_pipelines = self.config.get('sample_pipelines') or {}
         self._validate_type(self.sample_pipelines, 'sample_pipelines', dict)
         for k, v in self.sample_pipelines.items():
@@ -576,12 +584,22 @@ class ConfigParser(object):
             for item in v:
                 self._validate_type(item, msg + ' - {}'.format(item), dict)
                 ok = False
-                for k in SAMPLE_PIPELINE_ACTIONS:
+                ok_words = SAMPLE_PIPELINE_ACTIONS + CHANGE_COORDS_ACTIONS
+                for k in ok_words:
                     if k in item:
                         ok = True
-                        match = SAMPLE_PIPELINE_ACTIONS.index(k)
-                        match = SAMPLE_PIPELINE_ACTIONS[match]
-                        if not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
+                        match = ok_words.index(k)
+                        match = ok_words[match]
+                        if match in CHANGE_COORDS_ACTIONS:
+                            val = item[match]
+                            if match == 'change_coords':
+                                self._validate_custom_callable(item[match], True,
+                                        'sample_pipelines:{} - {} ({})'.format(k, match, item[match]))
+                            if match == 'flatten':
+                                self._validate_type(val, 'flatten:{}'.format(val), str)
+                                if not val == 'C':
+                                    raise ElmConfigError('Expected flatten:{} to be "C" for flatten order (more options may be there over time)'.format(val))
+                        elif not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
                             raise ElmConfigError('sample_pipeline item {0} is of type '
                                                  '{1} and refers to a key ({2}) that is not in '
                                                  '"{1}" dict of config'.format(item, match, item[k]))

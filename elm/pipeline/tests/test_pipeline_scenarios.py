@@ -3,7 +3,6 @@ import contextlib
 import datetime
 import os
 import tempfile
-
 import pytest
 import yaml
 
@@ -55,7 +54,7 @@ def adjust_config_sample_size(config, n_rows):
             if 'sample_pipeline' in step:
                 step['sample_pipeline'] += random_rows
             else:
-                step['sample_pipeline'] = random_rows
+                step['sample_pipeline'] = [{'flatten': 'C'}] + random_rows
 
 # The following slow_models take longer than about 11 seconds
 # to fit / predict a sample of size (500, 11) with default init kwargs
@@ -157,6 +156,7 @@ def tst_sklearn_method(model_init_class,
                 kwargs['model_scoring'] = 'accuracy_score_cv'
                 kwargs['model_selection'] = 'select_top_n'
                 kwargs['model_selection_kwargs'] = {'top_n': 1}
+                kwargs['classes'] = [0, 1]
                 if 'LogisticRegression' in model_init_class:
                     kwargs['model_scoring'] = kwargs['model_selection'] = None
             else:

@@ -1,14 +1,13 @@
 import copy
 import numpy as np
-from elm.sample_util.elm_store import ElmStore
-from elm.pipeline.sample_pipeline import flatten_cube
-from elm.sample_util.util import bands_as_columns
+from elm.readers import data_arrays_as_columns, ElmStore
 
-@bands_as_columns
-def random_rows(es, n_rows):
+def random_rows(es, n_rows, **kwargs):
     '''Drop '''
     attrs = copy.deepcopy(es.attrs)
     attrs['random_rows'] = n_rows
-    inds = np.arange(es.sample.values.shape[0])
+    inds = np.arange(es.flat.values.shape[0])
     np.random.shuffle(inds)
-    return ElmStore({'sample': es.sample[inds[:n_rows], :]}, attrs=attrs)
+    es = ElmStore({'flat': es.flat[inds[:n_rows], :]}, attrs=attrs)
+    assert es.flat.canvas
+    return es

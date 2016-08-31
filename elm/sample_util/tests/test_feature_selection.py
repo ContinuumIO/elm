@@ -47,9 +47,9 @@ for k in set(SELECTORS):
 def sample(ncols):
     bands = ['band_{}'.format(idx + 1) for idx in range(ncols)]
 
-    es = random_elm_store(bands, height=10, width=10)
-    nrows = es.sample.values.shape[0]
-    samp_y = np.ones(es.sample.space.size)
+    es = random_elm_store(bands, height=10, width=10).flatten()
+    nrows = es.flat.values.shape[0]
+    samp_y = np.ones(es.flat.space.size)
     samp_y[:samp_y.size // 2] = 0
     return es, samp_y
 
@@ -64,15 +64,15 @@ def test_feature_choices_ok(name, selection, custom_scorer):
     keep_columns = []
 
     selection = copy.deepcopy(selection)
-    selection['choices'] = list(samp.sample.band[:samp.sample.shape[1] // mult])
-    band_idx = [idx for idx, band in enumerate(samp.sample.band)
+    selection['choices'] = list(samp.flat.band[:samp.flat.shape[1] // mult])
+    band_idx = [idx for idx, band in enumerate(samp.flat.band)
                 if band in selection['choices']]
     if name == 'var':
         if custom_scorer:
             # already tested
             return
         pcent = 25
-        var = np.var(samp.sample.values[:, band_idx],axis=0)
+        var = np.var(samp.flat.values[:, band_idx],axis=0)
         selection['kwargs']['threshold'] = np.percentile(var, (25,))
 
     if 'kbest' in name or 'kpcent' in name:
@@ -87,7 +87,7 @@ def test_feature_choices_ok(name, selection, custom_scorer):
     es = feature_selection_base(samp, selection,
                                 sample_y=samp_y,
                                 keep_columns=keep_columns)
-    sel = es.sample.values
+    sel = es.flat.values
     assert not np.any(np.isnan(sel))
     if name == 'var':
         assert sel.shape[1] < len(band_idx)
@@ -95,4 +95,4 @@ def test_feature_choices_ok(name, selection, custom_scorer):
         assert sel.shape[1] == selection['kwargs']['k'] + len(keep_columns)
     if 'kpcent' in name:
         frac = selection['kwargs']['percentile'] / 100.
-        assert abs(sel.shape[1] - frac * (samp.sample.shape[1] / mult) + len(keep_columns)) <= 1
+        assert abs(sel.shape[1] - frac * (samp.flat.shape[1] / mult) + len(keep_columns)) <= 1

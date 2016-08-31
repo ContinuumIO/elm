@@ -11,7 +11,8 @@ MODEL_FIELDS = ['model_init_class',
                 'model_selection_func',
                 'model_selection_kwargs',
                 'step_type',
-                'step_name',]
+                'step_name',
+                'classes']
 
 
 def get_args_kwargs_defaults(func):

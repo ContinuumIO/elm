@@ -9,7 +9,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      tmp_dirs_context,
                                      test_one_config as tst_one_config,
                                      BANDS)
-from elm.pipeline.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
+from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
 transform_model = [('tag_0', PCA(n_components=3))]
 def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sample_pipeline'):
@@ -20,7 +20,8 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
 
     if not run_it:
         for item in config['pipeline']:
-            item['sample_pipeline'] += sample_pipeline
+            tsteps = [s for s in item['sample_pipeline'] if 'transform' in s]
+            item['sample_pipeline'] = sample_pipeline + tsteps
         step = config['pipeline'][0]
         config = ConfigParser(config=config)
         transform_name = [s for s in config.pipeline if 'transform' in step][0]['transform']
@@ -41,35 +42,38 @@ def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sam
             assert len(os.listdir(predict_path))
 
 def test_func_scaler():
-    es = random_elm_store(BANDS)
+    es = random_elm_store(BANDS).flatten()
     es2 = es.copy()
-    values = es.sample.values.copy()
+    values = es.flat.values.copy()
     values[values <= 0] = 0.0001
-    sp = [{'sample_pipeline': 'log10'}]
+    sp = [{'sample_pipeline': 'log10'},{'flatten': 'C'}]
     log10_changed = tst_one_sample_pipeline(sp, es, tag='test_func_scaler')
-    assert np.all(log10_changed.sample.values == np.log10(values))
-    sp2 = [{'sklearn_preprocessing': 'require_positive'},
-           {'sklearn_preprocessing': 'log10'},]
+    assert np.all(log10_changed.flat.values == np.log10(values))
+    sp2 = [{'flatten': 'C'},
+           {'sklearn_preprocessing': 'require_positive'},
+           {'sklearn_preprocessing': 'log10'},
+           ]
     log10_changed2 = tst_one_sample_pipeline(sp2, es2, tag='test_func_scaler2')
-    assert np.all(log10_changed2.sample.values == log10_changed.sample.values)
+    assert np.all(log10_changed2.flat.values == log10_changed.flat.values)
 
 def test_standard_scaler_and_interactions():
-    es = random_elm_store(BANDS)
-    es.sample.values = np.random.lognormal(100, 1, np.prod(es.sample.shape)).reshape(es.sample.shape)
-    sp = [{'sample_pipeline': 'standardize_log10'}]
+    es = random_elm_store(BANDS).flatten()
+    es.flat.values = np.random.lognormal(100, 1, np.prod(es.flat.shape)).reshape(es.flat.shape)
+    sp = [{'flatten': 'C'},{'sample_pipeline': 'standardize_log10'}]
     scaled = tst_one_sample_pipeline(sp, es, tag='test_standard_scaler_and_interactions')
-    mean = np.mean(scaled.sample.values)
+    mean = np.mean(scaled.flat.values)
     assert mean < 0.1 and mean > -0.1
-    std = np.std(scaled.sample.values)
+    std = np.std(scaled.flat.values)
     assert std > 0.9 and std < 1.1
-    sp = [{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
+    sp = [{'flatten': 'C'},{'get_y': True}, {'sample_pipeline': 'standardize_log10_var_top_80_inter'}]
     scaled2 = tst_one_sample_pipeline(sp, es)
-    assert scaled2.sample.shape[1] > es.sample.shape[1]
+    assert scaled2.flat.shape[1] > es.flat.shape[1]
 
 
 def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [
+          {'flatten': 'C'},
           {'get_y': True},
           {'sample_pipeline': 'standardize_log10_var_top_80_inter'},
     ]

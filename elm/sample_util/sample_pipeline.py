@@ -9,7 +9,10 @@ from sklearn.utils import check_array as _check_array
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.model_selection.util import filter_kwargs_to_func
-from elm.sample_util.elm_store import ElmStore
+from elm.readers import (ElmStore, flatten as _flatten)
+from elm.sample_util.change_coords import (change_coords_action,
+                                           CHANGE_COORDS_ACTIONS)
+from elm.sample_util.filename_selection import get_generated_args
 from elm.readers.util import row_col_to_xy
 
 logger = logging.getLogger(__name__)
@@ -47,6 +50,22 @@ def check_action_data(action_data):
     return True
 
 
+def _split_pipeline_output(output, sample, sample_y,
+                           sample_weight, context):
+    if not isinstance(output, (tuple, list)):
+        return output, sample_y, sample_weight
+    if len(output) == 1:
+        return output, sample_y, sample_weight
+    elif len(output) == 2:
+        return tuple(output) + (sample_weight,)
+    elif len(output) == 3:
+        return tuple(output)
+    else:
+        raise ValueError('{} sample_pipeline func returned '
+                         'more than 3 outputs in a '
+                         'tuple/list'.format(context))
+
+
 def run_sample_pipeline(action_data, sample=None, transform_model=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
@@ -66,18 +85,25 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         start_idx = 0
     for action in action_data[start_idx:]:
         sample_pipeline_step, func_str, args, kwargs = action
+        kwargs = kwargs.copy()
+        kwargs['sample_y'] = sample_y
+        kwargs['sample_weight'] = sample_weight
         logger.debug('On sample_pipeline step: {}'.format(sample_pipeline_step))
         if func_str.endswith('transform_sample_pipeline_step'):
             logger.debug('transform sample_pipeline step')
             samp_pipeline_step = args[0]
             args = tuple(args) + (transform_model,)
         func = import_callable(func_str, True, func_str)
+        func_out = None
         if sample is None:
             logger.debug('sample create sample_pipeline step')
             required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
             if not var_keyword:
                 kwargs = filter_kwargs_to_func(func, kwargs)
-            sample = func(*args, **kwargs)
+            output = func(*args, **kwargs)
+            sample, sample_y, sample_weight = _split_pipeline_output(output,
+                                               sample, sample_y,
+                                               sample_weight, repr(func))
         elif 'get_y' in args:
             logger.debug('get_y sample_pipeline step')
             sample_y = func(sample, **kwargs)
@@ -96,16 +122,18 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
             logger.debug('feature_selection sample_pipeline step')
             kw = copy.deepcopy(kwargs)
             kw['sample_y'] = sample_y
-            sample = func(sample, *args, **kw)
+            kw.pop('sample_weight')
+            func_out = func(sample, *args, **kw)
         else:
-            sample = func(sample, *args, **kwargs)
-        if not isinstance(sample, ElmStore) and hasattr(sample, 'sample'):
+            func_out = func(sample, *args, **kwargs)
+        if func_out is not None:
+            sample, sample_y, sample_weight = _split_pipeline_output(func_out, sample, sample_y,
+                                                   sample_weight, repr(func))
+        if not isinstance(sample, ElmStore):
             raise ValueError('Expected the return value of {} to be an '
-                             'elm.sample_util.elm_store:ElmStore'.format(func))
-        check_array(sample.sample.values,
-                    'sample_pipeline - after calling {} with args: {}  and kwargs: {}'.format(func, args, kwargs),
-                    allow_nd=True)
-        logger.debug('sample.shape {}'.format(sample.sample.shape))
+                             'elm.readers:ElmStore'.format(func))
+
+        logger.debug('Shapes {}'.format(tuple(getattr(sample, b).values.shape for b in sample.data_vars)))
     return (sample, sample_y, sample_weight)
 
 
@@ -123,16 +151,18 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
     d = train_or_predict_dict
 
     data_source = d['data_source']
+
     data_source = config.data_sources[d['data_source']]
     s = d.get('sample_args_generator',
                                   data_source.get('sample_args_generator'))
     if s:
         sample_args_generator = config.sample_args_generators[s]
         sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
+        sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
+                                         data_source.get('sample_args_generator_kwargs')) or {}
     else:
         sample_args_generator = None
-    sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
-                                         data_source.get('sample_args_generator_kwargs') or {})
+        sample_args_generator_kwargs = {}
     sample_args_generator_kwargs['data_source'] = data_source
     sampler_func = data_source['sample_from_args_func'] # TODO: this needs to be
                                                         # added to ConfigParser
@@ -145,11 +175,7 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
     if band_specs:
         sampler_args = (band_specs,)
     if sample_args_generator:
-        sampler_kwargs.update({'generated_args': tuple(sample_args_generator(**sample_args_generator_kwargs))})
-    elif sampler_args:
-        sampler_kwargs.update({'generated_args': sampler_args})
-    else:
-        pass # going with sampler_kwargs as given
+        sampler_kwargs.update(sample_args_generator_kwargs)
     reader_name = data_source.get('reader') or None
     if reader_name:
         reader = config.readers[reader_name]
@@ -157,19 +183,25 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
         load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:
         reader = load_array = load_meta = None
-    selection_kwargs = data_source.get('selection_kwargs') or {}
-    selection_kwargs.update({
-        'data_filter':     selection_kwargs.get('data_filter') or None,
-        'metadata_filter': selection_kwargs.get('metadata_filter') or None,
-        'filename_filter': selection_kwargs.get('filename_filter') or None,
-        'geo_filters':     selection_kwargs.get('geo_filters') or {},
-        'include_polys':   [config.polys[k]
-                            for k in selection_kwargs.get('include_polys', [])],
-        'exclude_polys':   [config.polys[k]
-                            for k in selection_kwargs.get('exclude_polys', [])],
+    get_k = lambda k, v: data_source.get('selection_kwargs',{}).get(k, sampler_kwargs.get(k, d.get(k, data_source.get(k, v)) ))
+
+    selection_kwargs = {
         'load_meta':       load_meta,
         'load_array':      load_array,
-    })
+    }
+    selection_kwargs.update(data_source.get('selection_kwargs') or {})
+
+    for k in selection_kwargs:
+        if '_filter' in k and selection_kwargs[k] and k != 'geo_filters':
+            selection_kwargs[k] = import_callable(selection_kwargs[k])
+    if sample_args_generator:
+        kw = copy.deepcopy(selection_kwargs)
+        kw.update(data_source)
+        kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
+        generated_args = get_generated_args(sample_args_generator,
+                                            band_specs,
+                                            **kw)
+        sampler_kwargs['generated_args'] = generated_args
     sampler_kwargs.update(selection_kwargs)
     action_data = [('create_sample', sampler_func, sampler_args, sampler_kwargs)]
     sample_pipeline = step.get('sample_pipeline')
@@ -231,6 +263,9 @@ def make_sample_pipeline_func(config, step):
             args = ('get_weight',)
             kwargs = data_source.get('get_weight_kwargs') or {}
             item = (func, args, kwargs)
+        elif any(k in CHANGE_COORDS_ACTIONS for k in action):
+            func, args, kwargs = change_coords_action(config, step, action)
+            item = (func, args, kwargs)
         else:
             # add items to actions of the form:
             # (
@@ -260,14 +295,12 @@ def check_array(arr, msg, **kwargs):
         raise ValueError('check_array ({}) failed with {}'.format(msg, repr(e)))
 
 def final_on_sample_step(fitter,
-                         model, s,
+                         model, X,
                          iter_offset,
                          fit_kwargs,
                          sample_y=None,
                          sample_weight=None,
-                         classes=None,
-                         flatten=True,
-                         flatten_y=False,
+                         classes=None
                       ):
     '''This is the final function called on a sample_pipeline
     or a simple sample that is input to training.  It ensures
@@ -278,9 +311,9 @@ def final_on_sample_step(fitter,
     Params:
        fitter:  a model attribute like "fit" or "partial_fit"
        model:   a sklearn model like MiniBatchKmeans()
-       s:       an ElmStore or xarray.Dataset with 'sample' DataArray
+       X:       an ElmStore or xarray.Dataset with 'flat' DataArray
        fit_kwargs: kwargs to fit_func from config
-       sample_y: numpy array (same row count as s) or None
+       Y: numpy array (same row count as s) or None
        sample_weight: numpy array (same row count as s) or None
        classes:  if using classification, all possible classes as iterable
                  or array of integers
@@ -288,13 +321,8 @@ def final_on_sample_step(fitter,
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
+    Y = sample_y
 
-    if flatten:
-        X = flatten_cube(s)
-    if flatten_y:
-        Y = flatten_cube(sample_y)
-    else:
-        Y = sample_y
     if sample_weight is not None:
         fit_kwargs['sample_weight'] = sample_weight
     if 'iter_offset' in kwargs:
@@ -306,90 +334,22 @@ def final_on_sample_step(fitter,
                          'argument but config\'s train section '
                          'get_y_func is not a callable'.format(fitter))
     if Y is not None:
-        fit_args = (X.sample.values, Y)
+        fit_args = (X.flat.values, Y)
         logger.debug('fit to X (shape {}) and Y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))
     else:
-        fit_args = (X.sample.values,)
+        fit_args = (X.flat.values,)
         logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
-    check_array(X.sample.values, "final_on_sample_step - X.sample.values")
+    check_array(X.flat.values, "final_on_sample_step - X.flat.values")
     if Y is not None:
         check_array(Y, "final_on_sample_step - Y")
     if sample_weight is not None:
         check_array(sample_weight, 'final_on_sample_step - sample_weight')
     if 'classes' in kwargs:
         if classes is None:
-            # TODO test that classes (the integer classes known
-            # ahead of time) can be specified in the config
-            # rather than just np.unique
-            # if it happens that a given sample does not have
-            # all classes represented, then the np.unique is wrong
-            classes = np.unique(Y)
+            raise ValueError('With model {} expected "classes" (unique classes int\'s) to be passed in config\'s "train" or "transform" dictionary')
         fit_kwargs['classes'] = classes
     if 'batch_size' in model.get_params():
-        logger.debug('set batch_size {}'.format(X.sample.values.shape[0]))
-        model.set_params(batch_size=X.sample.values.shape[0])
+        logger.debug('set batch_size {}'.format(X.flat.values.shape[0]))
+        model.set_params(batch_size=X.flat.values.shape[0])
     return fit_args, fit_kwargs
-
-def flatten_cube(elm_store):
-    '''Given an ElmStore with dims (band, y, x) return ElmStore
-    with shape (space, band) where space is a flattening of x,y
-
-    Params:
-        elm_store:  3-d ElmStore (band, y, x)
-
-    Returns:
-        elm_store:  2-d ElmStore (space, band)
-    '''
-    es = elm_store['sample']
-    if len(es.shape) == 2:
-        # its already flat
-        return elm_store
-    flat = xr.DataArray(np.array(tuple(es.values[idx, :, :].ravel()
-                              for idx in range(es.shape[0]))).T,
-                        coords=[np.arange(np.prod(es.shape[1:])),
-                                es.band.values],
-                        dims=('space',
-                              es.dims[0]),
-                        attrs=es.attrs)
-    flat_dropped = flat.dropna(dim='space')
-    flat_dropped.attrs.update(flat.attrs)
-    flat_dropped.attrs['dropped_points'] = flat.shape[0] - flat_dropped.shape[0]
-    return ElmStore({'sample': flat_dropped}, attrs=flat_dropped.attrs)
-
-
-def flattened_to_cube(flat, **attrs):
-    '''Given an ElmStore that has been flattened to (space, band) dims,
-    return a 3-d ElmStore with dims (band, y, x).  Requires that metadata
-    about x,y dims were preserved when the 2-d input ElmStore was created
-
-    Params:
-        flat: a 2-d ElmStore (space, band)
-        attrs: attribute dict to update the dict of the returned ElmStore
-
-    Returns:
-        es:  ElmStore (band, y, x)
-    '''
-    if len(flat.sample.shape) == 3:
-        # it's not actually flat
-        return flat
-    attrs2 = flat.attrs
-    attrs2.update(copy.deepcopy(attrs))
-    attrs = attrs2
-    filled = np.empty((flat.band.size, attrs['Height'], attrs['Width'])) * np.NaN
-    size = attrs['Height'] * attrs['Width']
-    space = np.intersect1d(np.arange(size), flat.space)
-    row = space // attrs['Width']
-    col = space - attrs['Width'] * row
-    for band in range(flat.sample.values.shape[1]):
-        shp = filled[band, row, col].shape
-        reshp = flat.sample.values[:, band].reshape(shp)
-        filled[band, row, col] = reshp
-    x, y =  row_col_to_xy(np.arange(attrs['Height']),
-                  np.arange(attrs['Width']),
-                  attrs['GeoTransform'])
-    coords = [('band', flat.band), ('y', y), ('x', x)]
-    filled = xr.DataArray(filled,
-                          coords=coords,
-                          dims=['band', 'y', 'x'])
-    return ElmStore({'sample': filled}, attrs=attrs)
 

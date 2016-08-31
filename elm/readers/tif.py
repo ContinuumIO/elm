@@ -1,3 +1,5 @@
+from collections import OrderedDict
+import copy
 import gc
 import logging
 import os
@@ -7,20 +9,29 @@ import rasterio as rio
 import xarray as xr
 
 from elm.sample_util.band_selection import match_meta
-from elm.readers.util import (geotransform_to_dims,
+from elm.readers.util import (geotransform_to_coords,
+                              geotransform_to_bounds,
                               bands_share_coords,
-                              SPATIAL_KEYS)
-from elm.sample_util.elm_store import ElmStore
+                              SPATIAL_KEYS,
+                              raster_as_2d,
+                              add_es_meta)
+from elm.readers import ElmStore
 logger = logging.getLogger(__name__)
+
+
+__all__ = ['load_tif_meta',
+          'load_dir_of_tifs_meta',
+          'load_dir_of_tifs_array',]
+
 
 def load_tif_meta(filename):
     r = rio.open(filename)
-    meta = {'MetaData': r.meta}
-    meta['GeoTransform'] = r.get_transform()
-    meta['Bounds'] = r.bounds
-    meta['Height'] = r.height
-    meta['Width'] = r.width
-    meta['Name'] = filename
+    meta = {'meta': r.meta}
+    meta['geo_transform'] = r.get_transform()
+    meta['bounds'] = r.bounds
+    meta['height'] = r.height
+    meta['width'] = r.width
+    meta['name'] = filename
     return r, meta
 
 def ls_tif_files(dir_of_tiffs):
@@ -28,20 +39,28 @@ def ls_tif_files(dir_of_tiffs):
     tifs = [f for f in tifs if f.lower().endswith('.tif') or f.lower.endswith('.tiff')]
     return [os.path.join(dir_of_tiffs, t) for t in tifs]
 
-def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
+def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
     tifs = ls_tif_files(dir_of_tiffs)
-    meta = {'MetaData': meta}
+    meta = copy.deepcopy(meta)
     band_order_info = []
     band_metas = []
-    for tif in tifs:
+
+    for band_idx, tif in enumerate(tifs):
         raster, band_meta = load_tif_meta(tif)
-        for idx, band_spec in enumerate(band_specs):
-            band_name = match_meta(band_meta, band_spec)
-            if band_name:
-                band_order_info.append((idx, tif, band_name))
-                band_metas.append((idx, band_meta))
-                break
-    if not band_order_info or len(band_order_info) != len(band_specs):
+
+        if band_specs:
+            for idx, band_spec in enumerate(band_specs):
+                band_name = match_meta(band_meta, band_spec)
+                if band_name:
+                    band_order_info.append((idx, tif, band_name))
+                    band_metas.append((idx, band_meta))
+                    break
+        else:
+            band_name = 'band_{}'.format(band_idx)
+            band_order_info.append((band_idx, tif, band_name))
+            band_metas.append((band_idx, band_meta))
+
+    if not band_order_info or (band_specs and (len(band_order_info) != len(band_specs))):
         raise ValueError('Failure to find all bands specified by '
                          'band_specs with length {}.\n'
                          'Found only {} of '
@@ -50,12 +69,8 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs, **meta):
     band_order_info.sort(key=lambda x:x[0])
     band_metas.sort(key=lambda x:x[0])
     band_metas = [b[1] for b in band_metas]
-    meta['BandMetaData'] = band_metas
-    meta['BandOrderInfo'] = band_order_info
-    if bands_share_coords(band_metas, raise_error=False):
-        meta['MetaData'].update(band_metas[0]['MetaData'])
-        for key in SPATIAL_KEYS:
-            meta[key] = band_metas[0][key]
+    meta['band_meta'] = band_metas
+    meta['band_order_info'] = band_order_info
     return meta
 
 def open_prefilter(filename):
@@ -69,42 +84,37 @@ def open_prefilter(filename):
         logger.info('Failed to rasterio.open {}'.format(filename))
         raise
 
-def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs):
-    band_order_info = meta['BandOrderInfo']
+def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
+    logger.debug('load_dir_of_tifs_array: {}'.format(dir_of_tiffs))
+    band_order_info = meta['band_order_info']
     tifs = ls_tif_files(dir_of_tiffs)
     logger.info('Load tif files from {}'.format(dir_of_tiffs))
-    bands_share_coords(meta['BandMetaData'], raise_error=True)
 
     if not len(band_order_info):
         raise ValueError('No matching bands with '
                          'band_specs {}'.format(band_specs))
+    native_dims = ('y', 'x')
+    elm_store_dict = OrderedDict()
+    meta['band_order'] = []
+    for idx, filename, band_name in band_order_info:
+        band_meta = copy.deepcopy({k: v for k, v in meta.items()
+                                   if k not in ('band_order_info', 'band_order')})
+        handle, raster = open_prefilter(filename)
+        raster = raster_as_2d(raster)
+        band_meta['geo_transform'] = handle.get_transform()
+        coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, band_meta['geo_transform'])
 
-    idx, filename, band_name = band_order_info[0]
-    handle, raster = open_prefilter(filename)
-    if len(raster.shape) == 3:
-        if raster.shape[0] == 1:
-            yx_shape = raster.shape[1:]
-        else:
-            raise ValueError('Did not expect 3-d TIF unless singleton in 0 or 2 dimension')
-    shp = (len(band_specs),) + yx_shape
-    store = np.empty(shp, dtype=raster.dtype)
-    store[0, :, :] = raster
-    del raster
+
+        band_meta['bounds'] = geotransform_to_bounds(handle.width,
+                                                     handle.height,
+                                                     band_meta['geo_transform'])
+
+        elm_store_dict[band_name] = xr.DataArray(raster,
+                                                 coords=[('y', coords_y),
+                                                         ('x', coords_x),],
+                                                 dims=native_dims,
+                                                 attrs=band_meta)
+
+        meta['band_order'].append(band_name)
     gc.collect()
-    if len(band_order_info) > 1:
-        for idx, filename, band_name in band_order_info[1:]:
-            handle, raster = open_prefilter(filename)
-            store[idx, :, :] = raster
-            del raster
-            gc.collect()
-    band_labels = [_[-1] for _ in band_specs]
-    coords_x, coords_y = geotransform_to_dims(handle.width, handle.height, meta['GeoTransform'])
-    band_data = xr.DataArray(store,
-                           coords=[('band', band_labels),
-                                   ('y', coords_y),
-                                   ('x', coords_x),
-                                   ],
-                           dims=['band','y','x',],
-                           attrs=meta)
-
-    return ElmStore({'sample': band_data}, attrs=meta)
+    return ElmStore(elm_store_dict, attrs=meta)

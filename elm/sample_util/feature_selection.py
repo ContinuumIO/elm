@@ -5,19 +5,17 @@ import sklearn.feature_selection as skfeat
 import xarray as xr
 
 from elm.config import import_callable
-from elm.pipeline.sample_pipeline import (flatten_cube,
-                                          flattened_to_cube,
-                                          check_array)
-from elm.sample_util.util import bands_as_columns
-from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.sample_pipeline import check_array
+from elm.readers import *
 from elm.model_selection.util import get_args_kwargs_defaults
 
 
-@bands_as_columns
+
 def feature_selection_base(sample_x,
                           selection_dict,
                           sample_y=None,
-                          keep_columns=None):
+                          keep_columns=None,
+                          **kwargs):
     '''feature_selection_base returns indices of columns to keep
     Params:
         sample:  a data frame sample with column names used in the
@@ -55,10 +53,10 @@ def feature_selection_base(sample_x,
     selection = feature_selection(*feature_selection_args,
                                 **feature_selection_kwargs)
     if feature_choices == 'all':
-        feature_choices = list(sample_x.sample.band)
-    band_idx = np.array([idx for idx, band in enumerate(sample_x.sample.band)
+        feature_choices = list(sample_x.flat.band)
+    band_idx = np.array([idx for idx, band in enumerate(sample_x.flat.band)
                          if band in feature_choices])
-    subset = sample_x.sample[:, band_idx]
+    subset = sample_x.flat[:, band_idx]
     check_array(subset.values, 'feature_selection:{} X subset'.format(selection))
 
     required_args, _, _ = get_args_kwargs_defaults(selection.fit)
@@ -71,11 +69,11 @@ def feature_selection_base(sample_x,
 
     selection.fit(subset.values, y=sample_y)
     ml_columns = selection.get_support(indices=True)
-    sample_x_dropped_bands =  ElmStore({'sample': xr.DataArray(sample_x.sample[:, band_idx[ml_columns]].copy(),
-                                              coords=[('space', sample_x.sample.space),
-                                                      ('band', sample_x.sample.band[band_idx[ml_columns]])],
+    sample_x_dropped_bands =  ElmStore({'flat': xr.DataArray(sample_x.flat[:, band_idx[ml_columns]].copy(),
+                                              coords=[('space', sample_x.flat.space),
+                                                      ('band', sample_x.flat.band[band_idx[ml_columns]])],
                                               dims=('space','band'),
-                                              attrs=sample_x.sample.attrs)},
+                                              attrs=sample_x.flat.attrs)},
                                           attrs=sample_x.attrs)
     del sample_x
     return sample_x_dropped_bands

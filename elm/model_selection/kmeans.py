@@ -9,13 +9,9 @@ from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
-from sklearn.metrics import silhouette_samples
 from elm.config import delayed
 from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
-from elm.pipeline.sample_pipeline import flatten_cube
-from elm.sample_util.elm_store import ElmStore
-from elm.sample_util.util import bands_as_columns
 
 
 def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
@@ -31,6 +27,7 @@ def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
         aic float
 
     '''
+    assert x.ndim == 2
     k, m = model.cluster_centers_.shape
     n = x.shape[0]
     d = model.inertia_

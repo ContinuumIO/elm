@@ -7,8 +7,8 @@ import numpy as np
 from sklearn.cross_validation import cross_val_score
 
 from elm.config.dask_settings import delayed, SERIAL_EVAL
-from elm.pipeline.sample_pipeline import run_sample_pipeline
-from elm.pipeline.sample_pipeline import final_on_sample_step
+from elm.sample_util.sample_pipeline import run_sample_pipeline
+from elm.sample_util.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import (score_one_model,
@@ -29,6 +29,7 @@ def fit(model,
         get_weight_kwargs=None,
         batches_per_gen=None,
         fit_kwargs=None,
+        classes=None,
         scoring=None,
         scoring_kwargs=None,
         transform_model=None,
@@ -38,7 +39,7 @@ def fit(model,
     Params:
 
         model:  instantiated model like MiniBatchKmeans()
-        action_data: from elm.pipeline.sample_pipeline:get_sample_pipeline_action_data
+        action_data: from elm.sample_util.sample_pipeline:get_sample_pipeline_action_data
                      (list of tuples of 3 items: (func, args, kwargs))
         get_y_func: function which returns a Y sample for an X sample dataframe
         get_y_kwargs: kwargs for get_y_func
@@ -60,10 +61,10 @@ def fit(model,
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,
                                                     fit_kwargs,
-                                                    classes=None, # TODO these need to be passed in some cases
-                                                    flatten=True,
+                                                    classes=classes, # TODO these need to be passed in some cases
                                                     sample_y=sample_y,
                                                     sample_weight=sample_weight)
+        logger.debug('fit_args {} fit_kwargs {}'.format(fit_args, fit_kwargs))
         out = fitter(*fit_args, **fit_kwargs)
         if out is not None: # allow fitter func to modify in place
                             # or return a fitted model
