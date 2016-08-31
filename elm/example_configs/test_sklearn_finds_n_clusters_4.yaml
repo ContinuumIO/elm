@@ -4,12 +4,12 @@ data_sources:
     sampler_args: null
     sampler_kwargs:
       centers:
-      - [2, 4]
-      - [22, 44]
-      - [42, 84]
-      - [62, 124]
+      - [2, 4, 6, 8]
+      - [22, 44, 66, 88]
+      - [42, 84, 126, 168]
+      - [62, 124, 186, 248]
       cluster_std: 0.0001
-      n_features: 2
+      n_features: 4
       n_samples: 10000
 ensembles:
   save_one: {saved_ensemble_size: 1}
@@ -46,12 +46,15 @@ pipeline:
 - {param_grid: example_param_grid, sample_pipeline: nothing, train: kmeans}
 sample_pipelines:
   minimal:
+  - {flatten: C}
   - {sklearn_preprocessing: require_positive}
   - {sklearn_preprocessing: log10}
   - {sklearn_preprocessing: standard}
   - {method: fit_transform, transform: pca}
-  nothing: []
+  nothing:
+  - {flatten: C}
   top_n:
+  - {flatten: C}
   - {sample_pipeline: minimal}
   - {feature_selection: top_n}
   - {method: fit_transform, transform: pca}

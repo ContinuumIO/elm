@@ -17,6 +17,7 @@ data_sources:
     - [long_name, 'Band 5 ', band_5]
     - [long_name, 'Band 7 ', band_7]
     - [long_name, 'Band 8 ', band_8]
+    - [long_name, 'Band 9 ', band_9]
     - [long_name, 'Band 10 ', band_10]
     - [long_name, 'Band 11 ', band_11]
     batch_size: 1440000
@@ -28,15 +29,16 @@ data_sources:
     keep_columns: []
     reader: hdf4-eos
     sample_args_generator: iter_files_recursively
-    sample_args_generator_kwargs: {extension: .hdf, top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
     sample_from_args_func: elm.sample_util.samplers:image_selection
     selection_kwargs:
       data_filter: null
+      extension: .hdf
       filename_filter: null
       geo_filters:
         exclude_polys: []
         include_polys: []
-      metadata_filter: null
+      metadata_filter: elm.sample_util.band_selection:example_meta_is_day
+      top_dir: env:ELM_EXAMPLE_DATA_PATH
   S3_LANDSAT_L2_TIFS:
     band_specs:
     - [name, _B1.TIF, band_1]
@@ -59,7 +61,7 @@ data_sources:
     sample_args_generator: tif_file_gen
     sample_args_generator_kwargs: {top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
     sample_from_args_func: elm.sample_util.samplers:image_selection
-    selection_kwargs: {}
+    selection_kwargs: {metadata_filter: 'elm.sample_util.band_selection:example_meta_is_day'}
 ensembles:
   no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, ngen: 1, saved_ensemble_size: 1}
   small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, ngen: 4, saved_ensemble_size: 4}
@@ -96,18 +98,20 @@ param_grids:
     feature_selection:
       top_80_percent:
         kwargs:
-          percentile: [0.3, 0.4, 0.5, 0.6, 0.7, 0.9]
+          percentile: [30, 40, 50, 60, 70, 80, 90]
     kmeans__n_clusters: [3, 4, 5, 6, 7, 8]
     pca__n_components: [2, 3, 4, 5]
     sample_pipeline: [standardize_log10_var_top_80_inter_trans, standardize_log10_var_top_80_trans]
 pipeline:
 - method: fit
   sample_pipeline:
+  - {sample_pipeline: flatten_example}
   - {feature_selection: select_all}
   - {get_y: true}
   train: kmeans
 - predict: kmeans
   sample_pipeline:
+  - {sample_pipeline: flatten_example}
   - {feature_selection: select_all}
   - {get_y: true}
 polys: {}
@@ -123,6 +127,10 @@ resamplers: {}
 sample_args_generators: {iter_files_recursively: 'elm.readers.local_file_iterators:iter_files_recursively',
   tif_file_gen: 'elm.readers.local_file_iterators:iter_dirs_of_dirs'}
 sample_pipelines:
+  flatten_example:
+  - {select_canvas: band_1}
+  - {flatten: C}
+  - {drop_na_rows: true}
   log10:
   - {sklearn_preprocessing: require_positive}
   - {sklearn_preprocessing: log10}
