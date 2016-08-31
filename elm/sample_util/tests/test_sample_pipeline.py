@@ -2,8 +2,10 @@ import copy
 
 import numpy as np
 import pandas as pd
-import xarray as xr
+import pytest
 from sklearn.decomposition import IncrementalPCA
+import xarray as xr
+
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.sample_util.sample_pipeline as sample_pipeline
 from elm.readers import ElmStore
