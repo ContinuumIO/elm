@@ -123,7 +123,8 @@ def predict_step(config, step, executor,
         models, meta = load_models_from_tag(config.ELM_TRAIN_PATH,
                                             tag)
     args = sampler_kwargs['generated_args']
-    arg_gen = itertools.product(args, models)
+    arg_gen = tuple(itertools.product(args, models))
+
     predict = partial(_predict_one_sample_one_arg,
                       action_data,
                       transform_model,

@@ -67,6 +67,7 @@ def load(path):
     return joblib.load(path)
 
 def load_models_from_tag(elm_train_path, tag):
+    logger.debug('Load {} from {}'.format(tag, elm_train_path))
     tag, subtag = split_model_tag(tag)
     paths = get_paths_for_tag(elm_train_path, tag, subtag)
     logger.info('Pickles: {}'.format(paths))

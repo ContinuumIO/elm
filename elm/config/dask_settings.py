@@ -17,19 +17,17 @@ def executor_context(dask_executor, dask_scheduler):
     if dask_executor == 'DISTRIBUTED':
         from distributed import Executor
         executor = Executor(dask_scheduler)
-        get_func = executor.get
     elif dask_executor == 'THREAD_POOL':
-        pool = ThreadPool(DASK_THREADS)
+        executor = ThreadPool(DASK_THREADS)
     elif dask_executor == 'SERIAL':
         executor = None
-        get_func = None
     else:
         raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_executor))
-    if dask_executor in ("THREAD_POOL",):
-        with da.set_options(pool=dask_executor):
+    with da.set_options(pool=dask_executor):
+        if dask_executor in ("THREAD_POOL",):
             yield pool
-    else:
-        yield executor
+        else:
+            yield executor
 
 
 def wait_for_futures(futures, executor=None):
@@ -40,7 +38,7 @@ def wait_for_futures(futures, executor=None):
         progress(futures)
         results = executor.gather(futures)
     else:
-        results = futures
+        results = list(futures)
     return results
 
 def no_executor_submit(func, *args, **kwargs):

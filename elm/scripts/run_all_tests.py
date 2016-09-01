@@ -22,7 +22,9 @@ from elm.config.env import parse_env_vars
 
 logger = logging.getLogger(__name__)
 
-SKIP_TOKENS = ('ProjectedGradientNMF',)
+SKIP_TOKENS = ('ProjectedGradientNMF','BayesianRidge', 'BernoulliRBM',
+               'Lasso','ElasticNetCV','FactorAnalysis',
+               'Lars', 'LarsCV','LassoCV','LassoLarsIC')
 
 LARGE_TEST_SETTINGS = {'ensembles': {'saved_ensemble_size': 2,
                                      'init_ensemble_size': 24,
@@ -93,6 +95,7 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
     test_configs = glob.glob(os.path.join(path, glob_pattern or '*.yaml'))
     for fname in test_configs:
         if any(s in fname for s in SKIP_TOKENS):
+            print_status('XFAIL', fname)
             logger.info('Skip config {}'.format(fname))
             continue
         logger.info('Run config {}'.format(fname))
@@ -118,7 +121,7 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
 
 def proc_wrapper(proc):
     def write(proc):
-        line = proc.stdout.read(4).decode()
+        line = proc.stdout.read(1).decode()
         print(line, end='')
         return line
     while proc.poll() is None:

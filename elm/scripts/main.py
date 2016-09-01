@@ -49,6 +49,7 @@ def try_finally_log_etime(started):
         if err:
             logger.info('There were errors {}'.format(err))
 
+
 def run_one_config(args=None, sys_argv=None,
                    return_0_if_ok=True, config_dict=None,
                    executor=None, started=None):
@@ -75,6 +76,7 @@ def run_one_config(args=None, sys_argv=None,
     if return_0_if_ok:
         return 0
     return return_values
+
 
 def _run_one_config_of_many(fname, **kwargs):
     print('Run config', fname)
