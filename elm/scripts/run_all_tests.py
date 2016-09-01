@@ -27,12 +27,15 @@ SKIP_TOKENS = ('ProjectedGradientNMF','BayesianRidge', 'BernoulliRBM',
                'Lars', 'LarsCV','LassoCV','LassoLarsIC')
 
 LARGE_TEST_SETTINGS = {'ensembles': {'saved_ensemble_size': 2,
-                                     'init_ensemble_size': 24,
+                                     'init_ensemble_size': 12,
                                      'ngen': 4,
                                      },
                        'param_grids': {'control': {'ngen': 4,
-                                       'mu': 24,
-                                       'k': 12}}}
+                                       'mu': 12,
+                                       'k': 4}}}
+
+STATUS_COUNTER = {'ok': 0, 'fail': 0, 'xfail': 0}
+ETIMES = {}
 
 def add_large_test_settings(config):
     for k, v in LARGE_TEST_SETTINGS.items():
@@ -56,11 +59,12 @@ def env_patch(**new_env):
     finally:
         os.environ.update(old_env)
 
-STATUS_COUNTER = {'ok': 0, 'fail': 0}
-ETIMES = {}
 
 def print_status(s, context):
     global STATUS_COUNTER
+    if isinstance(s, str) and 'XFAIL' in s:
+        logger.info('TEST_XFAIL\t{}\t{}'.format(s, context))
+        STATUS_COUNTER['xfail'] += 1
     if not s:
         STATUS_COUNTER['ok'] += 1
         logger.info('TEST_OK\t\t' + context)
