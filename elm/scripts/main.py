@@ -46,7 +46,8 @@ def try_finally_log_etime(started):
         logger.info('Ran from {} to {} ({} '
                     'seconds)'.format(started, ended,
                                       (ended - started).total_seconds()))
-
+        if err:
+            logger.info('There were errors {}'.format(err))
 
 def run_one_config(args=None, sys_argv=None,
                    return_0_if_ok=True, config_dict=None,
@@ -118,10 +119,12 @@ def main(args=None, sys_argv=None, return_0_if_ok=True):
     if args.config_dir is not None and args.config is not None:
         raise ElmConfigError('Expected --config-dir or --config, not both args')
     elif args.config_dir:
-        return run_many_configs(args, started=started, return_0_if_ok=return_0_if_ok)
-    return run_one_config(args=args, sys_argv=sys_argv,
+        ret = run_many_configs(args, started=started, return_0_if_ok=return_0_if_ok)
+        logger.info('Elapsed time {}'.format((datetime.datetime.now() - started).total_seconds()))
+    ret = run_one_config(args=args, sys_argv=sys_argv,
                           return_0_if_ok=return_0_if_ok,
                           started=started)
+    return ret
 
 if __name__ == "__main__":
     models = main()

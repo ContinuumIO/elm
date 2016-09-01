@@ -3,8 +3,12 @@ import contextlib
 import glob
 import logging
 import os
+import shutil
 import subprocess as sp
+import sys
+import tempfile
 import time
+import traceback
 
 import numpy as np
 from scipy.stats import describe
@@ -98,7 +102,11 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                                  config_dir=None,
                                  echo_config=False)
                 started = time.time()
-                ret_val = main(args=args, sys_argv=None, return_0_if_ok=True)
+                try:
+                    ret_val = main(args=args, sys_argv=None, return_0_if_ok=True)
+                except Exception as e:
+                    ret_val = repr(e)
+                    print(e, traceback.format_exc())
                 exe = new_env.get("DASK_EXECUTOR")
                 if not fname in ETIMES:
                     ETIMES[fname] = {}
@@ -108,24 +116,50 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                 print_status(ret_val, fname2)
 
 
+def proc_wrapper(proc):
+    def write(proc):
+        line = proc.stdout.read(4).decode()
+        print(line, end='')
+        return line
+    while proc.poll() is None:
+        if not write(proc):
+            break
+        time.sleep(0.02)
+    while write(proc):
+        pass
+    return proc.wait()
+
+
 def run_all_unit_tests(repo_dir, env, pytest_mark=None):
     with env_patch(**env) as new_env:
         proc_args = ['py.test']
         if pytest_mark:
             proc_args += ['-m', pytest_mark]
-        proc = sp.Popen(proc_args, cwd=repo_dir, env=new_env,
-                        stdout=sp.PIPE, stderr=sp.STDOUT)
-        def write():
-            line = proc.stdout.readline()
-            if line:
-                print(line, end='')
-            return line
-        while proc.poll() is None:
-            if not write():
-                break
-        while write():
-            pass
-        print_status(proc.wait(), 'unit_tests')
+        proc_kwargs = dict(cwd=repo_dir, env=new_env,
+                      stdout=sp.PIPE, stderr=sp.STDOUT)
+        proc = sp.Popen(proc_args, **proc_kwargs)
+        logger.info('{} with DASK_EXECUTOR={}'.format(proc_args, new_env['DASK_EXECUTOR']))
+        ret_val = proc_wrapper(proc)
+        print_status(ret_val, 'unit_tests')
+
+
+def run_all_tests_remote_git_branch(args):
+    branch = args.remote_git_branch
+    tmp = os.path.join(args.repo_dir, 'tmp')
+    if os.path.exists(tmp):
+        shutil.remove(tmp)
+    sp.Popen(['git', 'clone','http://github.com/ContinuumIO/elm'], cwd=tmp).wait()
+    cwd = os.path.join(tmp, 'elm')
+    sp.Popen(['git', 'fetch', '--all'], cwd=cwd).wait()
+    sp.Popen(['git', 'checkout', branch], cwd=cwd).wait()
+    sp.Popen(['source', 'activate', 'elm-env', '&&', 'python', 'setup.py', 'develop'],cwd=cwd).wait()
+    args = []
+    for arg in sys.argv:
+        if arg == repo_dir:
+            arg = tmp
+        args.append(arg)
+    proc = sp.Popen(args, cwd=os.curdir,stdout=sp.PIPE, stderr=sp.STDOUT)
+    return proc_wrapper(proc)
 
 
 def run_all_tests():
@@ -142,6 +176,7 @@ def run_all_tests():
     parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
     parser.add_argument('--add-large-test-settings', action='store_true', help='Adjust configs for larger ensembles / param_grids')
     parser.add_argument('--glob-pattern', help='Glob within repo_dir')
+    parser.add_argument('--remote-git-branch', help='Run on a remote git branch')
     args = parser.parse_args()
     args.config_dir = None
     if not args.dask_scheduler:
@@ -165,6 +200,8 @@ def run_all_tests():
     print('ETIMES', ETIMES)
     speed_up_fracs = {k: [] for k in args.dask_executors if k != 'SERIAL'}
     for fname in ETIMES:
+        if fname == 'unit_tests':
+            continue
         if ETIMES[fname].get("SERIAL"):
             base = ETIMES[fname]['SERIAL']
             for k, v in ETIMES[fname].items():
@@ -176,3 +213,5 @@ def run_all_tests():
     print('speed_up_fracs {}'.format(speed_up_fracs))
     print('Speed up summary {}'.format(speed_up_fracs_summary))
     print('STATUS', STATUS_COUNTER)
+
+
