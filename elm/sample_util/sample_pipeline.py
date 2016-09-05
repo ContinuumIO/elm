@@ -137,7 +137,7 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
     return (sample, sample_y, sample_weight)
 
 
-def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
+def get_sample_pipeline_action_data(train_or_predict_dict, config, step, data_source=None, sample_pipeline=None):
     '''Given sampling specs in a pipeline train or predict step,
     return action_data, a list of (func, args, kwargs) actions
 
@@ -149,10 +149,10 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
                                step
     '''
     d = train_or_predict_dict
+    if not data_source:
+        data_source = d['data_source']
 
-    data_source = d['data_source']
-
-    data_source = config.data_sources[d['data_source']]
+        data_source = config.data_sources[d['data_source']]
     s = d.get('sample_args_generator',
                                   data_source.get('sample_args_generator'))
     if s:
@@ -204,33 +204,38 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step):
         sampler_kwargs['generated_args'] = generated_args
     sampler_kwargs.update(selection_kwargs)
     action_data = [('create_sample', sampler_func, sampler_args, sampler_kwargs)]
-    sample_pipeline = step.get('sample_pipeline')
-    if 'sample_pipeline' in step:
-        actions = make_sample_pipeline_func(config, step)
+
+    sample_pipeline = sample_pipeline or step.get('sample_pipeline')
+    if sample_pipeline:
+        actions = make_sample_pipeline_func(config, step,
+                                            sample_pipeline=sample_pipeline,
+                                            data_source=data_source)
         action_data.extend(actions)
     return tuple(action_data)
 
-def make_sample_pipeline_func(config, step):
+def make_sample_pipeline_func(config, step, sample_pipeline=None, data_source=None):
     '''Make list of (func, args, kwargs) tuples to run sample_pipeline
     Params:
         config: validated config from elm.config.ConfigParser
         step:   a dictionary that is one step of a "pipeline" list
     '''
 
-    sample_pipeline = ConfigParser._get_sample_pipeline(config, step)
+    sample_pipeline = sample_pipeline or ConfigParser._get_sample_pipeline(config, step)
     actions = []
-    if 'train' in step:
-        key1 = 'train'
-    elif 'predict' in step:
-        key1 = 'predict'
-    elif 'transform' in step:
-        key1 = 'transform'
-    else:
-        raise ValueError('Expected "feature_selection" as a '
-                         'key within a "train" or "predict" pipeline '
-                         'action ({})'.format(action))
-    d = getattr(config, key1)[step[key1]]
-    data_source = config.data_sources[d['data_source']]
+    if not data_source:
+        if 'train' in step:
+            key1 = 'train'
+        elif 'predict' in step:
+            key1 = 'predict'
+        elif 'transform' in step:
+            key1 = 'transform'
+        else:
+            raise ValueError('Expected "feature_selection" as a '
+                             'key within a "train" or "predict" pipeline '
+                             'action ({})'.format(action))
+
+        d = getattr(config, key1)[step[key1]]
+        data_source = config.data_sources[d['data_source']]
     for action in sample_pipeline:
         if 'feature_selection' in action:
 
@@ -294,6 +299,10 @@ def check_array(arr, msg, **kwargs):
 
         raise ValueError('check_array ({}) failed with {}'.format(msg, repr(e)))
 
+def _has_arg(a):
+    return not (a is None or a == [] or (hasattr(a, 'size') and a.size == 0))
+
+
 def final_on_sample_step(fitter,
                          model, X,
                          iter_offset,
@@ -322,27 +331,28 @@ def final_on_sample_step(fitter,
     fit_kwargs = fit_kwargs or {}
     fit_kwargs = copy.deepcopy(fit_kwargs)
     Y = sample_y
-
-    if sample_weight is not None:
+    has_y = _has_arg(Y)
+    has_sw = _has_arg(sample_weight)
+    if has_sw:
         fit_kwargs['sample_weight'] = sample_weight
     if 'iter_offset' in kwargs:
         fit_kwargs['iter_offset'] = iter_offset
     if 'check_input' in kwargs:
         fit_kwargs['check_input'] = True
-    if any(a.lower() == 'y' for a in args) and Y is None:
+    if any(a.lower() == 'y' for a in args) and not has_y:
         raise ValueError('Fit function {} requires a Y positional '
                          'argument but config\'s train section '
                          'get_y_func is not a callable'.format(fitter))
-    if Y is not None:
+    if has_y:
         fit_args = (X.flat.values, Y)
         logger.debug('fit to X (shape {}) and Y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))
     else:
         fit_args = (X.flat.values,)
         logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
     check_array(X.flat.values, "final_on_sample_step - X.flat.values")
-    if Y is not None:
+    if has_y:
         check_array(Y, "final_on_sample_step - Y")
-    if sample_weight is not None:
+    if has_sw:
         check_array(sample_weight, 'final_on_sample_step - sample_weight')
     if 'classes' in kwargs:
         if classes is None:

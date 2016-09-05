@@ -47,10 +47,6 @@ def _make_model_args_from_config(config, train_or_trans_dict,
             model_init_kwargs['batch_size'] = batch_size
     fit_args = (action_data,)
     fit_kwargs = {
-        'get_y_func': data_source.get('get_y_func'),
-        'get_y_kwargs': data_source.get('get_y_kwargs'),
-        'get_weight_func': data_source.get('get_weight_func'),
-        'get_weight_kwargs': data_source.get('get_weight_kwargs'),
         'fit_kwargs': train_or_trans_dict.get('fit_kwargs') or {},
     }
     model_selection = train_or_trans_dict.get('model_selection') or None
@@ -170,22 +166,15 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-def serialize_models(models, **ensemble_kwargs):
-    if ensemble_kwargs.get('saved_ensemble_size') is not None:
-        saved_models = models[:ensemble_kwargs['saved_ensemble_size']]
-    else:
-        saved_models = models
-    model_paths, meta_path = save_models_with_meta(saved_models,
-                                 ensemble_kwargs['base_output_dir'],
-                                 ensemble_kwargs['tag'],
-                                 ensemble_kwargs['config'])
-    logger.info('Created model pickles: {} '
-                'and meta pickle {}'.format(model_paths, meta_path))
-    return models
+
+def _fit_one_model(*fit_args, **fit_kwargs):
+    #raise ValueError(repr((fit_args, fit_kwargs)))
+    return fit(*fit_args, **fit_kwargs)
 
 
 def _fit_list_of_models(args_kwargs, map_function,
                         get_results, model_names):
+
     fitted = get_results(
                 map_function(
                     lambda x: fit(*x[0], **x[1]),

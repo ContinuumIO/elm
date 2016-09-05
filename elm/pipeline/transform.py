@@ -35,6 +35,7 @@ def transform_sample_pipeline_step(sample_x,
     transform = config.transform[t]
     logger.debug('transform config {}'.format(transform))
     output =  getattr(transform_model, method)(sample_x.flat.values)
+    assert sample_x.is_flat()
     dims = (sample_x.flat.dims[0], 'components')
     components = np.array(['c_{}'.format(idx) for idx in range(output.shape[1])])
     attrs = copy.deepcopy(sample_x.attrs)
@@ -44,12 +45,12 @@ def transform_sample_pipeline_step(sample_x,
     # TODO if a 'fit' or 'fit_transform' is called in sample_pipeline
     # that transform model needs to be serialized later using the relevant
     # "transform" tag
-    sample_x['sample'] = xr.DataArray(output,
-                                      coords=[(dims[0],
-                                               getattr(sample_x.flat, dims[0]).values),
+    sample_x['flat'] = xr.DataArray(output,
+                                    coords=[(dims[0],
+                                             getattr(sample_x.flat, dims[0]).values),
                                               ('components', components)],
-                                      dims=dims,
-                                      attrs=attrs)
+                                    dims=dims,
+                                    attrs=attrs)
 
     return sample_x
 

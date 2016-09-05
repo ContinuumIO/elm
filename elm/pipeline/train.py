@@ -35,11 +35,14 @@ def _train_or_transform_step(train_or_transform,
     model_args, ensemble_kwargs = make_model_args_from_config(config,
                                                               step,
                                                               train_or_transform)
+    args_to_ensemble_evolve = kwargs.get('args_to_ensemble_evolve') or None
+    assert args_to_ensemble_evolve
     if evo_params is not None:
         args = (executor,
                 step,
                 evo_params,
-                kwargs.get('transform_model') or None,)
+                kwargs.get('transform_model') or None,
+                args_to_ensemble_evolve,)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
@@ -49,6 +52,7 @@ def _train_or_transform_step(train_or_transform,
     models = ensemble(executor,
                       model_args,
                       transform_model,
+                      args_to_ensemble_evolve,
                       **ensemble_kwargs)
     return models
 

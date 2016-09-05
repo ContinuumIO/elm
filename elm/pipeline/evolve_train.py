@@ -15,9 +15,9 @@ from elm.pipeline.util import (_validate_ensemble_members,
                                _prepare_fit_kwargs,
                                _get_model_selection_func,
                                _run_model_selection_func,
-                               serialize_models,
                                _fit_list_of_models,
                                make_model_args_from_config)
+from elm.pipeline.serialize import serialize_models
 
 
 def _on_each_ind(individual_to_new_config, step, train_or_transform,

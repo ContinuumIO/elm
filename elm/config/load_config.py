@@ -664,7 +664,9 @@ class ConfigParser(object):
 
     def _validate_pipeline(self):
         '''Validate config's "pipeline"'''
+
         self.pipeline = pipeline = self.config.get('pipeline', []) or []
+        return # TODO change!
         if not pipeline or not isinstance(pipeline, (tuple, list)):
             raise ElmConfigError('Expected a "pipeline" list of action '
                                    'dicts in config but found '

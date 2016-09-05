@@ -21,11 +21,7 @@ FIT_FUNC_ERR = ('Expected model {} to have a '
 
 
 def fit(model,
-        action_data,
-        get_y_func=None,
-        get_y_kwargs=None,
-        get_weight_func=None,
-        get_weight_kwargs=None,
+        sample_sample_y_sample_weight,
         batches_per_gen=None,
         fit_kwargs=None,
         classes=None,
@@ -46,7 +42,15 @@ def fit(model,
         fit_kwargs: kwargs passed to partial_fit or fit method of model
 
     '''
-    get_y_kwargs = get_y_kwargs or {}
+    logger.info((' - '.join(('{}',) * 9).format(model,
+        sample_sample_y_sample_weight,
+        batches_per_gen,
+        fit_kwargs,
+        classes,
+        scoring,
+        scoring_kwargs,
+        transform_model,
+        fit_method)))  #TODO remove this log
     if batches_per_gen > 1:
         if not hasattr(model, 'partial_fit') and fit_method == 'partial_fit':
             raise ValueError(FIT_FUNC_ERR.format(repr(model), batches_per_gen))
@@ -55,7 +59,12 @@ def fit(model,
     for idx in range(batches_per_gen):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, batches_per_gen))
-        sample, sample_y, sample_weight = run_sample_pipeline(action_data, transform_model=transform_model)
+
+        if sample_sample_y_sample_weight is None:
+            sample, sample_y, sample_weight = run_sample_pipeline(action_data, transform_model=transform_model)
+        else:
+            assert len(sample_sample_y_sample_weight) == 3, repr(len(sample_sample_y_sample_weight))
+            sample, sample_y, sample_weight = sample_sample_y_sample_weight
         fitter = getattr(model, fit_method, getattr(model, 'fit'))
         fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
                                                     iter_offset,

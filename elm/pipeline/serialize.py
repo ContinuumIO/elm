@@ -138,3 +138,15 @@ def transform_file_name(elm_transform_path, tag, bounds):
     return get_file_name(elm_transform_path, tag, bounds)
 
 
+def serialize_models(models, **ensemble_kwargs):
+    if ensemble_kwargs.get('saved_ensemble_size') is not None:
+        saved_models = models[:ensemble_kwargs['saved_ensemble_size']]
+    else:
+        saved_models = models
+    model_paths, meta_path = save_models_with_meta(saved_models,
+                                 ensemble_kwargs['base_output_dir'],
+                                 ensemble_kwargs['tag'],
+                                 ensemble_kwargs['config'])
+    logger.info('Created model pickles: {} '
+                'and meta pickle {}'.format(model_paths, meta_path))
+    return models
