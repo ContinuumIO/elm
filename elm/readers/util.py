@@ -31,6 +31,9 @@ Canvas = namedtuple('Canvas', CANVAS_FIELDS)
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
 
+BAND_SPEC_FIELDS = ('search_key', 'search_value', 'name')
+BandSpec = namedtuple('BandSpec', BAND_SPEC_FIELDS)
+
 #def serialize_canvas(canvas):
 #    vals = [item if not isinstance(item, Sequence) else list(item)
 #            for item in canvas]
