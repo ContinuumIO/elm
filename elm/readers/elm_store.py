@@ -1,12 +1,6 @@
-'''
-
-'''
-
 import logging
 
 import xarray as xr
-
-from elm.readers.util import add_es_meta
 
 __all__ = ['ElmStore', ]
 
