@@ -15,10 +15,7 @@ logger = logging.getLogger(__name__)
 class ElmStore(xr.Dataset):
 
     def __init__(self, *args, **kwargs):
-        add_canvas = kwargs.pop('add_canvas', True)
         super(ElmStore, self).__init__(*args, **kwargs)
-        if not self.is_flat() and add_canvas:
-            add_es_meta(self)
 
     def select_canvas(self, canvas):
         from elm.readers.reshape import select_canvas_elm_store
