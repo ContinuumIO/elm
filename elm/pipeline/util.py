@@ -1,8 +1,10 @@
 from collections import namedtuple, Sequence
 import copy
+from functools import partial
 import inspect
 import logging
 
+import dask
 import numbers
 
 from elm.config import import_callable
@@ -12,10 +14,18 @@ from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
 from elm.pipeline.run_model_method import run_model_method
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
-from elm.pipeline.serialize import save_models_with_meta
+from elm.sample_util.samplers import make_one_sample
 
 
 logger = logging.getLogger(__name__)
+
+_next_idx = 0
+
+def _next_name():
+    global _next_idx
+    n = 'ensemble-{}'.format(_next_idx)
+    _next_idx += 1
+    return n
 
 def _make_model_args_from_config(config, train_or_trans_dict,
                                  step, train_or_transform,
@@ -186,5 +196,28 @@ def _fit_list_of_models(args_kwargs, map_function,
                     args_kwargs
                 ))
     models = tuple(zip(model_names, fitted))
+    return models
+
+def run_train_dask(sample_pipeline_info, models,
+                   new_models, gen, fit_kwargs,
+                   get_func=None):
+    train_dsk = {}
+    sample_name = 'sample-{}'.format(gen)
+    sample_args = tuple(sample_pipeline_info) + (sample_name,)
+    train_dsk.update(make_one_sample(*sample_args))
+    keys = tuple('model-{}-gen-{}'.format(idx, gen)
+                 for idx in range(len(new_models or models)))
+    for name, (_, model) in zip(keys, models):
+        fitter = partial(_fit_one_model, model, **fit_kwargs)
+        train_dsk[name] = (fitter, sample_name)
+    def tkeys(*args):
+        return tuple(args)
+    new_models_name = _next_name()
+    train_dsk[new_models_name] = (tkeys, *keys)
+    if get_func is None:
+        new_models = tuple(dask.get(train_dsk, new_models_name))
+    else:
+        new_models = tuple(get_func(train_dsk, new_models_name))
+    models = tuple(zip(keys, new_models))
     return models
 

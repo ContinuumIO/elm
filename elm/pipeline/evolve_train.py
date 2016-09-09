@@ -153,13 +153,15 @@ def _evolve_train_or_transform(train_or_transform,
                                step,
                                evo_params,
                                transform_model,
+                               sample_pipeline_info,
                                **ensemble_kwargs):
 
     if hasattr(client, 'map'):
         map_function = client.map
     else:
         map_function = map
-    config = ensemble_kwargs['config']
+    (config, sample_pipeline, data_source,
+     transform_model, samples_per_batch) = sample_pipeline_info
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)

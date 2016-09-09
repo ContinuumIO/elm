@@ -3,8 +3,6 @@ from functools import partial
 from itertools import chain
 import logging
 
-import dask
-
 from elm.config import import_callable
 from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.serialize import serialize_models
@@ -13,18 +11,11 @@ from elm.pipeline.util import (_fit_list_of_models,
                                _validate_ensemble_members,
                                _get_model_selection_func,
                                _run_model_selection_func,
-                               _fit_one_model)
+                               _fit_one_model,
+                               run_train_dask)
 from elm.sample_util.samplers import make_one_sample
 
 logger = logging.getLogger(__name__)
-
-_next_idx = 0
-
-def _next_name():
-    global _next_idx
-    n = 'ensemble-{}'.format(_next_idx)
-    _next_idx += 1
-    return n
 
 
 def ensemble(client,
@@ -75,27 +66,11 @@ def ensemble(client,
     fit_kwargs = _prepare_fit_kwargs(model_args, ensemble_kwargs)
     final_names = []
     new_models = ()
+    models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     for gen in range(ngen):
-        train_dsk = {}
-        sample_name = 'sample-{}'.format(gen)
-        sample_args = tuple(sample_pipeline_info) + (sample_name,)
-        train_dsk.update(make_one_sample(*sample_args))
-        keys = tuple('model-{}-gen-{}'.format(idx, gen)
-                     for idx in range(len(new_models or models)))
-        if gen == 0:
-            models = zip(keys, models)
-        for name, (_, model) in zip(keys, models):
-            fitter = partial(_fit_one_model, model, **fit_kwargs)
-            train_dsk[name] = (fitter, sample_name)
-        def tkeys(*args):
-            return tuple(args)
-        new_models_name = _next_name()
-        train_dsk[new_models_name] = (tkeys, *keys)
-        if get_func is None:
-            new_models = tuple(dask.get(train_dsk, new_models_name))
-        else:
-            new_models = tuple(get_func(train_dsk, new_models_name))
-        models = tuple(zip(keys, new_models))
+        models = run_train_dask(sample_pipeline_info, models,
+                                new_models, gen, fit_kwargs,
+                                get_func=get_func)
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,
                                                model_args,

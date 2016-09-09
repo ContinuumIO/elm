@@ -41,7 +41,6 @@ def make_one_sample_part(config, sample_pipeline, data_source, transform_model):
                                     data_source, sample_pipeline)
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                                           transform_model=transform_model)
-    assert sample.is_flat(),(repr(sample.data_vars))
     return (sample, sample_y, sample_weight)
 
 

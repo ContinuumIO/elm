@@ -40,6 +40,13 @@ def _train_or_transform_step(train_or_transform,
                                                               data_source)
     sample_pipeline_info = kwargs.get('sample_pipeline_info') or None
     assert sample_pipeline_info
+    transform_model = kwargs.get('transform_model') or None
+
+    if transform_model is None:
+        transform_model = get_new_or_saved_transform_model(config,
+                                                           sample_pipeline,
+                                                           data_source,
+                                                           step)
     if evo_params is not None:
         args = (client,
                 step,
@@ -49,13 +56,6 @@ def _train_or_transform_step(train_or_transform,
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
-    transform_model = kwargs.get('transform_model') or None
-
-    if transform_model is None:
-        transform_model = get_new_or_saved_transform_model(config,
-                                                           sample_pipeline,
-                                                           data_source,
-                                                           step)
     models = ensemble(client,
                       model_args,
                       transform_model,
