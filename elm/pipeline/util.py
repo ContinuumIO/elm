@@ -10,7 +10,7 @@ from elm.model_selection.base import (base_selection, no_selection)
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
-from elm.pipeline.fit import fit
+from elm.pipeline.run_model_method import run_model_method
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.serialize import save_models_with_meta
 
@@ -18,12 +18,13 @@ from elm.pipeline.serialize import save_models_with_meta
 logger = logging.getLogger(__name__)
 
 def _make_model_args_from_config(config, train_or_trans_dict,
-                                 step, train_or_transform):
+                                 step, train_or_transform,
+                                 sample_pipeline, data_source):
     from elm.config.util import import_callable
     from elm.model_selection.util import get_args_kwargs_defaults
     classes = train_or_trans_dict.get('classes', None)
-    action_data = get_sample_pipeline_action_data(train_or_trans_dict, config, step)
-    data_source = config.data_sources[train_or_trans_dict.get('data_source')]
+    action_data = get_sample_pipeline_action_data(config, step,
+                                    data_source, sample_pipeline)
     if train_or_trans_dict.get('model_scoring'):
         logger.debug('Has model_scoring {}'.format(train_or_trans_dict['model_scoring']))
         ms = config.model_scoring[train_or_trans_dict['model_scoring']]
@@ -37,13 +38,13 @@ def _make_model_args_from_config(config, train_or_trans_dict,
     _, model_init_kwargs, _ = get_args_kwargs_defaults(model_init_class)
     default_fit = 'partial_fit' if 'partial_fit' in dir(model_init_class) else 'fit'
     model_init_kwargs.update(train_or_trans_dict.get('model_init_kwargs') or {})
-    fit_method = step.get('method', train_or_trans_dict.get('fit_method', train_or_trans_dict.get('method', 'fit')))
+    method = step.get('method', train_or_trans_dict.get('method', 'fit'))
     if 'batch_size' in model_init_kwargs:
         batch_size = step.get('batch_size', train_or_trans_dict.get('batch_size', data_source.get('batch_size')))
-        if (not isinstance(batch_size, numbers.Number) or batch_size <= 0) and 'partial_fit' == fit_method:
+        if (not isinstance(batch_size, numbers.Number) or batch_size <= 0) and 'partial_fit' == method:
             raise ValueError('"batch_size" (int) must be given in pipeline train or '
-                             'transform when partial_fit is used as a fit_method')
-        if fit_method == 'partial_fit':
+                             'transform when partial_fit is used as a method')
+        if method == 'partial_fit':
             model_init_kwargs['batch_size'] = batch_size
     fit_args = (action_data,)
     fit_kwargs = {
@@ -63,7 +64,7 @@ def _make_model_args_from_config(config, train_or_trans_dict,
         model_selection_kwargs = {}
     model_args = ModelArgs(model_init_class,
                            model_init_kwargs,
-                           fit_method,
+                           method,
                            fit_args,
                            fit_kwargs,
                            model_scoring,
@@ -79,13 +80,17 @@ def _make_model_args_from_config(config, train_or_trans_dict,
 
 def make_model_args_from_config(config,
                                 step,
-                                train_or_transform):
+                                train_or_transform,
+                                sample_pipeline,
+                                data_source):
     if train_or_transform == 'train':
         train_or_trans_dict = config.train[step['train']]
         train_model_args = _make_model_args_from_config(config,
                                                         train_or_trans_dict,
                                                         step,
-                                                        train_or_transform)
+                                                        train_or_transform,
+                                                        sample_pipeline,
+                                                        data_source)
         transform_model_args = None
     else:
         train_model_args = None
@@ -93,7 +98,9 @@ def make_model_args_from_config(config,
         transform_model_args = _make_model_args_from_config(config,
                                                             train_or_trans_dict,
                                                             step,
-                                                            train_or_transform)
+                                                            train_or_transform,
+                                                            sample_pipeline,
+                                                            data_source)
     ensemble_kwargs = config.ensembles[train_or_trans_dict['ensemble']]
     ensemble_kwargs['config'] = config
     ensemble_kwargs['tag'] = step[train_or_transform]
@@ -125,13 +132,12 @@ def _validate_ensemble_members(models):
     return models
 
 
-def _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs):
+def _prepare_fit_kwargs(model_args, ensemble_kwargs):
     fit_kwargs = copy.deepcopy(model_args.fit_kwargs)
     fit_kwargs['scoring'] = model_args.model_scoring
     fit_kwargs['scoring_kwargs'] = model_args.model_scoring_kwargs
-    fit_kwargs['transform_model'] = transform_model
-    fit_kwargs['fit_method'] = model_args.fit_method
-    fit_kwargs['batches_per_gen'] = ensemble_kwargs.get('batches_per_gen') or 1
+    fit_kwargs['method'] = model_args.method
+    fit_kwargs['partial_fit_batches'] = ensemble_kwargs.get('partial_fit_batches') or 1
     fit_kwargs['classes'] = model_args.classes
     return fit_kwargs
 
@@ -168,8 +174,7 @@ def _run_model_selection_func(model_selection_func, model_args,
 
 
 def _fit_one_model(*fit_args, **fit_kwargs):
-    #raise ValueError(repr((fit_args, fit_kwargs)))
-    return fit(*fit_args, **fit_kwargs)
+    return run_model_method(*fit_args, **fit_kwargs)
 
 
 def _fit_list_of_models(args_kwargs, map_function,

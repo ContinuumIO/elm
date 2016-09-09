@@ -3,7 +3,7 @@ import inspect
 
 MODEL_FIELDS = ['model_init_class',
                 'model_init_kwargs',
-                'fit_method',
+                'method',
                 'fit_args',
                 'fit_kwargs',
                 'model_scoring',

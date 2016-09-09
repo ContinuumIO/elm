@@ -27,6 +27,7 @@ def image_selection(band_specs,
     return select_from_file(filename, band_specs, **selection_kwargs)
 
 _name_num = 0
+
 def _next_name():
     global _name_num
     tag = 'load-{}'.format(_name_num)
@@ -36,12 +37,11 @@ def _next_name():
 
 def make_one_sample_part(config, sample_pipeline, data_source, transform_model):
 
-    action_data = get_sample_pipeline_action_data({}, config,
-                                                  {}, data_source=data_source,
-                                                  sample_pipeline=sample_pipeline)
+    action_data = get_sample_pipeline_action_data(config, {},
+                                    data_source, sample_pipeline)
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                                           transform_model=transform_model)
-    assert sample.is_flat(),(repr(action_data))
+    assert sample.is_flat(),(repr(sample.data_vars))
     return (sample, sample_y, sample_weight)
 
 

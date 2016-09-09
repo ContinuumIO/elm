@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 def _train_or_transform_step(train_or_transform,
                              config,
                              step,
-                             executor,
+                             client,
                              **kwargs):
     '''Evaluate a "train" step in a config's "pipeline"
 
@@ -24,35 +24,42 @@ def _train_or_transform_step(train_or_transform,
         train_or_transform: string - "train" or "transform"
         config:  config from elm.config.ConfigParser
         step:    current step dictionary in config's pipeline,
-        executor: None or a threaded/process/distributed Executor
+        client: None or a threaded/process/distributed Executor
         kwargs:
     Returns:
         models: the fitted models in the ensemble
     '''
     assert train_or_transform in ('train', 'transform')
     from elm.pipeline.transform import get_new_or_saved_transform_model
+    (_, sample_pipeline, data_source, transform_model, samples_per_batch) = kwargs['sample_pipeline_info']
     evo_params = kwargs.get('evo_params') or None
     model_args, ensemble_kwargs = make_model_args_from_config(config,
                                                               step,
-                                                              train_or_transform)
-    args_to_ensemble_evolve = kwargs.get('args_to_ensemble_evolve') or None
-    assert args_to_ensemble_evolve
+                                                              train_or_transform,
+                                                              sample_pipeline,
+                                                              data_source)
+    sample_pipeline_info = kwargs.get('sample_pipeline_info') or None
+    assert sample_pipeline_info
     if evo_params is not None:
-        args = (executor,
+        args = (client,
                 step,
                 evo_params,
                 kwargs.get('transform_model') or None,
-                args_to_ensemble_evolve,)
+                sample_pipeline_info,)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
     transform_model = kwargs.get('transform_model') or None
+
     if transform_model is None:
-        transform_model = get_new_or_saved_transform_model(config, step)
-    models = ensemble(executor,
+        transform_model = get_new_or_saved_transform_model(config,
+                                                           sample_pipeline,
+                                                           data_source,
+                                                           step)
+    models = ensemble(client,
                       model_args,
                       transform_model,
-                      args_to_ensemble_evolve,
+                      sample_pipeline_info,
                       **ensemble_kwargs)
     return models
 

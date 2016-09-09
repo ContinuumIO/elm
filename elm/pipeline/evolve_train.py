@@ -33,21 +33,24 @@ def _on_each_ind(individual_to_new_config, step, train_or_transform,
                                   in pipeline)
         config:                   from elm.config.ConfigParser
         ensemble_kwargs:           Dict with at least
-                                   "batches_per_gen": int key/value
+                                   "partial_fit_batches": int key/value
         transform_model:          None or list of 1 model name, model, e.g.:
                                   [('tag_0', IncrementalPCA(....))]
                                   (None if sample_pipeline doesn't use
                                    a transform)
         ind:                      Individual to evaluate
     Returns:
-        tuple of (args, kwargs) that go to elm.pipeline.fit.fit
+        tuple of (args, kwargs) that go to elm.pipeline.run_model_method:run_model_method
     '''
     new_config = individual_to_new_config(ind)
     model_args, _ = make_model_args_from_config(new_config,
                                                 step,
                                                 train_or_transform)
     if transform_model is None:
-        transform_model = get_new_or_saved_transform_model(config, step)
+        transform_model = get_new_or_saved_transform_model(config,
+                                                           sample_pipeline,
+                                                           data_source,
+                                                           step)
 
     fit_kwargs = _prepare_fit_kwargs(model_args,
                                      transform_model,
@@ -76,14 +79,14 @@ def on_each_evo_yield(individual_to_new_config,
         invalid_ind:               Individuals to evaluate
         config:                    Original elm.config.ConfigParser instance
         ensemble_kwargs:           Dict with at least
-                                   "batches_per_gen": int key/value
+                                   "partial_fit_batches": int key/value
         transform_model:           None or list of 1 model name, model, e.g.:
                                    [('tag_0', IncrementalPCA(....))]
                                    (None if sample_pipeline doesn't use
                                    a transform)
     Returns:
         List of tuples where each tuple is (args, kwargs) for
-        elm.pipeline.fit.fit
+        elm.pipeline.run_model_method:run_model_method
     '''
     args_kwargs = [] # args are (model, other needed args)
                      # kwargs are fit_kwargs
@@ -118,7 +121,7 @@ def _fit_invalid_ind(individual_to_new_config,
         train_or_transform:        "train" or "transform"
         config:                    Original elm.config.ConfigParser instance
         ensemble_kwargs:           Dict with at least
-                                   "batches_per_gen": int key/value
+                                   "partial_fit_batches": int key/value
         map_function:              Python's map or Executor's map
         get_results:               Wrapper around map_function such as ProgressBar
         invalid_ind:               Individuals to evaluate
@@ -146,18 +149,18 @@ def _fit_invalid_ind(individual_to_new_config,
 
 
 def _evolve_train_or_transform(train_or_transform,
-                               executor,
+                               client,
                                step,
                                evo_params,
                                transform_model,
                                **ensemble_kwargs):
 
-    if hasattr(executor, 'map'):
-        map_function = executor.map
+    if hasattr(client, 'map'):
+        map_function = client.map
     else:
         map_function = map
     config = ensemble_kwargs['config']
-    get_results = partial(wait_for_futures, executor=executor)
+    get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
     evo_args = [evo_params,]

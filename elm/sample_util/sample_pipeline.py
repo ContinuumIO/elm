@@ -137,7 +137,8 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
     return (sample, sample_y, sample_weight)
 
 
-def get_sample_pipeline_action_data(train_or_predict_dict, config, step, data_source=None, sample_pipeline=None):
+def get_sample_pipeline_action_data(config, step,
+                                    data_source, sample_pipeline):
     '''Given sampling specs in a pipeline train or predict step,
     return action_data, a list of (func, args, kwargs) actions
 
@@ -148,18 +149,11 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step, data_so
                                in the pipeline, like a "train" or "predict"
                                step
     '''
-    d = train_or_predict_dict
-    if not data_source:
-        data_source = d['data_source']
-
-        data_source = config.data_sources[d['data_source']]
-    s = d.get('sample_args_generator',
-                                  data_source.get('sample_args_generator'))
+    s = data_source.get('sample_args_generator')
     if s:
         sample_args_generator = config.sample_args_generators[s]
         sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
-        sample_args_generator_kwargs = d.get('sample_args_generator_kwargs',
-                                         data_source.get('sample_args_generator_kwargs')) or {}
+        sample_args_generator_kwargs = data_source.get('sample_args_generator_kwargs') or {}
     else:
         sample_args_generator = None
         sample_args_generator_kwargs = {}
@@ -183,7 +177,7 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step, data_so
         load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:
         reader = load_array = load_meta = None
-    get_k = lambda k, v: data_source.get('selection_kwargs',{}).get(k, sampler_kwargs.get(k, d.get(k, data_source.get(k, v)) ))
+    get_k = lambda k, v: data_source.get('selection_kwargs',{}).get(k, sampler_kwargs.get(k, data_source.get(k, v)) )
 
     selection_kwargs = {
         'load_meta':       load_meta,
@@ -194,14 +188,18 @@ def get_sample_pipeline_action_data(train_or_predict_dict, config, step, data_so
     for k in selection_kwargs:
         if '_filter' in k and selection_kwargs[k] and k != 'geo_filters':
             selection_kwargs[k] = import_callable(selection_kwargs[k])
+    kw = copy.deepcopy(selection_kwargs)
+    kw.update(data_source)
+    kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
     if sample_args_generator:
-        kw = copy.deepcopy(selection_kwargs)
-        kw.update(data_source)
-        kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
+
         generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
                                             **kw)
         sampler_kwargs['generated_args'] = generated_args
+    else:
+        sampler_kwargs['generated_args'] = [(sampler_args, sampler_kwargs)
+                                            for _ in range(data_source.get('n_batches') or 1)]
     sampler_kwargs.update(selection_kwargs)
     action_data = [('create_sample', sampler_func, sampler_args, sampler_kwargs)]
 
@@ -339,10 +337,10 @@ def final_on_sample_step(fitter,
         fit_kwargs['iter_offset'] = iter_offset
     if 'check_input' in kwargs:
         fit_kwargs['check_input'] = True
-    if any(a.lower() == 'y' for a in args) and not has_y:
-        raise ValueError('Fit function {} requires a Y positional '
-                         'argument but config\'s train section '
-                         'get_y_func is not a callable'.format(fitter))
+    #if any(a.lower() == 'y' for a in args) and not has_y:
+     #   raise ValueError('Fit function {} requires a Y positional '
+      #                   'argument but config\'s train section '
+       #                  'get_y_func is not a callable'.format(fitter))
     if has_y:
         fit_args = (X.flat.values, Y)
         logger.debug('fit to X (shape {}) and Y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))

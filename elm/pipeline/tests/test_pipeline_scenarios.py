@@ -18,13 +18,14 @@ from elm.model_selection.sklearn_support import MODELS_WITH_PREDICT_ESTIMATOR_TY
 config = copy.deepcopy(DEFAULTS)
 SMALL_ROW_COUNT = 500
 
-for step in config['pipeline']:
-    if 'train' in step:
-        DEFAULT_TRAIN_KEY = step['train']
-        DEFAULT_TRAIN = config['train'][step['train']]
-    if 'predict' in step:
-        DEFAULT_PREDICT_KEY = step['predict']
-        DEFAULT_PREDICT = config['train'][step['predict']]
+for step1 in config['pipeline']:
+    for step in step1['steps']:
+        if 'train' in step:
+            DEFAULT_TRAIN_KEY = step['train']
+            DEFAULT_TRAIN = config['train'][step['train']]
+        if 'predict' in step:
+            DEFAULT_PREDICT_KEY = step['predict']
+            DEFAULT_PREDICT = config['train'][step['predict']]
 
 
 def test_default_config():
@@ -48,13 +49,9 @@ def new_training_config(**train_kwargs):
 def adjust_config_sample_size(config, n_rows):
     '''Add a step to "sample_pipeline" for limiting
     the number of rows to a random subset of n_rows'''
-    for step in config['pipeline']:
-        if 'train' in step or 'predict' in step:
-            random_rows = [{'random_sample': n_rows}]
-            if 'sample_pipeline' in step:
-                step['sample_pipeline'] += random_rows
-            else:
-                step['sample_pipeline'] = [{'flatten': 'C'}] + random_rows
+    for step1 in config['pipeline']:
+        random_rows = [{'random_sample': n_rows}]
+        step1['sample_pipeline'] += [{'flatten': 'C'}] + random_rows
 
 # The following slow_models take longer than about 11 seconds
 # to fit / predict a sample of size (500, 11) with default init kwargs
@@ -110,7 +107,7 @@ def tst_sklearn_method(model_init_class,
                               'init_ensemble_size': 2,  # how many models to initialize at start
                               'saved_ensemble_size': 1, # how many models to serialize as "best"
                               'ngen': 1,       # how many model train/select generations
-                              'batches_per_gen': 1,     # how many partial_fit calls per train/select generation
+                              'partial_fit_batches': 1,     # how many partial_fit calls per train/select generation
                             }
         ks = set(c().get_params())
         models_defaults = {}
@@ -188,19 +185,24 @@ def tst_sklearn_method(model_init_class,
                 remove_pipeline_transforms(config)
             if n_rows:
                 adjust_config_sample_size(config, n_rows)
-            for item in config['pipeline']:
-                if item.get('method'):
-                    item['method'] = kwargs['fit_method']
-                if item.get('method') != 'partial_fit':
-                    item.pop('batch_size', 0)
+            for step in config['pipeline']:
+                steps = []
+                for item in step['steps']:
+                    if item.get('method'):
+                        item['method'] = kwargs['fit_method']
+                    if item.get('method') != 'partial_fit':
+                        item.pop('batch_size', 0)
+                    steps.append(item)
                 if not use_transform:
-                    item['sample_pipeline'] = [item2 for item2 in item.get('sample_pipeline', [])
+                    step['sample_pipeline'] = [item2 for item2 in step.get('sample_pipeline', [])
                                                if not 'transform' in item2]
                 if data_source.get('get_y_func'):
-                    item['sample_pipeline'] += [{'get_y': True}]
-
+                    step['sample_pipeline'] += [{'get_y': True}]
+                step['steps'] = steps
             if not has_predict:
-                config['pipeline'] = [_ for _ in config['pipeline'] if not 'predict' in _]
+                for step in config['pipeline']:
+                    step['steps'] = [s for s in step['steps']
+                                     if not 'predict' in s]
             config['data_sources'][DEFAULT_DS_KEY] = data_source
             with open('tested_config_{}.yaml'.format(model_init_class.split(':')[-1]), 'w') as f:
                 f.write(yaml.dump(config))

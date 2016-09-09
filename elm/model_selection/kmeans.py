@@ -31,7 +31,7 @@ def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
     n = x.shape[0]
     d = model.inertia_
     aic =  d + 2 * m * k
-    model.labels_ = None
+    delattr(model, 'labels_')
     return aic
 
 
@@ -51,24 +51,29 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     if drop_n > len(models):
         raise ValueError('All models would be dropped by drop_n {} '
                          'with len(models) {}'.format(drop_n, len(models)))
-    dropped = models[drop_n:]
+
+
     if drop_n:
+        dropped = models[-drop_n:]
         models = models[:-drop_n]
-    centroids = np.concatenate(tuple(m.cluster_centers_ for name, m in models))
+
     name_idx = 0
     new_models = []
-    for new in range(evolve_n):
+    if evolve_n:
+
+        centroids = np.concatenate(tuple(m.cluster_centers_ for name, m in models))
+        names = [name for name, model in models]
         meta_model = KMeans(**filter_kwargs_to_func(KMeans, **kwargs['model_init_kwargs']))
         meta_model.fit(centroids)
-        new_kwargs = copy.deepcopy(kwargs['model_init_kwargs'])
-        new_kwargs['init'] = meta_model.cluster_centers_
-        new_kwargs = filter_kwargs_to_func(KMeans, **new_kwargs)
-        new_model = (dropped[name_idx][0], MiniBatchKMeans(**new_kwargs))
-        new_models.append(new_model)
-        name_idx += 1
-    for new in range(init_n):
+        for name_idx, new in enumerate(range(evolve_n)):
+            new_kwargs = copy.deepcopy(kwargs['model_init_kwargs'])
+            new_kwargs['init'] = meta_model.cluster_centers_
+            new_kwargs = filter_kwargs_to_func(KMeans, **new_kwargs)
+            new_model = (names[name_idx], MiniBatchKMeans(**new_kwargs))
+            new_models.append(new_model)
+    for idx, new in enumerate(range(init_n)):
         new_kwargs = filter_kwargs_to_func(MiniBatchKMeans, **kwargs['model_init_kwargs'])
-        new_models.append((dropped[name_idx][0],
+        new_models.append(('new-kmeans-{}'.format(idx),
                            MiniBatchKMeans(**new_kwargs)))
-        name_idx += 1
     return tuple(new_models) + tuple(models)
+

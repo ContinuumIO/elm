@@ -1,6 +1,8 @@
 import contextlib
 import inspect
 
+import pytest
+
 from elm.config import DEFAULTS, ConfigParser, import_callable
 from elm.pipeline.tests.util import patch_ensemble_predict
 from elm.sample_util.sample_pipeline import check_action_data
@@ -13,26 +15,33 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'data_filter',
                            'geo_filters')
 
+
+
 def expected_fit_kwargs(data_source, train_dict, ensemble):
     fit_kwargs = {
-            'get_y_func': data_source.get('get_y_func'),
-            'get_y_kwargs': data_source.get('get_y_kwargs'),
-            'get_weight_func': data_source.get('get_weight_func'),
-            'get_weight_kwargs': data_source.get('get_weight_kwargs'),
             'fit_kwargs': train_dict['fit_kwargs'],
         }
     return fit_kwargs
 
-
-def test_train_makes_args_kwargs_ok():
+@pytest.mark.parametrize('ds_name, ds_dict', DEFAULTS['data_sources'].items())
+def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
     with patch_ensemble_predict() as (elmtrain, elmpredict):
         config = ConfigParser(config=DEFAULTS)
-        for step in config.pipeline:
-            if 'train' in step:
-                break
+        transform_model = None
+        sample_pipeline_info = (config,
+                                [{'flatten': 'C'}],
+                                ds_dict,
+                                transform_model,
+                                1)
+        for step1 in config.pipeline:
+            step1['data_source'] = ds_name
+            for step in step1['steps']:
+                if 'train' in step:
+                    break
         train_dict = config.train[step['train']]
-        args, kwargs = elmtrain.train_step(config, step, None)
-        (executor, model_args, transform_model) = args
+        args, kwargs = elmtrain.train_step(config, step, None,
+                                           sample_pipeline_info=sample_pipeline_info)
+        (client, model_args, transform_model, sample_pipeline_info) = args
         for k, v in config.ensembles[train_dict['ensemble']].items():
             assert kwargs[k] == v
         (model_init_class,
@@ -47,7 +56,7 @@ def test_train_makes_args_kwargs_ok():
          step_type,
          step_name,
          classes) = model_args
-        assert executor is None
+        assert client is None
         assert callable(model_init_class)   # model init func
         assert "KMeans" in repr(model_init_class)
         assert isinstance(model_init_kwargs, dict)  # model init kwargs
@@ -75,7 +84,8 @@ def test_train_makes_args_kwargs_ok():
         assert isinstance(model_selection_kwargs, dict)
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))
-        if any('transform' in step for step in config.pipeline):
+        if any(any('transform' in step for step in step1['steps'])
+               for step1 in config.pipeline):
             assert transform_model is not None
         else:
             assert transform_model is None

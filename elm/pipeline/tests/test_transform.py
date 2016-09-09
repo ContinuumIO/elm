@@ -12,6 +12,15 @@ from elm.pipeline.tests.util import (tmp_dirs_context,
                                      test_one_config as tst_one_config)
 from elm.model_selection import DECOMP_MODEL_STR
 
+for k,v in DEFAULTS['data_sources'].items():
+    DEFAULT_DATA_SOURCE = (k, v)
+    if k == 'NPP_DSRF1KD_L2GD':
+        break
+
+for k,v in DEFAULTS['transform'].items():
+    DEFAULT_TRANSFORM = (k, v)
+
+
 flatten = {'flatten': 'C'}
 def tst_once(tag, config):
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
@@ -39,27 +48,27 @@ def tst_transform(model_init_class, is_slow):
         params['n_jobs'] = 4
     if 'whiten' in params:
         params['whiten'] = True
-    transform = {'tested': {'model_init_kwargs': params,
+    transform = {'pca': {'model_init_kwargs': params,
                             'model_init_class': model_init_class,
-                            'data_source': DEFAULT_TRAIN['data_source'],
+                            'data_source': DEFAULT_DATA_SOURCE[0],
                             'ensemble': DEFAULT_TRAIN['ensemble'],
                             }
                 }
     if is_slow:
-        sp = [flatten, {'transform': 'tested', 'method': 'transform'}]
+        sp = [flatten, {'transform': 'pca', 'method': 'transform'}]
     else:
         sp = [flatten, {'random_sample': batch_size}]
-    pipeline = [{'transform': 'tested',
-                 'method': 'fit',
-                 'sample_pipeline': sp}
-                ]
+    pipeline = [{'sample_pipeline': sp,
+                 'data_source': DEFAULT_DATA_SOURCE[0],
+                 'steps': []}]
+    pipeline[0]['steps'] = [{'transform': 'pca',
+                             'method':    'fit',}]
     if is_slow:
-        pipeline += [{'train': 'kmeans',
-                      'method': 'fit',
-                      'sample_pipeline': sp}]
+        pipeline[0]['steps'] += [{'train': 'kmeans'}]
 
     config['train'] = {'kmeans': copy.deepcopy(DEFAULT_TRAIN)}
     config['pipeline'] = pipeline
+    config['data_sources'] = dict([DEFAULT_DATA_SOURCE])
     config['transform'] = transform
     with open('tested_config_{}.yaml'.format(model_init_class.split(':')[-1]), 'w') as f:
         f.write(yaml.dump(config))

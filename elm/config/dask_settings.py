@@ -21,39 +21,40 @@ SERIAL_EVAL = None # reset by elm.config.load_config.ConfigParser
 get_func = None
 
 @contextlib.contextmanager
-def executor_context(dask_executor, dask_scheduler):
+def client_context(dask_client, dask_scheduler):
     global get_func
-    if dask_executor == 'DISTRIBUTED':
+    if dask_client == 'DISTRIBUTED':
         assert Executor is not None, "You need to install distributed"
-        executor = Executor(dask_scheduler)
-        get_func = executor.get
-    elif dask_executor == 'THREAD_POOL':
-        executor = ThreadPool(DASK_THREADS)
+        client = Executor(dask_scheduler)
+        get_func = client.get
+    elif dask_client == 'THREAD_POOL':
+        client = ThreadPool(DASK_THREADS)
         get_func = dask_threaded_get
-    elif dask_executor == 'SERIAL':
-        executor = None
+    elif dask_client == 'SERIAL':
+        client = None
         get_func = get_sync
     else:
-        raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_executor))
-    with da.set_options(pool=dask_executor):
-        if dask_executor in ("THREAD_POOL",):
-            yield executor
+        raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_client))
+    with da.set_options(pool=dask_client):
+        if dask_client in ("THREAD_POOL",):
+            yield client
         else:
-            yield executor
+            yield client
 
 
-def wait_for_futures(futures, executor=None):
+def wait_for_futures(futures, client=None):
     '''Abstraction of waiting for mapped results
-    that works for any type of executor or no executor'''
-    if hasattr(executor, 'gather'): # distributed
+    that works for any type of client or no client'''
+    if hasattr(client, 'gather'): # distributed
         from distributed import progress
         progress(futures)
-        results = executor.gather(futures)
+        results = client.gather(futures)
     else:
         results = list(futures)
     return results
 
-def no_executor_submit(func, *args, **kwargs):
+
+def no_client_submit(func, *args, **kwargs):
     return func(*args, **kwargs)
 
-__all__ = ['no_executor_submit', 'executor_context', 'wait_for_futures']
+__all__ = ['no_client_submit', 'client_context', 'wait_for_futures']

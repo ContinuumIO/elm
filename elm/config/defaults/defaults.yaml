@@ -46,12 +46,9 @@ data_sources: {
  },
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
-  sample_args_generator_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH"
-  },
-
   selection_kwargs: {
     metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   },
   reader: dir_of_tifs_reader,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
@@ -143,13 +140,13 @@ ensembles: {
     init_ensemble_size: 1,  # how many models to initialize at start
     saved_ensemble_size: 1, # how many models to serialize as "best"
     ngen: 1,       # how many model train/select generations
-    batches_per_gen: 1,     # how many partial_fit calls per train/select generation
+    partial_fit_batches: 1,     # how many partial_fit calls per train/select generation
   },
   small_ensemble: {
     init_ensemble_size: 16,  # how many models to initialize at start
     saved_ensemble_size: 4, # how many models to serialize as "best"
     ngen: 4,       # how many model train/select generations
-    batches_per_gen: 4,     # how many partial_fit calls per train/select generation
+    partial_fit_batches: 4,     # how many partial_fit calls per train/select generation
   }
 }
 
@@ -159,7 +156,6 @@ transform: {
     model_init_kwargs: {"n_components": 2},
     data_source: NPP_DSRF1KD_L2GD,
     ensemble: no_ensemble,
-    model_selection: Null,
     model_scoring: Null,
     param_grid: pca_kmeans,
   }
@@ -277,7 +273,6 @@ train: {
 
 predict: {
   kmeans: {
-    data_source: NPP_DSRF1KD_L2GD,
     sample_args_generator: iter_files_recursively,
     sample_args_generator_kwargs: {
       top_dir: 'env:ELM_EXAMPLE_DATA_PATH',
@@ -289,26 +284,17 @@ change_detection: {
   time_series: []
 }
 pipeline:
-  - {transform: pca,
-     method: partial_fit,
-     sample_pipeline: [
-      {sample_pipeline: flatten_example},
-      {feature_selection: select_all},
-    ]}
-  - {train: kmeans,
-     method: partial_fit,
-     sample_pipeline: [
-      {sample_pipeline: flatten_example},
-      {feature_selection: select_all},
-      {transform: pca, method: transform},
-    ]}
-  - {predict: kmeans,
-     sample_pipeline: [
-      {sample_pipeline: flatten_example},
-      {feature_selection: select_all},
-      {transform: pca, method: transform},
-      ]
-    }
+  - {sample_pipeline: [{sample_pipeline: flatten_example},
+                       {transform: pca, method: fit_transform}],
+     data_source: NPP_DSRF1KD_L2GD,
+     steps: [
+       {transform: pca,
+        method: partial_fit},
+       {train: kmeans,
+        method: partial_fit},
+       {predict: kmeans},
+     ]
+  }
 
 
 # Config options that can be overriden by environment variables:

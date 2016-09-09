@@ -18,17 +18,25 @@ from elm.sample_util.samplers import make_one_sample
 
 logger = logging.getLogger(__name__)
 
+_next_idx = 0
 
-def ensemble(executor,
+def _next_name():
+    global _next_idx
+    n = 'ensemble-{}'.format(_next_idx)
+    _next_idx += 1
+    return n
+
+
+def ensemble(client,
              model_args,
              transform_model,
-             args_to_ensemble_evolve,
+             sample_pipeline_info,
              **ensemble_kwargs):
 
     '''Train model(s) in ensemble
 
     Params:
-        executor: None or a thread/process/distributed Executor
+        client: None or a thread/process/distributed Executor
         model_args: ModelArgs namedtuple
         transform_model: dictionary like:
                         {transform_name: [("tag_0", transform_model)]}
@@ -42,13 +50,13 @@ def ensemble(executor,
                     gens in the ensemble (calls to model_selection_func)
         '''
     from elm.config.dask_settings import get_func
-    if hasattr(executor, 'map'):
-        map_function = executor.map
+    if hasattr(client, 'map'):
+        map_function = client.map
     else:
         map_function = map
-    (config, sample_pipeline, data_source, transform_model, samples_per_batch) = args_to_ensemble_evolve
-    n_batches = data_source['n_batches']
-    get_results = partial(wait_for_futures, executor=executor)
+    (config, sample_pipeline, data_source, transform_model, samples_per_batch) = sample_pipeline_info
+    n_batches = data_source.get('n_batches') or 1
+    get_results = partial(wait_for_futures, client=client)
     model_selection_kwargs = model_args.model_selection_kwargs or {}
     ensemble_size = ensemble_kwargs['init_ensemble_size']
     ngen = ensemble_kwargs['ngen']
@@ -64,29 +72,29 @@ def ensemble(executor,
                                     model_init_kwargs,
                                     **ensemble_kwargs)
     model_selection_func = _get_model_selection_func(model_args)
-    fit_kwargs = _prepare_fit_kwargs(model_args, transform_model, ensemble_kwargs)
+    fit_kwargs = _prepare_fit_kwargs(model_args, ensemble_kwargs)
     final_names = []
     new_models = ()
     for gen in range(ngen):
         train_dsk = {}
         sample_name = 'sample-{}'.format(gen)
-        sample_args = tuple(args_to_ensemble_evolve) + (sample_name,)
+        sample_args = tuple(sample_pipeline_info) + (sample_name,)
         train_dsk.update(make_one_sample(*sample_args))
         keys = tuple('model-{}-gen-{}'.format(idx, gen)
                      for idx in range(len(new_models or models)))
         if gen == 0:
             models = zip(keys, models)
         for name, (_, model) in zip(keys, models):
-            assert not isinstance(model, tuple), repr(model)
             fitter = partial(_fit_one_model, model, **fit_kwargs)
             train_dsk[name] = (fitter, sample_name)
-        logger.info('Get Keys {}'.format(keys))
-        if executor is None:
-            new_models = (dask.get(train_dsk, key) for key in keys)
+        def tkeys(*args):
+            return tuple(args)
+        new_models_name = _next_name()
+        train_dsk[new_models_name] = (tkeys, *keys)
+        if get_func is None:
+            new_models = tuple(dask.get(train_dsk, new_models_name))
         else:
-            new_models = (get_func(train_dsk, key) for key in keys)
-        new_models = tuple(chain(new_models))
-        logger.info('new_models {}'.format(new_models))
+            new_models = tuple(get_func(train_dsk, new_models_name))
         models = tuple(zip(keys, new_models))
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,
@@ -95,7 +103,6 @@ def ensemble(executor,
                                                gen,
                                                fit_kwargs,
                                                models)
-            assert isinstance(models, (tuple, list)) and models and isinstance(models[0], (tuple, list))
         else:
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing

@@ -30,7 +30,7 @@ def get_default_data_days(yr):
         data_days = list(range(1, 366))
     return data_days
 
-def get_download_data_sources(config, step, executor):
+def get_download_data_sources(config, step, client):
     download_data_sources = step['download_data_sources']
     for name in download_data_sources:
         data_source = config.data_sources[name]

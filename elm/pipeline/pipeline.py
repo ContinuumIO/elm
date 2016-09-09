@@ -1,5 +1,6 @@
 from collections import defaultdict
 import copy
+import logging
 
 import dask
 
@@ -12,10 +13,20 @@ from elm.pipeline.util import get_transform_name_for_sample_pipeline
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.transform import get_new_or_saved_transform_model
 
+logger = logging.getLogger(__name__)
 
 
+def _create_args_to_each_step(config, major_step,
+                              return_values, transform_dict):
+    '''Create the args that go to each step in a pipeline's "steps"
+    Params:
 
-def sample_pipeline_for_each(config, major_step, return_values, transform_dict):
+        config:  elm.config.ConfigParser instance
+        major_step: the step dictionary in the pipeline, e.g config.pipeline[0]
+        return_values: dict of return values from previous pipeline steps
+        transform_dict: dict of transform models to be
+                        used in sample_pipeline if needed
+    '''
     samples_per_batch = major_step.get('samples_per_batch') or 1
     random_rows = major_step.get('random_rows')
     if random_rows:
@@ -23,22 +34,25 @@ def sample_pipeline_for_each(config, major_step, return_values, transform_dict):
         random_rows_per_file = random_rows // samples_per_batch
     else:
         random_rows_per_file = None
+    sample_pipeline = ConfigParser._get_sample_pipeline(config, major_step)
+    if sample_pipeline and not 'random_rows' in sample_pipeline[-1]:
+        if random_rows_per_file:
+            sample_pipeline = sample_pipeline + [{'random_rows': random_rows_per_file}]
+    data_source = config.data_sources[major_step['data_source']]
     for step in major_step['steps']:
         if step.get('transform') in transform_dict:
             transform_model = transform_dict[step['transform']]
         else:
-            transform_model = get_new_or_saved_transform_model(config, step)
+            transform_model = get_new_or_saved_transform_model(config,
+                                                               sample_pipeline,
+                                                               data_source,
+                                                               step)
         if transform_model:
             break
-    sample_pipeline = ConfigParser._get_sample_pipeline(config, major_step)
-    if not 'random_rows' in sample_pipeline[-1]:
-        if random_rows_per_file:
-            sample_pipeline = sample_pipeline + [{'random_rows': random_rows_per_file}]
-    data_source = config.data_sources[major_step['data_source']]
-    args_to_ensemble_evolve = (config, sample_pipeline, data_source,
-                               transform_model,
-                               samples_per_batch)
-    return args_to_ensemble_evolve
+    sample_pipeline_info = (config, sample_pipeline, data_source,
+                           transform_model,
+                           samples_per_batch)
+    return sample_pipeline_info
 
 
 def on_step(*args, **kwargs):
@@ -54,8 +68,12 @@ def on_step(*args, **kwargs):
         raise NotImplementedError('Put other operations like "change_detection" here')
 
 
-def _run_steps(return_values, transform_dict, evo_params_dict, executor, steps, config, args_to_ensemble_evolve):
+def _run_steps(return_values, transform_dict, evo_params_dict, client, steps, config, sample_pipeline_info):
+    '''Run the "steps" within a sample_pipeline dict's "steps"'''
+
     for idx, step in enumerate(steps):
+        logger.info('Pipeline step: {}'.format(repr(step)))
+        logger.info('Run pipeline step {}'.format(step))
         models = None
         if 'predict' in step and 'train' in return_values:
             if step['predict'] in return_values['train']:
@@ -72,33 +90,36 @@ def _run_steps(return_values, transform_dict, evo_params_dict, executor, steps, 
             transform_model = transform_dict[transform_key]
         else:
             transform_model = None
+
         kwargs = {'models': models,
                   'transform_model': transform_model,
-                  'args_to_ensemble_evolve': args_to_ensemble_evolve,
-                  }
-        if evo_params_dict:
-            raise NotImplementedError()
+                  'sample_pipeline_info': sample_pipeline_info}
         if idx in evo_params_dict:
             kwargs['evo_params'] = evo_params_dict[idx]
-        if args_to_ensemble_evolve is not None:
-            kwargs['args_to_ensemble_evolve'] = args_to_ensemble_evolve
-        step_type, ret_val = on_step(config, step, executor, **kwargs)
+        step_type, ret_val = on_step(config, step, client, **kwargs)
         return_values[step_type][step[step_type]] = ret_val
         if step_type == 'transform':
             transform_dict[step[step_type]] = ret_val
     return return_values, transform_dict
 
 
-def pipeline(config, executor):
-    '''Run all steps of a config's "pipeline"'''
-    args_to_ensemble_evolve = None
+def pipeline(config, client):
+    '''Run all steps of a config's "pipeline"
+    Parameters:
+        config: elm.config.ConfigParser instance
+        client: Executor/client from Distributed, thread pool
+                or None for serial evaluation
+    '''
+    sample_pipeline_info = None
     return_values = defaultdict(lambda: {})
     transform_dict = {}
     evo_params_dict = ea_setup(config)
     for idx, step in enumerate(config.pipeline):
-        rargs = (return_values, transform_dict, evo_params_dict, executor, step['steps'], config)
-        args_to_ensemble_evolve = sample_pipeline_for_each(config, step, return_values, transform_dict)
-        return_values, transform_dict = _run_steps(*(rargs + (args_to_ensemble_evolve,)))
+        sample_pipeline_info = _create_args_to_each_step(config, step, return_values, transform_dict)
+        rargs = (return_values, transform_dict, evo_params_dict,
+                 client, step['steps'], config,
+                 sample_pipeline_info)
+        return_values, transform_dict = _run_steps(*rargs)
     return return_values
 
 

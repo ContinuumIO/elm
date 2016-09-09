@@ -17,8 +17,14 @@ def elm_store_concat(*elms):
             if es[2] is not None:
                 sample_weights.append(es[2])
     elms = elms2
-    if sample_ys or sample_weights:
-        raise NotImplementedError()
+    if sample_ys:
+        sample_y = np.concatenate(sample_ys)
+    else:
+        sample_y = None
+    if sample_weights:
+        sample_weight = np.concatenate(sample_weights)
+    else:
+        sample_weight = None
     shp = set(es.flat.values.shape for es in elms)
     assert len(shp) == 1
     shp = tuple(shp)[0]
@@ -42,4 +48,4 @@ def elm_store_concat(*elms):
     es = ElmStore({'flat': xr.DataArray(store, coords=coords,
                                         dims=dims, attrs=attrs)},
                   attrs=attrs)
-    return (es, sample_ys, sample_weights)
+    return (es, sample_y, sample_weight)

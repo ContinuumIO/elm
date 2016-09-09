@@ -177,8 +177,8 @@ def run_all_tests():
     parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
     parser.add_argument('elm_configs_path', help='Path')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
-    parser.add_argument('--dask-executors', choices=choices, nargs='+',
-                        help='Dask executor(s) to test: %(choices)s')
+    parser.add_argument('--dask-clients', choices=choices, nargs='+',
+                        help='Dask client(s) to test: %(choices)s')
     parser.add_argument('--dask-scheduler', help='Dask scheduler URL')
     parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
     parser.add_argument('--add-large-test-settings', action='store_true', help='Adjust configs for larger ensembles / param_grids')
@@ -188,13 +188,13 @@ def run_all_tests():
     args.config_dir = None
     if not args.dask_scheduler:
         args.dask_scheduler = env.get('DASK_SCHEDULER', '10.0.0.10:8786')
-    if not args.dask_executors or 'ALL' in args.dask_executors:
-        args.dask_executors = [c for c in choices if c != 'ALL']
+    if not args.dask_clients or 'ALL' in args.dask_clients:
+        args.dask_clients = [c for c in choices if c != 'ALL']
     logger.info('Running run_all_tests with args: {}'.format(args))
     assert os.path.exists(args.repo_dir)
-    for executor in args.dask_executors:
+    for client in args.dask_clients:
         new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
-                   'DASK_EXECUTOR': executor}
+                   'DASK_EXECUTOR': client}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
@@ -205,7 +205,7 @@ def run_all_tests():
     if STATUS_COUNTER.get('fail') or failed_unit_tests:
         raise ValueError('Tests failed {}'.format(STATUS_COUNTER))
     print('ETIMES', ETIMES)
-    speed_up_fracs = {k: [] for k in args.dask_executors if k != 'SERIAL'}
+    speed_up_fracs = {k: [] for k in args.dask_clients if k != 'SERIAL'}
     for fname in ETIMES:
         if fname == 'unit_tests':
             continue

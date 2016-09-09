@@ -1,9 +1,19 @@
 CONFIG_STR = '''
+readers: {
+  hdf4-eos: {
+     load_array: "elm.readers.hdf4:load_hdf4_array",
+     load_meta: "elm.readers.hdf4:load_hdf4_meta"
+  },
+  dir_of_tifs_reader: {
+     load_array: "elm.readers.tif:load_dir_of_tifs_array",
+     load_meta: "elm.readers.tif:load_dir_of_tifs_meta"
+   },
+}
 ensembles: {
     save_one: {
-        saved_ensemble_size: 10,
-        init_ensemble_size: 600,
-        batches_per_gen:  4,
+        saved_ensemble_size: 4,
+        init_ensemble_size: 10,
+        partial_fit_batches:  2,
         ngen:  3,
     }
 }
@@ -12,10 +22,6 @@ transform: {
     model_init_class: "sklearn.decomposition:IncrementalPCA",
     model_init_kwargs: {"n_components": 2},
     ensemble: save_one,
-    model_selection: Null,
-    model_scoring: Null,
-    data_source: synthetic,
-    param_grid: example_param_grid,
   }
 }
 
@@ -63,13 +69,37 @@ sample_pipelines: {
 }
 
 data_sources: {
-  synthetic: {
-    sample_from_args_func: 'elm.pipeline.tests.util:random_elm_store',
-    sampler_args: [],
-    samples_per_batch: 4,
-    random_rows: 8000000,
-    n_batches: 10,
-  }
+ NPP_DSRF1KD_L2GD: {
+  reader: hdf4-eos,
+  file_pattern: "*.hdf",
+  sample_from_args_func: "elm.sample_util.samplers:image_selection",
+  band_specs: [[long_name, "Band 1 ", band_1],
+  [long_name, "Band 2 ", band_2],
+  [long_name, "Band 3 ", band_3],
+  [long_name, "Band 4 ", band_4],
+  [long_name, "Band 5 ", band_5],
+  [long_name, "Band 7 ", band_7],
+  [long_name, "Band 8 ", band_8],
+  [long_name, "Band 9 ", band_9],
+  [long_name, "Band 10 ", band_10],
+  [long_name, "Band 11 ", band_11]],
+  sample_args_generator: iter_files_recursively,
+  selection_kwargs: {
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+    extension: ".hdf",
+
+    data_filter: Null,
+    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+    filename_filter: Null,
+    geo_filters: {
+      include_polys: [],
+      exclude_polys: [],
+    },
+  },
+  keep_columns: [],
+  batch_size: 1440000,
+ },
+
 }
 
 model_scoring: {
@@ -82,23 +112,34 @@ model_scoring: {
 train: {
   kmeans: {
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
-    fit_kwargs: {},
-    model_init_kwargs: {},
+    model_init_kwargs: {compute_labels: True},
     ensemble: save_one,
     output_tag: kmeans,
-    data_source: synthetic,
-    keep_columns: [],
     model_scoring: testing_model_scoring,
+  }
+}
+predict: {
+  kmeans: {
+    sample_args_generator: iter_files_recursively,
+    sample_args_generator_kwargs: {
+      top_dir: 'env:ELM_EXAMPLE_DATA_PATH',
+      extension: '.hdf'
+    }
   }
 }
 
 pipeline:
-- {data_source: synthetic,
+- {data_source: NPP_DSRF1KD_L2GD,
   sample_pipeline: minimal,
   steps: [
     {train: kmeans},
+    {predict: kmeans},
     ]
   }
+sample_args_generators: {
+  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
+  iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
+}
 '''
 
 

@@ -5,7 +5,7 @@ from elm.pipeline.predict import predict_step
 def test_predict_step():
     models = [MiniBatchKMeans(n_clusters=n_clusters) for _ in range(5)]
 
-    predict_step(config, step, executor,
+    predict_step(config, step, client,
                  models=None,
                  serialize=None,
                  to_cube=True)

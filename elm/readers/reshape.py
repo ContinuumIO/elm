@@ -160,6 +160,7 @@ def filled_flattened(na_dropped):
     shp = getattr(na_dropped, 'shape_before_drop_na_rows', None)
     if not shp:
         return na_dropped
+    shp = (shp[0], len(na_dropped.band_order))
     filled = np.empty(shp) * np.NaN
     filled[na_dropped.space, :] = na_dropped.flat.values
     attrs = copy.deepcopy(na_dropped.attrs)
