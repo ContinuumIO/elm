@@ -15,13 +15,14 @@ from elm.pipeline.util import (_validate_ensemble_members,
                                _prepare_fit_kwargs,
                                _get_model_selection_func,
                                _run_model_selection_func,
-                               _fit_list_of_models,
-                               make_model_args_from_config)
+                               make_model_args_from_config,
+                               run_train_dask)
 from elm.pipeline.serialize import serialize_models
 
 
-def _on_each_ind(individual_to_new_config, step, train_or_transform,
-                 config, ensemble_kwargs, transform_model, ind):
+def on_each_generation(individual_to_new_config,
+                       sample_pipeline_info, step, train_or_transform,
+                       ensemble_kwargs, transform_model, gen, invalid_ind):
     '''Returns model, fit args, fit kwargs for Individual
     whose fitness must be solved
 
@@ -42,106 +43,29 @@ def _on_each_ind(individual_to_new_config, step, train_or_transform,
     Returns:
         tuple of (args, kwargs) that go to elm.pipeline.run_model_method:run_model_method
     '''
-    new_config = individual_to_new_config(ind)
-    model_args, _ = make_model_args_from_config(new_config,
+    from elm.config.dask_settings import get_func
+    (config, sample_pipeline, data_source,
+     transform_model, samples_per_batch) = sample_pipeline_info
+    sample_pipeline_infos = []
+    new_models = []
+    fit_kwargs = []
+    for idx, ind in enumerate(invalid_ind):
+        new_config = individual_to_new_config(ind)
+        spi = (new_config,) +  sample_pipeline_info[1:]
+        model_args, _ = make_model_args_from_config(new_config,
                                                 step,
-                                                train_or_transform)
-    if transform_model is None:
-        transform_model = get_new_or_saved_transform_model(config,
-                                                           sample_pipeline,
-                                                           data_source,
-                                                           step)
+                                                train_or_transform,
+                                                sample_pipeline,
+                                                data_source)
+        fit_kwargs.append(_prepare_fit_kwargs(model_args,
+                                         ensemble_kwargs))
+        model_init_kwargs = model_args.model_init_kwargs or {}
+        model = import_callable(model_args.model_init_class)(**model_init_kwargs)
+        new_models.append((ind.name, model))
 
-    fit_kwargs = _prepare_fit_kwargs(model_args,
-                                     transform_model,
-                                     ensemble_kwargs)
-    model_init_kwargs = model_args.model_init_kwargs or {}
-    model = import_callable(model_args.model_init_class)(**model_init_kwargs)
-    return ((model,) + tuple(model_args.fit_args), fit_kwargs)
-
-
-def on_each_evo_yield(individual_to_new_config,
-                      step,
-                      train_or_transform,
-                      invalid_ind,
-                      config,
-                      ensemble_kwargs,
-                      transform_model=None):
-    '''Run this on each yield from ea_general, which
-    includes "invalid_ind", the Individuals whose fitness
-    needs to be evaluated
-
-    Parameters:
-        individual_to_new_config:  Function taking Individual, returns
-                                   elm.config.ConfigParser instance
-        step:                      Dictionary step from config's "pipeline"
-        train_or_transform:        "train" or "transform"
-        invalid_ind:               Individuals to evaluate
-        config:                    Original elm.config.ConfigParser instance
-        ensemble_kwargs:           Dict with at least
-                                   "partial_fit_batches": int key/value
-        transform_model:           None or list of 1 model name, model, e.g.:
-                                   [('tag_0', IncrementalPCA(....))]
-                                   (None if sample_pipeline doesn't use
-                                   a transform)
-    Returns:
-        List of tuples where each tuple is (args, kwargs) for
-        elm.pipeline.run_model_method:run_model_method
-    '''
-    args_kwargs = [] # args are (model, other needed args)
-                     # kwargs are fit_kwargs
-    on_each_ind = partial(_on_each_ind,
-                          individual_to_new_config,
-                          step, train_or_transform,
-                          config, ensemble_kwargs,
-                          transform_model)
-
-    args_kwargs = map(on_each_ind, invalid_ind)
-    return args_kwargs
-
-
-def _fit_invalid_ind(individual_to_new_config,
-                     transform_model,
-                     step,
-                     train_or_transform,
-                     config,
-                     ensemble_kwargs,
-                     map_function,
-                     get_results,
-                     invalid_ind):
-    '''
-    Parameters:
-        individual_to_new_config:  Function taking Individual, returns
-                                   elm.config.ConfigParser instance
-        transform_model:           None or list of 1 model name, model, e.g.:
-                                   [('tag_0', IncrementalPCA(....))]
-                                   (None if sample_pipeline doesn't use
-                                   a transform)
-        step:                      Dictionary step from config's "pipeline"
-        train_or_transform:        "train" or "transform"
-        config:                    Original elm.config.ConfigParser instance
-        ensemble_kwargs:           Dict with at least
-                                   "partial_fit_batches": int key/value
-        map_function:              Python's map or Executor's map
-        get_results:               Wrapper around map_function such as ProgressBar
-        invalid_ind:               Individuals to evaluate
-    Returns:
-        tuple of (models, fitnesses) where:
-            models is a list of (name, model) tuples
-            fitnesses are the model scores for optimization
-    '''
-    args_kwargs = tuple(on_each_evo_yield(individual_to_new_config,
-                                          step,
-                                          train_or_transform,
-                                          invalid_ind,
-                                          config,
-                                          ensemble_kwargs,
-                                          transform_model=transform_model))
-    model_names = [ind.name for ind in invalid_ind]
-    models = _fit_list_of_models(args_kwargs,
-                                 map_function,
-                                 get_results,
-                                 model_names)
+    models = run_train_dask(sample_pipeline_info,
+                   new_models, gen, fit_kwargs,
+                   get_func=get_func)
     fitnesses = [model._score for name, model in models]
     fitnesses = [(item if isinstance(item, Sequence) else [item])
                  for item in fitnesses]
@@ -156,25 +80,19 @@ def _evolve_train_or_transform(train_or_transform,
                                sample_pipeline_info,
                                **ensemble_kwargs):
 
-    if hasattr(client, 'map'):
-        map_function = client.map
-    else:
-        map_function = map
     (config, sample_pipeline, data_source,
      transform_model, samples_per_batch) = sample_pipeline_info
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
     evo_args = [evo_params,]
-    fit_one_generation = partial(_fit_invalid_ind,
+    fit_one_generation = partial(on_each_generation,
                                  evo_params.individual_to_new_config,
-                                 transform_model,
+                                 sample_pipeline_info,
                                  step,
                                  train_or_transform,
-                                 config,
                                  ensemble_kwargs,
-                                 map_function,
-                                 get_results)
+                                 transform_model)
     try:
         param_history = []
         for a in required_args[1:]:
@@ -185,7 +103,7 @@ def _evolve_train_or_transform(train_or_transform,
             evo_args.append(control[a])
         ea_gen = ea_general(*evo_args)
         pop, _, _ = next(ea_gen)
-        models, fitnesses = fit_one_generation(pop)
+        models, fitnesses = fit_one_generation(0, pop)
         assign_check_fitness(pop,
                          fitnesses,
                          param_history,
@@ -199,13 +117,14 @@ def _evolve_train_or_transform(train_or_transform,
                              'ngen or early_stop keys')
         elif not ngen:
             ngen = 1000000
-        for idx in range(ngen):
+        for gen in range(ngen):
             # on last generation invalid_ind becomes None
             # and breaks this loop
-            if idx > 0:
-                models, fitnesses = fit_one_generation(invalid_ind)
+            if gen > 0:
+                models, fitnesses = fit_one_generation(gen, invalid_ind)
                 fitted_models.update(dict(models))
             (pop, invalid_ind, param_history) = ea_gen.send(fitnesses)
+
             pop_names = [ind.name for ind in pop]
             fitted_models = {k: v for k, v in fitted_models.items()
                              if k in pop_names}

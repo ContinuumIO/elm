@@ -6,8 +6,7 @@ import logging
 from elm.config import import_callable
 from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.serialize import serialize_models
-from elm.pipeline.util import (_fit_list_of_models,
-                               _prepare_fit_kwargs,
+from elm.pipeline.util import (_prepare_fit_kwargs,
                                _validate_ensemble_members,
                                _get_model_selection_func,
                                _run_model_selection_func,
@@ -65,11 +64,10 @@ def ensemble(client,
     model_selection_func = _get_model_selection_func(model_args)
     fit_kwargs = _prepare_fit_kwargs(model_args, ensemble_kwargs)
     final_names = []
-    new_models = ()
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     for gen in range(ngen):
         models = run_train_dask(sample_pipeline_info, models,
-                                new_models, gen, fit_kwargs,
+                                gen, fit_kwargs,
                                 get_func=get_func)
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,

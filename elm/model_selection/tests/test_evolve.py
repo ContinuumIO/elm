@@ -19,7 +19,7 @@ from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 def _setup():
     '''Return the config above and the param_grid'''
     config = ConfigParser(config=yaml.load(CONFIG_STR))
-    param_grid = get_param_grid(config, config.pipeline[0])
+    param_grid = get_param_grid(config, config.pipeline[0],config.pipeline[0]['steps'][0])
     return config, param_grid
 
 

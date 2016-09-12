@@ -182,33 +182,25 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-
 def _fit_one_model(*fit_args, **fit_kwargs):
     return run_model_method(*fit_args, **fit_kwargs)
 
 
-def _fit_list_of_models(args_kwargs, map_function,
-                        get_results, model_names):
-
-    fitted = get_results(
-                map_function(
-                    lambda x: fit(*x[0], **x[1]),
-                    args_kwargs
-                ))
-    models = tuple(zip(model_names, fitted))
-    return models
-
 def run_train_dask(sample_pipeline_info, models,
-                   new_models, gen, fit_kwargs,
+                   gen, fit_kwargs,
                    get_func=None):
     train_dsk = {}
     sample_name = 'sample-{}'.format(gen)
     sample_args = tuple(sample_pipeline_info) + (sample_name,)
     train_dsk.update(make_one_sample(*sample_args))
-    keys = tuple('model-{}-gen-{}'.format(idx, gen)
-                 for idx in range(len(new_models or models)))
-    for name, (_, model) in zip(keys, models):
-        fitter = partial(_fit_one_model, model, **fit_kwargs)
+    keys = tuple(name for name, model in models)
+    for idx, (name, model) in enumerate(models):
+
+        if isinstance(fit_kwargs, (tuple, list)):
+            kw = fit_kwargs[idx]
+        else:
+            kw = fit_kwargs
+        fitter = partial(_fit_one_model, model, **kw)
         train_dsk[name] = (fitter, sample_name)
     def tkeys(*args):
         return tuple(args)

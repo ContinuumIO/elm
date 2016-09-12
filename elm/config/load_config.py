@@ -615,14 +615,14 @@ class ConfigParser(object):
         self.param_grids = self.config.get('param_grids') or {}
         self._validate_type(self.param_grids, 'param_grids', dict)
         for k, v in self.param_grids.items():
-            steps = [step for step in self.pipeline
-                     if step.get('param_grid')]
-            for step in steps:
-                if not step['param_grid'] in self.param_grids:
-                    raise ElmConfigError('Pipeline step {} refers to '
-                                         'a param_grid which is not defined '
-                                         'in param_grids ({})'.format(step, step['param_grid']))
-                get_param_grid(self, step)
+            for step1 in self.pipeline:
+                for step in (s for s in step1['steps'] if 'param_grid' in s):
+
+                    if not step['param_grid'] in self.param_grids:
+                        raise ElmConfigError('Pipeline step {} refers to '
+                                             'a param_grid which is not defined '
+                                             'in param_grids ({})'.format(step, step['param_grid']))
+                    get_param_grid(self, step1, step)
 
     def _validate_pipeline_train(self, step):
         '''Validate a "train" step within config's "pipeline"'''

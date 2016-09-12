@@ -108,15 +108,14 @@ train: {
     model_init_kwargs: {},
     ensemble: save_one,
     output_tag: kmeans,
-    data_source: synthetic,
     keep_columns: [],
     model_scoring: testing_model_scoring,
   }
 }
 
 pipeline:
-- train: kmeans
-  param_grid: example_param_grid
-  sample_pipeline: minimal
+- sample_pipeline: minimal
+  data_source: synthetic
+  steps: [{train: kmeans, param_grid: example_param_grid}]
 
 '''
