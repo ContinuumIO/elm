@@ -51,7 +51,8 @@ def test_sample_pipeline_feature_selection():
                     'choices': BANDS,
                     'kwargs': {'threshold': 0.08,},
                 }
-                action_data = sample_pipeline.get_sample_pipeline_action_data(config2.train[train_name], config2, action)
+                action_data = sample_pipeline.get_sample_pipeline_action_data(config, step,
+                                    data_source, sample_pipeline)
                 transform_models = None
                 for repeats in range(5):
                     s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_model=None)

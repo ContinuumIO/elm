@@ -7,7 +7,7 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.pipeline.serialize import load_models_from_tag
-from elm.readers import data_arrays_as_columns
+from elm.readers import ElmStore
 from elm.pipeline.util import _make_model_args_from_config
 
 logger = logging.getLogger(__name__)
@@ -35,23 +35,24 @@ def transform_sample_pipeline_step(sample_x,
     transform = config.transform[t]
     logger.debug('transform config {}'.format(transform))
     output =  getattr(transform_model, method)(sample_x.flat.values)
-    dims = (sample_x.flat.dims[0], 'components')
+    assert sample_x.is_flat()
+    dims = ('space', 'band')
     components = np.array(['c_{}'.format(idx) for idx in range(output.shape[1])])
     attrs = copy.deepcopy(sample_x.attrs)
     attrs['transform'] = {'new_shape': list(output.shape)}
+    attrs['band_order'] = components
     assert not np.any(np.isnan(output))
     assert np.all(np.isfinite(output))
     # TODO if a 'fit' or 'fit_transform' is called in sample_pipeline
     # that transform model needs to be serialized later using the relevant
     # "transform" tag
-    sample_x['sample'] = xr.DataArray(output,
-                                      coords=[(dims[0],
-                                               getattr(sample_x.flat, dims[0]).values),
-                                              ('components', components)],
-                                      dims=dims,
-                                      attrs=attrs)
+    return ElmStore({'flat': xr.DataArray(output,
+                                    coords=[(dims[0],
+                                             getattr(sample_x.flat, dims[0]).values),
+                                              ('band', components)],
+                                    dims=dims,
+                                    attrs=attrs)}, attrs=attrs)
 
-    return sample_x
 
 
 def _get_saved_transform_models(action, config, **kwargs):
@@ -64,9 +65,8 @@ def _get_saved_transform_models(action, config, **kwargs):
     return transform_models
 
 
-def init_saved_transform_models(config, step):
+def init_saved_transform_models(config, sample_pipeline):
 
-    sample_pipeline = step.get('sample_pipeline') or []
     transform_model = None
     for action in sample_pipeline:
         if 'transform' in action:
@@ -78,22 +78,23 @@ def init_saved_transform_models(config, step):
     return transform_model
 
 
-def get_new_or_saved_transform_model(config, step):
+def get_new_or_saved_transform_model(config, sample_pipeline, data_source, step):
     transform_model = None
     train_or_transform = 'train' if 'train' in step else 'transform'
-    sample_pipeline = step.get('sample_pipeline') or []
     for item in sample_pipeline:
         if 'transform' in item:
             method = item.get('method', config.transform.get('method', None))
             if method is None:
                 raise ValueError('Expected a "method" for transform')
             if 'fit' not in method:
-                return init_saved_transform_models(config, step)
+                return init_saved_transform_models(config, sample_pipeline)
             else:
                 model_args = _make_model_args_from_config(config,
                                                           config.transform[item['transform']],
                                                           step,
-                                                          train_or_transform)
+                                                          train_or_transform,
+                                                          sample_pipeline,
+                                                          data_source)
                 model = model_args.model_init_class(**model_args.model_init_kwargs)
                 return [('tag_0', model)]
     return None

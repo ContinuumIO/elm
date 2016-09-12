@@ -54,7 +54,7 @@ def parse_env_vars():
         elm_env_vars[item['name']] = val
     for item in str_fields_specs:
         if item['name'] == 'DASK_SCHEDULER':
-            required = elm_env_vars['DASK_EXECUTOR'] != 'SERIAL'
+            required = elm_env_vars['DASK_EXECUTOR'] == 'DISTRIBUTED'
         else:
             required = item.get('required', False)
         val = process_str_env_var(item['name'],

@@ -189,9 +189,11 @@ def make_blobs_elm_store(**make_blobs_kwargs):
 
 
 def remove_pipeline_transforms(config):
-    config['pipeline'] = [_ for _ in config['pipeline'] if not 'transform' in _]
+    for idx in range(len(config['pipeline'])):
+        config['pipeline'][idx]['steps'] = [_ for _ in config['pipeline'][idx]['steps']
+                                            if not 'transform' in _]
 
     for item in config['pipeline']:
-        if 'sample_pipeline' in item:
-            item['sample_pipeline'] = [_ for _ in item['sample_pipeline'] if not 'transform' in _]
+        item['sample_pipeline'] = [_ for _ in item['sample_pipeline']
+                                   if not 'transform' in _]
 

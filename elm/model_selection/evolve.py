@@ -201,7 +201,7 @@ def parse_param_grid_items(param_grid_name, train_config, transform_config,
     return param_grid_parsed
 
 
-def get_param_grid(config, step):
+def get_param_grid(config, step1, step):
     '''Get the metadata for one config step that has a param_grid or return None'''
     param_grid_name = step.get('param_grid') or None
     if not param_grid_name:
@@ -218,8 +218,8 @@ def get_param_grid(config, step):
         raise ElmConfigError('Expected param_grid to be used with a "train" '
                          'or "transform" step of a pipeline, but found param_grid '
                          'was used in step {}'.format(step))
-    if 'sample_pipeline' in step and transform_step_name is None:
-        sample_pipeline = step['sample_pipeline']
+    if 'sample_pipeline' in step1 and transform_step_name is None:
+        sample_pipeline = step1['sample_pipeline']
         transform_steps = [_ for _ in sample_pipeline if 'transform' in _]
         transform_names = set(_.get('transform') for _ in transform_steps)
         if len(transform_names) > 1:
@@ -234,6 +234,12 @@ def get_param_grid(config, step):
         raise ElmConfigError('Expected param_grids: {} to be a dict '
                              'but found {}'.format(param_grid_name, param_grid))
     control = param_grid.get('control') or {}
+    if not isinstance(control, dict):
+        raise ElmConfigError("Expected 'control' as dict")
+    early_stop = control.get('early_stop') or None
+    if early_stop:
+        if not isinstance(early_stop, dict) or not any(k in early_stop for k in ('abs_change', 'percent_change', 'threshold')):
+            raise ElmConfigError('Expected "early_stop" to be a dict with a key in ("abs_change", "percent_change", "threshold")')
     if not isinstance(control, dict):
         raise ElmConfigError('Expected param_grids: {} - "control" to be a dict'.format(control))
     for required_key, typ in REQUIRED_CONTROL_KEYS_TYPES.items():
@@ -436,11 +442,6 @@ def individual_to_new_config(config, deap_params, ind):
                        keys,
                        choices[idx])
     new_config = ConfigParser(config=new_config)
-    if sample_pipeline is not None:
-        idx = [idx for idx, s in enumerate(new_config.pipeline)
-               if s == deap_params['control']['step']][0]
-        new_sp = new_config.sample_pipelines[sample_pipeline]
-        new_config.pipeline[idx]['sample_pipeline'] = new_sp
     return new_config
 
 
@@ -517,12 +518,13 @@ def _get_evolve_meta(config):
     '''Returns parsed param_grids info or None if not used'''
     param_grid_name_to_deap = {}
     step_name_to_param_grid_name = {}
-    for idx, step in enumerate(config.pipeline):
-        pg = get_param_grid(config, step)
-        if pg:
-            param_grid_name_to_deap.update(pg)
-            idx_name = (idx, step.get('train', step.get('transform')))
-            step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
+    for idx, step1 in enumerate(config.pipeline):
+        for step in step1['steps']:
+            pg = get_param_grid(config, step1, step)
+            if pg:
+                param_grid_name_to_deap.update(pg)
+                idx_name = (idx, step.get('train', step.get('transform')))
+                step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
     if not param_grid_name_to_deap:
         return None
     return (step_name_to_param_grid_name, param_grid_name_to_deap)
@@ -564,6 +566,7 @@ def ea_setup(config):
         toolbox.register('individual', tools.initIterate, creator.Individual,
                          toolbox.indices)
         toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+        early_stop = deap_params['control'].get('early_stop') or None
         evo_params =  EvoParams(
                toolbox=_configure_toolbox(toolbox, deap_params, config, **kwargs),
                individual_to_new_config=partial(individual_to_new_config,
@@ -573,7 +576,7 @@ def ea_setup(config):
                param_grid_name=param_grid_name,
                history_file='{}.csv'.format(param_grid_name),
                score_weights=score_weights,
-               early_stop=deap_params['control'].get('early_stop') or None,
+               early_stop=early_stop,
         )
         evo_params_dict[idx] = evo_params
     return evo_params_dict

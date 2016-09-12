@@ -65,7 +65,7 @@ def test_bad_train_config():
         bad_config = tst_bad_config(bad_config)
         bad_config['ensembles'][k]['ngen'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['ensembles'][k]['batches_per_gen'] = item
+        bad_config['ensembles'][k]['partial_fit_batches'] = item
         bad_config = tst_bad_config(bad_config)
 
 

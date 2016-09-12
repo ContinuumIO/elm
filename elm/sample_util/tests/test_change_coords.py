@@ -21,9 +21,13 @@ transform = {'model_init_class': 'sklearn.decomposition:PCA',
              'data_source': 'synthetic',
              'model_init_kwargs': {'n_components': n_components,}}
 
-def make_pipeline(sample_pipeline):
-    pipeline = [{'train': 'ex1', 'sample_pipeline': sample_pipeline}]
+
+def make_pipeline(sample_pipeline, data_source):
+    pipeline = [{'data_source': 'synthetic',
+                 'sample_pipeline': sample_pipeline,
+                 'steps': [{'train': 'ex1'}]}]
     return pipeline
+
 
 def tst_one_sample_pipeline(sample_pipeline):
     sample = random_elm_store()
@@ -31,9 +35,10 @@ def tst_one_sample_pipeline(sample_pipeline):
               'ensembles': {'ex3': {'saved_ensemble_size': 1}},
               'train': {'ex1': train},
               'transform': {'ex2': transform},
-              'pipeline': make_pipeline(sample_pipeline)}
+              'pipeline': make_pipeline(sample_pipeline, data_source)}
     config = ConfigParser(config=config)
-    ma, _ = make_model_args_from_config(config, config.pipeline[0], 'train')
+    ma, _ = make_model_args_from_config(config, config.pipeline[0]['steps'][0], 'train',
+                                        sample_pipeline, data_source)
     action_data = ma.fit_args[0]
     transform_model = [('tag_0', PCA(n_components=n_components))]
     new_es, _, _ = run_sample_pipeline(action_data,

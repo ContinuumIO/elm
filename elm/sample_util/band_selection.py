@@ -6,8 +6,6 @@ import logging
 import pandas as pd
 import re
 
-from elm.config import delayed
-from elm.readers.hdf4 import load_hdf4_array, load_hdf4_meta
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.sample_util.util import InvalidSample
 

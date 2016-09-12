@@ -5,8 +5,6 @@ import logging
 from numba import njit
 import numpy as np
 
-from elm.config import delayed
-
 logger = logging.getLogger(__name__)
 
 Spatialbounds = namedtuple('Spatialbounds', 'north south east west')

@@ -18,8 +18,7 @@ str_fields_specs:
     choices: [
     DISTRIBUTED,
     SERIAL,
-    THREAD_POOL,
-    PROCESS_POOL]}
+    THREAD_POOL]}
  - {name: DASK_SCHEDULER,
     required: True}
  - {name: LADSWEB_LOCAL_CACHE,  # needs to be deprecated

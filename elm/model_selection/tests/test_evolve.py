@@ -19,7 +19,7 @@ from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 def _setup():
     '''Return the config above and the param_grid'''
     config = ConfigParser(config=yaml.load(CONFIG_STR))
-    param_grid = get_param_grid(config, config.pipeline[0])
+    param_grid = get_param_grid(config, config.pipeline[0],config.pipeline[0]['steps'][0])
     return config, param_grid
 
 
@@ -67,7 +67,6 @@ def test_individual_to_new_config():
     new_config = individual_to_new_config(config, param_grid_item, ind)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 4
     assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 3
-    assert new_config.pipeline[0]['sample_pipeline'] == top_n
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 40
 
 
@@ -175,7 +174,7 @@ bad_param = [
         ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
         ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
         ]
-not_dicts = (9, [], (), 9.1, None, [2,3])
+not_dicts = (9, 9.1, [2,3])
 not_int = ({},[], 9.1, [1,3])
 bad_control = [{}, [], 9, None, 'cant be string', [9]]
 int_keys = tuple(control_key + (k,)
