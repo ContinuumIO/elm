@@ -55,30 +55,33 @@ def load_hdf5_meta(datafile):
                 sub_datasets=sds,
                 name=datafile)
 
-def load_array(dataset):
-    data_file = gdal.Open(dataset)
+def load_subdataset(subdataset):
+    data_file = gdal.Open(subdataset)
     raster = raster_as_2d(data_file.ReadAsArray())
-    canvas = Canvas(geo_transform=data_file.GetGeoTransform(),
-                    xsize=data_file.RasterXSize,
-                    ysize=data_file.RasterYSize,
-                    zsize=None,
-                    tsize=None,
-                    zbounds=None,
-                    tbounds=None,
-                    bounds=None,
-                    dims=None,
+    raster = raster.T
+    rows, cols = raster.shape
+    geotrans = (-180, .1, 0, 90, 0, -.1) # TODO: GDAL appears to give wrong geo_transform
+    coord_x, coord_y = geotransform_to_coords(cols,
+                                              rows,
+                                              geotrans)
+
+    dims = ('y', 'x')
+    canvas = Canvas(geo_transform=geotrans,
+                    xsize=cols,
+                    ysize=rows,
+                    dims=dims,
+                    xbounds=(coord_x[0], coord_x[-1]),
+                    ybounds=(coord_y[0], coord_y[-1]),
                     ravel_order='C')
 
-    coord_x, coord_y = geotransform_to_coords(data_file.RasterXSize,
-                                        data_file.RasterYSize,
-                                        canvas.geo_transform)
     attrs = dict(canvas=canvas)
+    attrs['geo_transform'] = geotrans
     coords = [('y', coord_y),('x', coord_x)] 
-    dims = ('y', 'x')
     return xr.DataArray(data=raster,
                         coords=coords,
                         dims=dims,
                         attrs=attrs)
+
 
 def load_hdf5_array(datafile, meta, band_specs):
     logger.debug('load_hdf5_array: {}'.format(datafile))
@@ -92,49 +95,19 @@ def load_hdf5_array(datafile, meta, band_specs):
                 band_order_info.append((idx, band_meta, sd, bs.name))
                 break
 
-    band_order_info.sort(key=lambda x:x[0])
     if not len(band_order_info):
-        raise ValueError('No matching bands with '
-                         'band_specs {}'.format(band_specs))
+        raise ValueError('No matching bands with band_specs {}'.format(band_specs))
 
+    band_order_info.sort(key=lambda x:x[0])
     elm_store_data = OrderedDict()
-
     band_order = []
     for _, band_meta, sd, name in band_order_info:
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
-        subdata = gdal.Open(sd[0], GA_ReadOnly)
-        raster = raster_as_2d(subdata.ReadAsArray())
-
-        canvas = Canvas()
-        canvas.geo_transform = subdata.GetGeoTransform()
-        canvas.ravel_order = 'C'
-        import pdb;pdb.set_trace()
-        canvas.ysize = subdata.GetGeoTransform()
-        canvas.xsize = subdata.GetGeoTransform()
-        canvas.zsize = subdata.GetGeoTransform()
-        canvas.tsize = subdata.GetGeoTransform()
-        canvas.dims = subdata.GetGeoTransform()
-        canvas.zbounds = subdata.GetGeoTransform()
-        canvas.tbounds = subdata.GetGeoTransform()
-        canvas.bounds = subdata.GetGeoTransform()
-
-        attrs['geo_transform'] = dat0.GetGeoTransform()
-        coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
-                                            dat0.RasterYSize,
-                                            attrs['geo_transform'])
-        elm_store_data[name] = xr.DataArray(raster,
-                               coords=[('y', coord_y),
-                                       ('x', coord_x),
-                                       ],
-                               dims=('y','x'),
-                               attrs=attrs)
-
+        elm_store_data[name] = load_subdataset(sd[0])
         band_order.append(name)
-    del dat0
+
     attrs = copy.deepcopy(attrs)
     attrs['band_order'] = band_order
     gc.collect()
     return ElmStore(elm_store_data, attrs=attrs)
-
-

@@ -8,6 +8,7 @@ import re
 
 from elm.config import delayed
 from elm.readers.hdf4 import load_hdf4_array, load_hdf4_meta
+from elm.readers.util import BandSpec
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.sample_util.util import InvalidSample
 
@@ -31,11 +32,23 @@ def _strip_key(k):
     return k
 
 def match_meta(meta, band_spec):
-    search_key, search_value, name = band_spec
+    '''
+    Parmeters
+    ---------
+    meta: dataset meta information object
+    band_spec: BandSpec object
+
+    Returns
+    -------
+    boolean of whether band_spec matches meta
+    '''
+    if not isinstance(band_spec, BandSpec):
+        raise ValueError('band_spec must be elm.readers.BandSpec object')
+
     for mkey in meta:
-        if bool(re.search(search_key, mkey, re.IGNORECASE)):
-            if bool(re.search(search_value, meta[mkey], re.IGNORECASE)):
-                return name
+        if bool(re.search(band_spec.search_key, mkey, re.IGNORECASE)):
+            if bool(re.search(band_spec.search_value, meta[mkey], re.IGNORECASE)):
+                return True
     return False
 
 

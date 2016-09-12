@@ -16,6 +16,7 @@ from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
+from elm.readers.util import BandSpec
 
 
 
@@ -461,11 +462,14 @@ class ConfigParser(object):
                                                             repr(t.get('model_init_class'))))
             output_tag = t.get('output_tag')
             self._validate_type(output_tag, 'train:output_tag', str)
-        band_specs = data_source.get('band_specs') or None
+
+        band_specs = None
+        if data_source.get('band_specs'):
+            band_specs = [BandSpec(*x) for x in data_source.get('band_specs')]
+
         band_names = data_source.get('band_names') or None
         if band_specs:
-            t['band_names'] = [(x[-1] if isinstance(x, Sequence) else x)
-                               for x in band_specs]
+            t['band_names'] = [(x.name if isinstance(x, BandSpec) else x) for x in band_specs]
             ensemble = t.get('ensemble')
             if not ensemble or not ensemble in self.ensembles:
                 raise ElmConfigError('Each train or transform dict must have an '

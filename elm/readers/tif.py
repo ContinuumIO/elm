@@ -50,9 +50,8 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
 
         if band_specs:
             for idx, band_spec in enumerate(band_specs):
-                band_name = match_meta(band_meta, band_spec)
-                if band_name:
-                    band_order_info.append((idx, tif, band_name))
+                if match_meta(band_meta, band_spec):
+                    band_order_info.append((idx, tif, band_spec.name))
                     band_metas.append((idx, band_meta))
                     break
         else:

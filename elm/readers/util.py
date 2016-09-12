@@ -7,7 +7,10 @@ import ogr
 from rasterio.coords import BoundingBox
 import scipy.interpolate as spi
 
-__all__ = ['Canvas', 'CANVAS_FIELDS', 'xy_to_row_col', 'row_col_to_xy',
+import attr
+from attr.validators import instance_of
+
+__all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
            'xy_canvas']
@@ -15,24 +18,29 @@ logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
 
-CANVAS_FIELDS = ('geo_transform',
-                 'ysize',
-                 'xsize',
-                 'zsize',
-                 'tsize',
-                 'dims',
-                 'ravel_order',
-                 'zbounds',
-                 'tbounds',
-                 'bounds')
+@attr.s
+class Canvas(object):
+    geo_transform = attr.ib()
+    xsize = attr.ib()
+    ysize = attr.ib()
+    dims = attr.ib()
+    ravel_order = attr.ib(default='C')
+    zbounds = attr.ib(default=None)
+    xbounds = attr.ib(default=None)
+    ybounds = attr.ib(default=None)
+    tbounds = attr.ib(default=None)
+    zsize = attr.ib(default=None)
+    tsize = attr.ib(default=None)
+    bounds = attr.ib(default=None)
 
-Canvas = namedtuple('Canvas', CANVAS_FIELDS)
+@attr.s
+class BandSpec(object):
+    search_key = attr.ib()
+    search_value = attr.ib()
+    name = attr.ib()
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
-
-BAND_SPEC_FIELDS = ('search_key', 'search_value', 'name')
-BandSpec = namedtuple('BandSpec', BAND_SPEC_FIELDS)
 
 #def serialize_canvas(canvas):
 #    vals = [item if not isinstance(item, Sequence) else list(item)
@@ -139,8 +147,6 @@ def _extract_valid_xy(band_arr):
         x = getattr(band_arr, name, getattr(band_arr, name.lower(), None))
         if x is not None:
             break
-    #if x is None:
-     #   raise ValueError('Band DataArray does not have an X dimension with a name in {}'.format(VALID_X_NAMES))
     if x is not None:
         xname = name
     y = yname = None
@@ -148,8 +154,6 @@ def _extract_valid_xy(band_arr):
         y = getattr(band_arr, name, None)
         if y is not None:
             break
-    #if y is None:
-     #   raise ValueError('Band DataArray does not have an Y dimension with a name in {}'.format(VALID_Y_NAMES))
     if y is not None:
         yname = name
     return x, name, y, yname
@@ -216,11 +220,7 @@ def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='C'):
         ('geo_transform', geo_transform),
         ('ysize', ysize),
         ('xsize', xsize),
-        ('zsize', None),
-        ('tsize', None),
         ('dims', dims),
         ('ravel_order', ravel_order),
-        ('zbounds', None),
-        ('tbounds', None),
         ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
     )))

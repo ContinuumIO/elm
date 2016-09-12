@@ -13,6 +13,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               geotransform_to_coords,
                               row_col_to_xy,
                               raster_as_2d,
+                              Canvas,
                               add_es_meta)
 
 __all__ = [
@@ -55,9 +56,8 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     if band_specs:
         for band_meta, s in zip(band_metas, sds):
             for idx, band_spec in enumerate(band_specs):
-                name = match_meta(band_meta, band_spec)
-                if name:
-                    band_order_info.append((idx, band_meta, s, name))
+                if match_meta(band_meta, band_spec):
+                    band_order_info.append((idx, band_meta, s, band_spec.name))
                     break
 
         band_order_info.sort(key=lambda x:x[0])
@@ -80,10 +80,18 @@ def load_hdf4_array(datafile, meta, band_specs=None):
         coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
                                             dat0.RasterYSize,
                                             attrs['geo_transform'])
+
+        canvas = Canvas(geo_transform=dat0.GetGeoTransform(),
+                        xsize=dat0.RasterXSize,
+                        ysize=dat0.RasterYSize,
+                        dims=native_dims,
+                        xbounds=(coord_x[0], coord_x[-1]),
+                        ybounds=(coord_y[0], coord_y[-1]),
+                        ravel_order='C')
+        attrs['canvas'] = canvas
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),
-                                       ('x', coord_x),
-                                       ],
+                                       ('x', coord_x)],
                                dims=native_dims,
                                attrs=attrs)
 
@@ -93,5 +101,3 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     attrs['band_order'] = band_order
     gc.collect()
     return ElmStore(elm_store_data, attrs=attrs)
-
-
