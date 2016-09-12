@@ -175,7 +175,7 @@ bad_param = [
         ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
         ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
         ]
-not_dicts = (9, [], (), 9.1, None, [2,3])
+not_dicts = (9, 9.1, [2,3])
 not_int = ({},[], 9.1, [1,3])
 bad_control = [{}, [], 9, None, 'cant be string', [9]]
 int_keys = tuple(control_key + (k,)

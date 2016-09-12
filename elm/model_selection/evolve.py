@@ -235,6 +235,12 @@ def get_param_grid(config, step1, step):
                              'but found {}'.format(param_grid_name, param_grid))
     control = param_grid.get('control') or {}
     if not isinstance(control, dict):
+        raise ElmConfigError("Expected 'control' as dict")
+    early_stop = control.get('early_stop') or None
+    if early_stop:
+        if not isinstance(early_stop, dict) or not any(k in early_stop for k in ('abs_change', 'percent_change', 'threshold')):
+            raise ElmConfigError('Expected "early_stop" to be a dict with a key in ("abs_change", "percent_change", "threshold")')
+    if not isinstance(control, dict):
         raise ElmConfigError('Expected param_grids: {} - "control" to be a dict'.format(control))
     for required_key, typ in REQUIRED_CONTROL_KEYS_TYPES.items():
         item = control.get(required_key) or None
@@ -560,6 +566,7 @@ def ea_setup(config):
         toolbox.register('individual', tools.initIterate, creator.Individual,
                          toolbox.indices)
         toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+        early_stop = deap_params['control'].get('early_stop') or None
         evo_params =  EvoParams(
                toolbox=_configure_toolbox(toolbox, deap_params, config, **kwargs),
                individual_to_new_config=partial(individual_to_new_config,
@@ -569,7 +576,7 @@ def ea_setup(config):
                param_grid_name=param_grid_name,
                history_file='{}.csv'.format(param_grid_name),
                score_weights=score_weights,
-               early_stop=deap_params['control'].get('early_stop') or None,
+               early_stop=early_stop,
         )
         evo_params_dict[idx] = evo_params
     return evo_params_dict

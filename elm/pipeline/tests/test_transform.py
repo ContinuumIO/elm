@@ -28,6 +28,7 @@ def tst_once(tag, config):
         assert glob.glob(os.path.join(transform_path, '*','*.pkl'))
         assert not glob.glob(os.path.join(predict_path, '*'))
 
+
 def tst_transform(model_init_class, is_slow):
     config = copy.deepcopy(DEFAULTS)
     c = import_callable(model_init_class)()
@@ -75,6 +76,7 @@ def tst_transform(model_init_class, is_slow):
     tst_once('test_transform:' + model_init_class, config)
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize('model_init_class', sorted(DECOMP_MODEL_STR))
 def test_transform_pipeline_step(model_init_class):
     tst_transform(model_init_class, False)
