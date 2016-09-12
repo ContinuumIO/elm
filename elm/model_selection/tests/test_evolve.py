@@ -67,7 +67,6 @@ def test_individual_to_new_config():
     new_config = individual_to_new_config(config, param_grid_item, ind)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 4
     assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 3
-    assert new_config.pipeline[0]['sample_pipeline'] == top_n
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 40
 
 
