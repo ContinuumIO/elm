@@ -36,13 +36,15 @@ def test_load_subdataset():
     assert 'canvas' in data_array.attrs.keys()
     assert data_array.data is not None
 
+
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES, reason='elm-data repo has not been cloned')
-def test_read_array():
+@pytest.mark.parametrize('filename', HDF5_FILES)
+def test_read_array(filename):
     band_specs = [BandSpec(search_key='FileName',
-                           search_value='3B-HHR.MS.MRG.3IMERG.20160101-S000000-E002959.0000.V03D.HDF5',
+                           search_value='3B-.*\.MS\.MRG.3IMERG\.20160101-[\.\-\w\d]+',
                            name='testdata')]
-    meta = load_hdf5_meta(HDF5_FILES[0])
-    es = load_hdf5_array(HDF5_FILES[0], meta, band_specs)
+    meta = load_hdf5_meta(filename)
+    es = load_hdf5_array(filename, meta, band_specs)
     for band in es.data_vars:
         sample = getattr(es, band)
         assert sample.y.size == 1800
