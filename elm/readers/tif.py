@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 
 __all__ = ['load_tif_meta',
-          'load_dir_of_tifs_meta',
-          'load_dir_of_tifs_array',]
+           'load_dir_of_tifs_meta',
+           'load_dir_of_tifs_array',]
 
 
 def load_tif_meta(filename):

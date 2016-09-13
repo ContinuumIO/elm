@@ -22,7 +22,6 @@ CHANGE_COORDS_ACTIONS = (
 )
 
 
-
 def select_canvas(es, key, value, **kwargs):
     band = value
     band_arr = getattr(es, band, None)

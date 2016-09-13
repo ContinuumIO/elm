@@ -631,9 +631,9 @@ def _eval_agg_stop(agg, seq):
                          '("all", "any", <callable>)'.format(agg))
 
 
-def _check_ints(typ, value, positive_definite=True):
+def _check_number(typ, value, positive_definite=True):
     '''Check all members of Sequence value are ints'''
-    if not all(isinstance(val, int) and (val > 0 if positive_definite else True)
+    if not all(isinstance(val, numbers.Number) and (val > 0 if positive_definite else True)
                for val in value):
         raise ElmConfigError('With early_stop: {} expected a Sequence of positive ints (indices) but found {}'.format(typ, value))
 
@@ -690,17 +690,17 @@ def eval_stop_wrapper(evo_params, original_fitness):
     elif 'percent_change' in early_stop:
         typ = 'percent_change'
         value = early_stop['percent_change']
-        _check_ints(typ, value)
+        _check_number(typ, value)
         func = _percent_change_stop
     elif 'threshold' in early_stop:
         typ = 'threshold'
         value = early_stop['threshold']
-        _check_ints(typ, value, positive_definite=False)
+        _check_number(typ, value, positive_definite=False)
         func = _threshold_stop
     elif 'abs_change' in early_stop:
         typ = 'abs_change'
         value = early_stop['abs_change']
-        _check_ints(typ, value)
+        _check_number(typ, value)
         func = _abs_change_stop
     else:
         raise ValueError('early_stop:{} does not have a '
