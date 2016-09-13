@@ -42,6 +42,7 @@ def load_hdf5_meta(datafile):
             vals = _nc_str_to_dict(v)
             bm.update(vals)
         band_metas.append(bm)
+        band_metas[-1]['sub_dataset_name'] = s[0]
 
     meta = dict()
     for k, v in f.GetMetadata().items():
@@ -92,8 +93,9 @@ def load_hdf5_array(datafile, meta, band_specs):
                 band_order_info.append((idx, band_meta, sd, bs.name))
                 break
 
-    if not len(band_order_info):
-        raise ValueError('No matching bands with band_specs {}'.format(band_specs))
+    if len(band_order_info) != len(band_specs):
+        raise ValueError('Number of bands matching band_specs {} was not equal '
+                         'to the number of band_specs {}'.format(len(band_order_info), len(band_specs)))
 
     band_order_info.sort(key=lambda x:x[0])
     elm_store_data = OrderedDict()

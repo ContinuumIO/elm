@@ -30,6 +30,7 @@ def load_hdf4_meta(datafile):
     for s in sds:
         f2 = gdal.Open(s[0], GA_ReadOnly)
         band_metas.append(f2.GetMetadata())
+        band_metas[-1]['sub_dataset_name'] = s[0]
     meta = {
              'meta': f.GetMetadata(),
              'band_meta': band_metas,

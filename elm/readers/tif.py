@@ -29,7 +29,7 @@ def load_tif_meta(filename):
     meta['bounds'] = r.bounds
     meta['height'] = r.height
     meta['width'] = r.width
-    meta['name'] = filename
+    meta['name'] = meta['sub_dataset_name'] = filename
     return r, meta
 
 def ls_tif_files(dir_of_tiffs):

@@ -40,11 +40,25 @@ def test_load_subdataset():
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES, reason='elm-data repo has not been cloned')
 @pytest.mark.parametrize('filename', HDF5_FILES)
 def test_read_array(filename):
-    band_specs = [BandSpec(search_key='FileName',
-                           search_value='3B-.*\.MS\.MRG.3IMERG\.20160101-[\.\-\w\d]+',
-                           name='testdata')]
+    if os.path.basename(filename).startswith('3B-MO'):
+        sub_dataset_names = ('/precipitation',)
+    else:
+        sub_dataset_names = ('HQobservationTime',
+                             'HQprecipSource',
+                             'HQprecipitation',
+                             'IRkalmanFilterWeight',
+                             'IRprecipitation',
+                             'precipitationCal',
+                             'precipitationUncal',
+                             'probabilityLiquidPrecipitation',)
+    band_specs = []
+    for sub in sub_dataset_names:
+        band_specs.append(BandSpec(search_key='sub_dataset_name',
+                               search_value=sub + '$', # line ender regex
+                               name=sub))
     meta = load_hdf5_meta(filename)
     es = load_hdf5_array(filename, meta, band_specs)
+    assert len(es.data_vars) == len(sub_dataset_names)
     for band in es.data_vars:
         sample = getattr(es, band)
         assert sample.y.size == 1800
