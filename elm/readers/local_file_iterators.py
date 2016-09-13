@@ -34,7 +34,7 @@ def get_all_filenames_for_product(data_source):
 def iter_dirs_of_dirs(**kwargs):
     top_dir = kwargs['top_dir']
     ext = kwargs.get('extension', '')
-    logger.info('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
+    logger.debug('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
     for root, dirs, files in os.walk(top_dir):
         if any(os.path.isfile(f) for f in files):
             if (ext and any(f.endswith(ext) for f in files)) or not ext:
@@ -45,7 +45,7 @@ def iter_files_recursively(**kwargs):
     path = os.environ['ELM_EXAMPLE_DATA_PATH']
     ext = kwargs.get('extension', '')
     top_dir = kwargs['top_dir']
-    logger.info('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
+    logger.debug('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
 
     if not path or not os.path.exists(path):
         raise ValueError('Clone the ContinuumIO/elm-data repo and '

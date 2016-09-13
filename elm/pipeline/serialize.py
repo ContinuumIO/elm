@@ -25,6 +25,7 @@ def split_model_tag(model_tag):
         tag, subtag = parts
     return tag, subtag
 
+
 def get_paths_for_tag(elm_train_path, tag, subtags):
     paths = {}
     subtags = subtags or 'all'
@@ -42,15 +43,20 @@ def get_paths_for_tag(elm_train_path, tag, subtags):
     paths['meta'] = os.path.join(elm_train_path, tag, 'model-{}_meta.pkl'.format(tag))
     return paths
 
+
 def mkdir_p(path):
     '''Ensure the *dirname* of argument path has been created'''
     if not os.path.exists(os.path.dirname(path)):
         os.makedirs(os.path.dirname(path))
 
+
 def dump(data, path):
+    logger.debug('dump {}'.format(path))
     joblib.dump(data, path)
 
+
 def save_models_with_meta(models, elm_train_path, tag, meta):
+    logger.debug('Save models at {} with tag {}'.format(elm_train_path, tag))
     mkdir_p(elm_train_path)
     paths = get_paths_for_tag(elm_train_path, tag,
                               [_[0] for _ in models])
@@ -63,10 +69,13 @@ def save_models_with_meta(models, elm_train_path, tag, meta):
     dump(meta, paths['meta'])
     return (paths_out, paths['meta'])
 
+
 def load(path):
     return joblib.load(path)
 
+
 def load_models_from_tag(elm_train_path, tag):
+    logger.debug('Load {} from {}'.format(tag, elm_train_path))
     tag, subtag = split_model_tag(tag)
     paths = get_paths_for_tag(elm_train_path, tag, subtag)
     logger.info('Pickles: {}'.format(paths))
@@ -76,7 +85,6 @@ def load_models_from_tag(elm_train_path, tag):
             continue
         models.append((k, load(v)))
     return (models, load(paths['meta']))
-
 
 
 def drop_some_attrs(prediction):
@@ -92,33 +100,11 @@ def drop_some_attrs(prediction):
 def predict_to_pickle(prediction, fname_base):
     dump(prediction, fname_base + '.xr')
 
+
 def predict_to_netcdf(prediction, fname_base):
     mkdir_p(fname_base)
     drop_some_attrs(prediction)
     prediction.to_netcdf(fname_base + '.nc')
-
-def band_to_tif(band, filename):
-    kwargs = dict(
-                driver='GTiff',
-                dtype=rio.float32,
-                count=1,
-                compress='lzw',
-                nodata=0,
-                bigtiff='YES', # Output will be larger than 4GB
-                width=band.shape[0],
-                height=band.shape[1],
-
-            )
-    raise NotImplementedError('This band_to_tif function is not working - hanging '
-                              'indefinitely')
-    if 'crs' in band.attrs['MetaData']:
-        kwargs['crs'] = band.attrs['MetaData']['crs']
-    kwargs['transform'] = band.attrs['geo_transform']
-    mkdir_p(filename)
-    with rio.drivers():
-        with rio.open(filename, 'w', **kwargs) as f:
-            data = band.astype(rio.float32)
-            f.write_band(1, data, window=((0, band.y.size), (0, band.x.size)))
 
 
 def get_file_name(base, tag, bounds):
@@ -133,7 +119,20 @@ def get_file_name(base, tag, bounds):
 def predict_file_name(elm_predict_path, tag, bounds):
     return get_file_name(elm_predict_path, tag, bounds)
 
+
 def transform_file_name(elm_transform_path, tag, bounds):
     return get_file_name(elm_transform_path, tag, bounds)
 
 
+def serialize_models(models, **ensemble_kwargs):
+    if ensemble_kwargs.get('saved_ensemble_size') is not None:
+        saved_models = models[:ensemble_kwargs['saved_ensemble_size']]
+    else:
+        saved_models = models
+    model_paths, meta_path = save_models_with_meta(saved_models,
+                                 ensemble_kwargs['base_output_dir'],
+                                 ensemble_kwargs['tag'],
+                                 ensemble_kwargs['config'])
+    logger.info('Created model pickles: {} '
+                'and meta pickle {}'.format(model_paths, meta_path))
+    return models

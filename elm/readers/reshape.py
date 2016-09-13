@@ -11,7 +11,6 @@ import numpy as np
 import scipy.interpolate as spi
 import xarray as xr
 
-from elm.config import import_callable
 from elm.readers import ElmStore, Canvas
 from elm.readers.util import canvas_to_coords, VALID_X_NAMES, VALID_Y_NAMES
 
@@ -160,6 +159,7 @@ def filled_flattened(na_dropped):
     shp = getattr(na_dropped, 'shape_before_drop_na_rows', None)
     if not shp:
         return na_dropped
+    shp = (shp[0], len(na_dropped.band_order))
     filled = np.empty(shp) * np.NaN
     filled[na_dropped.space, :] = na_dropped.flat.values
     attrs = copy.deepcopy(na_dropped.attrs)

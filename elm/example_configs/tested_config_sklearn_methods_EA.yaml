@@ -42,15 +42,15 @@ pipeline:
 - {param_grid: example_param_grid, sample_pipeline: minimal, train: kmeans}
 sample_pipelines:
   minimal:
-  - {flatten: F}
+  - {flatten: C}
   - {sklearn_preprocessing: require_positive}
   - {sklearn_preprocessing: log10}
   - {sklearn_preprocessing: standard}
   - {method: fit_transform, transform: pca}
   nothing:
-  - {flatten: F}
+  - {flatten: C}
   top_n:
-  - {flatten: F}
+  - {flatten: C}
   - {sample_pipeline: minimal}
   - {feature_selection: top_n}
   - {method: fit_transform, transform: pca}

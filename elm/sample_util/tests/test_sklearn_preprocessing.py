@@ -2,7 +2,9 @@ import copy
 import os
 
 import numpy as np
+import pytest
 from sklearn.decomposition import PCA
+import yaml
 
 from elm.config import DEFAULTS, ConfigParser
 from elm.pipeline.tests.util import (random_elm_store,
@@ -12,27 +14,38 @@ from elm.pipeline.tests.util import (random_elm_store,
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
 transform_model = [('tag_0', PCA(n_components=3))]
-def tst_one_sample_pipeline(sample_pipeline, es, run_it=False, tag='tests_of_sample_pipeline'):
-    config = copy.deepcopy(DEFAULTS)
-    train_or_predict_dict = copy.deepcopy(config['train']['kmeans'])
-    data_source = config['data_sources'][train_or_predict_dict['data_source']]
-    data_source['get_y_func'] = 'elm.pipeline.tests.util:example_get_y_func_binary'
 
+def tst_one_sample_pipeline(sample_pipeline,
+                            es,
+                            run_it=False,
+                            tag='tests_of_sample_pipeline'):
+    def write(content):
+        with open(tag + '.yaml', 'w') as f:
+            f.write(content)
+
+    config = copy.deepcopy(DEFAULTS)
+
+    step1 = config['pipeline'][0]
+    train_or_predict_dict = copy.deepcopy(config['train']['kmeans'])
+    data_source = config['data_sources'][step1['data_source']]
+    data_source['get_y_func'] = 'elm.pipeline.tests.util:example_get_y_func_binary'
+    write(yaml.dump(config))
     if not run_it:
-        for item in config['pipeline']:
-            tsteps = [s for s in item['sample_pipeline'] if 'transform' in s]
-            item['sample_pipeline'] = sample_pipeline + tsteps
-        step = config['pipeline'][0]
+
+        step = config['pipeline'][0]['steps'][0]
+
         config = ConfigParser(config=config)
-        transform_name = [s for s in config.pipeline if 'transform' in step][0]['transform']
-        action_data = get_sample_pipeline_action_data(train_or_predict_dict,
-                                     config,
-                                     step)
-        sample, sample_y, sample_weight = run_sample_pipeline(action_data, sample=es,
-                                     transform_model=transform_model)
-        return sample
+        for step1 in config.pipeline:
+            step1['sample_pipeline'] = sample_pipeline
+            sample_pipeline = ConfigParser._get_sample_pipeline(config, step1)
+            action_data = get_sample_pipeline_action_data(config, step,
+                                    data_source, sample_pipeline)
+            sample, sample_y, sample_weight = run_sample_pipeline(action_data, sample=es,
+                                         transform_model=transform_model)
+
+            return sample
     else:
-        transform_name = config['pipeline'][0]['transform']
+        transform_name = config['pipeline'][0]['steps'][0]['transform']
         for item in config['pipeline']:
             item['sample_pipeline'] = sample_pipeline
         with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
@@ -56,6 +69,7 @@ def test_func_scaler():
     log10_changed2 = tst_one_sample_pipeline(sp2, es2, tag='test_func_scaler2')
     assert np.all(log10_changed2.flat.values == log10_changed.flat.values)
 
+
 def test_standard_scaler_and_interactions():
     es = random_elm_store(BANDS).flatten()
     es.flat.values = np.random.lognormal(100, 1, np.prod(es.flat.shape)).reshape(es.flat.shape)
@@ -70,6 +84,7 @@ def test_standard_scaler_and_interactions():
     assert scaled2.flat.shape[1] > es.flat.shape[1]
 
 
+@pytest.mark.slow
 def test_scaling_full_config():
     es = random_elm_store(BANDS)
     sp = [

@@ -8,7 +8,6 @@ from gdalconst import GA_ReadOnly
 import numpy as np
 import xarray as xr
 
-from elm.config import delayed
 from elm.readers.util import (geotransform_to_bounds,
                               geotransform_to_coords,
                               Canvas,
@@ -17,7 +16,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               raster_as_2d,
                               add_es_meta)
 
-from elm.readers import ElmStore 
+from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
 
 __all__ = [
@@ -76,7 +75,7 @@ def load_subdataset(subdataset):
 
     attrs = dict(canvas=canvas)
     attrs['geo_transform'] = geotrans
-    coords = [('y', coord_y),('x', coord_x)] 
+    coords = [('y', coord_y),('x', coord_x)]
     return xr.DataArray(data=raster,
                         coords=coords,
                         dims=dims,

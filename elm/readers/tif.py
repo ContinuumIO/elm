@@ -36,7 +36,7 @@ def load_tif_meta(filename):
 
 def ls_tif_files(dir_of_tiffs):
     tifs = os.listdir(dir_of_tiffs)
-    tifs = [f for f in tifs if f.lower().endswith('.tif') or f.lower.endswith('.tiff')]
+    tifs = [f for f in tifs if f.lower().endswith('.tif') or f.lower().endswith('.tiff')]
     return [os.path.join(dir_of_tiffs, t) for t in tifs]
 
 def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
