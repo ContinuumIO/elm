@@ -11,6 +11,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      tmp_dirs_context,
                                      test_one_config as tst_one_config,
                                      BANDS)
+from elm.readers import *
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
 
 transform_model = [('tag_0', PCA(n_components=3))]
@@ -55,7 +56,7 @@ def tst_one_sample_pipeline(sample_pipeline,
             assert len(os.listdir(predict_path))
 
 def test_func_scaler():
-    es = random_elm_store(BANDS).flatten()
+    es = flatten(random_elm_store(BANDS))
     es2 = es.copy()
     values = es.flat.values.copy()
     values[values <= 0] = 0.0001
@@ -71,7 +72,7 @@ def test_func_scaler():
 
 
 def test_standard_scaler_and_interactions():
-    es = random_elm_store(BANDS).flatten()
+    es = flatten(random_elm_store(BANDS))
     es.flat.values = np.random.lognormal(100, 1, np.prod(es.flat.shape)).reshape(es.flat.shape)
     sp = [{'flatten': 'C'},{'sample_pipeline': 'standardize_log10'}]
     scaled = tst_one_sample_pipeline(sp, es, tag='test_standard_scaler_and_interactions')

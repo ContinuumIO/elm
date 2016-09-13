@@ -8,7 +8,7 @@ import xarray as xr
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.sample_util.sample_pipeline as sample_pipeline
-from elm.readers import ElmStore
+from elm.readers import *
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      random_elm_store,
                                      BANDS,
@@ -69,17 +69,17 @@ def test_elm_store_to_flat_to_elm_store():
                     coords=[('y', np.arange(20)),('x', np.arange(50))],
                     dims=['y', 'x'],
                     attrs=attrs)}, attrs=attrs)
-    flat = samp.flatten()
-    samp2 = flat.inverse_flatten()
+    flat = flatten(samp)
+    samp2 = inverse_flatten(flat)
     diff = samp.sample.values - samp2.sample.values
     assert np.max(np.abs(diff)) < 1e-3
     values = samp.sample.values.copy()
     values[0, 0] = np.NaN
     values[0, 3] = np.NaN
     samp.sample.values = values
-    flat_smaller = samp.flatten().drop_na_rows()
+    flat_smaller = drop_na_rows(flatten(samp))
     assert flat_smaller.flat.values.shape[0] == np.prod(samp.sample.values.shape) - 2
-    samp2 = flat_smaller.inverse_flatten()
+    samp2 = inverse_flatten(flat_smaller)
     v = samp.sample.values
     v2 = samp2.sample.values
     assert v[np.isnan(v)].size == v2[np.isnan(v2)].size

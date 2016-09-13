@@ -12,8 +12,10 @@ logger = logging.getLogger(__name__)
 class ElmStore(xr.Dataset):
 
     def __init__(self, *args, **kwargs):
+        add_canvas = kwargs.pop('add_canvas', True)
         super(ElmStore, self).__init__(*args, **kwargs)
-        self._add_es_meta()
+        if add_canvas:
+            self._add_es_meta()
 
     def get_shared_canvas(self):
         canvas = getattr(self, 'canvas', None)

@@ -7,7 +7,9 @@ from elm.readers import (select_canvas as _select_canvas,
                          flatten as _flatten,
                          inverse_flatten as _inverse_flatten,
                          Canvas,
-                         check_is_flat)
+                         check_is_flat,
+                         transpose as _transpose,
+                         aggregate_simple)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
@@ -52,17 +54,15 @@ def inverse_flatten(es, key, value, **kwargs):
 def modify_sample(es, key, value, **kwargs):
     func = import_callable(value)
     out = func(es, **kwargs)
-    if isinstance(out, (list, tuple)):
-        [o.add_band_order()  for o in out]
-    else:
-        out.add_band_order()
     return out
 
+
 def transpose(es, key, value, **kwargs):
-    return es._transpose(value)
+    return _transpose(es, value)
+
 
 def agg(es, key, value, **kwargs):
-    return es.agg(**value)
+    return aggregate_simple(es, **value)
 
 
 def _check_change_coords_action(config, step, sample_pipeline_step):
