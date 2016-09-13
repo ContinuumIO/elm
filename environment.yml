@@ -38,3 +38,4 @@ dependencies:
    - geopy
    - descartes
    - zict
+   - pytest-rerunfailures

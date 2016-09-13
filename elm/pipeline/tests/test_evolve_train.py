@@ -109,19 +109,20 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
 n_clusters = range(2, 8, 2)
 n_features = range(2, 6, 2)
 early_stop_conditions = (
-    {'abs_change': [100000000,],'agg': 'all'},
+    {'abs_change': [1000000000,],'agg': 'all'},
     {'percent_change': [99.99,], 'agg': 'all'},
     {'threshold': [1,],      'agg': 'any'},
     None
 )
-pytest_args = tuple(product(n_clusters, n_features, early_stop_conditions))
 
+pytest_args = tuple(product(n_clusters, n_features, early_stop_conditions))
 
 def test_finds_true_num_clusters_fast():
     tst_finds_true_n_clusters_once(*pytest_args[0])
 
 
 @pytest.mark.slow
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.parametrize('n_clusters, n_features, early_stop', pytest_args)
 def test_finds_true_num_clusters_slow(n_clusters, n_features, early_stop):
     tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop)
