@@ -37,11 +37,8 @@ def test_read_meta():
         raster, meta = load_tif_meta(tif)
         assert hasattr(raster, 'read')
         assert hasattr(raster, 'width')
-        assertions_on_metadata(meta, is_band_specific=True)
-        band_specs_with_band_8 = band_specs + [['name', '_B8.TIF', 'band_8']]
+        band_specs_with_band_8 = band_specs + [BandSpec('name', '_B8.TIF', 'band_8')]
         meta = load_dir_of_tifs_meta(TIF_DIR, band_specs_with_band_8)
-        for band_meta in meta['band_meta']:
-            assertions_on_metadata(band_meta, is_band_specific=True)
         band_meta = meta['band_meta']
         heights_names = [(m['height'], m['name']) for m in band_meta]
         # band 8 is panchromatic with 15 m resolution
@@ -60,13 +57,13 @@ def test_read_array():
         sample = getattr(es, var)
         mean_y = np.mean(sample.y)
         mean_x = np.mean(sample.x)
-        band_names = np.array([b[-1] for b in band_specs])
+        band_names = np.array([b.name for b in band_specs])
         assert sorted((mean_x,
-                sample.bounds.left,
-                sample.bounds.right))[1] == mean_x
+                sample.canvas.bounds.left,
+                sample.canvas.bounds.right))[1] == mean_x
         assert sorted((mean_y,
-                sample.bounds.top,
-                sample.bounds.bottom))[1] == mean_y
+                sample.canvas.bounds.top,
+                sample.canvas.bounds.bottom))[1] == mean_y
         assert np.all(band_names == es.band_order)
         assertions_on_band_metadata(sample.attrs)
 

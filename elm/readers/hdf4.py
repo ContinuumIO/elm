@@ -12,8 +12,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               geotransform_to_coords,
                               row_col_to_xy,
                               raster_as_2d,
-                              Canvas,
-                              add_es_meta)
+                              Canvas)
 
 __all__ = [
     'load_hdf4_meta',
@@ -35,8 +34,6 @@ def load_hdf4_meta(datafile):
              'meta': f.GetMetadata(),
              'band_meta': band_metas,
              'sub_datasets': sds,
-             'height': dat0.RasterYSize,
-             'width':  dat0.RasterXSize,
              'name': datafile,
             }
     return meta
@@ -80,13 +77,13 @@ def load_hdf4_array(datafile, meta, band_specs=None):
                                             dat0.RasterYSize,
                                             attrs['geo_transform'])
 
-        canvas = Canvas(geo_transform=dat0.GetGeoTransform(),
+        geo_transform = dat0.GetGeoTransform()
+        canvas = Canvas(geo_transform=geo_transform,
                         xsize=dat0.RasterXSize,
                         ysize=dat0.RasterYSize,
                         dims=native_dims,
-                        xbounds=(coord_x[0], coord_x[-1]),
-                        ybounds=(coord_y[0], coord_y[-1]),
-                        ravel_order='C')
+                        ravel_order='C',
+                        bounds=geotransform_to_bounds(dat0.RasterXSize, dat0.RasterYSize, geo_transform))
         attrs['canvas'] = canvas
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),

@@ -7,7 +7,7 @@ import xarray as xr
 
 from elm.config import import_callable
 from elm.pipeline.serialize import load_models_from_tag
-from elm.readers import ElmStore
+from elm.readers import ElmStore, check_is_flat
 from elm.pipeline.util import _make_model_args_from_config
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def transform_sample_pipeline_step(sample_x,
     transform = config.transform[t]
     logger.debug('transform config {}'.format(transform))
     output =  getattr(transform_model, method)(sample_x.flat.values)
-    assert sample_x.is_flat()
+    assert check_is_flat(sample_x, raise_err=False)
     dims = ('space', 'band')
     components = np.array(['c_{}'.format(idx) for idx in range(output.shape[1])])
     attrs = copy.deepcopy(sample_x.attrs)

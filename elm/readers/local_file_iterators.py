@@ -11,6 +11,7 @@ def VIIRS_L2_PATTERN(product_number, product_name, yr, data_day):
     return os.path.join(LADSWEB_LOCAL_CACHE, str(product_number), product_name, str(yr),
                       '{:03d}'.format(data_day), '*.hdf')
 
+
 def get_all_filenames_for_product(data_source):
     product_name = data_source['product_name']
     product_number = data_source['product_number']

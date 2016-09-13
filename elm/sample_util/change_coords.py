@@ -1,12 +1,13 @@
 import numpy as np
 
 from elm.config import ElmConfigError, import_callable
-from elm.readers import (select_canvas_elm_store,
+from elm.readers import (select_canvas as _select_canvas,
                          drop_na_rows as _drop_na_rows,
                          ElmStore,
                          flatten as _flatten,
                          inverse_flatten as _inverse_flatten,
-                         Canvas)
+                         Canvas,
+                         check_is_flat)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
@@ -26,7 +27,7 @@ def select_canvas(es, key, value, **kwargs):
     if band_arr is None:
         raise ValueError('Argument to select_canvas should be a band name, e.g. "band_1" (found {})'.format(band))
     new_canvas = band_arr.canvas
-    new_es = select_canvas_elm_store(es, new_canvas)
+    new_es = _select_canvas(es, new_canvas)
     return new_es
 
 
@@ -38,7 +39,7 @@ def flatten(es, key, value, **kwargs):
 
 
 def drop_na_rows(es, key, value, **kwargs):
-    if not es.is_flat():
+    if not check_is_flat(es):
         raise ElmConfigError('"flatten" must be called before "drop_na_rows"')
     return _drop_na_rows(es)
 

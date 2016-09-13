@@ -11,10 +11,8 @@ import xarray as xr
 from elm.sample_util.band_selection import match_meta
 from elm.readers.util import (geotransform_to_coords,
                               geotransform_to_bounds,
-                              bands_share_coords,
                               SPATIAL_KEYS,
-                              raster_as_2d,
-                              add_es_meta)
+                              raster_as_2d)
 from elm.readers import ElmStore
 logger = logging.getLogger(__name__)
 
@@ -94,7 +92,8 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
                          'band_specs {}'.format(band_specs))
     native_dims = ('y', 'x')
     elm_store_dict = OrderedDict()
-    meta['band_order'] = []
+    attrs = {'meta': meta}
+    attrs['band_order'] = []
     for idx, filename, band_name in band_order_info:
         band_meta = copy.deepcopy({k: v for k, v in meta.items()
                                    if k not in ('band_order_info', 'band_order')})
@@ -102,18 +101,12 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
         raster = raster_as_2d(raster)
         band_meta['geo_transform'] = handle.get_transform()
         coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, band_meta['geo_transform'])
-
-
-        band_meta['bounds'] = geotransform_to_bounds(handle.width,
-                                                     handle.height,
-                                                     band_meta['geo_transform'])
-
         elm_store_dict[band_name] = xr.DataArray(raster,
                                                  coords=[('y', coords_y),
                                                          ('x', coords_x),],
                                                  dims=native_dims,
                                                  attrs=band_meta)
 
-        meta['band_order'].append(band_name)
+        attrs['band_order'].append(band_name)
     gc.collect()
-    return ElmStore(elm_store_dict, attrs=meta)
+    return ElmStore(elm_store_dict, attrs=attrs)

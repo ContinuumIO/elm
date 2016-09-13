@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 from sklearn.feature_selection import chi2
 
+from elm.readers import *
 from elm.sample_util.feature_selection import feature_selection_base
 from elm.pipeline.tests.util import random_elm_store
 # TODO consider moving some default selection like
@@ -47,7 +48,7 @@ for k in set(SELECTORS):
 def sample(ncols):
     bands = ['band_{}'.format(idx + 1) for idx in range(ncols)]
 
-    es = random_elm_store(bands, height=10, width=10).flatten()
+    es = flatten(random_elm_store(bands, height=10, width=10))
     nrows = es.flat.values.shape[0]
     samp_y = np.ones(es.flat.space.size)
     samp_y[:samp_y.size // 2] = 0
@@ -96,3 +97,4 @@ def test_feature_choices_ok(name, selection, custom_scorer):
     if 'kpcent' in name:
         frac = selection['kwargs']['percentile'] / 100.
         assert abs(sel.shape[1] - frac * (samp.flat.shape[1] / mult) + len(keep_columns)) <= 1
+

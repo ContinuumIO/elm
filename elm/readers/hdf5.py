@@ -13,8 +13,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               Canvas,
                               BandSpec,
                               row_col_to_xy,
-                              raster_as_2d,
-                              add_es_meta)
+                              raster_as_2d)
 
 from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
@@ -69,8 +68,7 @@ def load_subdataset(subdataset):
                     xsize=cols,
                     ysize=rows,
                     dims=dims,
-                    xbounds=(coord_x[0], coord_x[-1]),
-                    ybounds=(coord_y[0], coord_y[-1]),
+                    bounds=geotransform_to_bounds(cols, rows, geotrans),
                     ravel_order='C')
 
     attrs = dict(canvas=canvas)
