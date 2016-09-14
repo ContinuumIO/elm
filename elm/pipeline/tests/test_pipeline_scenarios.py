@@ -1,6 +1,7 @@
 import copy
 import contextlib
 import datetime
+from itertools import product
 import os
 import tempfile
 import pytest
@@ -73,6 +74,7 @@ def get_type(model_init_class):
 def tst_sklearn_method(model_init_class,
                        c,
                        n_rows,
+                       data_source_name=None,
                        use_transform=True):
     '''This func can test almost all sklearn clusterers, regressors,
     or classifiers as they are used in the config / pipeline system
@@ -144,9 +146,10 @@ def tst_sklearn_method(model_init_class,
             pytest.xfail('{} models from sklearn are unsupported'.format(model_init_class))
         method_args, method_kwargs, _ = get_args_kwargs_defaults(c.fit)
         kwargs['model_scoring'] = None
-        DEFAULT_DS_KEY = DEFAULTS['train'][DEFAULT_TRAIN_KEY]['data_source']
+        if data_source_name is None:
+            data_source_name = DEFAULTS['pipeline'][0]['data_source']
         data_sources = DEFAULTS['data_sources']
-        data_source = copy.deepcopy(data_sources[DEFAULT_DS_KEY])
+        data_source = copy.deepcopy(data_sources[data_source_name])
         if any(a.lower() == 'y' for a in method_args):
             #  supervised
             model_type = get_type(model_init_class)
@@ -187,6 +190,8 @@ def tst_sklearn_method(model_init_class,
                 adjust_config_sample_size(config, n_rows)
             for step in config['pipeline']:
                 steps = []
+                if data_source_name is not None:
+                    step['data_source'] = data_source_name
                 for item in step['steps']:
                     if item.get('method'):
                         item['method'] = kwargs['fit_method']
@@ -203,7 +208,7 @@ def tst_sklearn_method(model_init_class,
                 for step in config['pipeline']:
                     step['steps'] = [s for s in step['steps']
                                      if not 'predict' in s]
-            config['data_sources'][DEFAULT_DS_KEY] = data_source
+            config['data_sources'][data_source_name] = data_source
             with open('tested_config_{}.yaml'.format(model_init_class.split(':')[-1]), 'w') as f:
                 f.write(yaml.dump(config))
             log = tst_one_config(config=config, cwd=cwd)
@@ -226,10 +231,11 @@ def tst_sklearn_method(model_init_class,
                 pickles = [t for t in os.listdir(transform_path) if t.endswith('.pkl')]
                 assert pickles
 
-
+data_source_names = tuple(DEFAULTS['data_sources'])
+pytest_data = tuple((ds, k, v) for ds, (k, v) in product(data_source_names, sorted(MODELS_WITH_PREDICT_DICT.items())))
 @pytest.mark.slow
-@pytest.mark.parametrize('model_init_class,func', sorted(MODELS_WITH_PREDICT_DICT.items()))
-def test_sklearn_methods_slow(model_init_class, func):
+@pytest.mark.parametrize('data_source, model_init_class,func', pytest_data)
+def test_sklearn_methods_slow(data_source, model_init_class, func):
     '''Test running each classifier/regressor/cluster model
     through the default pipeline adjusted as necessary, where
     the training sample size is a full file (None as n_rows)
@@ -241,7 +247,9 @@ def test_sklearn_methods_slow(model_init_class, func):
     '''
     if model_init_class.split(':')[-1].startswith('Randomized'):
         pytest.skip('sklearn Randomized* classes are too slow for this test')
-    tst_sklearn_method(model_init_class, func, None, use_transform=False)
+    tst_sklearn_method(model_init_class, func, None,
+                       data_source_name=data_source,
+                       use_transform=False)
 
 
 

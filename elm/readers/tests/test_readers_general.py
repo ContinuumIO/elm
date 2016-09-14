@@ -36,6 +36,7 @@ def test_na_drop_no_meta():
     flat.flat.values[:3, :] = np.NaN
     flat.flat.values[10:12, :] = np.NaN
     na_dropped = drop_na_rows(flat)
+    assert na_dropped.flat.values.shape[0] == flat.flat.values.shape[0] - 5
     inv = inverse_flatten(na_dropped)
     flat2 = flatten(inv)
     val1 = flat.flat.values

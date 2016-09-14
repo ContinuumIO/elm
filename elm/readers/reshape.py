@@ -61,6 +61,8 @@ def aggregate_simple(es, **kwargs):
 
 
 def select_canvas(es, new_canvas):
+    if getattr(es, '_dummy_canvas', False):
+        raise ValueError('This ElmStore cannot be run through select_canvas because geo transform was not read correctly from input data')
     es_new_dict = OrderedDict()
     for band in es.data_vars:
         data_arr = getattr(es, band)
@@ -121,10 +123,8 @@ def flatten(es, ravel_order='C'):
     old_dims = []
     for idx, band in enumerate(band_names):
         data_arr = getattr(es, band, None)
-        if data_arr is None:
-            raise ValueError(repr(es.data_vars))
-        assert hasattr(data_arr, 'canvas')
-        old_canvases.append(data_arr.canvas)
+        canvas = getattr(data_arr, 'canvas', None)
+        old_canvases.append(canvas)
         old_dims.append(data_arr.dims)
         if store is None:
             # TODO consider canvas here instead

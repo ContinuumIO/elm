@@ -143,9 +143,9 @@ class ConfigParser(object):
                                        'a dict'.format(k, v))
 
             load = v.get('load_array')
-            bounds = v.get('load_meta')
+            meta = v.get('load_meta')
             self._validate_custom_callable(load, True, 'readers:{} load_array'.format(k))
-            self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
+            self._validate_custom_callable(meta, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
 

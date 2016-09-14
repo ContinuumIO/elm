@@ -13,7 +13,7 @@ from attr.validators import instance_of
 __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
-           'xy_canvas']
+           'xy_canvas','dummy_canvas']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -31,6 +31,7 @@ class Canvas(object):
     tsize = attr.ib(default=None)
     bounds = attr.ib(default=None)
 
+
 @attr.s
 class BandSpec(object):
     search_key = attr.ib()
@@ -40,10 +41,23 @@ class BandSpec(object):
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
 
+DEFAULT_GEO_TRANSFORM = (-180, .1, 0, 90, 0, -.1)
 #def serialize_canvas(canvas):
 #    vals = [item if not isinstance(item, Sequence) else list(item)
 #            for item in canvas]
 #
+
+def dummy_canvas(xsize, ysize, dims, **kwargs):
+    dummy = {'geo_transform': DEFAULT_GEO_TRANSFORM,
+             'xsize': xsize,
+             'ysize': ysize,
+             'dims': dims,}
+    dummy.update(kwargs)
+    dummy['bounds'] = geotransform_to_bounds(dummy['xsize'],
+                                             dummy['ysize'],
+                                             dummy['geo_transform'])
+    return Canvas(**dummy)
+
 def xy_to_row_col(x, y, geo_transform):
     ''' Get row and column idx's from x and y where
     x and y are the coordinates matching the upper left

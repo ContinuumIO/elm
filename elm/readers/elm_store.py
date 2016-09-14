@@ -3,7 +3,9 @@ import logging
 
 import xarray as xr
 
-from elm.readers.util import _extract_valid_xy, Canvas, geotransform_to_bounds
+from elm.readers.util import (_extract_valid_xy, Canvas,
+                              geotransform_to_bounds,
+                              dummy_canvas)
 
 __all__ = ['ElmStore', ]
 
@@ -14,8 +16,20 @@ class ElmStore(xr.Dataset):
     def __init__(self, *args, **kwargs):
         add_canvas = kwargs.pop('add_canvas', True)
         super(ElmStore, self).__init__(*args, **kwargs)
+        self.attrs['_dummy_canvas'] = not add_canvas
         if add_canvas:
+            self._add_band_order()
             self._add_es_meta()
+        else:
+            self._add_band_order()
+            self._add_dummy_canvas()
+
+    def _add_dummy_canvas(self):
+        for band in self.band_order:
+            band_arr = getattr(self, band)
+            band_arr.attrs['canvas'] = dummy_canvas(band_arr.values.shape[1],
+                                                    band_arr.values.shape[0],
+                                                    band_arr.dims)
 
     def get_shared_canvas(self):
         canvas = getattr(self, 'canvas', None)
@@ -43,7 +57,6 @@ class ElmStore(xr.Dataset):
         self.attrs['band_order'] = old + new
 
     def _add_es_meta(self):
-        self._add_band_order()
         band_order = getattr(self, 'band_order', sorted(self.data_vars))
         self.attrs['band_order'] = band_order
         if tuple(self.data_vars.keys()) != ('flat',):
