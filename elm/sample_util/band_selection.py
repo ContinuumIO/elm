@@ -44,8 +44,13 @@ def match_meta(meta, band_spec):
         raise ValueError('band_spec must be elm.readers.BandSpec object')
 
     for mkey in meta:
-        if bool(re.search(band_spec.search_key, mkey, re.IGNORECASE)):
-            if bool(re.search(band_spec.search_value, meta[mkey], re.IGNORECASE)):
+        key_re_flags = [getattr(re, att)
+                        for att in (band_spec.key_re_flags or [])]
+        value_re_flags = [getattr(re, att)
+                        for att in (band_spec.value_re_flags or [])]
+
+        if bool(re.search(band_spec.search_key, mkey, *key_re_flags)):
+            if bool(re.search(band_spec.search_value, meta[mkey], *value_re_flags)):
                 return True
     return False
 

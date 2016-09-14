@@ -21,11 +21,13 @@ data_sources: {
  hdf5_precip_hourly: {
    reader: hdf5_example,
    sample_from_args_func: "elm.sample_util.samplers:image_selection",
-   band_specs: [{search_key: sub_dataset_name, search_value: /precipitation, name: precip}],
+   band_specs: [{search_key: sub_dataset_name, search_value: /precipitation, name: band_1, key_re_flags: [], value_re_flags: []}],
    selection_kwargs: {
-    file_pattern: .*HRR*\.HDF5,
+    file_pattern: 3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5,
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-   }
+   },
+   batch_size: 1440000,
+   sample_args_generator: iter_files_recursively,
   },
  NPP_DSRF1KD_L2GD: {
   reader: hdf4_example,
@@ -51,23 +53,22 @@ data_sources: {
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
   selection_kwargs: {
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    file_pattern: .*\.tif
+    file_pattern: TIF
   },
   reader: tif_example,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [
-  {search_key: name, search_value: "_B1.TIF ", name: band_1},
-  {search_key: name, search_value: "_B2.TIF ", name: band_2},
-  {search_key: name, search_value: "_B3.TIF ", name: band_3},
-  {search_key: name, search_value: "_B4.TIF ", name: band_4},
-  {search_key: name, search_value: "_B5.TIF ", name: band_5},
-  {search_key: name, search_value: "_B6.TIF ", name: band_6},
-  {search_key: name, search_value: "_B7.TIF ", name: band_7},
-  {search_key: name, search_value: "_B9.TIF ", name: band_9},
-  {search_key: name, search_value: "_B10.TIF ", name: band_10},
-  {search_key: name, search_value: "_B11.TIF ", name: band_11}
+  {search_key: name, search_value: "_B1.TIF", name: band_1},
+  {search_key: name, search_value: "_B2.TIF", name: band_2},
+  {search_key: name, search_value: "_B3.TIF", name: band_3},
+  {search_key: name, search_value: "_B4.TIF", name: band_4},
+  {search_key: name, search_value: "_B5.TIF", name: band_5},
+  {search_key: name, search_value: "_B6.TIF", name: band_6},
+  {search_key: name, search_value: "_B7.TIF", name: band_7},
+  {search_key: name, search_value: "_B9.TIF", name: band_9},
+  {search_key: name, search_value: "_B10.TIF", name: band_10},
+  {search_key: name, search_value: "_B11.TIF", name: band_11}
   ],
   batch_size: 1440000,
   },

@@ -37,6 +37,8 @@ class BandSpec(object):
     search_key = attr.ib()
     search_value = attr.ib()
     name = attr.ib()
+    key_re_flags = attr.ib(default=None)
+    value_re_flags = attr.ib(default=None)
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment

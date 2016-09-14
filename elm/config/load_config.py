@@ -159,7 +159,8 @@ class ConfigParser(object):
             raise ElmConfigError('Expected "band_specs" to be a list of dicts')
         new_band_specs = []
         for band_spec in band_specs:
-            if not all(k.name in band_spec for k in attr.fields(BandSpec)):
+            if not all(k.name in band_spec for k in attr.fields(BandSpec)
+                       if not k.default == attr.NOTHING):
                 raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
             new_band_specs.append(BandSpec(**band_spec))
         return new_band_specs
