@@ -97,9 +97,12 @@ def _prepare_serialize_prediction(prediction):
         for k,v in c.items():
             if isinstance(v, (tuple, list)):
                 c[k] = np.array(v)
-        attrs = {'canvas': c}
-        band_arr.attrs = attrs
-        prediction.attrs = attrs
+            else:
+                if v is None:
+                    v = np.NaN
+                c[k] = np.array([v])
+        band_arr.attrs = c
+        prediction.attrs = c
 
 
 def predict_to_pickle(prediction, fname_base):
