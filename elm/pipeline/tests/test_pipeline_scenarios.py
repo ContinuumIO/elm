@@ -186,7 +186,9 @@ def tst_sklearn_method(model_init_class,
         with new_training_config(**kwargs) as config:
             if not use_transform:
                 remove_pipeline_transforms(config)
-            if n_rows:
+            if n_rows or data_source_name == 'S3_LANDSAT_L2_TIFS':
+                if not n_rows:
+                    n_rows = 100000
                 adjust_config_sample_size(config, n_rows)
             for step in config['pipeline']:
                 steps = []
