@@ -12,7 +12,9 @@ from elm.sample_util.band_selection import match_meta
 from elm.readers.util import (geotransform_to_coords,
                               geotransform_to_bounds,
                               SPATIAL_KEYS,
-                              raster_as_2d)
+                              raster_as_2d,
+                              READ_ARRAY_KWARGS,
+                              BandSpec)
 from elm.readers import ElmStore
 logger = logging.getLogger(__name__)
 
@@ -49,7 +51,7 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
         if band_specs:
             for idx, band_spec in enumerate(band_specs):
                 if match_meta(band_meta, band_spec):
-                    band_order_info.append((idx, tif, band_spec.name))
+                    band_order_info.append((idx, tif, band_spec))
                     band_metas.append((idx, band_meta))
                     break
         else:
@@ -70,12 +72,12 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
     meta['band_order_info'] = band_order_info
     return meta
 
-def open_prefilter(filename):
+def open_prefilter(filename, **reader_kwargs):
     '''Placeholder for future operations on open file rasterio
     handle like resample / aggregate or setting width, height, etc
     on load.  TODO see optional kwargs to rasterio.open'''
     try:
-        r = rio.open(filename)
+        r = rio.open(filename, **reader_kwargs)
         return r, r.read()
     except Exception as e:
         logger.info('Failed to rasterio.open {}'.format(filename))
@@ -94,10 +96,21 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
     elm_store_dict = OrderedDict()
     attrs = {'meta': meta}
     attrs['band_order'] = []
-    for idx, filename, band_name in band_order_info:
+    for idx, filename, band_spec in band_order_info:
+        if isinstance(band_spec, BandSpec):
+            band_name = band_spec.name
+            reader_kwargs = {k: getattr(band_spec, k) for k in READ_ARRAY_KWARGS if getattr(band_spec, k)}
+            if 'xsize' in reader_kwargs:
+                reader_kwargs['width'] = reader_kwargs.pop('xsize')
+            if 'ysize' in reader_kwargs:
+                reader_kwargs['height'] = reader_kwargs.pop('ysize')
+        else:
+            band_name = band_spec
+            reader_kwargs = {}
+
         band_meta = copy.deepcopy({k: v for k, v in meta.items()
                                    if k not in ('band_order_info', 'band_order')})
-        handle, raster = open_prefilter(filename)
+        handle, raster = open_prefilter(filename, **reader_kwargs)
         raster = raster_as_2d(raster)
         band_meta['geo_transform'] = handle.get_transform()
         coords_x, coords_y = geotransform_to_coords(handle.width, handle.height, band_meta['geo_transform'])

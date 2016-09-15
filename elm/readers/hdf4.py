@@ -12,7 +12,9 @@ from elm.readers.util import (geotransform_to_bounds,
                               geotransform_to_coords,
                               row_col_to_xy,
                               raster_as_2d,
-                              Canvas)
+                              Canvas,
+                              BandSpec,
+                              READ_ARRAY_KWARGS)
 
 __all__ = [
     'load_hdf4_meta',
@@ -54,7 +56,7 @@ def load_hdf4_array(datafile, meta, band_specs=None):
         for band_meta, s in zip(band_metas, sds):
             for idx, band_spec in enumerate(band_specs):
                 if match_meta(band_meta, band_spec):
-                    band_order_info.append((idx, band_meta, s, band_spec.name))
+                    band_order_info.append((idx, band_meta, s, band_spec))
                     break
 
         band_order_info.sort(key=lambda x:x[0])
@@ -68,11 +70,17 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     elm_store_data = OrderedDict()
 
     band_order = []
-    for _, band_meta, s, name in band_order_info:
+    for _, band_meta, s, band_spec in band_order_info:
+        if isinstance(band_spec, BandSpec):
+            name = band_spec.name
+            reader_kwargs = {k: getattr(band_spec, k) for k in READ_ARRAY_KWARGS if getattr(band_spec, k)}
+        else:
+            reader_kwargs = {}
+            name = band_spec
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
         dat0 = gdal.Open(s[0], GA_ReadOnly)
-        raster = raster_as_2d(dat0.ReadAsArray())
+        raster = raster_as_2d(dat0.ReadAsArray(**reader_kwargs))
         attrs['geo_transform'] = dat0.GetGeoTransform()
         coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
                                             dat0.RasterYSize,

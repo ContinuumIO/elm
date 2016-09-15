@@ -13,7 +13,8 @@ from elm.readers.util import (geotransform_to_bounds,
                               Canvas,
                               BandSpec,
                               row_col_to_xy,
-                              raster_as_2d)
+                              raster_as_2d,
+                              READ_ARRAY_KWARGS)
 
 from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
@@ -54,9 +55,9 @@ def load_hdf5_meta(datafile):
                 sub_datasets=sds,
                 name=datafile)
 
-def load_subdataset(subdataset):
+def load_subdataset(subdataset, **reader_kwargs):
     data_file = gdal.Open(subdataset)
-    raster = raster_as_2d(data_file.ReadAsArray())
+    raster = raster_as_2d(data_file.ReadAsArray(**reader_kwargs))
     raster = raster.T
     rows, cols = raster.shape
     geotrans = (-180, .1, 0, 90, 0, -.1) # TODO: GDAL appears to give wrong geo_transform
@@ -90,7 +91,7 @@ def load_hdf5_array(datafile, meta, band_specs):
     for band_meta, sd in zip(band_metas, sds):
         for idx, bs in enumerate(band_specs):
             if match_meta(band_meta, bs):
-                band_order_info.append((idx, band_meta, sd, bs.name))
+                band_order_info.append((idx, band_meta, sd, bs))
                 break
 
     if len(band_order_info) != len(band_specs):
@@ -100,10 +101,17 @@ def load_hdf5_array(datafile, meta, band_specs):
     band_order_info.sort(key=lambda x:x[0])
     elm_store_data = OrderedDict()
     band_order = []
-    for _, band_meta, sd, name in band_order_info:
+    for _, band_meta, sd, band_spec in band_order_info:
+        if isinstance(band_spec, BandSpec):
+            name = band_spec.name
+            reader_kwargs = {k: getattr(band_spec, k) for k in READ_ARRAY_KWARGS if getattr(band_spec, k)}
+        else:
+            reader_kwargs = {}
+            name = band_spec
+
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
-        elm_store_data[name] = load_subdataset(sd[0])
+        elm_store_data[name] = load_subdataset(sd[0], **reader_kwargs)
         band_order.append(name)
 
     attrs = copy.deepcopy(attrs)

@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 
+import attr
 import numpy as np
 import pytest
 
@@ -66,4 +67,18 @@ def test_read_array():
                 sample.canvas.bounds.bottom))[1] == mean_y
         assert np.all(band_names == es.band_order)
         assertions_on_band_metadata(sample.attrs)
+
+
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
+def test_reader_kwargs():
+    band_specs_kwargs = []
+    for b in band_specs:
+        b = attr.asdict(b)
+        b['xsize'], b['ysize'] = 200, 300
+        band_specs_kwargs.append(BandSpec(**b))
+    meta = load_dir_of_tifs_meta(TIF_DIR, band_specs_kwargs)
+    es = load_dir_of_tifs_array(TIF_DIR, meta, band_specs_kwargs)
+    for b in es.band_order:
+        assert getattr(es, b).values.shape == (300, 200)
 

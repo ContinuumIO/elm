@@ -5,7 +5,8 @@ readers: {
   },
   tif_example: {
     load_array: "elm.readers.tif:load_dir_of_tifs_array",
-    load_meta: "elm.readers.tif:load_dir_of_tifs_meta"
+    load_meta: "elm.readers.tif:load_dir_of_tifs_meta",
+    load_array_kwargs: {xsize: 500, ysize: 500},
   },
   hdf5_example: {
     load_array: "elm.readers.hdf5:load_hdf5_array",

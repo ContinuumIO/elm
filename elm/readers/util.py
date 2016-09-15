@@ -18,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
 
+READ_ARRAY_KWARGS = ('xsize', 'ysize', 'yoff', 'xoff')
+
 @attr.s
 class Canvas(object):
     geo_transform = attr.ib()
@@ -39,6 +41,10 @@ class BandSpec(object):
     name = attr.ib()
     key_re_flags = attr.ib(default=None)
     value_re_flags = attr.ib(default=None)
+    xoff = attr.ib(default=None)
+    yoff = attr.ib(default=None)
+    xsize = attr.ib(default=None)
+    ysize = attr.ib(default=None)
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
