@@ -2,6 +2,7 @@ import glob
 import gdal
 import os
 
+import attr
 import numpy as np
 import pytest
 
@@ -36,6 +37,8 @@ def get_band_specs(filename):
         band_specs.append(BandSpec(search_key='sub_dataset_name',
                                search_value=sub + '$', # line ender regex
                                name=sub))
+    return sub_dataset_names, band_specs
+
 
 @pytest.mark.parametrize('hdf', HDF5_FILES or [])
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
@@ -68,3 +71,20 @@ def test_read_array(filename):
         assert sample.x.size == 3600
         assert len(es.data_vars) == len(band_specs)
         assertions_on_band_metadata(sample.attrs)
+
+
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
+def test_reader_kwargs():
+    pytest.xfail('Transpose issue in hdf5 files')
+    sub_dataset_names, band_specs = get_band_specs(HDF5_FILES[0])
+    band_specs_kwargs = []
+    for b in band_specs:
+        b = attr.asdict(b)
+        b['xsize'], b['ysize'] = 200, 300
+        band_specs_kwargs.append(BandSpec(**b))
+    meta = load_hdf5_meta(HDF5_FILES[0])
+    es = load_hdf5_array(HDF5_FILES[0], meta, band_specs_kwargs)
+    for b in es.band_order:
+        assert getattr(es, b).values.shape == (300, 200)
+
