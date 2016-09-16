@@ -9,6 +9,7 @@ import yaml
 
 from elm.pipeline import pipeline
 from elm.config import DEFAULTS, DEFAULTS_FILE, import_callable
+from elm.example_data import EXAMPLE_FILES
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection import get_args_kwargs_defaults
 from elm.pipeline.tests.util import (tmp_dirs_context,
@@ -240,7 +241,7 @@ def tst_sklearn_method(model_init_class,
 data_source_names = tuple(DEFAULTS['data_sources'])
 pytest_data = tuple((ds, k, v) for ds, (k, v) in product(data_source_names, sorted(MODELS_WITH_PREDICT_DICT.items())))
 @pytest.mark.slow
-@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+@pytest.mark.skipif(not EXAMPLE_FILES,
                reason='elm-data repo has not been cloned')
 @pytest.mark.parametrize('data_source, model_init_class,func', pytest_data)
 def test_sklearn_methods_slow(data_source, model_init_class, func):

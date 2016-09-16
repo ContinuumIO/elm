@@ -6,7 +6,6 @@ readers: {
   tif_example: {
     load_array: "elm.readers.tif:load_dir_of_tifs_array",
     load_meta: "elm.readers.tif:load_dir_of_tifs_meta",
-    load_array_kwargs: {xsize: 500, ysize: 500},
   },
   hdf5_example: {
     load_array: "elm.readers.hdf5:load_hdf5_array",
@@ -64,12 +63,6 @@ data_sources: {
   {search_key: name, search_value: "_B2.TIF", name: band_2},
   {search_key: name, search_value: "_B3.TIF", name: band_3},
   {search_key: name, search_value: "_B4.TIF", name: band_4},
-  {search_key: name, search_value: "_B5.TIF", name: band_5},
-  {search_key: name, search_value: "_B6.TIF", name: band_6},
-  {search_key: name, search_value: "_B7.TIF", name: band_7},
-  {search_key: name, search_value: "_B9.TIF", name: band_9},
-  {search_key: name, search_value: "_B10.TIF", name: band_10},
-  {search_key: name, search_value: "_B11.TIF", name: band_11}
   ],
   batch_size: 1440000,
   },
@@ -217,6 +210,7 @@ sample_pipelines: {
   flatten_example: [
     {select_canvas: band_1},
     {flatten: 'C'},
+    {sklearn_preprocessing: require_positive},
     {drop_na_rows: True},
   ],
 }
