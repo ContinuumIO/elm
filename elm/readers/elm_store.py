@@ -12,23 +12,33 @@ __all__ = ['ElmStore', ]
 logger = logging.getLogger(__name__)
 
 class ElmStore(xr.Dataset):
-
+    _es_kwargs = {
+                    'add_canvas': True,
+                    'lost_axis': None
+        }
     def __init__(self, *args, **kwargs):
-        add_canvas = kwargs.pop('add_canvas', True)
+        es_kwargs = {k: kwargs.pop(k, v)
+                     for k,v in self._es_kwargs.items()}
         super(ElmStore, self).__init__(*args, **kwargs)
-        self.attrs['_dummy_canvas'] = not add_canvas
-        if add_canvas:
+        self.attrs['_dummy_canvas'] = not es_kwargs['add_canvas']
+        if es_kwargs['add_canvas']:
             self._add_band_order()
             self._add_es_meta()
         else:
             self._add_band_order()
-            self._add_dummy_canvas()
+            self._add_dummy_canvas(**es_kwargs)
 
-    def _add_dummy_canvas(self):
+    def _add_dummy_canvas(self, **es_kwargs):
+        lost_axis = es_kwargs['lost_axis']
         for band in self.band_order:
             band_arr = getattr(self, band)
-            band_arr.attrs['canvas'] = dummy_canvas(band_arr.values.shape[1],
-                                                    band_arr.values.shape[0],
+            shp = band_arr.values.shape
+            if len(shp) < 2:
+                if lost_axis == 0:
+                    shp = (1, shp[0])
+                elif lost_axis == 1:
+                    shp = (shp[0], 1)
+            band_arr.attrs['canvas'] = dummy_canvas(shp[1], shp[0],
                                                     band_arr.dims)
 
     def get_shared_canvas(self):

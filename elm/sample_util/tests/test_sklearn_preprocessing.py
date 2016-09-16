@@ -13,9 +13,12 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      BANDS)
 from elm.readers import *
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
-
+from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
+                                    ELM_EXAMPLE_DATA_PATH)
 transform_model = [('tag_0', PCA(n_components=3))]
 
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
 def tst_one_sample_pipeline(sample_pipeline,
                             es,
                             run_it=False,
@@ -30,11 +33,9 @@ def tst_one_sample_pipeline(sample_pipeline,
     train_or_predict_dict = copy.deepcopy(config['train']['kmeans'])
     data_source = config['data_sources'][step1['data_source']]
     data_source['get_y_func'] = 'elm.pipeline.tests.util:example_get_y_func_binary'
-    write(yaml.dump(config))
+    data_source['top_dir'] = ELM_EXAMPLE_DATA_PATH
     if not run_it:
-
         step = config['pipeline'][0]['steps'][0]
-
         config = ConfigParser(config=config)
         for step1 in config.pipeline:
             step1['sample_pipeline'] = sample_pipeline

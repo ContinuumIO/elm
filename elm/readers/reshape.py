@@ -49,15 +49,21 @@ def aggregate_simple(es, **kwargs):
 
     kw = {k: v for k, v in kwargs.items()
           if k not in ('func',)}
+
     dim = kwargs.get('dim')
     axis = kwargs.get('axis')
     if isinstance(axis, int) and dim or (not isinstance(axis, int) and not dim):
         raise ValueError('kwargs given to aggregate_simple must include *one* of "dim" or "axis"')
     agged = OrderedDict()
+    lost_axes = []
     for band in es.data_vars:
+
         data_arr = getattr(es, band)
+        lost_axes.append(data_arr.dims.index(dim) if dim else axis)
         agged[band] = getattr(data_arr, func)(**kw)
-    return ElmStore(agged, attrs=es.attrs, add_canvas=False)
+    if len(set(lost_axes)) != 1:
+        raise ValueError('Cannot aggregate when the axis (dim) of aggregation is not the same for all DataArrays in ElmStore')
+    return ElmStore(agged, attrs=es.attrs, add_canvas=False, lost_axis=lost_axes[0])
 
 
 def select_canvas(es, new_canvas):

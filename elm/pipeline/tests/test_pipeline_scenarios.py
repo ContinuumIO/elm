@@ -95,7 +95,7 @@ def tst_sklearn_method(model_init_class,
         * Each model can get a scoring that depends on supervised/unsupervised
         * Model selection logic works for ensembles
     '''
-    tag = '{}-n_rows-{}'.format(model_init_class, n_rows)
+    tag = '{}-{}-n_rows-{}'.format(data_source_name, model_init_class, n_rows)
     embedding = ('LocallyLinearEmbedding', 'SpectralEmbedding', 'SpectralCluster')
     if any(s in model_init_class for s in embedding):
         pytest.xfail('Affinity matrix would be too large - embedding methods')
@@ -103,6 +103,8 @@ def tst_sklearn_method(model_init_class,
         pytest.skip('Too slow (DictionaryLearning on random data)')
     if n_rows is None and 'LocallyLinearEmbedding' in model_init_class:
         pytest.skip('LocallyLinearEmbedding is too slow for unlimited rows in this test')
+
+
     with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
         # make a small ensemble for simplicity
         default_ensemble =  {
@@ -187,8 +189,10 @@ def tst_sklearn_method(model_init_class,
             if not use_transform:
                 remove_pipeline_transforms(config)
             if n_rows or data_source_name == 'S3_LANDSAT_L2_TIFS':
+                # TIF test is already quite slow
+                # with the loading of files
                 if not n_rows:
-                    n_rows = 100000
+                    n_rows = 10000
                 adjust_config_sample_size(config, n_rows)
             for step in config['pipeline']:
                 steps = []
@@ -211,7 +215,7 @@ def tst_sklearn_method(model_init_class,
                     step['steps'] = [s for s in step['steps']
                                      if not 'predict' in s]
             config['data_sources'][data_source_name] = data_source
-            with open('tested_config_{}.yaml'.format(model_init_class.split(':')[-1]), 'w') as f:
+            with open('tested_config_{}-{}.yaml'.format(model_init_class.split(':')[-1], tag), 'w') as f:
                 f.write(yaml.dump(config))
             log = tst_one_config(config=config, cwd=cwd)
             train_outputs_tmp = os.path.join(train_path, DEFAULT_TRAIN_KEY)
@@ -236,6 +240,8 @@ def tst_sklearn_method(model_init_class,
 data_source_names = tuple(DEFAULTS['data_sources'])
 pytest_data = tuple((ds, k, v) for ds, (k, v) in product(data_source_names, sorted(MODELS_WITH_PREDICT_DICT.items())))
 @pytest.mark.slow
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
 @pytest.mark.parametrize('data_source, model_init_class,func', pytest_data)
 def test_sklearn_methods_slow(data_source, model_init_class, func):
     '''Test running each classifier/regressor/cluster model
