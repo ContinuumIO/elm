@@ -19,6 +19,24 @@ from elm.readers.util import BandSpec
 
 HDF5_DIR = os.path.dirname(HDF5_FILES[0])
 
+def get_band_specs(filename):
+    if os.path.basename(filename).startswith('3B-MO'):
+        sub_dataset_names = ('/precipitation',)
+    else:
+        sub_dataset_names = ('HQobservationTime',
+                             'HQprecipSource',
+                             'HQprecipitation',
+                             'IRkalmanFilterWeight',
+                             'IRprecipitation',
+                             'precipitationCal',
+                             'precipitationUncal',
+                             'probabilityLiquidPrecipitation',)
+    band_specs = []
+    for sub in sub_dataset_names:
+        band_specs.append(BandSpec(search_key='sub_dataset_name',
+                               search_value=sub + '$', # line ender regex
+                               name=sub))
+
 @pytest.mark.parametrize('hdf', HDF5_FILES or [])
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
@@ -40,22 +58,7 @@ def test_load_subdataset():
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES, reason='elm-data repo has not been cloned')
 @pytest.mark.parametrize('filename', HDF5_FILES)
 def test_read_array(filename):
-    if os.path.basename(filename).startswith('3B-MO'):
-        sub_dataset_names = ('/precipitation',)
-    else:
-        sub_dataset_names = ('HQobservationTime',
-                             'HQprecipSource',
-                             'HQprecipitation',
-                             'IRkalmanFilterWeight',
-                             'IRprecipitation',
-                             'precipitationCal',
-                             'precipitationUncal',
-                             'probabilityLiquidPrecipitation',)
-    band_specs = []
-    for sub in sub_dataset_names:
-        band_specs.append(BandSpec(search_key='sub_dataset_name',
-                               search_value=sub + '$', # line ender regex
-                               name=sub))
+    sub_dataset_names, band_specs = get_band_specs(filename)
     meta = load_hdf5_meta(filename)
     es = load_hdf5_array(filename, meta, band_specs)
     assert len(es.data_vars) == len(sub_dataset_names)

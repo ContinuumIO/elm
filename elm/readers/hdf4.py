@@ -73,26 +73,31 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     for _, band_meta, s, band_spec in band_order_info:
         if isinstance(band_spec, BandSpec):
             name = band_spec.name
-            reader_kwargs = {k: getattr(band_spec, k) for k in READ_ARRAY_KWARGS if getattr(band_spec, k)}
+            reader_kwargs = {k: getattr(band_spec, k)
+                             for k in READ_ARRAY_KWARGS
+                             if getattr(band_spec, k)}
         else:
             reader_kwargs = {}
             name = band_spec
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
         dat0 = gdal.Open(s[0], GA_ReadOnly)
+        band_meta.update(reader_kwargs)
         raster = raster_as_2d(dat0.ReadAsArray(**reader_kwargs))
         attrs['geo_transform'] = dat0.GetGeoTransform()
-        coord_x, coord_y = geotransform_to_coords(dat0.RasterXSize,
-                                            dat0.RasterYSize,
-                                            attrs['geo_transform'])
 
         geo_transform = dat0.GetGeoTransform()
+        ysize, xsize = raster.shape
+        coord_x, coord_y = geotransform_to_coords(xsize,
+                                                  ysize,
+                                                  geo_transform)
+
         canvas = Canvas(geo_transform=geo_transform,
-                        xsize=dat0.RasterXSize,
-                        ysize=dat0.RasterYSize,
+                        xsize=xsize,
+                        ysize=ysize,
                         dims=native_dims,
                         ravel_order='C',
-                        bounds=geotransform_to_bounds(dat0.RasterXSize, dat0.RasterYSize, geo_transform))
+                        bounds=geotransform_to_bounds(xsize, ysize, geo_transform))
         attrs['canvas'] = canvas
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),

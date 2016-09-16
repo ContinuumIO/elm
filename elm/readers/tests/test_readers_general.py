@@ -5,6 +5,7 @@ import xarray as xr
 
 from elm.readers import *
 
+
 def random_elm_store_no_meta(width=100, height=200):
     bands = ['band_1', 'band_2']
     es = OrderedDict()
@@ -46,3 +47,5 @@ def test_na_drop_no_meta():
     val1 = inv.band_1.values
     val2 = inv2.band_1.values
     assert np.all(val1[~np.isnan(val1)] == val2[~np.isnan(val2)])
+
+

@@ -1,6 +1,7 @@
 import glob
 import os
 
+import attr
 import numpy as np
 import pytest
 
@@ -65,4 +66,17 @@ def test_read_array(hdf):
         assertions_on_band_metadata(sample.attrs)
     es2 = load_hdf4_array(hdf, meta, band_specs=None)
     assert len(es2.data_vars) > len(es.data_vars)
+
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
+def test_reader_kwargs():
+    band_specs_kwargs = []
+    for b in band_specs:
+        b = attr.asdict(b)
+        b['xsize'], b['ysize'] = 200, 300
+        band_specs_kwargs.append(BandSpec(**b))
+    meta = load_hdf4_meta(HDF4_FILES[0])
+    es = load_hdf4_array(HDF4_FILES[0], meta, band_specs_kwargs)
+    for b in es.band_order:
+        assert getattr(es, b).values.shape == (300, 200)
 
