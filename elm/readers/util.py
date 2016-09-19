@@ -42,8 +42,6 @@ class BandSpec(object):
     name = attr.ib()
     key_re_flags = attr.ib(default=None)
     value_re_flags = attr.ib(default=None)
-    xoff = attr.ib(default=None)
-    yoff = attr.ib(default=None)
     buf_xsize = attr.ib(default=None)
     buf_ysize = attr.ib(default=None)
     window = attr.ib(default=None)
