@@ -93,7 +93,8 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
                          'them.'.format(len(band_specs), len(band_order_info)))
     # error if they do not share coords at this point
     band_order_info.sort(key=lambda x:x[0])
-    meta['band_order_info'] = band_order_info
+    meta['band_meta'] = [b[-1] for b in band_order_info]
+    meta['band_order_info'] = [b[:-1] for b in band_order_info]
     return meta
 
 def open_prefilter(filename, meta, **reader_kwargs):
@@ -123,7 +124,7 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
     elm_store_dict = OrderedDict()
     attrs = {'meta': meta}
     attrs['band_order'] = []
-    for (idx, filename, band_spec, band_meta) in band_order_info:
+    for (idx, filename, band_spec), band_meta in zip(band_order_info, meta['band_meta']):
         band_name = band_spec.name
         reader_kwargs = {k: getattr(band_spec, k)
                          for k in READ_ARRAY_KWARGS
