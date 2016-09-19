@@ -14,7 +14,8 @@ from elm.readers.util import (geotransform_to_bounds,
                               BandSpec,
                               row_col_to_xy,
                               raster_as_2d,
-                              READ_ARRAY_KWARGS)
+                              READ_ARRAY_KWARGS,
+                              window_to_gdal_read_kwargs)
 
 from elm.readers import ElmStore
 from elm.sample_util.band_selection import match_meta
@@ -67,8 +68,8 @@ def load_subdataset(subdataset, **reader_kwargs):
 
     dims = ('y', 'x')
     canvas = Canvas(geo_transform=geotrans,
-                    xsize=cols,
-                    ysize=rows,
+                    buf_xsize=cols,
+                    buf_ysize=rows,
                     dims=dims,
                     bounds=geotransform_to_bounds(cols, rows, geotrans),
                     ravel_order='C')
@@ -104,16 +105,17 @@ def load_hdf5_array(datafile, meta, band_specs):
     for _, band_meta, sd, band_spec in band_order_info:
         if isinstance(band_spec, BandSpec):
             name = band_spec.name
-            reader_kwargs = {k: getattr(band_spec, k) for k in READ_ARRAY_KWARGS if getattr(band_spec, k)}
+            reader_kwargs = {k: getattr(band_spec, k)
+                             for k in READ_ARRAY_KWARGS
+                             if getattr(band_spec, k)}
         else:
             reader_kwargs = {}
             name = band_spec
-
+        reader_kwargs = window_to_gdal_read_kwargs(**reader_kwargs)
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
         elm_store_data[name] = load_subdataset(sd[0], **reader_kwargs)
         band_order.append(name)
-
     attrs = copy.deepcopy(attrs)
     attrs['band_order'] = band_order
     gc.collect()

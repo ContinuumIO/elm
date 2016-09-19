@@ -13,18 +13,19 @@ from attr.validators import instance_of
 __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
-           'xy_canvas','dummy_canvas']
+           'xy_canvas','dummy_canvas', 'BandSpec']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
 
-READ_ARRAY_KWARGS = ('xsize', 'ysize', 'yoff', 'xoff')
+READ_ARRAY_KWARGS = ('window', 'buf_xsize', 'buf_ysize',
+                     'yoff', 'xoff')
 
 @attr.s
 class Canvas(object):
     geo_transform = attr.ib()
-    xsize = attr.ib()
-    ysize = attr.ib()
+    buf_xsize = attr.ib()
+    buf_ysize = attr.ib()
     dims = attr.ib()
     ravel_order = attr.ib(default='C')
     zbounds = attr.ib(default=None)
@@ -43,8 +44,9 @@ class BandSpec(object):
     value_re_flags = attr.ib(default=None)
     xoff = attr.ib(default=None)
     yoff = attr.ib(default=None)
-    xsize = attr.ib(default=None)
-    ysize = attr.ib(default=None)
+    buf_xsize = attr.ib(default=None)
+    buf_ysize = attr.ib(default=None)
+    window = attr.ib(default=None)
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
@@ -55,14 +57,14 @@ DEFAULT_GEO_TRANSFORM = (-180, .1, 0, 90, 0, -.1)
 #            for item in canvas]
 #
 
-def dummy_canvas(xsize, ysize, dims, **kwargs):
+def dummy_canvas(buf_xsize, buf_ysize, dims, **kwargs):
     dummy = {'geo_transform': DEFAULT_GEO_TRANSFORM,
-             'xsize': xsize,
-             'ysize': ysize,
+             'buf_xsize': buf_xsize,
+             'buf_ysize': buf_ysize,
              'dims': dims,}
     dummy.update(kwargs)
-    dummy['bounds'] = geotransform_to_bounds(dummy['xsize'],
-                                             dummy['ysize'],
+    dummy['bounds'] = geotransform_to_bounds(dummy['buf_xsize'],
+                                             dummy['buf_ysize'],
                                              dummy['geo_transform'])
     return Canvas(**dummy)
 
@@ -81,13 +83,13 @@ def row_col_to_xy(row, col, geo_transform):
     y = (row * geo_transform[5]) + geo_transform[3]
     return x, y
 
-def geotransform_to_coords(xsize, ysize, geo_transform):
-    return row_col_to_xy(np.arange(ysize), np.arange(xsize), geo_transform)
+def geotransform_to_coords(buf_xsize, buf_ysize, geo_transform):
+    return row_col_to_xy(np.arange(buf_ysize), np.arange(buf_xsize), geo_transform)
 
 
-def geotransform_to_bounds(xsize, ysize, geo_transform):
+def geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform):
     left, bottom = row_col_to_xy(0, 0, geo_transform)
-    right, top = row_col_to_xy(xsize, ysize, geo_transform)
+    right, top = row_col_to_xy(buf_xsize, buf_ysize, geo_transform)
     return BoundingBox(left, bottom, right, top)
 
 
@@ -104,7 +106,7 @@ def raster_as_2d(raster):
 
 def canvas_to_coords(canvas):
     dims = canvas.dims
-    x, y = geotransform_to_coords(canvas.xsize, canvas.ysize,
+    x, y = geotransform_to_coords(canvas.buf_xsize, canvas.buf_ysize,
                                   canvas.geo_transform)
     dims2 = []
     label_y, label_x = 'y', 'x'
@@ -158,12 +160,31 @@ def _extract_valid_xy(band_arr):
 
 
 
-def xy_canvas(geo_transform, xsize, ysize, dims, ravel_order='C'):
+def xy_canvas(geo_transform, buf_xsize, buf_ysize, dims, ravel_order='C'):
     return Canvas(**OrderedDict((
         ('geo_transform', geo_transform),
-        ('ysize', ysize),
-        ('xsize', xsize),
+        ('buf_ysize', buf_ysize),
+        ('buf_xsize', buf_xsize),
         ('dims', dims),
         ('ravel_order', ravel_order),
-        ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
+        ('bounds', geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform)),
     )))
+
+def window_to_gdal_read_kwargs(**reader_kwargs):
+    if 'window' in reader_kwargs:
+        window = reader_kwargs['window']
+        y, x = map(tuple, window)
+        xsize = int(np.diff(x)[0])
+        ysize = int(np.diff(y)[0])
+        xoff = x[0]
+        yoff = y[0]
+        r = {'xoff': xoff,
+             'yoff': yoff,
+             'xsize': xsize,
+             'ysize': ysize,}
+        r.update({k: v for k, v in reader_kwargs.items()
+                  if k != 'window'})
+        return r
+    return reader_kwargs
+
+

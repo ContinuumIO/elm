@@ -14,7 +14,8 @@ from elm.readers.util import (geotransform_to_bounds,
                               raster_as_2d,
                               Canvas,
                               BandSpec,
-                              READ_ARRAY_KWARGS)
+                              READ_ARRAY_KWARGS,
+                              window_to_gdal_read_kwargs)
 
 __all__ = [
     'load_hdf4_meta',
@@ -79,6 +80,7 @@ def load_hdf4_array(datafile, meta, band_specs=None):
         else:
             reader_kwargs = {}
             name = band_spec
+        reader_kwargs = window_to_gdal_read_kwargs(**reader_kwargs)
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
         dat0 = gdal.Open(s[0], GA_ReadOnly)
@@ -87,17 +89,17 @@ def load_hdf4_array(datafile, meta, band_specs=None):
         attrs['geo_transform'] = dat0.GetGeoTransform()
 
         geo_transform = dat0.GetGeoTransform()
-        ysize, xsize = raster.shape
-        coord_x, coord_y = geotransform_to_coords(xsize,
-                                                  ysize,
+        buf_ysize, buf_xsize = raster.shape
+        coord_x, coord_y = geotransform_to_coords(buf_xsize,
+                                                  buf_ysize,
                                                   geo_transform)
 
         canvas = Canvas(geo_transform=geo_transform,
-                        xsize=xsize,
-                        ysize=ysize,
+                        buf_xsize=buf_xsize,
+                        buf_ysize=buf_ysize,
                         dims=native_dims,
                         ravel_order='C',
-                        bounds=geotransform_to_bounds(xsize, ysize, geo_transform))
+                        bounds=geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform))
         attrs['canvas'] = canvas
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),

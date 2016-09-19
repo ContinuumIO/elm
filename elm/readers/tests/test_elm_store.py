@@ -46,7 +46,7 @@ def test_reshape(ftype, fnames_list):
             band_arr = getattr(es, band)
             assert hasattr(band_arr, 'canvas')
             assert hasattr(band_arr, 'geo_transform')
-            assert hasattr(band_arr.canvas, 'xsize')
+            assert hasattr(band_arr.canvas, 'buf_xsize')
             assert hasattr(band_arr, 'y')
             assert hasattr(band_arr, 'x')
             assert hasattr(band_arr.canvas, 'bounds')
@@ -129,8 +129,8 @@ def test_canvas_select(ftype, fnames_list):
         break
     canvas_dict_orig = attr.asdict(band_arr.canvas)
     canvas_dict = canvas_dict_orig.copy()
-    canvas_dict['xsize'] = canvas_dict['xsize'] // 2
-    canvas_dict['ysize'] = canvas_dict['ysize'] // 4
+    canvas_dict['buf_xsize'] = canvas_dict['buf_xsize'] // 2
+    canvas_dict['buf_ysize'] = canvas_dict['buf_ysize'] // 4
     new_canvas = Canvas(**canvas_dict)
     sel2 = select_canvas(es, new_canvas)
     for band2 in sel2.data_vars:

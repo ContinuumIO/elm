@@ -106,11 +106,11 @@ def _select_from_file_base(filename,
     keep_file = _filename_filter(filename,
                                  search=filename_search,
                                  func=filename_filter)
-    args_required, _, _ = get_args_kwargs_defaults(load_meta)
-    if len(args_required) == 1:
+    args_required, default_kwargs, _ = get_args_kwargs_defaults(load_meta)
+    if len(args_required) == 1 and not 'band_specs' in default_kwargs:
         meta = load_meta(filename)
     else:
-        meta = load_meta(filename, band_specs)
+        meta = load_meta(filename, band_specs=band_specs)
     if metadata_filter is not None:
         keep_file = metadata_filter(filename, meta)
         if dry_run:

@@ -73,7 +73,7 @@ def test_reader_kwargs():
     band_specs_kwargs = []
     for b in band_specs:
         b = attr.asdict(b)
-        b['xsize'], b['ysize'] = 200, 300
+        b['buf_xsize'], b['buf_ysize'] = 200, 300
         band_specs_kwargs.append(BandSpec(**b))
     meta = load_hdf4_meta(HDF4_FILES[0])
     es = load_hdf4_array(HDF4_FILES[0], meta, band_specs_kwargs)

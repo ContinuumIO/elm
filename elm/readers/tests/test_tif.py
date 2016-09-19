@@ -75,7 +75,7 @@ def test_reader_kwargs():
     band_specs_kwargs = []
     for b in band_specs:
         b = attr.asdict(b)
-        b['xsize'], b['ysize'] = 200, 300
+        b['buf_xsize'], b['buf_ysize'] = 200, 300
         band_specs_kwargs.append(BandSpec(**b))
     meta = load_dir_of_tifs_meta(TIF_DIR, band_specs_kwargs)
     es = load_dir_of_tifs_array(TIF_DIR, meta, band_specs_kwargs)

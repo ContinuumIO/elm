@@ -85,13 +85,13 @@ class ElmStore(xr.Dataset):
             z = getattr(band_arr, 'z', None)
             t = getattr(band_arr, 't', None)
             if x is not None:
-                xsize = x.size
+                buf_xsize = x.size
             else:
-                xsize = None
+                buf_xsize = None
             if y is not None:
-                ysize = y.size
+                buf_ysize = y.size
             else:
-                ysize = None
+                buf_ysize = None
             if z is not None:
                 zsize = z.size
                 zbounds = [np.min(z), np.max(z)]
@@ -111,15 +111,15 @@ class ElmStore(xr.Dataset):
                     geo_transform = getattr(band_arr, 'geo_transform', getattr(self, 'geo_transform'))
             band_arr.attrs['canvas'] = Canvas(**OrderedDict((
                 ('geo_transform', geo_transform),
-                ('ysize', ysize),
-                ('xsize', xsize),
+                ('buf_ysize', buf_ysize),
+                ('buf_xsize', buf_xsize),
                 ('zsize', zsize),
                 ('tsize', tsize),
                 ('dims', band_arr.dims),
                 ('ravel_order', getattr(self, 'ravel_order', 'C')),
                 ('zbounds', zbounds),
                 ('tbounds', tbounds),
-                ('bounds', geotransform_to_bounds(xsize, ysize, geo_transform)),
+                ('bounds', geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform)),
             )))
             if old_canvas is not None and old_canvas != band_arr.attrs['canvas']:
                 shared = False
