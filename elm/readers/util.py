@@ -18,8 +18,7 @@ logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
 
-READ_ARRAY_KWARGS = ('window', 'buf_xsize', 'buf_ysize',
-                     'yoff', 'xoff')
+READ_ARRAY_KWARGS = ('window', 'buf_xsize', 'buf_ysize',)
 
 @attr.s
 class Canvas(object):
