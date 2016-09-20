@@ -1,5 +1,6 @@
 import os
 
+import attr
 import pytest
 import numpy as np
 
@@ -45,7 +46,7 @@ def test_reshape(ftype, fnames_list):
             band_arr = getattr(es, band)
             assert hasattr(band_arr, 'canvas')
             assert hasattr(band_arr, 'geo_transform')
-            assert hasattr(band_arr.canvas, 'xsize')
+            assert hasattr(band_arr.canvas, 'buf_xsize')
             assert hasattr(band_arr, 'y')
             assert hasattr(band_arr, 'x')
             assert hasattr(band_arr.canvas, 'bounds')
@@ -53,7 +54,6 @@ def test_reshape(ftype, fnames_list):
     else:
         assert hasattr(es, 'canvas')
         assert hasattr(es, 'geo_transform')
-        assert hasattr(es, 'bounds')
         for band in es.data_vars:
             band_arr = getattr(es, band)
             break
@@ -81,7 +81,7 @@ def test_reshape(ftype, fnames_list):
         for band in es_new.band_vars:
             canvas = getattr(es_new, band).canvas
             break
-    es_new = inverse_flatten(es.select_canvas(canvas).flatten())
+    es_new = inverse_flatten(flatten(select_canvas(es, canvas)))
     assert hasattr(es_new, 'band_order')
     for cv, dims, band in zip(old_canvases, old_dims, es_new.band_order):
         band_arr = getattr(es_new, band)
@@ -95,17 +95,17 @@ def test_elm_store_methods(ftype, fnames_list):
     bands = tuple(es.data_vars)
     assert bands == tuple(es.band_order)
     old_band_arr = getattr(es, bands[0])
-    flat = es.flatten()
+    flat = flatten(es)
     assert hasattr(flat, 'flat')
     assert len(flat.flat.values.shape) == 2
     assert flat.flat.values.shape[1] == len(bands)
     assert np.all(flat.flat.band == bands)
     flat.flat.values[:3, :] = np.NaN
-    na_dropped = flat.drop_na_rows()
+    na_dropped = drop_na_rows(flat)
     assert hasattr(na_dropped, 'flat')
     assert na_dropped.flat.values.shape[0] == flat.flat.values.shape[0] - 3
 
-    es_new = na_dropped.inverse_flatten()
+    es_new = inverse_flatten(na_dropped)
     assert tuple(es_new.band_order) == bands
     assert tuple(es_new.data_vars) == bands
     for band in es_new.data_vars:
@@ -121,18 +121,18 @@ def test_canvas_select(ftype, fnames_list):
     es = _setup(ftype, fnames_list)
     for band in es.data_vars:
         band_arr = getattr(es, band)
-        sel = select_canvas_elm_store(es, band_arr.canvas)
+        sel = select_canvas(es, band_arr.canvas)
         assert np.all(sel.canvas == band_arr.canvas)
         for band2 in sel.data_vars:
             assert getattr(sel, band2).values.shape == band_arr.values.shape
             break
         break
-    canvas_dict_orig = band_arr.canvas._asdict()
+    canvas_dict_orig = attr.asdict(band_arr.canvas)
     canvas_dict = canvas_dict_orig.copy()
-    canvas_dict['xsize'] = canvas_dict['xsize'] // 2
-    canvas_dict['ysize'] = canvas_dict['ysize'] // 4
+    canvas_dict['buf_xsize'] = canvas_dict['buf_xsize'] // 2
+    canvas_dict['buf_ysize'] = canvas_dict['buf_ysize'] // 4
     new_canvas = Canvas(**canvas_dict)
-    sel2 = es.select_canvas(new_canvas)
+    sel2 = select_canvas(es, new_canvas)
     for band2 in sel2.data_vars:
         band_arr2 = getattr(sel2, band2)
         xidx = [idx for idx, x in enumerate(band_arr2.dims)
@@ -145,13 +145,13 @@ def test_canvas_select(ftype, fnames_list):
 
 def test_flatten_inverse_flatten():
     ftype, fnames_list = sorted(f for f in FILES.items()
-                         if f[0] == 'hdf')[0]
+                                if f[0] == 'hdf')[0]
     es = _setup(ftype, fnames_list)
-    flat = es.flatten()
-    inv = flat.inverse_flatten()
-    flat2 = inv.flatten()
-    flat3 = flat2.drop_na_rows()
-    inv2 = flat3.inverse_flatten()
-    inv3 = inv2.transpose('x', 'y')
+    flat = flatten(es)
+    inv = inverse_flatten(flat)
+    flat2 = flatten(inv)
+    flat3 = drop_na_rows(flat2)
+    inv2 = inverse_flatten(flat3)
+    inv3 = transpose(inv2, ('x', 'y'))
     assert np.all(inv3.band_1.values == es.band_1.transpose('x', 'y').values)
 

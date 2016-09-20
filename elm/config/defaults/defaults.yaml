@@ -1,73 +1,75 @@
 readers: {
-  hdf4-eos: {
-     load_array: "elm.readers.hdf4:load_hdf4_array",
-     load_meta: "elm.readers.hdf4:load_hdf4_meta"
+  hdf4_example: {
+    load_array: "elm.readers.hdf4:load_hdf4_array",
+    load_meta: "elm.readers.hdf4:load_hdf4_meta"
   },
-  dir_of_tifs_reader: {
-     load_array: "elm.readers.tif:load_dir_of_tifs_array",
-     load_meta: "elm.readers.tif:load_dir_of_tifs_meta"
-   },
+  tif_example: {
+    load_array: "elm.readers.tif:load_dir_of_tifs_array",
+    load_meta: "elm.readers.tif:load_dir_of_tifs_meta",
+  },
+  hdf5_example: {
+    load_array: "elm.readers.hdf5:load_hdf5_array",
+    load_meta: "elm.readers.hdf5:load_hdf5_meta",
+  },
+  netcdf_example: {
+    load_array: "elm.readers.netcdf:load_netcdf_array",
+    load_meta: "elm.readers.netcdf:load_netcdf_meta",
+  }
 }
 
 data_sources: {
+ hdf5_precip_hourly: {
+   reader: hdf5_example,
+   sample_from_args_func: "elm.sample_util.samplers:image_selection",
+   band_specs: [{search_key: sub_dataset_name,
+                 search_value: /precipitation,
+                 name: band_1,
+                 key_re_flags: [],
+                 value_re_flags: [],
+                 meta_to_geotransform: "elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform",
+                 stored_coords_order: ["x", "y"]}],
+   selection_kwargs: {
+    file_pattern: 3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5,
+    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+   },
+   batch_size: 1440000,
+   sample_args_generator: iter_files_recursively,
+  },
  NPP_DSRF1KD_L2GD: {
-  reader: hdf4-eos,
-  file_pattern: "*.hdf",
+  reader: hdf4_example,
+  file_pattern: .*\.hdf,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
-  band_specs: [[long_name, "Band 1 ", band_1],
-  [long_name, "Band 2 ", band_2],
-  [long_name, "Band 3 ", band_3],
-  [long_name, "Band 4 ", band_4],
-  [long_name, "Band 5 ", band_5],
-  [long_name, "Band 7 ", band_7],
-  [long_name, "Band 8 ", band_8],
-  [long_name, "Band 9 ", band_9],
-  [long_name, "Band 10 ", band_10],
-  [long_name, "Band 11 ", band_11]],
+  band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
+  {search_key: long_name, search_value: "Band 2 ", name: band_2},
+  {search_key: long_name, search_value: "Band 3 ", name: band_3},
+  {search_key: long_name, search_value: "Band 4 ", name: band_4},
+  {search_key: long_name, search_value: "Band 5 ", name: band_5},
+  {search_key: long_name, search_value: "Band 6 ", name: band_6},
+  {search_key: long_name, search_value: "Band 7 ", name: band_7},
+  {search_key: long_name, search_value: "Band 9 ", name: band_9},
+  {search_key: long_name, search_value: "Band 10 ", name: band_10},
+  {search_key: long_name, search_value: "Band 11 ", name: band_11}],
   sample_args_generator: iter_files_recursively,
   selection_kwargs: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    extension: ".hdf",
-
-    data_filter: Null,
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
-    filename_filter: Null,
-    geo_filters: {
-      include_polys: [],
-      exclude_polys: [],
-    },
+    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
   },
-  get_y_func: Null,
-  get_y_kwargs: {},
-  get_weight_func: Null,
-  get_weight_kwargs: {},
-  keep_columns: [],
   batch_size: 1440000,
  },
  S3_LANDSAT_L2_TIFS: {
   sample_args_generator: tif_file_gen,
   selection_kwargs: {
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+    file_pattern: TIF
   },
-  reader: dir_of_tifs_reader,
+  reader: tif_example,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
-  band_specs: [[name, "_B1.TIF", band_1],
-  [name, "_B2.TIF", band_2],
-  [name, "_B3.TIF", band_3],
-  [name, "_B4.TIF", band_4],
-  [name, "_B5.TIF", band_5],
-  [name, "_B6.TIF", band_6],
-  [name, "_B7.TIF", band_7],
-  #[name, "_B8.TIF", band_8], # band 8 in panchromatic and at 15 m rather than 30 m
-  [name, "_B9.TIF", band_9],
-  [name, "_B10.TIF", band_10],
-  [name, "_B11.TIF", band_11]],
-  get_y_func: Null,
-  get_y_kwargs: {},
-  get_weight_func: Null,
-  get_weight_kwargs: {},
-  keep_columns: [],
+  band_specs: [
+  {search_key: name, search_value: "_B1.TIF", name: band_1},
+  {search_key: name, search_value: "_B2.TIF", name: band_2},
+  {search_key: name, search_value: "_B3.TIF", name: band_3},
+  {search_key: name, search_value: "_B4.TIF", name: band_4},
+  ],
   batch_size: 1440000,
   },
 }
@@ -76,21 +78,6 @@ sample_args_generators: {
   iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }
 
-polys: {
-
-}
-resamplers: {
-
-}
-aggregations: {
-
-}
-masks: {
-
-}
-add_features: {
-  # an example of an entry here: NPP_DSRF1KD_L2GD_NDVI: "elm.sample_util.add_features:ndvi",
-}
 feature_selection: {
   select_all: {
     selection: all,
@@ -154,10 +141,8 @@ transform: {
   pca: {
     model_init_class: "sklearn.decomposition:IncrementalPCA",
     model_init_kwargs: {"n_components": 2},
-    data_source: NPP_DSRF1KD_L2GD,
     ensemble: no_ensemble,
     model_scoring: Null,
-    param_grid: pca_kmeans,
   }
 }
 
@@ -231,57 +216,26 @@ sample_pipelines: {
   flatten_example: [
     {select_canvas: band_1},
     {flatten: 'C'},
+    {sklearn_preprocessing: require_positive},
     {drop_na_rows: True},
   ],
-}
-param_grids: {
-  pca_kmeans: {
-    kmeans__n_clusters: [3,4,5,6,7,8],
-    pca__n_components: [2,3,4,5],
-    sample_pipeline: [standardize_log10_var_top_80_inter_trans,
-                      standardize_log10_var_top_80_trans],
-    feature_selection: {top_80_percent: {kwargs: {percentile: [30, 40, 50, 60, 70, 80, 90],}}},
-    # data_sources: {selection_kwargs: {some_kwarg: [1,2,3,5,6]}}
-    control: {
-      select_method: selNSGA2,
-      crossover_method: cxTwoPoint,
-      mutate_method: mutShuffleIndexes,
-      init_pop: random,
-      indpb: 0.2,
-      mutpb: 0.4,
-      mu:    24,
-    }
-  }
 }
 train: {
   kmeans: {
     model_init_class: "sklearn.cluster:MiniBatchKMeans",
-    # TODO Deprecate code dealing with: "post_fit_func":
-    fit_kwargs: {},
     model_init_kwargs: {
       compute_labels: True
     },
     ensemble: no_ensemble,
     output_tag: kmeans,
-    data_source: NPP_DSRF1KD_L2GD,
-    keep_columns: [],
     model_scoring: kmeans_aic,
     model_selection: kmeans_model_averaging,
-    param_grid: pca_kmeans
   }
 }
 
 predict: {
   kmeans: {
-    sample_args_generator: iter_files_recursively,
-    sample_args_generator_kwargs: {
-      top_dir: 'env:ELM_EXAMPLE_DATA_PATH',
-      extension: '.hdf'
-    }
   }
-}
-change_detection: {
-  time_series: []
 }
 pipeline:
   - {sample_pipeline: [{sample_pipeline: flatten_example},

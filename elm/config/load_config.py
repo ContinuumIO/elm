@@ -5,6 +5,7 @@ import numbers
 import os
 import traceback
 
+import attr
 import numpy as np
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
@@ -16,7 +17,6 @@ from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
-
 
 
 logger = logging.getLogger(__name__)
@@ -141,25 +141,27 @@ class ConfigParser(object):
                                        'a dict'.format(k, v))
 
             load = v.get('load_array')
-            bounds = v.get('load_meta')
+            meta = v.get('load_meta')
             self._validate_custom_callable(load, True, 'readers:{} load_array'.format(k))
-            self._validate_custom_callable(bounds, True, 'readers:{} load_meta'.format(k))
+            self._validate_custom_callable(meta, True, 'readers:{} load_meta'.format(k))
             self.readers[k] = v
 
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
-
-        if not band_specs or not isinstance(band_specs, list):
+        from elm.readers.util import BandSpec
+        if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
+        if not all(isinstance(bs, dict) for bs in band_specs):
+            raise ElmConfigError('Expected "band_specs" to be a list of dicts')
+        new_band_specs = []
         for band_spec in band_specs:
-            if not isinstance(band_spec, (tuple, list)) or not len(band_spec) == 3 or not all(isinstance(b, str) for b in band_spec):
-                raise ElmConfigError("band_spec {} in data_sources:{} "
-                                       "did not have 3 strings "
-                                       "(metadata key search phrase,"
-                                       "metadata value search phrase, "
-                                       "band name)".format(band_spec, name))
+            if not all(k.name in band_spec for k in attr.fields(BandSpec)
+                       if not k.default == attr.NOTHING):
+                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
+            new_band_specs.append(BandSpec(**band_spec))
+        return new_band_specs
 
     def _validate_one_data_source(self, name, ds):
         '''Validate one data source within "data_sources"
@@ -171,6 +173,8 @@ class ConfigParser(object):
         self._validate_custom_callable(sample_from_args_func,
                                 True,
                                 'train:{} sample_from_args_func'.format(name))
+        if 'band_specs' in ds:
+            ds['band_specs'] = self._validate_band_specs(ds.get('band_specs'), name)
         if not sample_from_args_func:
             reader = ds.get('reader')
             if not reader in self.readers:
@@ -182,7 +186,6 @@ class ConfigParser(object):
                 raise ElmConfigError('data_source {} refers to a '
                                        '"download" {} not defined in "downloads"'
                                        ' section'.format(ds, download))
-            self._validate_band_specs(ds.get('band_specs'), name)
             s = ds.get('sample_args_generator')
             if not s in self.sample_args_generators:
                 raise ElmConfigError('Expected data_source: '
@@ -447,15 +450,6 @@ class ConfigParser(object):
                                                             repr(t.get('model_init_class'))))
             output_tag = t.get('output_tag')
             self._validate_type(output_tag, 'train:output_tag', str)
-        band_specs = data_source.get('band_specs') or None
-        band_names = data_source.get('band_names') or None
-        if band_specs:
-            t['band_names'] = [(x[-1] if isinstance(x, Sequence) else x)
-                               for x in band_specs]
-            ensemble = t.get('ensemble')
-            if not ensemble or not ensemble in self.ensembles:
-                raise ElmConfigError('Each train or transform dict must have an '
-                                     '"ensemble" key that is also a key in "ensembles"')
         self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
 
     def _validate_train_or_transform(self, train_or_transform):

@@ -1,11 +1,15 @@
 import glob
 import os
 
+import attr
 import numpy as np
 import pytest
 
 from elm.readers.hdf4 import (load_hdf4_meta,
                               load_hdf4_array)
+
+from elm.readers.util import BandSpec
+
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH,
                                     HDF4_FILES,
@@ -13,17 +17,17 @@ from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     assertions_on_band_metadata)
 
 HDF4_DIR = os.path.dirname(HDF4_FILES[0])
-
+kwargs = {}
 band_specs = [
-    ['long_name', 'Band 1 ', 'band_1'],
-    ['long_name', 'Band 2 ', 'band_2'],
-    ['long_name', 'Band 3 ', 'band_3'],
-    ['long_name', 'Band 4 ', 'band_4'],
-    ['long_name', 'Band 5 ', 'band_5'],
-    ['long_name', 'Band 7 ', 'band_7'],
-    ['long_name', 'Band 8 ', 'band_8'],
-    ['long_name', 'Band 10 ', 'band_10'],
-    ['long_name', 'Band 11 ', 'band_11'],
+    BandSpec('long_name', 'Band 1 ', 'band_1', **kwargs),
+    BandSpec('long_name', 'Band 2 ', 'band_2', **kwargs),
+    BandSpec('long_name', 'Band 3 ', 'band_3', **kwargs),
+    BandSpec('long_name', 'Band 4 ', 'band_4', **kwargs),
+    BandSpec('long_name', 'Band 5 ', 'band_5', **kwargs),
+    BandSpec('long_name', 'Band 7 ', 'band_7', **kwargs),
+    BandSpec('long_name', 'Band 8 ', 'band_8', **kwargs),
+    BandSpec('long_name', 'Band 10 ', 'band_10', **kwargs),
+    BandSpec('long_name', 'Band 11 ', 'band_11', **kwargs),
 ]
 
 @pytest.mark.parametrize('hdf', HDF4_FILES or [])
@@ -31,7 +35,7 @@ band_specs = [
                reason='elm-data repo has not been cloned')
 def test_read_meta(hdf):
     meta = load_hdf4_meta(hdf)
-    assertions_on_metadata(meta, is_band_specific=False)
+    assertions_on_metadata(meta)
     assert 'GranuleBeginningDateTime' in meta['meta']
     for band_meta in meta['band_meta']:
         assert 'GranuleBeginningDateTime' in band_meta
@@ -48,7 +52,7 @@ def test_read_array(hdf):
         sample = getattr(es, band)
         mean_y = np.mean(sample.y)
         mean_x = np.mean(sample.x)
-        band_names = np.array([b[-1] for b in band_specs])
+        band_names = np.array([b.name for b in band_specs])
         assert sorted((mean_x,
                 sample.canvas.bounds.left,
                 sample.canvas.bounds.right))[1] == mean_x
@@ -58,8 +62,21 @@ def test_read_array(hdf):
         assert sample.y.size == 1200
         assert sample.x.size == 1200
         assert len(es.data_vars) == len(band_specs)
-        assert np.all(es.band_order == [x[-1] for x in band_specs])
+        assert np.all(es.band_order == [x.name for x in band_specs])
         assertions_on_band_metadata(sample.attrs)
     es2 = load_hdf4_array(hdf, meta, band_specs=None)
     assert len(es2.data_vars) > len(es.data_vars)
+
+@pytest.mark.skipif(not ELM_HAS_EXAMPLES,
+               reason='elm-data repo has not been cloned')
+def test_reader_kwargs():
+    band_specs_kwargs = []
+    for b in band_specs:
+        b = attr.asdict(b)
+        b['buf_xsize'], b['buf_ysize'] = 200, 300
+        band_specs_kwargs.append(BandSpec(**b))
+    meta = load_hdf4_meta(HDF4_FILES[0])
+    es = load_hdf4_array(HDF4_FILES[0], meta, band_specs_kwargs)
+    for b in es.band_order:
+        assert getattr(es, b).values.shape == (300, 200)
 

@@ -6,10 +6,10 @@ from affine import Affine
 import netCDF4 as nc
 import xarray as xr
 
-from elm.readers.util import (geotransform_to_bounds, add_es_meta,
+from elm.readers.util import (geotransform_to_bounds,
                               VALID_X_NAMES, VALID_Y_NAMES)
 from elm.readers import ElmStore
-from elm.sample_util.band_selection import match_meta
+from elm.sample_util.metadata_selection import match_meta
 
 __all__ = ['load_netcdf_meta', 'load_netcdf_array']
 

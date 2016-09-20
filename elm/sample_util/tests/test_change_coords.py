@@ -111,9 +111,9 @@ def test_modify_sample():
     assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
     new_names = set(es.band_order) - set(new_es.band_order)
     assert all('new' in n for n in new_names)
-    flat = new_es.flatten()
+    flat = flatten(new_es)
     assert not len(set(tuple(flat.flat.band.values)) ^ set(new_es.band_order))
-    inv = flat.inverse_flatten()
+    inv = inverse_flatten(flat)
     for band in inv.data_vars:
         band_arr = getattr(inv, band)
         assert band_arr.values.shape == getattr(new_es, band).values.shape

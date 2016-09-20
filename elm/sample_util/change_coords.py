@@ -1,12 +1,15 @@
 import numpy as np
 
 from elm.config import ElmConfigError, import_callable
-from elm.readers import (select_canvas_elm_store,
+from elm.readers import (select_canvas as _select_canvas,
                          drop_na_rows as _drop_na_rows,
                          ElmStore,
                          flatten as _flatten,
                          inverse_flatten as _inverse_flatten,
-                         Canvas)
+                         Canvas,
+                         check_is_flat,
+                         transpose as _transpose,
+                         aggregate_simple)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
@@ -19,14 +22,13 @@ CHANGE_COORDS_ACTIONS = (
 )
 
 
-
 def select_canvas(es, key, value, **kwargs):
     band = value
     band_arr = getattr(es, band, None)
     if band_arr is None:
         raise ValueError('Argument to select_canvas should be a band name, e.g. "band_1" (found {})'.format(band))
     new_canvas = band_arr.canvas
-    new_es = select_canvas_elm_store(es, new_canvas)
+    new_es = _select_canvas(es, new_canvas)
     return new_es
 
 
@@ -38,7 +40,7 @@ def flatten(es, key, value, **kwargs):
 
 
 def drop_na_rows(es, key, value, **kwargs):
-    if not es.is_flat():
+    if not check_is_flat(es):
         raise ElmConfigError('"flatten" must be called before "drop_na_rows"')
     return _drop_na_rows(es)
 
@@ -51,17 +53,15 @@ def inverse_flatten(es, key, value, **kwargs):
 def modify_sample(es, key, value, **kwargs):
     func = import_callable(value)
     out = func(es, **kwargs)
-    if isinstance(out, (list, tuple)):
-        [o.add_band_order()  for o in out]
-    else:
-        out.add_band_order()
     return out
 
+
 def transpose(es, key, value, **kwargs):
-    return es._transpose(value)
+    return _transpose(es, value)
+
 
 def agg(es, key, value, **kwargs):
-    return es.agg(**value)
+    return aggregate_simple(es, **value)
 
 
 def _check_change_coords_action(config, step, sample_pipeline_step):

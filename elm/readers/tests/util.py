@@ -34,12 +34,8 @@ else:
     HDF4_FILES = []
     NETCDF_FILES = []
 
-def assertions_on_metadata(meta, is_band_specific=False):
-    required_keys = ('meta',
-                     'height',
-                     'width')
-    if not is_band_specific:
-        required_keys += ('band_meta',)
+def assertions_on_metadata(meta):
+    required_keys = ('meta', 'band_meta')
     for key in required_keys:
         assert key in meta
 
@@ -47,3 +43,4 @@ def assertions_on_band_metadata(band_meta):
     required_keys = ('geo_transform', 'canvas')
     for key in required_keys:
         assert key in band_meta
+

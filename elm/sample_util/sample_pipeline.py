@@ -192,7 +192,7 @@ def get_sample_pipeline_action_data(config, step,
     kw.update(data_source)
     kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
     if sample_args_generator:
-
+        logger.debug('Calling sample_args_generator')
         generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
                                             **kw)

@@ -1,6 +1,6 @@
 CONFIG_STR = '''
 readers: {
-  hdf4-eos: {
+  hdf4_example: {
      load_array: "elm.readers.hdf4:load_hdf4_array",
      load_meta: "elm.readers.hdf4:load_hdf4_meta"
   },
@@ -70,7 +70,7 @@ sample_pipelines: {
 
 data_sources: {
  NPP_DSRF1KD_L2GD: {
-  reader: hdf4-eos,
+  reader: hdf4_example,
   file_pattern: "*.hdf",
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[long_name, "Band 1 ", band_1],
@@ -89,7 +89,7 @@ data_sources: {
     extension: ".hdf",
 
     data_filter: Null,
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
     filename_filter: Null,
     geo_filters: {
       include_polys: [],

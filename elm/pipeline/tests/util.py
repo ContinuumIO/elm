@@ -21,7 +21,6 @@ import elm.pipeline.train as elmtrain
 import elm.pipeline.predict as predict
 import elm.pipeline.transform as elmtransform
 from elm.readers import *
-from elm.readers.util import add_es_meta
 from elm.scripts.main import main as elm_main
 
 old_ensemble = elmtrain.ensemble

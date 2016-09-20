@@ -7,11 +7,11 @@ import gc
 import logging
 import os
 
+import attr
 import numpy as np
 import scipy.interpolate as spi
 import xarray as xr
 
-from elm.config import import_callable
 from elm.readers import ElmStore, Canvas
 from elm.readers.util import canvas_to_coords, VALID_X_NAMES, VALID_Y_NAMES
 
@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 AGG_METHODS = tuple('all any argmax argmin max mean median min prod sum std var'.split())
 
-__all__ = ['select_canvas_elm_store',
+__all__ = ['select_canvas',
            'drop_na_rows',
            'flatten',
            'filled_flattened',
@@ -36,7 +36,7 @@ def transpose(es, new_dims):
         if not len(set(new_dims) & set(data_arr.dims)) == len(new_dims):
             raise ValueError('At least one of new_dims is not an existing dim (new_dims {}, existing {})'.format(new_dims, data_arr.dims))
         trans[band] = data_arr.transpose(*new_dims)
-        canvas = trans[band].canvas._asdict()
+        canvas = attr.asdict(trans[band].canvas)
         canvas['dims'] = new_dims
         trans[band].attrs['canvas'] = Canvas(**canvas)
     return ElmStore(trans, attrs=es.attrs)
@@ -49,19 +49,26 @@ def aggregate_simple(es, **kwargs):
 
     kw = {k: v for k, v in kwargs.items()
           if k not in ('func',)}
+
     dim = kwargs.get('dim')
     axis = kwargs.get('axis')
     if isinstance(axis, int) and dim or (not isinstance(axis, int) and not dim):
         raise ValueError('kwargs given to aggregate_simple must include *one* of "dim" or "axis"')
     agged = OrderedDict()
+    lost_axes = []
     for band in es.data_vars:
+
         data_arr = getattr(es, band)
+        lost_axes.append(data_arr.dims.index(dim) if dim else axis)
         agged[band] = getattr(data_arr, func)(**kw)
-    return ElmStore(agged, attrs=es.attrs, add_canvas=False)
+    if len(set(lost_axes)) != 1:
+        raise ValueError('Cannot aggregate when the axis (dim) of aggregation is not the same for all DataArrays in ElmStore')
+    return ElmStore(agged, attrs=es.attrs, add_canvas=False, lost_axis=lost_axes[0])
 
 
-def select_canvas_elm_store(es, new_canvas):
-    assert not es.is_flat()
+def select_canvas(es, new_canvas):
+    if getattr(es, '_dummy_canvas', False):
+        raise ValueError('This ElmStore cannot be run through select_canvas because geo transform was not read correctly from input data')
     es_new_dict = OrderedDict()
     for band in es.data_vars:
         data_arr = getattr(es, band)
@@ -91,7 +98,7 @@ def select_canvas_elm_store(es, new_canvas):
 
 
 def drop_na_rows(flat):
-    assert flat.is_flat()
+    check_is_flat(flat)
     flat_dropped = flat.flat.dropna(dim='space')
     flat_dropped.attrs.update(flat.attrs)
     flat_dropped.attrs['drop_na_rows'] = flat.flat.values.shape[0] - flat_dropped.shape[0]
@@ -112,7 +119,7 @@ def flatten(es, ravel_order='C'):
     Returns:
         elm_store:  2-d ElmStore (space, band)
     '''
-    if es.is_flat():
+    if check_is_flat(es, raise_err=False):
         return es
     if not es.get_shared_canvas():
         raise ValueError('es.select_canvas should be called before flatten when, as in this case, the bands do not all have the same Canvas')
@@ -122,10 +129,8 @@ def flatten(es, ravel_order='C'):
     old_dims = []
     for idx, band in enumerate(band_names):
         data_arr = getattr(es, band, None)
-        if data_arr is None:
-            raise ValueError(repr(es.data_vars))
-        assert hasattr(data_arr, 'canvas')
-        old_canvases.append(data_arr.canvas)
+        canvas = getattr(data_arr, 'canvas', None)
+        old_canvases.append(canvas)
         old_dims.append(data_arr.dims)
         if store is None:
             # TODO consider canvas here instead
@@ -156,7 +161,7 @@ def flatten(es, ravel_order='C'):
 
 
 def filled_flattened(na_dropped):
-    assert na_dropped.is_flat()
+
     shp = getattr(na_dropped, 'shape_before_drop_na_rows', None)
     if not shp:
         return na_dropped

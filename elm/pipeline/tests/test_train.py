@@ -1,5 +1,6 @@
 import contextlib
 import inspect
+import os
 
 import pytest
 
@@ -15,15 +16,9 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'data_filter',
                            'geo_filters')
 
+DEFAULTS2 = ConfigParser(config=DEFAULTS)
 
-
-def expected_fit_kwargs(data_source, train_dict, ensemble):
-    fit_kwargs = {
-            'fit_kwargs': train_dict['fit_kwargs'],
-        }
-    return fit_kwargs
-
-@pytest.mark.parametrize('ds_name, ds_dict', DEFAULTS['data_sources'].items())
+@pytest.mark.parametrize('ds_name, ds_dict', DEFAULTS2.data_sources.items())
 def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
     with patch_ensemble_predict() as (elmtrain, elmpredict):
         config = ConfigParser(config=DEFAULTS)
@@ -34,7 +29,6 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
                                 transform_model,
                                 1)
         for step1 in config.pipeline:
-            step1['data_source'] = ds_name
             for step in step1['steps']:
                 if 'train' in step:
                     break
@@ -72,9 +66,9 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
         # is a method of model_init_class
         check_action_data(fit_args[0])
         # fit_kwargs
-        data_source = config.data_sources[train_dict['data_source']]
+        data_source = config.data_sources[config.pipeline[0]['data_source']]
         ensemble = config.ensembles[train_dict['ensemble']]
-        assert fit_kwargs == expected_fit_kwargs(data_source, train_dict, ensemble)
+        assert fit_kwargs == {'fit_kwargs': train_dict.get('fit_kwargs') or {}}
         # model_scoring
         assert not model_scoring or (':' in model_scoring and import_callable(model_scoring))
         # model scoring kwargs

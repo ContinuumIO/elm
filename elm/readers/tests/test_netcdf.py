@@ -20,7 +20,7 @@ variables_list = ['HQobservationTime']
 def test_read_meta():
     for nc_file in NETCDF_FILES:
         meta = load_netcdf_meta(nc_file)
-        assertions_on_metadata(meta, is_band_specific=True)
+        assertions_on_metadata(meta)
 
 
 def _validate_array_test_result(ds):
@@ -29,11 +29,11 @@ def _validate_array_test_result(ds):
     mean_x = np.mean(sample.x)
 
     assert sorted((mean_x,
-            ds.bounds.left,
-            ds.bounds.right))[1] == mean_x
+            ds.canvas.bounds.left,
+            ds.canvas.bounds.right))[1] == mean_x
     assert sorted((mean_y,
-            ds.bounds.top,
-            ds.bounds.bottom))[1] == mean_y
+            ds.canvas.bounds.top,
+            ds.canvas.bounds.bottom))[1] == mean_y
     assert ds.y.size == 1800
     assert ds.x.size == 3600
 

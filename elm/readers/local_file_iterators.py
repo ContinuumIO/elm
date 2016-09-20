@@ -1,6 +1,7 @@
 import glob
 import logging
 import os
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -10,6 +11,7 @@ __all__ = ['VIIRS_L2_PATTERN', 'get_all_filenames_for_product'
 def VIIRS_L2_PATTERN(product_number, product_name, yr, data_day):
     return os.path.join(LADSWEB_LOCAL_CACHE, str(product_number), product_name, str(yr),
                       '{:03d}'.format(data_day), '*.hdf')
+
 
 def get_all_filenames_for_product(data_source):
     product_name = data_source['product_name']
@@ -33,27 +35,24 @@ def get_all_filenames_for_product(data_source):
 
 def iter_dirs_of_dirs(**kwargs):
     top_dir = kwargs['top_dir']
-    ext = kwargs.get('extension', '')
-    logger.debug('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
+    file_pattern = kwargs.get('file_pattern') or None
+    logger.debug('Read {} from {}'.format(file_pattern, top_dir))
     for root, dirs, files in os.walk(top_dir):
-        if any(os.path.isfile(f) for f in files):
-            if (ext and any(f.endswith(ext) for f in files)) or not ext:
+        if any(os.path.isfile(os.path.join(root, f)) for f in files):
+            if (file_pattern and any(re.search(file_pattern, f) for f in files)) or not file_pattern:
                 yield root
 
 
 def iter_files_recursively(**kwargs):
-    path = os.environ['ELM_EXAMPLE_DATA_PATH']
-    ext = kwargs.get('extension', '')
+    file_pattern = kwargs.get('file_pattern') or None
     top_dir = kwargs['top_dir']
-    logger.debug('Read files from {} ({})'.format(top_dir, '{} extension'.format(ext) if ext else 'no file glob param'))
-
-    if not path or not os.path.exists(path):
-        raise ValueError('Clone the ContinuumIO/elm-data repo and '
-                         'define ELM_EXAMPLE_DATA_PATH env var')
+    logger.debug('Read {} from {}'.format(file_pattern, top_dir))
+    if not top_dir or not os.path.exists(top_dir):
+        raise ValueError('Expected top_dir ({}) to exist'.format(top_dir))
     for root, dirs, files in os.walk(top_dir):
         if files:
-            if ext:
-                files = (f for f in files if f.endswith(ext))
+            if file_pattern:
+                files = (f for f in files if re.search(file_pattern, f))
             else:
                 files = iter(files)
             yield from (os.path.join(root, f) for f in files)

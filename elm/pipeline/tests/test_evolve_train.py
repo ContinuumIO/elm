@@ -42,7 +42,7 @@ def test_sklearn_methods_evolutionary():
 def synthetic_centers(n_clusters, n_features):
     base = 2
     return [[base * nf * nc for nf in range(1, n_features + 1)]
-            for nc in range(1, 1 + n_clusters * 10, 10)]
+            for nc in range(1, 1 + n_clusters * 10000, 10000)]
 
 
 def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
@@ -62,12 +62,12 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
     syn['sampler_kwargs'] = {'n_samples': 10000,
                              'n_features': n_features,
                              'centers': synthetic_centers(n_clusters, n_features),
-                             'cluster_std': 0.0001,}
+                             'cluster_std': 0.0000001,}
     syn['sampler_args'] = None
     for step in config['pipeline']:
         step['sample_pipeline'] = 'nothing'
     tag = 'test_sklearn_finds_n_clusters_{}'
-    tag = tag.format(n_clusters)
+    tag = tag.format(n_clusters) + '_' + '_'.join(early_stop.keys() if early_stop else "None")
     pg = config['param_grids']['example_param_grid']
     pg = {k: v for k, v in pg.items() if not k.startswith('pca')}
     pg['control']['mu'] = 16
@@ -109,19 +109,20 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
 n_clusters = range(2, 8, 2)
 n_features = range(2, 6, 2)
 early_stop_conditions = (
-    {'abs_change': [10000000,],'agg': 'all'},
-    {'percent_change': [99,], 'agg': 'all'},
-    {'threshold': [10,],      'agg': 'any'},
+    {'abs_change': [1000000000,],'agg': 'all'},
+    {'percent_change': [99.99,], 'agg': 'all'},
+    {'threshold': [1,],      'agg': 'any'},
     None
 )
-pytest_args = tuple(product(n_clusters, n_features, early_stop_conditions))
 
+pytest_args = tuple(product(n_clusters, n_features, early_stop_conditions))
 
 def test_finds_true_num_clusters_fast():
     tst_finds_true_n_clusters_once(*pytest_args[0])
 
 
 @pytest.mark.slow
+@pytest.mark.flaky(reruns=3)
 @pytest.mark.parametrize('n_clusters, n_features, early_stop', pytest_args)
 def test_finds_true_num_clusters_slow(n_clusters, n_features, early_stop):
     tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop)

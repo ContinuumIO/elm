@@ -4,6 +4,7 @@ import os
 import pickle
 import re
 
+import attr
 import numpy as np
 import rasterio as rio
 
@@ -87,14 +88,21 @@ def load_models_from_tag(elm_train_path, tag):
     return (models, load(paths['meta']))
 
 
-def drop_some_attrs(prediction):
+def _prepare_serialize_prediction(prediction):
     # I couldn't get it it to dump to netcdf
     # without dropping almost all the metadata
     for band in prediction.data_vars:
         band_arr = getattr(prediction, band)
-        prediction.attrs = band_arr.attrs = {
-            'geo_transform': np.array(prediction.attrs['geo_transform']),
-            }
+        c = attr.asdict(band_arr.canvas)
+        for k,v in c.items():
+            if isinstance(v, (tuple, list)):
+                c[k] = np.array(v)
+            else:
+                if v is None:
+                    v = np.NaN
+                c[k] = np.array([v])
+        band_arr.attrs = c
+        prediction.attrs = c
 
 
 def predict_to_pickle(prediction, fname_base):
@@ -103,8 +111,12 @@ def predict_to_pickle(prediction, fname_base):
 
 def predict_to_netcdf(prediction, fname_base):
     mkdir_p(fname_base)
-    drop_some_attrs(prediction)
-    prediction.to_netcdf(fname_base + '.nc')
+    try:
+        _prepare_serialize_prediction(prediction)
+        prediction.to_netcdf(fname_base + '.nc')
+    except:
+        logger.info('Likely failed serializing attrs {}'.format(prediction.attrs))
+        raise
 
 
 def get_file_name(base, tag, bounds):

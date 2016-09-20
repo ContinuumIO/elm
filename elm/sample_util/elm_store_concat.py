@@ -3,6 +3,7 @@ import numpy as np
 import xarray as xr
 
 from elm.readers.elm_store import ElmStore
+from elm.readers import check_is_flat
 
 def elm_store_concat(*elms):
     elms2 = []
@@ -10,7 +11,7 @@ def elm_store_concat(*elms):
     for es in elms:
         es = es[0]
         if isinstance(es, (list, tuple)):
-            assert es[0].is_flat()
+            assert check_is_flat(es[0])
             elms2.append(es[0])
             if es[1] is not None:
                 sample_ys.append(es[1])
