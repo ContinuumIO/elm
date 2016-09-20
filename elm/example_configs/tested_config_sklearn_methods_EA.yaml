@@ -39,7 +39,10 @@ param_grids:
     pca__n_components: [2, 3, 4, 5]
     sample_pipeline: [minimal, top_n]
 pipeline:
-- {param_grid: example_param_grid, sample_pipeline: minimal, train: kmeans}
+- data_source: synthetic
+  sample_pipeline: minimal
+  steps:
+  - {param_grid: example_param_grid, train: kmeans}
 sample_pipelines:
   minimal:
   - {flatten: C}
@@ -63,7 +66,6 @@ sklearn_preprocessing:
   standard: {copy: false, method: StandardScaler, with_mean: true, with_std: true}
 train:
   kmeans:
-    data_source: synthetic
     ensemble: save_one
     fit_kwargs: {}
     keep_columns: []

@@ -1,0 +1,90 @@
+data_sources:
+  synthetic:
+    sample_from_args_func: elm.pipeline.tests.util:make_blobs_elm_store
+    sampler_args: null
+    sampler_kwargs:
+      centers:
+      - [2, 4, 6, 8]
+      - [20002, 40004, 60006, 80008]
+      - [40002, 80004, 120006, 160008]
+      - [60002, 120004, 180006, 240008]
+      - [80002, 160004, 240006, 320008]
+      - [100002, 200004, 300006, 400008]
+      cluster_std: 1.0e-07
+      n_features: 4
+      n_samples: 10000
+ensembles:
+  save_one: {saved_ensemble_size: 1}
+feature_selection:
+  top_n:
+    choices: all
+    kwargs: {percentile: 80}
+    scoring: f_classif
+    selection: sklearn.feature_selection:SelectPercentile
+model_scoring:
+  testing_model_scoring:
+    score_weights: [-1]
+    scoring: elm.model_selection.kmeans:kmeans_aic
+param_grids:
+  example_param_grid:
+    control:
+      crossover_method: cxTwoPoint
+      cxpb: 0.3
+      early_stop:
+        agg: any
+        threshold: [1]
+      eta: 20
+      indpb: 0.5
+      init_pop: random
+      k: 8
+      mu: 16
+      mutate_method: mutUniformInt
+      mutpb: 0.9
+      ngen: 11
+      select_method: selNSGA2
+    kmeans__init: [k-means++, random]
+    kmeans__n_clusters: [2, 3, 4, 6]
+pipeline:
+- data_source: synthetic
+  sample_pipeline: nothing
+  steps:
+  - {param_grid: example_param_grid, train: kmeans}
+sample_pipelines:
+  minimal:
+  - {flatten: C}
+  - {sklearn_preprocessing: require_positive}
+  - {sklearn_preprocessing: log10}
+  - {sklearn_preprocessing: standard}
+  - {method: fit_transform, transform: pca}
+  nothing:
+  - {flatten: C}
+  top_n:
+  - {flatten: C}
+  - {sample_pipeline: minimal}
+  - {feature_selection: top_n}
+  - {method: fit_transform, transform: pca}
+sklearn_preprocessing:
+  log10: {func: 'numpy:log10', method: FunctionTransformer, validate: true}
+  require_positive:
+    func: elm.sample_util.encoding_scaling:require_positive
+    func_kwargs: {small_num: 0.0001}
+    method: FunctionTransformer
+  standard: {copy: false, method: StandardScaler, with_mean: true, with_std: true}
+train:
+  kmeans:
+    ensemble: save_one
+    fit_kwargs: {}
+    keep_columns: []
+    model_init_class: sklearn.cluster:KMeans
+    model_init_kwargs: {max_iter: 1000, n_init: 10, verbose: 0}
+    model_scoring: testing_model_scoring
+    output_tag: kmeans
+transform:
+  pca:
+    data_source: synthetic
+    ensemble: save_one
+    model_init_class: sklearn.decomposition:IncrementalPCA
+    model_init_kwargs: {n_components: 2}
+    model_scoring: null
+    model_selection: null
+    param_grid: example_param_grid
