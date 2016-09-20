@@ -89,7 +89,7 @@ data_sources: {
     extension: ".hdf",
 
     data_filter: Null,
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
     filename_filter: Null,
     geo_filters: {
       include_polys: [],

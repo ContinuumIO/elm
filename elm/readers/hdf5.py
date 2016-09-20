@@ -15,10 +15,11 @@ from elm.readers.util import (geotransform_to_bounds,
                               row_col_to_xy,
                               raster_as_2d,
                               READ_ARRAY_KWARGS,
+                              take_geo_transform_from_meta,
                               window_to_gdal_read_kwargs)
 
 from elm.readers import ElmStore
-from elm.sample_util.band_selection import match_meta
+from elm.sample_util.metadata_selection import match_meta
 
 __all__ = [
     'load_hdf5_meta',
@@ -56,27 +57,37 @@ def load_hdf5_meta(datafile):
                 sub_datasets=sds,
                 name=datafile)
 
-def load_subdataset(subdataset, **reader_kwargs):
+def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
     data_file = gdal.Open(subdataset)
     raster = raster_as_2d(data_file.ReadAsArray(**reader_kwargs))
-    raster = raster.T
-    rows, cols = raster.shape
-    geotrans = (-180, .1, 0, 90, 0, -.1) # TODO: GDAL appears to give wrong geo_transform
+    #raster = raster.T
+    if band_spec.stored_coords_order[0] == 'y':
+        rows, cols = raster.shape
+        dims = ('y', 'x')
+    else:
+        rows, cols = raster.T.shape
+        dims = ('x', 'y')
+    geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
+    if geo_transform is None:
+        geo_transform = data_file.GetGeoTransform()
     coord_x, coord_y = geotransform_to_coords(cols,
                                               rows,
-                                              geotrans)
+                                              geo_transform)
 
-    dims = ('y', 'x')
-    canvas = Canvas(geo_transform=geotrans,
+
+    canvas = Canvas(geo_transform=geo_transform,
                     buf_xsize=cols,
                     buf_ysize=rows,
                     dims=dims,
-                    bounds=geotransform_to_bounds(cols, rows, geotrans),
+                    bounds=geotransform_to_bounds(cols, rows, geo_transform),
                     ravel_order='C')
 
     attrs = dict(canvas=canvas)
-    attrs['geo_transform'] = geotrans
-    coords = [('y', coord_y),('x', coord_x)]
+    attrs['geo_transform'] = geo_transform
+    if dims == ('y', 'x'):
+        coords = [('y', coord_y), ('x', coord_x)]
+    else:
+        coords = [('x', coord_x), ('y', coord_y)]
     return xr.DataArray(data=raster,
                         coords=coords,
                         dims=dims,
@@ -114,7 +125,7 @@ def load_hdf5_array(datafile, meta, band_specs):
         reader_kwargs = window_to_gdal_read_kwargs(**reader_kwargs)
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
-        elm_store_data[name] = load_subdataset(sd[0], **reader_kwargs)
+        elm_store_data[name] = load_subdataset(sd[0], attrs, band_spec, **reader_kwargs)
         band_order.append(name)
     attrs = copy.deepcopy(attrs)
     attrs['band_order'] = band_order

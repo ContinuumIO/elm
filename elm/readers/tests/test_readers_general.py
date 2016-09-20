@@ -59,10 +59,10 @@ def test_na_drop_no_meta():
 
 @pytest.mark.parametrize('ftype', ('hdf4', 'hdf5', 'tif',))
 def test_reader_kwargs_window(ftype):
+
     '''Assert that "window" can be passed in a BandSpec
     to control the (ymin, ymax), (xmin, xmax) window to read'''
     if ftype == 'hdf5':
-        pytest.xfail('hdf5 has transpose issue making this test not work')
         _, band_specs = get_band_specs(HDF5_FILES[0])
         meta = load_hdf5_meta(HDF5_FILES[0])
         full_es = load_hdf5_array(HDF5_FILES[0], meta, band_specs)

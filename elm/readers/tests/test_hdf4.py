@@ -17,17 +17,17 @@ from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     assertions_on_band_metadata)
 
 HDF4_DIR = os.path.dirname(HDF4_FILES[0])
-
+kwargs = {}
 band_specs = [
-    BandSpec('long_name', 'Band 1 ', 'band_1'),
-    BandSpec('long_name', 'Band 2 ', 'band_2'),
-    BandSpec('long_name', 'Band 3 ', 'band_3'),
-    BandSpec('long_name', 'Band 4 ', 'band_4'),
-    BandSpec('long_name', 'Band 5 ', 'band_5'),
-    BandSpec('long_name', 'Band 7 ', 'band_7'),
-    BandSpec('long_name', 'Band 8 ', 'band_8'),
-    BandSpec('long_name', 'Band 10 ', 'band_10'),
-    BandSpec('long_name', 'Band 11 ', 'band_11'),
+    BandSpec('long_name', 'Band 1 ', 'band_1', **kwargs),
+    BandSpec('long_name', 'Band 2 ', 'band_2', **kwargs),
+    BandSpec('long_name', 'Band 3 ', 'band_3', **kwargs),
+    BandSpec('long_name', 'Band 4 ', 'band_4', **kwargs),
+    BandSpec('long_name', 'Band 5 ', 'band_5', **kwargs),
+    BandSpec('long_name', 'Band 7 ', 'band_7', **kwargs),
+    BandSpec('long_name', 'Band 8 ', 'band_8', **kwargs),
+    BandSpec('long_name', 'Band 10 ', 'band_10', **kwargs),
+    BandSpec('long_name', 'Band 11 ', 'band_11', **kwargs),
 ]
 
 @pytest.mark.parametrize('hdf', HDF4_FILES or [])

@@ -215,7 +215,7 @@ def tst_sklearn_method(model_init_class,
                 for step in config['pipeline']:
                     step['steps'] = [s for s in step['steps']
                                      if not 'predict' in s]
-            config['data_sources'][data_source_name] = data_source
+            config['data_sources'] = {data_source_name: data_source}
             with open('tested_config_{}-{}.yaml'.format(model_init_class.split(':')[-1], tag), 'w') as f:
                 f.write(yaml.dump(config))
             log = tst_one_config(config=config, cwd=cwd)

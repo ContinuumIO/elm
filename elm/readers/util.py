@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import namedtuple, OrderedDict, Sequence
 import logging
 
 import gdal
@@ -9,6 +9,8 @@ import scipy.interpolate as spi
 
 import attr
 from attr.validators import instance_of
+
+from elm.config import import_callable
 
 __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
@@ -44,6 +46,8 @@ class BandSpec(object):
     buf_xsize = attr.ib(default=None)
     buf_ysize = attr.ib(default=None)
     window = attr.ib(default=None)
+    meta_to_geotransform = attr.ib(default=None)
+    stored_coords_order = attr.ib(default=('y', 'x'))
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
@@ -79,6 +83,7 @@ def row_col_to_xy(row, col, geo_transform):
     x = (col * geo_transform[1]) + geo_transform[0]
     y = (row * geo_transform[5]) + geo_transform[3]
     return x, y
+
 
 def geotransform_to_coords(buf_xsize, buf_ysize, geo_transform):
     return row_col_to_xy(np.arange(buf_ysize), np.arange(buf_xsize), geo_transform)
@@ -167,6 +172,7 @@ def xy_canvas(geo_transform, buf_xsize, buf_ysize, dims, ravel_order='C'):
         ('bounds', geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform)),
     )))
 
+
 def window_to_gdal_read_kwargs(**reader_kwargs):
     if 'window' in reader_kwargs:
         window = reader_kwargs['window']
@@ -183,5 +189,15 @@ def window_to_gdal_read_kwargs(**reader_kwargs):
                   if k != 'window'})
         return r
     return reader_kwargs
+
+
+def take_geo_transform_from_meta(band_spec, **meta):
+    if band_spec.meta_to_geotransform:
+        func = import_callable(band_spec.meta_to_geotransform)
+        geo_transform = func(**meta)
+        if not isinstance(geo_transform, Sequence) or len(geo_transform) != 6:
+            raise ValueError('band_spec.meta_to_geotransform {} did not return a sequence of len 6'.format(band_spec.meta_to_geotransform))
+        return geo_transform
+    return None
 
 

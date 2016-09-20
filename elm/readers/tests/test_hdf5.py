@@ -36,7 +36,9 @@ def get_band_specs(filename):
     for sub in sub_dataset_names:
         band_specs.append(BandSpec(search_key='sub_dataset_name',
                                search_value=sub + '$', # line ender regex
-                               name=sub))
+                               name=sub,
+                               meta_to_geotransform="elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform",
+                               stored_coords_order=("x", "y")))
     return sub_dataset_names, band_specs
 
 
@@ -52,8 +54,12 @@ def test_read_meta(hdf):
                    reason='elm-data repo has not been cloned')
 def test_load_subdataset():
     f = HDF5_FILES[0]
+    _ , band_specs = get_band_specs(f)
     data_file = gdal.Open(f)
-    data_array = load_subdataset(data_file.GetSubDatasets()[0][0])
+    meta = load_hdf5_meta(f)
+    data_array = load_subdataset(data_file.GetSubDatasets()[0][0],
+                                 meta['band_meta'][0],
+                                 band_specs[0])
     assert 'canvas' in data_array.attrs.keys()
     assert data_array.data is not None
 
@@ -76,7 +82,6 @@ def test_read_array(filename):
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
 def test_reader_kwargs():
-    pytest.xfail('Transpose issue in hdf5 files')
     sub_dataset_names, band_specs = get_band_specs(HDF5_FILES[0])
     band_specs_kwargs = []
     for b in band_specs:

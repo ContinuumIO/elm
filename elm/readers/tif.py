@@ -8,13 +8,15 @@ import numpy as np
 import rasterio as rio
 import xarray as xr
 
-from elm.sample_util.band_selection import match_meta
+from elm.sample_util.metadata_selection import match_meta
 from elm.readers.util import (geotransform_to_coords,
                               geotransform_to_bounds,
                               SPATIAL_KEYS,
                               raster_as_2d,
                               READ_ARRAY_KWARGS,
+                              take_geo_transform_from_meta,
                               BandSpec)
+
 from elm.readers import ElmStore
 logger = logging.getLogger(__name__)
 
@@ -138,9 +140,18 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
         band_meta.update(reader_kwargs)
         handle, raster = open_prefilter(filename, band_meta, **reader_kwargs)
         raster = raster_as_2d(raster)
-        band_meta['geo_transform'] = handle.get_transform()
-        coords_x, coords_y = geotransform_to_coords(raster.shape[1],
-                                                    raster.shape[0],
+        geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
+        if geo_transform is None:
+
+            band_meta['geo_transform'] = handle.get_transform()
+        else:
+            band_meta['geo_transform'] = geo_transform
+        if band_spec.stored_coords_order[0] == 'y':
+            rows, cols = raster.shape
+        else:
+            rows, cols = raster.T.shape
+        coords_x, coords_y = geotransform_to_coords(cols,
+                                                    rows,
                                                     band_meta['geo_transform'])
         elm_store_dict[band_name] = xr.DataArray(raster,
                                                  coords=[('y', coords_y),

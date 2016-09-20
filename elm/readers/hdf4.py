@@ -15,6 +15,7 @@ from elm.readers.util import (geotransform_to_bounds,
                               Canvas,
                               BandSpec,
                               READ_ARRAY_KWARGS,
+                              take_geo_transform_from_meta,
                               window_to_gdal_read_kwargs)
 
 __all__ = [
@@ -46,7 +47,7 @@ def load_hdf4_meta(datafile):
 def load_hdf4_array(datafile, meta, band_specs=None):
 
     from elm.readers import ElmStore
-    from elm.sample_util.band_selection import match_meta
+    from elm.sample_util.metadata_selection import match_meta
     logger.debug('load_hdf4_array: {}'.format(datafile))
     f = gdal.Open(datafile, GA_ReadOnly)
 
@@ -72,34 +73,42 @@ def load_hdf4_array(datafile, meta, band_specs=None):
 
     band_order = []
     for _, band_meta, s, band_spec in band_order_info:
+        attrs = copy.deepcopy(meta)
+        attrs.update(copy.deepcopy(band_meta))
         if isinstance(band_spec, BandSpec):
             name = band_spec.name
             reader_kwargs = {k: getattr(band_spec, k)
                              for k in READ_ARRAY_KWARGS
                              if getattr(band_spec, k)}
+            geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
         else:
             reader_kwargs = {}
             name = band_spec
+            geo_transform = None
         reader_kwargs = window_to_gdal_read_kwargs(**reader_kwargs)
-        attrs = copy.deepcopy(meta)
-        attrs.update(copy.deepcopy(band_meta))
         dat0 = gdal.Open(s[0], GA_ReadOnly)
         band_meta.update(reader_kwargs)
         raster = raster_as_2d(dat0.ReadAsArray(**reader_kwargs))
-        attrs['geo_transform'] = dat0.GetGeoTransform()
-
-        geo_transform = dat0.GetGeoTransform()
-        buf_ysize, buf_xsize = raster.shape
-        coord_x, coord_y = geotransform_to_coords(buf_xsize,
-                                                  buf_ysize,
+        if geo_transform is None:
+            geo_transform = dat0.GetGeoTransform()
+        attrs['geo_transform'] = geo_transform
+        if hasattr(band_spec, 'store_coords_order'):
+            if band_spec.stored_coords_order[0] == 'y':
+                rows, cols = raster.shape
+            else:
+                rows, cols = raster.T.shape
+        else:
+            rows, cols = raster.shape
+        coord_x, coord_y = geotransform_to_coords(cols,
+                                                  rows,
                                                   geo_transform)
 
         canvas = Canvas(geo_transform=geo_transform,
-                        buf_xsize=buf_xsize,
-                        buf_ysize=buf_ysize,
+                        buf_xsize=cols,
+                        buf_ysize=rows,
                         dims=native_dims,
                         ravel_order='C',
-                        bounds=geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform))
+                        bounds=geotransform_to_bounds(cols, rows, geo_transform))
         attrs['canvas'] = canvas
         elm_store_data[name] = xr.DataArray(raster,
                                coords=[('y', coord_y),

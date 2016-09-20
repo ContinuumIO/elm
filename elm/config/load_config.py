@@ -17,8 +17,6 @@ from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.defaults import DEFAULTS, CONFIG_KEYS
-from elm.readers.util import BandSpec
-
 
 
 logger = logging.getLogger(__name__)
@@ -151,7 +149,7 @@ class ConfigParser(object):
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
-
+        from elm.readers.util import BandSpec
         if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
