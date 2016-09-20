@@ -21,7 +21,13 @@ data_sources: {
  hdf5_precip_hourly: {
    reader: hdf5_example,
    sample_from_args_func: "elm.sample_util.samplers:image_selection",
-   band_specs: [{search_key: sub_dataset_name, search_value: /precipitation, name: band_1, key_re_flags: [], value_re_flags: []}],
+   band_specs: [{search_key: sub_dataset_name,
+                 search_value: /precipitation,
+                 name: band_1,
+                 key_re_flags: [],
+                 value_re_flags: [],
+                 meta_to_geotransform: "elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform",
+                 stored_coords_order: ["x", "y"]}],
    selection_kwargs: {
     file_pattern: 3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5,
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
@@ -46,7 +52,7 @@ data_sources: {
   sample_args_generator: iter_files_recursively,
   selection_kwargs: {
     top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    metadata_filter: "elm.sample_util.band_selection:example_meta_is_day",
+    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
   },
   batch_size: 1440000,
  },
