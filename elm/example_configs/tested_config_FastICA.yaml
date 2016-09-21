@@ -1,86 +1,26 @@
-DASK_EXECUTOR: SERIAL
-DASK_PROCESSES: null
-DASK_SCHEDULER: null
-DASK_THREADS: null
-LADSWEB_LOCAL_CACHE: null
-add_features: {}
-aggregations: {}
-change_detection:
-  time_series: []
 data_sources:
   NPP_DSRF1KD_L2GD:
     band_specs:
-    - [long_name, 'Band 1 ', band_1]
-    - [long_name, 'Band 2 ', band_2]
-    - [long_name, 'Band 3 ', band_3]
-    - [long_name, 'Band 4 ', band_4]
-    - [long_name, 'Band 5 ', band_5]
-    - [long_name, 'Band 7 ', band_7]
-    - [long_name, 'Band 8 ', band_8]
-    - [long_name, 'Band 9 ', band_9]
-    - [long_name, 'Band 10 ', band_10]
-    - [long_name, 'Band 11 ', band_11]
+    - {name: band_1, search_key: long_name, search_value: 'Band 1 '}
+    - {name: band_2, search_key: long_name, search_value: 'Band 2 '}
+    - {name: band_3, search_key: long_name, search_value: 'Band 3 '}
+    - {name: band_4, search_key: long_name, search_value: 'Band 4 '}
+    - {name: band_5, search_key: long_name, search_value: 'Band 5 '}
+    - {name: band_6, search_key: long_name, search_value: 'Band 6 '}
+    - {name: band_7, search_key: long_name, search_value: 'Band 7 '}
+    - {name: band_9, search_key: long_name, search_value: 'Band 9 '}
+    - {name: band_10, search_key: long_name, search_value: 'Band 10 '}
+    - {name: band_11, search_key: long_name, search_value: 'Band 11 '}
     batch_size: 1440000
-    file_pattern: '*.hdf'
-    get_weight_func: null
-    get_weight_kwargs: {}
-    get_y_func: null
-    get_y_kwargs: {}
-    keep_columns: []
-    reader: hdf4-eos
+    file_pattern: .*\.hdf
+    reader: hdf4_example
     sample_args_generator: iter_files_recursively
     sample_from_args_func: elm.sample_util.samplers:image_selection
-    selection_kwargs:
-      data_filter: null
-      extension: .hdf
-      filename_filter: null
-      geo_filters:
-        exclude_polys: []
-        include_polys: []
-      metadata_filter: elm.sample_util.band_selection:example_meta_is_day
-      top_dir: env:ELM_EXAMPLE_DATA_PATH
-  S3_LANDSAT_L2_TIFS:
-    band_specs:
-    - [name, _B1.TIF, band_1]
-    - [name, _B2.TIF, band_2]
-    - [name, _B3.TIF, band_3]
-    - [name, _B4.TIF, band_4]
-    - [name, _B5.TIF, band_5]
-    - [name, _B6.TIF, band_6]
-    - [name, _B7.TIF, band_7]
-    - [name, _B9.TIF, band_9]
-    - [name, _B10.TIF, band_10]
-    - [name, _B11.TIF, band_11]
-    batch_size: 1440000
-    get_weight_func: null
-    get_weight_kwargs: {}
-    get_y_func: null
-    get_y_kwargs: {}
-    keep_columns: []
-    reader: dir_of_tifs_reader
-    sample_args_generator: tif_file_gen
-    sample_args_generator_kwargs: {top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
-    sample_from_args_func: elm.sample_util.samplers:image_selection
-    selection_kwargs: {metadata_filter: 'elm.sample_util.band_selection:example_meta_is_day'}
+    selection_kwargs: {metadata_filter: 'elm.sample_util.metadata_selection:example_meta_is_day',
+      top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
 ensembles:
-  no_ensemble: {batches_per_gen: 1, init_ensemble_size: 1, ngen: 1, saved_ensemble_size: 1}
-  small_ensemble: {batches_per_gen: 4, init_ensemble_size: 16, ngen: 4, saved_ensemble_size: 4}
-feature_selection:
-  select_all:
-    choices: all
-    kwargs: {}
-    scoring: chi2
-    scoring_kwargs: {}
-    selection: all
-  top_80_percent:
-    choices: all
-    kwargs: {percentile: 80}
-    scoring: f_classif
-    selection: sklearn.feature_selection:SelectPercentile
-masks: {}
+  no_ensemble: {init_ensemble_size: 1, ngen: 1, partial_fit_batches: 1, saved_ensemble_size: 1}
 model_scoring:
-  accuracy_score_cv: {greater_is_better: true, needs_proba: false, needs_threshold: false,
-    scoring: accuracy_score, scoring_agg: 'numpy:median'}
   kmeans_aic:
     score_weights: [-1]
     scoring: elm.model_selection.kmeans:kmeans_aic
@@ -88,91 +28,29 @@ model_selection:
   kmeans_model_averaging:
     func: elm.model_selection.kmeans:kmeans_model_averaging
     kwargs: {drop_n: 0, evolve_n: 1, init_n: 0}
-  select_top_n:
-    func: elm.model_selection.base:select_top_n_models
-    kwargs: {top_n: 1}
-param_grids:
-  pca_kmeans:
-    control: {crossover_method: cxTwoPoint, indpb: 0.2, init_pop: random, mu: 24,
-      mutate_method: mutShuffleIndexes, mutpb: 0.4, select_method: selNSGA2}
-    feature_selection:
-      top_80_percent:
-        kwargs:
-          percentile: [30, 40, 50, 60, 70, 80, 90]
-    kmeans__n_clusters: [3, 4, 5, 6, 7, 8]
-    pca__n_components: [2, 3, 4, 5]
-    sample_pipeline: [standardize_log10_var_top_80_inter_trans, standardize_log10_var_top_80_trans]
 pipeline:
-- method: fit
+- data_source: NPP_DSRF1KD_L2GD
   sample_pipeline:
   - {flatten: C}
   - {random_sample: 1000}
-  transform: tested
-polys: {}
+  steps:
+  - {method: fit, transform: pca}
 predict:
-  kmeans:
-    data_source: NPP_DSRF1KD_L2GD
-    sample_args_generator: iter_files_recursively
-    sample_args_generator_kwargs: {extension: .hdf, top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
+  kmeans: {}
 readers:
-  dir_of_tifs_reader: {load_array: 'elm.readers.tif:load_dir_of_tifs_array', load_meta: 'elm.readers.tif:load_dir_of_tifs_meta'}
-  hdf4-eos: {load_array: 'elm.readers.hdf4:load_hdf4_array', load_meta: 'elm.readers.hdf4:load_hdf4_meta'}
-resamplers: {}
+  hdf4_example: {load_array: 'elm.readers.hdf4:load_hdf4_array', load_meta: 'elm.readers.hdf4:load_hdf4_meta'}
 sample_args_generators: {iter_files_recursively: 'elm.readers.local_file_iterators:iter_files_recursively',
   tif_file_gen: 'elm.readers.local_file_iterators:iter_dirs_of_dirs'}
-sample_pipelines:
-  flatten_example:
-  - {select_canvas: band_1}
-  - {flatten: C}
-  - {drop_na_rows: true}
-  log10:
-  - {sklearn_preprocessing: require_positive}
-  - {sklearn_preprocessing: log10}
-  standardize_log10:
-  - {sample_pipeline: log10}
-  - {sklearn_preprocessing: standard}
-  standardize_log10_var_top_80:
-  - {sample_pipeline: standardize_log10}
-  - {feature_selection: top_80_percent}
-  standardize_log10_var_top_80_inter:
-  - {sample_pipeline: standardize_log10_var_top_80}
-  - {sklearn_preprocessing: poly_2nd_interactions_only}
-  standardize_log10_var_top_80_inter_trans:
-  - {sample_pipeline: standardize_log10_var_top_80_inter}
-  - {method: fit_transform, transform: pca}
-  standardize_log10_var_top_80_trans:
-  - {sample_pipeline: standardize_log10_var_top_80}
-  - {method: fit_transform, transform: pca}
-sklearn_preprocessing:
-  log: {func: 'numpy:log', method: FunctionTransformer, validate: true}
-  log10: {func: 'numpy:log10', method: FunctionTransformer, validate: true}
-  min_max:
-    axis: 0
-    copy: false
-    feature_range: [0, 1]
-    method: minmax_scale
-  poly_2nd: {degree: 2, include_bias: true, interaction_only: false, method: PolynomialFeatures}
-  poly_2nd_interactions_only: {degree: 2, include_bias: true, interaction_only: true,
-    method: PolynomialFeatures}
-  require_positive:
-    func: elm.sample_util.encoding_scaling:require_positive
-    func_kwargs: {small_num: 0.0001}
-    method: FunctionTransformer
-  standard: {copy: false, method: StandardScaler, with_mean: true, with_std: true}
 train:
   kmeans:
-    data_source: NPP_DSRF1KD_L2GD
     ensemble: no_ensemble
-    fit_kwargs: {}
-    keep_columns: []
     model_init_class: sklearn.cluster:MiniBatchKMeans
     model_init_kwargs: {compute_labels: true}
     model_scoring: kmeans_aic
     model_selection: kmeans_model_averaging
     output_tag: kmeans
-    param_grid: pca_kmeans
 transform:
-  tested:
+  pca:
     data_source: NPP_DSRF1KD_L2GD
     ensemble: no_ensemble
     model_init_class: sklearn.decomposition:FastICA

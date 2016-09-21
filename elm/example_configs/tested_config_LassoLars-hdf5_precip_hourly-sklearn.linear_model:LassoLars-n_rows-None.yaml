@@ -1,0 +1,57 @@
+data_sources:
+  hdf5_precip_hourly:
+    band_specs:
+    - key_re_flags: []
+      meta_to_geotransform: elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform
+      name: band_1
+      search_key: sub_dataset_name
+      search_value: /precipitation
+      stored_coords_order: [x, y]
+      value_re_flags: []
+    batch_size: 1440000
+    get_y_func: elm.pipeline.tests.util:example_get_y_func_continuous
+    reader: hdf5_example
+    sample_args_generator: iter_files_recursively
+    sample_from_args_func: elm.sample_util.samplers:image_selection
+    selection_kwargs: {file_pattern: 3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5,
+      top_dir: 'env:ELM_EXAMPLE_DATA_PATH'}
+ensembles:
+  no_ensemble: {init_ensemble_size: 1, ngen: 1, partial_fit_batches: 1, saved_ensemble_size: 1}
+pipeline:
+- data_source: hdf5_precip_hourly
+  sample_pipeline:
+  - {select_canvas: band_1}
+  - {flatten: C}
+  - {sklearn_preprocessing: require_positive}
+  - {drop_na_rows: true}
+  - {get_y: true}
+  steps:
+  - {method: fit, train: kmeans}
+  - {predict: kmeans}
+predict:
+  kmeans: {}
+readers:
+  hdf5_example: {load_array: 'elm.readers.hdf5:load_hdf5_array', load_meta: 'elm.readers.hdf5:load_hdf5_meta'}
+sample_args_generators: {iter_files_recursively: 'elm.readers.local_file_iterators:iter_files_recursively',
+  tif_file_gen: 'elm.readers.local_file_iterators:iter_dirs_of_dirs'}
+sklearn_preprocessing:
+  require_positive:
+    func: elm.sample_util.encoding_scaling:require_positive
+    func_kwargs: {small_num: 0.0001}
+    method: FunctionTransformer
+train:
+  kmeans:
+    ensemble: no_ensemble
+    ensemble_kwargs: {init_ensemble_size: 2, ngen: 1, partial_fit_batches: 1, saved_ensemble_size: 1}
+    fit_method: fit
+    model_init_class: sklearn.linear_model:LassoLars
+    model_init_kwargs: {max_iter: 10}
+    model_scoring: null
+    model_selection: null
+    output_tag: kmeans
+transform:
+  pca:
+    ensemble: no_ensemble
+    model_init_class: sklearn.decomposition:IncrementalPCA
+    model_init_kwargs: {n_components: 2}
+    model_scoring: null

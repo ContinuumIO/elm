@@ -4,12 +4,6 @@ data_sources:
     sampler_args: []
 ensembles:
   save_one: {saved_ensemble_size: 1}
-feature_selection:
-  top_n:
-    choices: all
-    kwargs: {percentile: 80}
-    scoring: f_classif
-    selection: sklearn.feature_selection:SelectPercentile
 model_scoring:
   testing_model_scoring:
     score_weights: [-1]
@@ -39,21 +33,16 @@ param_grids:
     pca__n_components: [2, 3, 4, 5]
     sample_pipeline: [minimal, top_n]
 pipeline:
-- {param_grid: example_param_grid, sample_pipeline: minimal, train: kmeans}
-sample_pipelines:
-  minimal:
+- data_source: synthetic
+  sample_pipeline:
   - {flatten: C}
   - {sklearn_preprocessing: require_positive}
   - {sklearn_preprocessing: log10}
   - {sklearn_preprocessing: standard}
   - {method: fit_transform, transform: pca}
-  nothing:
-  - {flatten: C}
-  top_n:
-  - {flatten: C}
-  - {sample_pipeline: minimal}
-  - {feature_selection: top_n}
-  - {method: fit_transform, transform: pca}
+  steps:
+  - {param_grid: example_param_grid, train: kmeans}
+readers: {}
 sklearn_preprocessing:
   log10: {func: 'numpy:log10', method: FunctionTransformer, validate: true}
   require_positive:
@@ -63,7 +52,6 @@ sklearn_preprocessing:
   standard: {copy: false, method: StandardScaler, with_mean: true, with_std: true}
 train:
   kmeans:
-    data_source: synthetic
     ensemble: save_one
     fit_kwargs: {}
     keep_columns: []
