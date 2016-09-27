@@ -19,6 +19,7 @@ readers: {
 
 data_sources: {
  hdf5_precip_hourly: {
+   na_from_meta: True,
    reader: hdf5_example,
    sample_from_args_func: "elm.sample_util.samplers:image_selection",
    band_specs: [{search_key: sub_dataset_name,
@@ -26,18 +27,16 @@ data_sources: {
                  name: band_1,
                  key_re_flags: [],
                  value_re_flags: [],
-                 meta_to_geotransform: "elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform",
+                 meta_to_geotransform: "elm.sample_util.metadata_selection:grid_header_to_geo_transform",
                  stored_coords_order: ["x", "y"]}],
-   selection_kwargs: {
-    file_pattern: 3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5,
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-   },
+   file_pattern: "3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5",
+   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
    batch_size: 1440000,
    sample_args_generator: iter_files_recursively,
   },
  NPP_DSRF1KD_L2GD: {
+  na_from_meta: True,
   reader: hdf4_example,
-  file_pattern: .*\.hdf,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
   {search_key: long_name, search_value: "Band 2 ", name: band_2},
@@ -50,18 +49,16 @@ data_sources: {
   {search_key: long_name, search_value: "Band 10 ", name: band_10},
   {search_key: long_name, search_value: "Band 11 ", name: band_11}],
   sample_args_generator: iter_files_recursively,
-  selection_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
-  },
+  top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+  metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
+  file_pattern: ".hdf",
   batch_size: 1440000,
  },
  S3_LANDSAT_L2_TIFS: {
+  na_from_meta: True,
   sample_args_generator: tif_file_gen,
-  selection_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    file_pattern: TIF
-  },
+  top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+  file_pattern: ".TIF",
   reader: tif_example,
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [

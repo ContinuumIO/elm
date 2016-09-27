@@ -37,7 +37,7 @@ def get_band_specs(filename):
         band_specs.append(BandSpec(search_key='sub_dataset_name',
                                search_value=sub + '$', # line ender regex
                                name=sub,
-                               meta_to_geotransform="elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform",
+                               meta_to_geotransform="elm.sample_util.metadata_selection:grid_header_to_geo_transform",
                                stored_coords_order=("x", "y")))
     return sub_dataset_names, band_specs
 

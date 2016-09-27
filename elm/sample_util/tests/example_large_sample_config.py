@@ -71,7 +71,7 @@ sample_pipelines: {
 data_sources: {
  NPP_DSRF1KD_L2GD: {
   reader: hdf4_example,
-  file_pattern: "*.hdf",
+  file_pattern: "hdf",
   sample_from_args_func: "elm.sample_util.samplers:image_selection",
   band_specs: [[long_name, "Band 1 ", band_1],
   [long_name, "Band 2 ", band_2],
@@ -84,17 +84,17 @@ data_sources: {
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
   sample_args_generator: iter_files_recursively,
-  selection_kwargs: {
-    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-    extension: ".hdf",
 
-    data_filter: Null,
-    metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
-    filename_filter: Null,
-    geo_filters: {
-      include_polys: [],
-      exclude_polys: [],
-    },
+  top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+  extension: ".hdf",
+
+  data_filter: Null,
+  metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
+  filename_filter: Null,
+  geo_filters: {
+    include_polys: [],
+    exclude_polys: [],
+  },
   },
   keep_columns: [],
   batch_size: 1440000,

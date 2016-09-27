@@ -98,8 +98,9 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         if sample is None:
             logger.debug('sample create sample_pipeline step')
             required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
-            if not var_keyword:
-                kwargs = filter_kwargs_to_func(func, kwargs)
+            kwargs = {k: v for k, v in filter_kwargs_to_func(func, **kwargs).items()
+                      if k not in required_args}
+
             output = func(*args, **kwargs)
             sample, sample_y, sample_weight = _split_pipeline_output(output,
                                                sample, sample_y,
@@ -149,27 +150,16 @@ def get_sample_pipeline_action_data(config, step,
                                in the pipeline, like a "train" or "predict"
                                step
     '''
-    s = data_source.get('sample_args_generator')
-    if s:
-        sample_args_generator = config.sample_args_generators[s]
-        sample_args_generator = import_callable(sample_args_generator, True, sample_args_generator)
-        sample_args_generator_kwargs = data_source.get('sample_args_generator_kwargs') or {}
-    else:
-        sample_args_generator = None
-        sample_args_generator_kwargs = {}
-    sample_args_generator_kwargs['data_source'] = data_source
     sampler_func = data_source['sample_from_args_func'] # TODO: this needs to be
                                                         # added to ConfigParser
                                                         # validation (sample_from_args_func requirement)
     band_specs = data_source.get('band_specs') or None
     sampler_args = data_source.get('sampler_args') or ()
-    sampler_kwargs = data_source.get('sampler_kwargs') or {}
+    sampler_kwargs = data_source
     # TODO the usage of sampler_args in config needs
     # to be validated
     if band_specs:
-        sampler_args = (band_specs,)
-    if sample_args_generator:
-        sampler_kwargs.update(sample_args_generator_kwargs)
+        sampler_args = (band_specs,) + tuple(sampler_args)
     reader_name = data_source.get('reader') or None
     if reader_name:
         reader = config.readers[reader_name]
@@ -177,30 +167,24 @@ def get_sample_pipeline_action_data(config, step,
         load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:
         reader = load_array = load_meta = None
-    get_k = lambda k, v: data_source.get('selection_kwargs',{}).get(k, sampler_kwargs.get(k, data_source.get(k, v)) )
 
-    selection_kwargs = {
-        'load_meta':       load_meta,
-        'load_array':      load_array,
-    }
-    selection_kwargs.update(data_source.get('selection_kwargs') or {})
-
-    for k in selection_kwargs:
-        if '_filter' in k and selection_kwargs[k] and k != 'geo_filters':
-            selection_kwargs[k] = import_callable(selection_kwargs[k])
-    kw = copy.deepcopy(selection_kwargs)
-    kw.update(data_source)
+    for k in sampler_kwargs:
+        if '_filter' in k and sampler_kwargs[k] and k != 'geo_filters':
+            selection_kwargs[k] = import_callable(sampler_kwargs[k])
+    kw = copy.deepcopy(sampler_kwargs)
     kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
+    sample_args_generator = data_source.get('sample_args_generator') or None
     if sample_args_generator:
+        sample_args_generator = import_callable(config.sample_args_generators[sample_args_generator])
         logger.debug('Calling sample_args_generator')
-        generated_args = get_generated_args(sample_args_generator,
+        generated_args = get_generated_args(import_callable(sample_args_generator),
                                             band_specs,
                                             **kw)
         sampler_kwargs['generated_args'] = generated_args
     else:
         sampler_kwargs['generated_args'] = [(sampler_args, sampler_kwargs)
                                             for _ in range(data_source.get('n_batches') or 1)]
-    sampler_kwargs.update(selection_kwargs)
+
     action_data = [('create_sample', sampler_func, sampler_args, sampler_kwargs)]
 
     sample_pipeline = sample_pipeline or step.get('sample_pipeline')

@@ -1,5 +1,8 @@
 from collections import namedtuple, OrderedDict, Sequence
+from itertools import product
 import logging
+import numbers
+import re
 
 import gdal
 import numpy as np
@@ -191,13 +194,142 @@ def window_to_gdal_read_kwargs(**reader_kwargs):
     return reader_kwargs
 
 
-def take_geo_transform_from_meta(band_spec, **meta):
-    if band_spec.meta_to_geotransform:
+def take_geo_transform_from_meta(band_spec=None, required=True, **meta):
+    if band_spec and getattr(band_spec, 'meta_to_geotransform', False):
         func = import_callable(band_spec.meta_to_geotransform)
         geo_transform = func(**meta)
         if not isinstance(geo_transform, Sequence) or len(geo_transform) != 6:
             raise ValueError('band_spec.meta_to_geotransform {} did not return a sequence of len 6'.format(band_spec.meta_to_geotransform))
         return geo_transform
+    elif required:
+        geo_transform = grid_header_to_geo_transform(**meta)
+        return geo_transform
     return None
 
+GRID_HEADER_WORDS = ('REGISTRATION', 'BINMETHOD',
+                     'LATITUDERESOLUTION', 'LONGITUDERESOLUTION',
+                     ('NORTHBOUNDINGCOORD', 'NORTHERNMOSTLAT'),
+                     ('SOUTHBOUNDINGCOORD', 'SOUTHERNMOSTLAT'),
+                     ('EASTBOUNDINGCOORD', 'EASTERNMOSTLON'),
+                     ('WESTBOUNDINGCOORD', 'WESTERNMOSTLON'),
+                     'ORIGIN',)
+
+def grid_header_to_geo_transform(**meta):
+    '''Unwind an attrs dict, trying to find bounding box words
+    that can be used to make a geo_transform object.
+
+    Parameters:
+        **meta:  some dict
+    Returns:
+        geo_transform: tuple
+    '''
+    grid_header = {}
+    for word1, v in meta.items():
+        if isinstance(v, dict):
+            geo_transform1 = grid_header_to_geo_transform(**v)
+            if geo_transform1:
+                return geo_transform1
+            else:
+                continue
+        word1 = word1.upper()
+        word = None
+        for g in GRID_HEADER_WORDS:
+            if isinstance(g, tuple):
+                if any(gi for gi in g if gi in word1):
+                    word = g[0]
+            else:
+                if g in word1:
+                    word = g
+        if not word:
+            continue
+        if "RESOLUTION" in word or "COORD" in word or 'MOSTLAT' in word or 'MOSTLON' in word:
+            grid_header[word] = float(v)
+        else:
+            grid_header[word] = v
+    if not len(grid_header) >= 6:
+        return None
+    lat_res, s, n = (grid_header['LATITUDERESOLUTION'],
+           grid_header['SOUTHBOUNDINGCOORD'],
+           grid_header['NORTHBOUNDINGCOORD'])
+    lon_res, e, w = (grid_header['LONGITUDERESOLUTION'],
+           grid_header['EASTBOUNDINGCOORD'],
+           grid_header['WESTBOUNDINGCOORD'])
+    origin = grid_header.get('ORIGIN', 'NORTHWEST')
+    if origin == 'SOUTHWEST':
+        geo_transform = (w, lon_res, 0, s, 0, lat_res)
+    elif origin == 'NORTHWEST':
+        geo_transform = (w, lon_res, 0, n, 0, -lat_res)
+    else:
+        raise ValueError('Did not expect origin: {}'.format(origin))
+    return geo_transform
+
+
+
+VALID_RANGE_WORDS = ('^valid[\s\-_]*range',)
+INVALID_RANGE_WORDS = ('invalid[\s\-_]*range',)
+MISSING_VALUE_WORDS = ('missing[\s\-_]*range',)
+
+def _case_insensitive_lookup(dic, lookup_list):
+    for k, pattern in product(dic, lookup_list):
+        match = re.search(pattern, k, re.IGNORECASE)
+        if match:
+            val = dic[k]
+            if isinstance(val, numbers.Number) or (isinstance(val, Sequence) and all(isinstance(v, numbers.Number) for v in val)):
+                return val
+
+def extract_valid_range(**attrs):
+    overall = _case_insensitive_lookup(attrs.get('meta') or {}, VALID_RANGE_WORDS)
+    band_specific = [_case_insensitive_lookup(b, VALID_RANGE_WORDS)
+                     for b in (attrs.get('band_meta') or [])]
+    return (overall, band_specific)
+
+
+def extract_missing_value(**attrs):
+    overall = _case_insensitive_lookup(attrs.get('meta') or {}, MISSING_VALUE_WORDS)
+    band_specific = [_case_insensitive_lookup(b, MISSING_VALUE_WORDS)
+                     for b in (attrs.get('band_meta') or [])]
+    return (overall, band_specific)
+
+
+def extract_invalid_range(**attrs):
+    overall = _case_insensitive_lookup(attrs.get('meta') or {}, INVALID_RANGE_WORDS)
+    band_specific = [_case_insensitive_lookup(b, INVALID_RANGE_WORDS)
+                     for b in (attrs.get('band_meta') or [])]
+    return (overall, band_specific)
+
+
+def _set_invalid_na(values, invalid):
+    if invalid:
+        if len(inv) == 2:
+            values[(values > invalid[0])&(values < invalid[1])] = np.NaN
+        else:
+            values[values == invalid] = np.NaN
+
+def _set_na_from_valid_range(values, valid_range):
+    if valid_range:
+        if len(valid_range) == 2:
+            values[~((values >= valid_range[0])&(values <= valid_range[1]))] = np.NaN
+        else:
+            logger.info('Ignoring valid range metadata (does not have length of 2)')
+
+
+
+def set_na_based_on_meta(es):
+    attrs = es.attrs
+    invalid_range_o, invalid_range_b = extract_invalid_range(**attrs)
+    valid_range_o, valid_range_b     = extract_valid_range(**attrs)
+    missing_value_o, missing_value_b = extract_missing_value(**attrs)
+    for idx, band in enumerate(es.data_vars):
+        band_arr = getattr(es, band)
+        val = band_arr.values
+        _set_invalid_na(val, invalid_range_o)
+        if invalid_range_b and invalid_range_b[idx]:
+            _set_invalid_na(val, invalid_range_b[idx])
+        _set_na_from_valid_range(val, valid_range_o)
+        if valid_range_b and valid_range_b[idx]:
+            _set_invalid_na(val, valid_range_b[idx])
+        if missing_value_o:
+            val[val == missing_value_o] = np.NaN
+        if missing_value_b and missing_value_b[idx]:
+            val[val == missing_value_b[idx]] = np.NaN
 

@@ -2,7 +2,7 @@ data_sources:
   hdf5_precip_hourly:
     band_specs:
     - key_re_flags: []
-      meta_to_geotransform: elm.sample_util.metadata_selection:grid_header_hdf5_to_geo_transform
+      meta_to_geotransform: elm.sample_util.metadata_selection:grid_header_to_geo_transform
       name: band_1
       search_key: sub_dataset_name
       search_value: /precipitation

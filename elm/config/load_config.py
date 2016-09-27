@@ -240,19 +240,15 @@ class ConfigParser(object):
     def _validate_selection_kwargs(self, data_source, name):
         '''Validate the "selection_kwargs" related to
         sample pre-processing'''
-        selection_kwargs = data_source.get('selection_kwargs')
+        selection_kwargs = data_source # TODO renaming needed further
         if not selection_kwargs:
             return
-        if not isinstance(selection_kwargs, dict):
-            raise ElmConfigError('In data_source:{} expected '
-                                   '"selection_kwargs" to be '
-                                   'a dict'.format(selection_kwargs))
         selection_kwargs['geo_filters'] = selection_kwargs.get('geo_filters', {}) or {}
         for poly_field in ('include_polys', 'exclude_polys'):
             pf = selection_kwargs['geo_filters'].get(poly_field, []) or []
             for item in pf:
                 if not item in self.polys:
-                    raise ElmConfigError('config\'s selection_kwargs dict {} '
+                    raise ElmConfigError('config\'s data_source dict {} '
                                            '"include_polys" or "exclude_poly" '
                                            'must refer to a list of keys from config\'s '
                                            '"polys"'.format(self.selection_kwargs))
@@ -260,10 +256,10 @@ class ConfigParser(object):
             f = selection_kwargs.get(filter_name, {})
             if f:
                 self._validate_custom_callable(f, True,
-                                               'selection_kwargs:{} - {}'.format(name, filter_name))
+                                               'data_source:{} - {}'.format(name, filter_name))
             else:
                 selection_kwargs[filter_name] = None
-        self.data_sources[name]['selection_kwargs'] = selection_kwargs
+        self.data_sources[name] = selection_kwargs
 
 
     def _validate_resamplers(self):
