@@ -45,6 +45,7 @@ def test_read_using_dict_of_variables():
         ds = load_netcdf_array(nc_file, meta, variables_dict)
         _validate_array_test_result(ds)
 
+
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                    reason='elm-data repo has not been cloned')
 def test_read_using_list_of_variables():
