@@ -111,15 +111,21 @@ It is easiest to copy the default config referenced above in snippets, and then 
 .. toctree::
    :titlesonly:
    :hidden:
-   :maxdepth: 2
+   :maxdepth: 1
 
    Home <self>
    About <about>
-   Getting started... <getting_started.rst>
+   Getting started... <getting_started>
    Features <features>
    Building <build_package>
    Cluster Help <cluster_help>
-   Configuration <config>
+
+.. _config-docs:
+
+.. toctree::
+   :maxdepth: 2
+
+   Configuration <Config/index>
    Environment Variables <environment_vars>
    Feature Selection <feature_selection>
    Example Pipeline <sample_pipeline>
