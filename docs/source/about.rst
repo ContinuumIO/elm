@@ -1,87 +1,9 @@
-# NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pipeline
 
-## Using the Code
+About ELM
+====
 
-To use this code:
-
-#### Install:
-Create the development environment:
-```
-conda env create
-```
-
-Activate the environment:
-```
-source activate elm-env
-```
-(older versions of the code may have `elm` in place of `elm-env` above.  The environment name was changed to avoid conflict with `elm` package on anaconda.org.  The `elm-env` is uploaded to the nasasbir org on anaconda.org.)
-
-Install the source:
-```
-python setup.py develop
-```
-Clone the `elm-data` repo using Git LFS so that more tests can be run:
-```
-brew install git-lfs # or apt-get, yum, etc
-git lfs install
-git clone https://github.com/ContinuumIO/elm-data
-git remote add origin https://github.com/ContinuumIO/elm-data
-```
-
-Add the following to your .bashrc or environment, changing the paths depending on where you have cloned elm-data:
-```
-export DASK_EXECUTOR=SERIAL
-export ELM_EXAMPLE_DATA_PATH=/Users/psteinberg/Documents/elm-data
-```
-
-
-#### Run the default config
-```
-DASK_EXECUTOR=SERIAL LADSWEB_LOCAL_CACHE=`pwd` DASK_SCHEDULER=1 elm-download-ladsweb --config elm/config/defaults/defaults.yaml
-```
-(replacing the yaml if not using the default VIIRS Level 2 dataset)
-
-Run the faster running tests:
-```
-py.test -m "not slow"
-```
-or all of the tests:
-```
-py.test
-```
-or get the verbose test output
-```
-py.test -v
-```
-and cut and paste a test mark to run a specific test:
-```
-py.test -k test_train_makes_args_kwargs_ok
-```
-
-#### Run the default pipeline yaml:
-_In serial_:
-```
-DASK_EXECUTOR=SERIAL elm-main --config elm/config/defaults/defaults.yaml  --echo-config
-```
-_With dask-distributed_:
-```
-dask-scheduler
-```
-In separate command prompts do this for each worker:
-```
-dworker 10.0.0.10:8786 # or what dask-scheduler gave as IP
-```
-Then
-```
-ELM_LOGGING_LEVEL=DEBUG DASK_EXECUTOR=DISTRIBUTED DASK_SCHEDULER=10.0.0.10:8786 elm-main --config elm/config/defaults/defaults.yaml  --echo-config
-```
-(You should modify the `ensembles` section of one of the configs in `elm/example_configs` to a larger ensemble to see a better parallel versus serial performance difference)
-
-## Config File Format
-
-It is easiest to copy the default config referenced above in snippets, and then follow [these instructions on editing the config](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.md).
-
-## About the NASA SBIR S5.03 Project
+About the NASA SBIR S5.03 Project
+-----
 Phase I - Techniques for
 * Data mining
 * Fusion
@@ -96,7 +18,8 @@ Phase II
  * Feature extraction
  * Change detection
 
-## Scope (Phase I)
+Scope (Phase I)
+-----
 
 * Flexible API where most functions can take an image, mosaic, or other array
 * Several unsupervised classification and clustering methods for large data
@@ -107,9 +30,11 @@ Phase II
 
 Support for most operating systems/platforms on most parts of the API.
 
-### Phase I Milestones
+Phase I Milestones
+-----
 
-#### Milestone I: Cluster plugin for dask+distributed stack
+Milestone I: Cluster plugin for dask+distributed stack
+----------
 
 Milestone I Task 1: Streamlined deployment of dask distributed
 This will install dask+distributed plus the stack we need for machine learning and
@@ -163,7 +88,8 @@ Milestone III Task 1: Distribution and Promotion of Satellite Classification Too
 Milestone III Task 2: Documentation
 Milestone III Task 3: Final Report on Phase I
 
-## Additional work identified for Phase I
+Additional work identified for Phase I
+----
 
 Research how dask / xarray / numba can be used for nonlinear dimensionality reduction and spectral unmixing.  Begin by looking at [pysptools Pixel Purity Index and other methods](http://pysptools.sourceforge.net/_modules/pysptools/eea/eea.html#PPI) which work with in-memory numpy arrays.
 
@@ -180,7 +106,9 @@ Another idea not mentioned in scope: as part of the flexible API for images/mosa
  * In some cases, when creating an image mosaic object in our to-be-created flexible API, the spatial / temporal / band-related metadata will come from filenames and foldernames in some cases, but more often from metadata contained within the files (e.g. a GeoTiff file contains this information in the file, not the filename generally).
  * We should go over the tutorials on [dask delayed](http://dask.pydata.org/en/latest/delayed.html) which is dask for cases that are not clearly array or dataframe problems.
 
-# Contribution Guidelines
+
+Contribution Guidelines
+------
  * Make a feature branch and PR in this repo (no forking)
  * Make [py.test tests in the package subdirectory(ies)](README_testing.md) you are modifying
  * Mark the PR with the tag WIP or ready for review, and mention the issue number that it is fixing
@@ -190,12 +118,11 @@ Another idea not mentioned in scope: as part of the flexible API for images/mosa
  * Wait for at least one `LGTM` comment before merge of feature branch into master
  * Update the [waffle board](https://waffle.io/ContinuumIO/nasasbir) or use the tagging system in github
 
-# See also
+See also
+------
 
  * [README on features of the new image pipeline](README_features.txt)
  * [README on testing practices](README_testing.txt)
  * [README on NASA contacts and example datasets](README_nasa_projects.txt)
  * [README on configuration of the image pipeline](https://github.com/ContinuumIO/nasasbir/blob/master/README_config.txt)
-
-
 

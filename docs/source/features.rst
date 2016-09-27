@@ -1,6 +1,8 @@
-# Features
+Features
+==========
 
-## Cluster Plugins or Config Files
+Cluster Plugins or Config Files
+--------
 
 Create a cluster profile to automate installation of:
 
@@ -17,7 +19,8 @@ The cluster profile should use the dask plugin.
 
 The API we develop should support either a local dask scheduler or distributed dask scheduler where feasible.
 
-## Dask-Xarray-Numba Image Tools
+Dask-Xarray-Numba Image Tools
+--------
 
 From the proposal, the image pipeline will have "a flexible API where most functions support" the following input data types:
 
@@ -32,7 +35,8 @@ From the proposal, the image pipeline will have "a flexible API where most funct
 
 Create an Xarray-based data structure to represent each of the types above and allow classification, pre- and post-processing from there.
 
-### Pipeline Preprocess
+Pipeline Preprocess
+--------
 
 The pipeline API should allow the following optional steps:
 
@@ -47,7 +51,8 @@ The pipeline API should allow the following optional steps:
  * Computation of user-defined features from functional specs.  For example, it may be necessary to calculate a ratio of different bands as an additional column for machine learning input.  NDVI is an example.
  * Thresholding for mask creation, e.g. limit a classifier to considering areas where NDVI > X.
 
-### Pipeline Classifier/Regressors
+Pipeline Classifier/Regressors
+--------
 
 The image pipeline should support [these classifiers with `partial_fit` methods](http://scikit-learn.org/stable/modules/scaling_strategies.html)
 
@@ -66,7 +71,8 @@ and k-means:
 
  * sklearn.cluster.MiniBatchKMeans
 
-### Output Types:
+Output Types:
+--------
 
  * sklearn predictor models for each method listed above like PCA, classifiers, regressors, clustering. (pickle)
  * Image / image mosaic in nested directory structure
