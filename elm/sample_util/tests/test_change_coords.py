@@ -11,7 +11,7 @@ from elm.readers import *
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 n_components = 3
 data_source = {'sample_from_args_func': random_elm_store,
-               'sampler_kwargs': {'attrs': {}}}
+               'attrs': {}}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
          'data_source': 'synthetic',
@@ -29,8 +29,25 @@ def make_pipeline(sample_pipeline, data_source):
     return pipeline
 
 
-def tst_one_sample_pipeline(sample_pipeline):
+def tst_one_sample_pipeline(sample_pipeline, add_na_per_band=0):
     sample = random_elm_store()
+    if add_na_per_band:
+        for idx, band in enumerate(sample.data_vars):
+            band_arr = getattr(sample, band)
+            val = band_arr.values
+            inds = np.arange(val.size)
+            np.random.shuffle(inds)
+            x = inds // val.shape[0]
+            y = inds % val.shape[0]
+            slc = slice(None, add_na_per_band // 2)
+            val[y[slc],x[slc]] = 99 * idx
+            band_arr.attrs['missing_value'] = 99 * idx
+            slc = slice(add_na_per_band // 2, add_na_per_band)
+            val[y[slc], x[slc]] = 199 * idx
+            band_arr.attrs['invalid-range'] = [198 * idx, 200 * idx]
+            band_arr.attrs['valid-range'] = [-1e12, 1e12]
+
+            assert val[np.isnan(val)].size == 0
     config = {'data_sources': {'synthetic': data_source},
               'ensembles': {'ex3': {'saved_ensemble_size': 1}},
               'train': {'ex1': train},
@@ -140,4 +157,10 @@ def test_agg_inverse_flatten():
                 assert x1 is not None and x2 is not None
 
 
-
+def test_set_na_from_meta():
+    set_na = [{'modify_sample': 'elm.readers:set_na_from_meta'}]
+    es, new_es = tst_one_sample_pipeline(set_na, add_na_per_band=13)
+    assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
+    for band in es.data_vars:
+        has_nan = getattr(new_es, band).values
+        assert has_nan.size - 13 == has_nan[~np.isnan(has_nan)].size

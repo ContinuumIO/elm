@@ -98,8 +98,7 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         if sample is None:
             logger.debug('sample create sample_pipeline step')
             required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
-            kwargs = {k: v for k, v in filter_kwargs_to_func(func, **kwargs).items()
-                      if k not in required_args}
+            kwargs = {k: v for k,v in kwargs.items() if k not in required_args}
 
             output = func(*args, **kwargs)
             sample, sample_y, sample_weight = _split_pipeline_output(output,
@@ -155,7 +154,6 @@ def get_sample_pipeline_action_data(config, step,
                                                         # validation (sample_from_args_func requirement)
     band_specs = data_source.get('band_specs') or None
     sampler_args = data_source.get('sampler_args') or ()
-    sampler_kwargs = data_source
     # TODO the usage of sampler_args in config needs
     # to be validated
     if band_specs:
@@ -167,12 +165,12 @@ def get_sample_pipeline_action_data(config, step,
         load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:
         reader = load_array = load_meta = None
-
-    for k in sampler_kwargs:
-        if '_filter' in k and sampler_kwargs[k] and k != 'geo_filters':
-            sampler_kwargs[k] = import_callable(sampler_kwargs[k])
-    kw = copy.deepcopy(sampler_kwargs)
-    kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
+    data_source['load_meta'] = load_meta
+    data_source['load_array'] = load_array
+    for k in data_source:
+        if '_filter' in k and data_source[k] and k != 'geo_filters':
+            data_source[k] = import_callable(data_source[k])
+    kw = {k: v for k, v in data_source.items() if not k in ('band_specs',)}
     sample_args_generator = data_source.get('sample_args_generator') or None
     if sample_args_generator:
         sample_args_generator = import_callable(config.sample_args_generators[sample_args_generator])
@@ -180,12 +178,12 @@ def get_sample_pipeline_action_data(config, step,
         generated_args = get_generated_args(import_callable(sample_args_generator),
                                             band_specs,
                                             **kw)
-        sampler_kwargs['generated_args'] = generated_args
+        data_source['generated_args'] = generated_args
     else:
-        sampler_kwargs['generated_args'] = [(sampler_args, sampler_kwargs)
-                                            for _ in range(data_source.get('n_batches') or 1)]
+        data_source['generated_args'] = [(sampler_args, data_source)
+                                          for _ in range(data_source.get('n_batches') or 1)]
 
-    action_data = [('create_sample', sampler_func, sampler_args, sampler_kwargs)]
+    action_data = [('create_sample', sampler_func, sampler_args, data_source)]
 
     sample_pipeline = sample_pipeline or step.get('sample_pipeline')
     if sample_pipeline:
@@ -204,20 +202,6 @@ def make_sample_pipeline_func(config, step, sample_pipeline=None, data_source=No
 
     sample_pipeline = sample_pipeline or ConfigParser._get_sample_pipeline(config, step)
     actions = []
-    if not data_source:
-        if 'train' in step:
-            key1 = 'train'
-        elif 'predict' in step:
-            key1 = 'predict'
-        elif 'transform' in step:
-            key1 = 'transform'
-        else:
-            raise ValueError('Expected "feature_selection" as a '
-                             'key within a "train" or "predict" pipeline '
-                             'action ({})'.format(action))
-
-        d = getattr(config, key1)[step[key1]]
-        data_source = config.data_sources[d['data_source']]
     for action in sample_pipeline:
         if 'feature_selection' in action:
 

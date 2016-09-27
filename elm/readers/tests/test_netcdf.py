@@ -8,7 +8,7 @@ from elm.readers.netcdf import load_netcdf_meta, load_netcdf_array
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     NETCDF_FILES,
                                     assertions_on_metadata)
-
+from elm.readers.util import BandSpec
 NETCDF_DIR = os.path.dirname(NETCDF_FILES[0])
 
 variables_dict = dict(HQobservationTime='HQobservationTime')
@@ -52,4 +52,8 @@ def test_read_using_list_of_variables():
         meta = load_netcdf_meta(nc_file)
         ds = load_netcdf_array(nc_file, meta, variables_list)
         _validate_array_test_result(ds)
+        variables_list2 = [BandSpec('', '', v) for v in variables_list]
+        ds = load_netcdf_array(nc_file, meta, variables_list2)
+        _validate_array_test_result(ds)
+
 
