@@ -1,4 +1,4 @@
-Pipeline Config File Format
+Job Configuration
 ========
 
 This README walks through each section of the defaults.yaml default config and discusses how each section may be modified.
