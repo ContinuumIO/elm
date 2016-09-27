@@ -18,7 +18,8 @@ from elm.config import import_callable
 __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
-           'xy_canvas','dummy_canvas', 'BandSpec']
+           'xy_canvas','dummy_canvas', 'BandSpec',
+           'set_na_from_meta']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -267,69 +268,72 @@ def grid_header_to_geo_transform(**meta):
 
 VALID_RANGE_WORDS = ('^valid[\s\-_]*range',)
 INVALID_RANGE_WORDS = ('invalid[\s\-_]*range',)
-MISSING_VALUE_WORDS = ('missing[\s\-_]*range',)
+MISSING_VALUE_WORDS = ('missing[\s\-_]*value', 'invalid[\s\-\_]*value',)
 
 def _case_insensitive_lookup(dic, lookup_list):
     for k, pattern in product(dic, lookup_list):
         match = re.search(pattern, k, re.IGNORECASE)
+        val = dic[k]
         if match:
-            val = dic[k]
             if isinstance(val, numbers.Number) or (isinstance(val, Sequence) and all(isinstance(v, numbers.Number) for v in val)):
                 return val
+        elif isinstance(val, dict):
+            return _case_insensitive_lookup(val, lookup_list)
 
 def extract_valid_range(**attrs):
-    overall = _case_insensitive_lookup(attrs.get('meta') or {}, VALID_RANGE_WORDS)
-    band_specific = [_case_insensitive_lookup(b, VALID_RANGE_WORDS)
-                     for b in (attrs.get('band_meta') or [])]
-    return (overall, band_specific)
+    return _case_insensitive_lookup(attrs, VALID_RANGE_WORDS)
 
 
 def extract_missing_value(**attrs):
-    overall = _case_insensitive_lookup(attrs.get('meta') or {}, MISSING_VALUE_WORDS)
-    band_specific = [_case_insensitive_lookup(b, MISSING_VALUE_WORDS)
-                     for b in (attrs.get('band_meta') or [])]
-    return (overall, band_specific)
+    return _case_insensitive_lookup(attrs, MISSING_VALUE_WORDS)
 
 
 def extract_invalid_range(**attrs):
-    overall = _case_insensitive_lookup(attrs.get('meta') or {}, INVALID_RANGE_WORDS)
-    band_specific = [_case_insensitive_lookup(b, INVALID_RANGE_WORDS)
-                     for b in (attrs.get('band_meta') or [])]
-    return (overall, band_specific)
+    return _case_insensitive_lookup(attrs, INVALID_RANGE_WORDS)
 
 
 def _set_invalid_na(values, invalid):
-    if invalid:
-        if len(inv) == 2:
-            values[(values > invalid[0])&(values < invalid[1])] = np.NaN
-        else:
-            values[values == invalid] = np.NaN
+    if len(invalid) == 2:
+        values[(values > invalid[0])&(values < invalid[1])] = np.NaN
+    else:
+        values[values == invalid] = np.NaN
+
 
 def _set_na_from_valid_range(values, valid_range):
-    if valid_range:
-        if len(valid_range) == 2:
-            values[~((values >= valid_range[0])&(values <= valid_range[1]))] = np.NaN
-        else:
-            logger.info('Ignoring valid range metadata (does not have length of 2)')
+    if len(valid_range) == 2:
+        values[~((values >= valid_range[0])&(values <= valid_range[1]))] = np.NaN
+    else:
+        logger.info('Ignoring valid range metadata (does not have length of 2)')
 
 
 
-def set_na_based_on_meta(es):
+def set_na_from_meta(es, **kwargs):
     attrs = es.attrs
-    invalid_range_o, invalid_range_b = extract_invalid_range(**attrs)
-    valid_range_o, valid_range_b     = extract_valid_range(**attrs)
-    missing_value_o, missing_value_b = extract_missing_value(**attrs)
+    invalid_range_o = extract_invalid_range(**attrs)
+    valid_range_o   = extract_valid_range(**attrs)
+    missing_value_o = extract_missing_value(**attrs)
     for idx, band in enumerate(es.data_vars):
         band_arr = getattr(es, band)
         val = band_arr.values
-        _set_invalid_na(val, invalid_range_o)
-        if invalid_range_b and invalid_range_b[idx]:
-            _set_invalid_na(val, invalid_range_b[idx])
-        _set_na_from_valid_range(val, valid_range_o)
-        if valid_range_b and valid_range_b[idx]:
-            _set_invalid_na(val, valid_range_b[idx])
-        if missing_value_o:
+        if invalid_range_o is not None:
+            logger.debug('Invalid range {}'.format(invalid_range_o))
+            _set_invalid_na(val, invalid_range_o)
+        invalid_range_b = extract_invalid_range(**band_arr.attrs)
+        if invalid_range_b is not None:
+            logger.debug('Invalid range {}'.format(invalid_range_b))
+            _set_invalid_na(val, invalid_range_b)
+        if valid_range_o is not None:
+            logger.debug('Valid range {}'.format(valid_range_o))
+            _set_na_from_valid_range(val, valid_range_o)
+        valid_range_b = extract_valid_range(**band_arr.attrs)
+        if valid_range_b is not None:
+            logger.debug('Valid range {}'.format(valid_range_b))
+            _set_na_from_valid_range(val, valid_range_b)
+        if missing_value_o is not None:
+            logger.debug('Missing value {}'.format(missing_value_o))
             val[val == missing_value_o] = np.NaN
-        if missing_value_b and missing_value_b[idx]:
-            val[val == missing_value_b[idx]] = np.NaN
+        missing_value_b = extract_missing_value(**band_arr.attrs)
+        if missing_value_b is not None:
+            logger.debug('Missing value {}'.format(missing_value_b))
+            val[val == missing_value_b] = np.NaN
 

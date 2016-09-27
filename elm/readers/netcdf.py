@@ -110,7 +110,7 @@ def load_netcdf_array(datafile, meta, band_specs=None):
             band_spec = band_specs[0]
         data = OrderedDict(data)
     else:
-        data = OrderedDict([(k, ds[v]) for k, v in meta['variables'].items()])
+        data = OrderedDict([(v, ds[v]) for v in meta['variables']])
         band_spec = None
     geo_transform = take_geo_transform_from_meta(band_spec=band_spec,
                                                   required=True,

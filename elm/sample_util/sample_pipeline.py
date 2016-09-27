@@ -170,7 +170,7 @@ def get_sample_pipeline_action_data(config, step,
 
     for k in sampler_kwargs:
         if '_filter' in k and sampler_kwargs[k] and k != 'geo_filters':
-            selection_kwargs[k] = import_callable(sampler_kwargs[k])
+            sampler_kwargs[k] = import_callable(sampler_kwargs[k])
     kw = copy.deepcopy(sampler_kwargs)
     kw = {k: v for k, v in kw.items() if not k in ('band_specs',)}
     sample_args_generator = data_source.get('sample_args_generator') or None

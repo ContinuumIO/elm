@@ -46,7 +46,6 @@ def iter_dirs_of_dirs(**kwargs):
 
 def iter_files_recursively(**kwargs):
     file_pattern = kwargs.get('file_pattern') or None
-    raise ValueError(repr(file_pattern))
     top_dir = kwargs['top_dir']
     logger.debug('Read {} from {}'.format(file_pattern, top_dir))
     if not top_dir or not os.path.exists(top_dir):

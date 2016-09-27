@@ -5,8 +5,7 @@ import xarray as xr
 
 from elm.readers.util import (_extract_valid_xy, Canvas,
                               geotransform_to_bounds,
-                              dummy_canvas,
-                              set_na_based_on_meta)
+                              dummy_canvas)
 
 __all__ = ['ElmStore', ]
 
@@ -16,7 +15,6 @@ class ElmStore(xr.Dataset):
     _es_kwargs = {
                     'add_canvas': True,
                     'lost_axis': None,
-                    'na_from_meta': True,
                 }
     def __init__(self, *args, **kwargs):
         es_kwargs = {k: kwargs.pop(k, v)
@@ -29,8 +27,6 @@ class ElmStore(xr.Dataset):
         else:
             self._add_band_order()
             self._add_dummy_canvas(**es_kwargs)
-        if es_kwargs['na_from_meta']:
-            set_na_based_on_meta(self)
 
     def _add_dummy_canvas(self, **es_kwargs):
         lost_axis = es_kwargs['lost_axis']
