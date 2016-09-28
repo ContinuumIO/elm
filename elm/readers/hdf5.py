@@ -57,7 +57,7 @@ def load_hdf5_meta(datafile):
                 sub_datasets=sds,
                 name=datafile)
 
-def load_subdataset(subdataset, attrs, band_spec, band_meta, **reader_kwargs):
+def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
     data_file = gdal.Open(subdataset)
     raster = raster_as_2d(data_file.ReadAsArray(**reader_kwargs))
     #raster = raster.T

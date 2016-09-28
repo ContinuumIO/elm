@@ -193,13 +193,20 @@ class ConfigParser(object):
                                        ' section'.format(ds, download))
             s = ds.get('sample_args_generator')
             if not s in self.sample_args_generators:
+                try:
+                    sample_args_generator = import_callable(s)
+                except Exception as e:
+                    raise ElmConfigError('data_source:{} uses a sample_args_generator {} that '
+                                         'is neither importable nor in '
+                                         '"sample_args_generators" dict'.format(name, s))
                 raise ElmConfigError('Expected data_source: '
                                      'sample_args_generator {} to be in '
                                      'sample_args_generators.keys()')
-            sample_args_generator = self.sample_args_generators[s]
-            self._validate_custom_callable(sample_args_generator,
-                                    True,
-                                    'train:{} sample_args_generator'.format(name))
+            else:
+                sample_args_generator = self.sample_args_generators[s]
+                self._validate_custom_callable(sample_args_generator,
+                                        True,
+                                        'data_source:{} sample_args_generator'.format(name))
             self._validate_selection_kwargs(ds, name)
             keep_columns = ds.get('keep_columns') or []
             self._validate_type(keep_columns, 'keep_columns', (tuple, list))

@@ -175,7 +175,10 @@ def get_sample_pipeline_action_data(config, step,
     kw = {k: v for k, v in data_source.items() if not k in ('band_specs',)}
     sample_args_generator = data_source.get('sample_args_generator') or None
     if sample_args_generator:
-        sample_args_generator = import_callable(config.sample_args_generators[sample_args_generator])
+        if isinstance(sample_args_generator, (tuple, str)) and sample_args_generator in config.sample_args_generators:
+            sample_args_generator = import_callable(config.sample_args_generators[sample_args_generator])
+        else:
+            sample_args_generator = import_callable(sample_args_generator)
         logger.debug('Calling sample_args_generator')
         generated_args = get_generated_args(import_callable(sample_args_generator),
                                             band_specs,
