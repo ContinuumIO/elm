@@ -116,8 +116,9 @@ def load_netcdf_array(datafile, meta, band_specs=None):
     geo_transform = take_geo_transform_from_meta(band_spec=band_spec,
                                                   required=True,
                                                   **meta['meta'])
-    for b in meta['band_meta']:
+    for b, sub_dataset_name in zip(meta['band_meta'], data):
         b['geo_transform'] = meta['geo_transform'] = geo_transform
+        b['sub_dataset_name'] = sub_dataset_name
     new_es = ElmStore(data,
                     coords=_normalize_coords(ds),
                     attrs=meta)

@@ -57,7 +57,7 @@ def load_hdf5_meta(datafile):
                 sub_datasets=sds,
                 name=datafile)
 
-def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
+def load_subdataset(subdataset, attrs, band_spec, band_meta, **reader_kwargs):
     data_file = gdal.Open(subdataset)
     raster = raster_as_2d(data_file.ReadAsArray(**reader_kwargs))
     #raster = raster.T
@@ -82,8 +82,9 @@ def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
                     bounds=geotransform_to_bounds(cols, rows, geo_transform),
                     ravel_order='C')
 
-    attrs = dict(canvas=canvas)
+    attrs['canvas'] = canvas
     attrs['geo_transform'] = geo_transform
+
     if dims == ('y', 'x'):
         coords = [('y', coord_y), ('x', coord_x)]
     else:
@@ -126,6 +127,7 @@ def load_hdf5_array(datafile, meta, band_specs):
         attrs = copy.deepcopy(meta)
         attrs.update(copy.deepcopy(band_meta))
         elm_store_data[name] = load_subdataset(sd[0], attrs, band_spec, **reader_kwargs)
+
         band_order.append(name)
     attrs = copy.deepcopy(attrs)
     attrs['band_order'] = band_order

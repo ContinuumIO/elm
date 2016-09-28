@@ -24,7 +24,7 @@ get_func = None
 def client_context(dask_client, dask_scheduler):
     global get_func
     if dask_client == 'DISTRIBUTED':
-        if Executor is None
+        if Executor is None:
             raise ValueError('distributed is not installed - "conda install distributed"')
         client = Executor(dask_scheduler)
         get_func = client.get

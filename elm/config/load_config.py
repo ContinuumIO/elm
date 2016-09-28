@@ -153,14 +153,19 @@ class ConfigParser(object):
         if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
-        if not all(isinstance(bs, dict) for bs in band_specs):
-            raise ElmConfigError('Expected "band_specs" to be a list of dicts')
+        if not all(isinstance(bs, (dict, str)) for bs in band_specs):
+            raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
         new_band_specs = []
         for band_spec in band_specs:
-            if not all(k.name in band_spec for k in attr.fields(BandSpec)
+            if isinstance(band_spec, str):
+                new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
+                                                'search_value': band_spec,
+                                                'name': band_spec}))
+            elif not all(k.name in band_spec for k in attr.fields(BandSpec)
                        if not k.default == attr.NOTHING):
                 raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
-            new_band_specs.append(BandSpec(**band_spec))
+            else:
+                new_band_specs.append(BandSpec(**band_spec))
         return new_band_specs
 
     def _validate_one_data_source(self, name, ds):
