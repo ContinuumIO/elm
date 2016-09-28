@@ -232,7 +232,7 @@ To be developed, this section will refer to outputs from `predict` steps in the 
     }
 
 pipeline
-========
+------------
 
 The config dictionaries shown above do not do anything until some parts of them are referenced in the `pipeline` list, where
 each element of the list is a dictionary specifying an action.  An example here is to
@@ -265,7 +265,7 @@ Though not shown in the default `pipeline` above, a `train` or `predict` action 
 
 
 Dask configuration
-========
+------------
 
 The following are the defaults for dask settings in the config.  These can be overriden your config file or environment variables:
 
@@ -279,7 +279,7 @@ The following are the defaults for dask settings in the config.  These can be ov
     LADSWEB_LOCAL_CACHE: Null # where to download ftp data from ladsweb locally
 
 Pipeline Config-Related Code
-========
+------------
 
 See [the config subpackage](https://github.com/ContinuumIO/nasasbir/tree/master/elm/config) which has
  * [env.py](https://github.com/ContinuumIO/nasasbir/blob/master/elm/config/env.py) for parsing environment varibles
