@@ -11,7 +11,6 @@ def elm_store_concat(*elms):
     for es in elms:
         es = es[0]
         if isinstance(es, (list, tuple)):
-            assert check_is_flat(es[0])
             elms2.append(es[0])
             if es[1] is not None:
                 sample_ys.append(es[1])
@@ -27,7 +26,6 @@ def elm_store_concat(*elms):
     else:
         sample_weight = None
     shp = set(es.flat.values.shape for es in elms)
-    assert len(shp) == 1
     shp = tuple(shp)[0]
     new_shp = (len(elms) * shp[0], shp[1])
     store = np.empty(new_shp) * np.NaN

@@ -9,5 +9,4 @@ def random_rows(es, n_rows, **kwargs):
     inds = np.arange(es.flat.values.shape[0])
     np.random.shuffle(inds)
     es = ElmStore({'flat': es.flat[inds[:n_rows], :]}, attrs=attrs)
-    assert es.flat.canvas
     return es

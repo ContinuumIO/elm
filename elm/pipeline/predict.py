@@ -131,7 +131,6 @@ def predict_step(config, step, client,
     else:
         submit_func = no_client_submit
     get_results = partial(wait_for_futures, client=client)
-    predict_dict = config.predict[step['predict']]
     action_data = get_sample_pipeline_action_data(config, step,
                                     data_source, sample_pipeline)
     sampler_kwargs = action_data[0][-1]

@@ -95,7 +95,7 @@ def geotransform_to_coords(buf_xsize, buf_ysize, geo_transform):
 
 def geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform):
     left, bottom = row_col_to_xy(0, 0, geo_transform)
-    right, top = row_col_to_xy(buf_xsize, buf_ysize, geo_transform)
+    right, top = row_col_to_xy(buf_ysize - 1, buf_xsize - 1, geo_transform)
     return BoundingBox(left, bottom, right, top)
 
 

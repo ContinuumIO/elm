@@ -80,8 +80,6 @@ def ensemble(client,
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing
                  # the model params
-        for m in models:
-            assert isinstance(m, tuple) and len(m) == 2, repr(models)
     serialize_models(models, **ensemble_kwargs)
     return models
 

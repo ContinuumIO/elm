@@ -19,18 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 def _nc_str_to_dict(nc_str):
-    str_list = [g.split('=') for g in nc_str.split(';\n')]
-    return dict([g for g in str_list if len(g) == 2])
+    if isinstance(nc_str, str):
+        str_list = [g.split('=') for g in nc_str.split(';\n')]
+        d = dict([g for g in str_list if len(g) == 2])
+        if d:
+            return d
+        return nc_str
+    return nc_str
 
 
 def _get_nc_attrs(nc_dataset):
 
     return {k: _nc_str_to_dict(nc_dataset.getncattr(k))
             for k in nc_dataset.ncattrs()}
-
-def _get_bandmeta(nc_dataset):
-    _assert_nc_attr(nc_dataset, 'Grid.GridHeader')
-    return _nc_str_to_dict(nc_dataset.getncattr('Grid.GridHeader'))
 
 
 def _get_subdatasets(nc_dataset):

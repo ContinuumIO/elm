@@ -54,6 +54,8 @@ def _split_pipeline_output(output, sample, sample_y,
                            sample_weight, context):
     if not isinstance(output, (tuple, list)):
         return output, sample_y, sample_weight
+    if not output:
+        raise ValueError('{} sample_pipeline func returned falsy {}'.format(context, repr(output)))
     if len(output) == 1:
         return output, sample_y, sample_weight
     elif len(output) == 2:

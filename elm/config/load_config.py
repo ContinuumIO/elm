@@ -556,7 +556,6 @@ class ConfigParser(object):
                     sample_pipeline.append(item)
             return sample_pipeline, has_seen
         sample_pipeline, _ = clean(sp, has_seen)
-        assert not any('sample_pipeline' in item for item in sample_pipeline),(repr(sample_pipeline))
         return sample_pipeline
 
     def _validate_sample_pipelines(self):
@@ -634,11 +633,6 @@ class ConfigParser(object):
 
     def _validate_pipeline_predict(self, step):
         '''Validate a "predict" step within config's "pipeline"'''
-        predict = step.get('predict')
-        if not predict in self.predict:
-            raise ElmConfigError('Pipeline refers to an undefined "predict"'
-                                   ' key: {}'.format(repr(predict)))
-        step['predict'] = predict
         return step
 
     def _validate_pipeline(self):
@@ -682,7 +676,6 @@ class ConfigParser(object):
         for key, typ in self.config_keys:
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
-            assert isinstance(getattr(self, key), typ)
 
     def __str__(self):
         return yaml.dump(self.raw_config)

@@ -29,7 +29,6 @@ def _train_or_transform_step(train_or_transform,
     Returns:
         models: the fitted models in the ensemble
     '''
-    assert train_or_transform in ('train', 'transform')
     from elm.pipeline.transform import get_new_or_saved_transform_model
     (_, sample_pipeline, data_source, transform_model, samples_per_batch) = kwargs['sample_pipeline_info']
     evo_params = kwargs.get('evo_params') or None
@@ -39,7 +38,8 @@ def _train_or_transform_step(train_or_transform,
                                                               sample_pipeline,
                                                               data_source)
     sample_pipeline_info = kwargs.get('sample_pipeline_info') or None
-    assert sample_pipeline_info
+    if not sample_pipeline_info:
+        raise ValueError('Expected sample_pipeline_info')
     transform_model = kwargs.get('transform_model') or None
 
     if transform_model is None:

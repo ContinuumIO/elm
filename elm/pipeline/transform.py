@@ -25,9 +25,6 @@ def transform_sample_pipeline_step(sample_x,
                                    transform_models,
                                    **kwargs):
 
-    assert transform_models
-    assert len(transform_models) == 1
-    assert len(transform_models[0]) == 2
     name, transform_model = transform_models[0]
     t = action['transform']
     method = action.get('method', 'fit_transform')
@@ -35,14 +32,11 @@ def transform_sample_pipeline_step(sample_x,
     transform = config.transform[t]
     logger.debug('transform config {}'.format(transform))
     output =  getattr(transform_model, method)(sample_x.flat.values)
-    assert check_is_flat(sample_x, raise_err=False)
     dims = ('space', 'band')
     components = np.array(['c_{}'.format(idx) for idx in range(output.shape[1])])
     attrs = copy.deepcopy(sample_x.attrs)
     attrs['transform'] = {'new_shape': list(output.shape)}
     attrs['band_order'] = components
-    assert not np.any(np.isnan(output))
-    assert np.all(np.isfinite(output))
     # TODO if a 'fit' or 'fit_transform' is called in sample_pipeline
     # that transform model needs to be serialized later using the relevant
     # "transform" tag
@@ -61,7 +55,6 @@ def _get_saved_transform_models(action, config, **kwargs):
     logger.debug('Transform method does not include "fit"')
     logger.info('Load pickled transform_models from {} {}'.format(config.ELM_TRANSFORM_PATH, tag))
     transform_models, meta = load_models_from_tag(config.ELM_TRANSFORM_PATH, tag)
-    assert len(transform_models) == 1 and len(transform_models[0]) == 2
     return transform_models
 
 
