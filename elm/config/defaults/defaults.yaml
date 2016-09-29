@@ -31,7 +31,7 @@ data_sources: {
    file_pattern: "3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5",
    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
    batch_size: 1440000,
-   sample_args_generator: iter_files_recursively,
+   sample_args_generator: "elm.readers.local_file_iterators:iter_files_recursively",
   },
  NPP_DSRF1KD_L2GD: {
   reader: hdf4_example,
@@ -227,10 +227,7 @@ train: {
   }
 }
 
-predict: {
-  kmeans: {
-  }
-}
+
 pipeline:
   - {sample_pipeline: [{sample_pipeline: flatten_example},
                        {transform: pca, method: fit_transform}],

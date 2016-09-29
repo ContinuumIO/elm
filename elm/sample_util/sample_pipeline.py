@@ -68,7 +68,7 @@ def _split_pipeline_output(output, sample, sample_y,
                          'tuple/list'.format(context))
 
 
-def run_sample_pipeline(action_data, sample=None, transform_model=None):
+def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=None, transform_model=None):
     '''Given action_data as a list of (func, args, kwargs) tuples,
     run each function passing args and kwargs to it
     Params:
@@ -77,7 +77,7 @@ def run_sample_pipeline(action_data, sample=None, transform_model=None):
         transform_model: An example:
                              [('tag_0', PCA(.....))]
     '''
-    sample_y, sample_weight = None, None
+
     check_action_data(action_data)
     if sample is not None:
         if len(action_data) == 1:
@@ -180,7 +180,7 @@ def get_sample_pipeline_action_data(config, step,
         else:
             sample_args_generator = import_callable(sample_args_generator)
         logger.debug('Calling sample_args_generator')
-        generated_args = get_generated_args(import_callable(sample_args_generator),
+        generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
                                             **kw)
         data_source['generated_args'] = generated_args
