@@ -85,7 +85,7 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
                     break
         else:
             band_name = 'band_{}'.format(band_idx)
-            band_order_info.append((band_idx, tif, band_name))
+            band_order_info.append((band_idx, tif, band_name, band_meta))
 
     if not band_order_info or (band_specs and (len(band_order_info) != len(band_specs))):
         logger.debug('len(band_order_info) {}'.format(len(band_order_info)))
@@ -127,10 +127,13 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
     attrs = {'meta': meta}
     attrs['band_order'] = []
     for (idx, filename, band_spec), band_meta in zip(band_order_info, meta['band_meta']):
-        band_name = band_spec.name
-        reader_kwargs = {k: getattr(band_spec, k)
-                         for k in READ_ARRAY_KWARGS
-                         if getattr(band_spec, k)}
+        band_name = getattr(band_spec, 'name', band_spec)
+        if not isinstance(band_spec, str):
+            reader_kwargs = {k: getattr(band_spec, k)
+                             for k in READ_ARRAY_KWARGS
+                             if getattr(band_spec, k)}
+        else:
+            reader_kwargs = {}
         if 'buf_xsize' in reader_kwargs:
             reader_kwargs['width'] = reader_kwargs.pop('buf_xsize')
         if 'buf_ysize' in reader_kwargs:
@@ -146,7 +149,7 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
             band_meta['geo_transform'] = handle.get_transform()
         else:
             band_meta['geo_transform'] = geo_transform
-        if band_spec.stored_coords_order[0] == 'y':
+        if getattr(band_spec, 'stored_coords_order', ['y', 'x'])[0] == 'y':
             rows, cols = raster.shape
         else:
             rows, cols = raster.T.shape

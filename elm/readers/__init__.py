@@ -6,3 +6,4 @@ from elm.readers.netcdf import *
 from elm.readers.tif import *
 from elm.readers.util import *
 from elm.readers.reshape import *
+from elm.readers.load_array import *
