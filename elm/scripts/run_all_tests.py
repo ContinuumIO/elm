@@ -172,13 +172,13 @@ def run_all_tests_remote_git_branch(args):
     return proc_wrapper(proc)
 
 
-def build_cli_parser(include_required=True):
+def build_cli_parser(include_positional=True):
     '''Return an argparse.ArgumentParser object which includes the arguments needed by this script.
 
     This function is also used by run_nightly.py.
     '''
     parser = ArgumentParser(description='Run longer-running tests of elm')
-    if include_required:
+    if include_positional:
         parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
         parser.add_argument('elm_configs_path', help='Path')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
