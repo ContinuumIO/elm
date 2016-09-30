@@ -20,6 +20,7 @@ from elm.scripts.main import main, cli
 from elm.config.env import parse_env_vars
 
 
+
 logger = logging.getLogger(__name__)
 
 SKIP_TOKENS = ('ProjectedGradientNMF','BayesianRidge', 'BernoulliRBM',
@@ -33,6 +34,8 @@ LARGE_TEST_SETTINGS = {'ensembles': {'saved_ensemble_size': 2,
                        'param_grids': {'control': {'ngen': 4,
                                        'mu': 12,
                                        'k': 4}}}
+
+DASK_CLIENTS = ['ALL', 'SERIAL', 'DISTRIBUTED', 'THREAD_POOL', ]
 
 STATUS_COUNTER = {'ok': 0, 'fail': 0, 'xfail': 0}
 ETIMES = {}
@@ -154,42 +157,52 @@ def run_all_tests_remote_git_branch(args):
     branch = args.remote_git_branch
     tmp = os.path.join(args.repo_dir, 'tmp')
     if os.path.exists(tmp):
-        shutil.remove(tmp)
+        shutil.rmtree(tmp)
     sp.Popen(['git', 'clone','http://github.com/ContinuumIO/elm'], cwd=tmp).wait()
     cwd = os.path.join(tmp, 'elm')
     sp.Popen(['git', 'fetch', '--all'], cwd=cwd).wait()
     sp.Popen(['git', 'checkout', branch], cwd=cwd).wait()
     sp.Popen(['source', 'activate', 'elm-env', '&&', 'python', 'setup.py', 'develop'],cwd=cwd).wait()
-    args = []
+    args_lst = []
     for arg in sys.argv:
-        if arg == repo_dir:
+        if arg == args.repo_dir:
             arg = tmp
-        args.append(arg)
-    proc = sp.Popen(args, cwd=os.curdir,stdout=sp.PIPE, stderr=sp.STDOUT)
+        args_lst.append(arg)
+    proc = sp.Popen(args_lst, cwd=os.curdir,stdout=sp.PIPE, stderr=sp.STDOUT)
     return proc_wrapper(proc)
 
 
-def run_all_tests():
-    global STATUS_COUNTER
-    choices = ['ALL', 'SERIAL', 'DISTRIBUTED', 'THREAD_POOL', ]
-    env = parse_env_vars()
+def build_cli_parser(include_positional=True):
+    '''Return an argparse.ArgumentParser object which includes the arguments needed by this script.
+
+    This function is also used by run_nightly.py.
+    '''
     parser = ArgumentParser(description='Run longer-running tests of elm')
-    parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
-    parser.add_argument('elm_configs_path', help='Path')
+    if include_positional:
+        parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
+        parser.add_argument('elm_configs_path', help='Path')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
-    parser.add_argument('--dask-clients', choices=choices, nargs='+',
-                        help='Dask client(s) to test: %(choices)s')
+    parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
+                        help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
     parser.add_argument('--dask-scheduler', help='Dask scheduler URL')
     parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
     parser.add_argument('--add-large-test-settings', action='store_true', help='Adjust configs for larger ensembles / param_grids')
     parser.add_argument('--glob-pattern', help='Glob within repo_dir')
     parser.add_argument('--remote-git-branch', help='Run on a remote git branch')
-    args = parser.parse_args()
+    return parser
+
+
+def run_all_tests(args=None):
+    global STATUS_COUNTER
+    env = parse_env_vars()
+    if args is None:
+        parser = build_cli_parser()
+        args = parser.parse_args()
     args.config_dir = None
     if not args.dask_scheduler:
         args.dask_scheduler = env.get('DASK_SCHEDULER', '10.0.0.10:8786')
     if not args.dask_clients or 'ALL' in args.dask_clients:
-        args.dask_clients = [c for c in choices if c != 'ALL']
+        args.dask_clients = [c for c in DASK_CLIENTS if c != 'ALL']
     logger.info('Running run_all_tests with args: {}'.format(args))
     assert os.path.exists(args.repo_dir)
     for client in args.dask_clients:
