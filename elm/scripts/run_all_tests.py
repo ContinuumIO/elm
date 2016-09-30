@@ -183,7 +183,7 @@ def build_cli_parser(include_required=True):
         parser.add_argument('elm_configs_path', help='Path')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
     parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
-                        help='Dask client(s) to test: %(DASK_CLIENTS)s')
+                        help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
     parser.add_argument('--dask-scheduler', help='Dask scheduler URL')
     parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
     parser.add_argument('--add-large-test-settings', action='store_true', help='Adjust configs for larger ensembles / param_grids')
