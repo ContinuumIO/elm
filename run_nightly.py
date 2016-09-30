@@ -13,7 +13,7 @@ args = parser.parse_args()
 
 # Provide the arguments which the user omitted
 if args.dask_clients is None:
-    args.dask_clients = 'SERIAL DISTRIBUTED'
+    args.dask_clients = ['SERIAL', 'DISTRIBUTED']
 if args.dask_scheduler is None:
     args.dask_scheduler = 'localhost:8786'
 if args.remote_git_branch is None:
