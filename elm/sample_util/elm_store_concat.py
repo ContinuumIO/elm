@@ -16,6 +16,12 @@ def elm_store_concat(*elms):
                 sample_ys.append(es[1])
             if es[2] is not None:
                 sample_weights.append(es[2])
+        elif hasattr(es, 'x') and hasattr(es, 'y') and hasattr(es, 'sample_weight'):
+            elms2.append(es.x)
+            if es.y is not None:
+                sample_ys.append(es.y)
+            if es.sample_weight is not None:
+                sample_weights.append(es.sample_weight)
     elms = elms2
     if sample_ys:
         sample_y = np.concatenate(sample_ys)

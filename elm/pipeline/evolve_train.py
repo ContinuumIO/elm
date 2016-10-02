@@ -21,8 +21,16 @@ from elm.pipeline.serialize import serialize_models
 
 
 def on_each_generation(individual_to_new_config,
-                       sample_pipeline_info, step, train_or_transform,
-                       ensemble_kwargs, transform_model, gen, invalid_ind):
+                       config,
+                       sample_pipeline,
+                       data_source,
+                       transform_model,
+                       samples_per_batch,
+                       step,
+                       train_or_transform,
+                       ensemble_kwargs,
+                       gen,
+                       invalid_ind):
     '''Returns model, fit args, fit kwargs for Individual
     whose fitness must be solved
 
@@ -44,8 +52,8 @@ def on_each_generation(individual_to_new_config,
         tuple of (args, kwargs) that go to elm.pipeline.run_model_method:run_model_method
     '''
     from elm.config.dask_settings import get_func
-    (config, sample_pipeline, data_source,
-     transform_model, samples_per_batch) = sample_pipeline_info
+    sample_pipeline_info = (config, sample_pipeline, data_source,
+                            transform_model, samples_per_batch)
     sample_pipeline_infos = []
     new_models = []
     fit_kwargs = []
@@ -63,7 +71,7 @@ def on_each_generation(individual_to_new_config,
         model = import_callable(model_args.model_init_class)(**model_init_kwargs)
         new_models.append((ind.name, model))
 
-    models = run_train_dask(sample_pipeline_info,
+    models = run_train_dask(*sample_pipeline_info,
                    new_models, gen, fit_kwargs,
                    get_func=get_func)
     fitnesses = [model._score for name, model in models]
@@ -76,23 +84,26 @@ def _evolve_train_or_transform(train_or_transform,
                                client,
                                step,
                                evo_params,
+                               config,
+                               sample_pipeline,
+                               data_source,
                                transform_model,
-                               sample_pipeline_info,
+                               samples_per_batch,
                                **ensemble_kwargs):
 
-    (config, sample_pipeline, data_source,
-     transform_model, samples_per_batch) = sample_pipeline_info
+
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
     evo_args = [evo_params,]
     fit_one_generation = partial(on_each_generation,
                                  evo_params.individual_to_new_config,
-                                 sample_pipeline_info,
+                                 config, sample_pipeline, data_source,
+                                 transform_model, samples_per_batch,
                                  step,
                                  train_or_transform,
-                                 ensemble_kwargs,
-                                 transform_model)
+                                 ensemble_kwargs)
+
     try:
         param_history = []
         for a in required_args[1:]:

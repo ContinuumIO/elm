@@ -7,7 +7,7 @@ import logging
 import dask
 import numbers
 
-from elm.config import import_callable
+from elm.config import import_callable, parse_env_vars
 from elm.model_selection.base import (base_selection, no_selection)
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
@@ -15,6 +15,7 @@ from elm.model_selection.util import ModelArgs
 from elm.pipeline.run_model_method import run_model_method
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.sample_util.samplers import make_one_sample
+
 
 
 logger = logging.getLogger(__name__)
@@ -29,17 +30,27 @@ def _next_name():
 
 def _make_model_args_from_config(config, train_or_trans_dict,
                                  step, train_or_transform,
-                                 sample_pipeline, data_source):
+                                 sample_pipeline, data_source,
+                                 model_scoring=None,
+                                 model_selection=None,
+                                 **sample_pipeline_kwargs):
     from elm.config.util import import_callable
     from elm.model_selection.util import get_args_kwargs_defaults
     classes = train_or_trans_dict.get('classes', None)
-    action_data = get_sample_pipeline_action_data(config, step,
-                                    data_source, sample_pipeline)
-    if train_or_trans_dict.get('model_scoring'):
-        logger.debug('Has model_scoring {}'.format(train_or_trans_dict['model_scoring']))
-        ms = config.model_scoring[train_or_trans_dict['model_scoring']]
+
+    action_data = get_sample_pipeline_action_data(sample_pipeline, config, step,
+                                                  data_source, **sample_pipeline_kwargs)
+    if not model_scoring:
+        model_scoring = train_or_trans_dict.get('model_scoring')
+    if model_scoring:
+        logger.debug('Has model_scoring {}'.format(model_scoring))
+        if config and not isinstance(model_scoring, dict):
+            ms = config.model_scoring[train_or_trans_dict['model_scoring']]
+        else:
+            ms = model_scoring
         model_scoring = ms.get('scoring') or None
         model_scoring_kwargs = ms or {}
+
     else:
         logger.debug('No model_scoring {}'.format(train_or_trans_dict))
         model_scoring = None
@@ -48,9 +59,15 @@ def _make_model_args_from_config(config, train_or_trans_dict,
     _, model_init_kwargs, _ = get_args_kwargs_defaults(model_init_class)
     default_fit = 'partial_fit' if 'partial_fit' in dir(model_init_class) else 'fit'
     model_init_kwargs.update(train_or_trans_dict.get('model_init_kwargs') or {})
-    method = step.get('method', train_or_trans_dict.get('method', 'fit'))
+    method = train_or_trans_dict.get('method', None)
+    if not method and step:
+        method = step.get('method')
+    if not method:
+        method = 'fit'
     if 'batch_size' in model_init_kwargs:
-        batch_size = step.get('batch_size', train_or_trans_dict.get('batch_size', data_source.get('batch_size')))
+        batch_size = train_or_trans_dict.get('batch_size', data_source.get('batch_size'))
+        if not batch_size and step:
+            batch_size = step.get('batch_size')
         if (not isinstance(batch_size, numbers.Number) or batch_size <= 0) and 'partial_fit' == method:
             raise ValueError('"batch_size" (int) must be given in pipeline train or '
                              'transform when partial_fit is used as a method')
@@ -61,8 +78,9 @@ def _make_model_args_from_config(config, train_or_trans_dict,
         'fit_kwargs': train_or_trans_dict.get('fit_kwargs') or {},
     }
     model_selection = train_or_trans_dict.get('model_selection') or None
-    if model_selection and model_selection not in ('no_selection',):
-        model_selection = config.model_selection[model_selection]
+    if model_selection:
+        if isinstance(model_selection, str) and model_selection not in ('no_selection', None):
+            model_selection = config.model_selection[model_selection]
         model_selection_kwargs = copy.deepcopy(model_selection.get('kwargs') or {}) or {}
         model_selection_kwargs.update({
             'model_init_class': model_init_class,
@@ -72,6 +90,7 @@ def _make_model_args_from_config(config, train_or_trans_dict,
     else:
         model_selection_func = 'no_selection'
         model_selection_kwargs = {}
+    step_name = step[train_or_transform] if step else train_or_trans_dict['output_tag']
     model_args = ModelArgs(model_init_class,
                            model_init_kwargs,
                            method,
@@ -82,42 +101,65 @@ def _make_model_args_from_config(config, train_or_trans_dict,
                            model_selection_func,
                            model_selection_kwargs,
                            train_or_transform,
-                           step[train_or_transform],
-                           classes,
-                    )
+                           step_name,
+                           classes)
     return model_args
 
 
-def make_model_args_from_config(config,
-                                step,
-                                train_or_transform,
+def make_model_args_from_config(train_or_transform,
                                 sample_pipeline,
-                                data_source):
+                                data_source,
+                                config=None,
+                                step=None,
+                                train_dict=None,
+                                model_scoring=None,
+                                model_selection=None,
+                                ensemble_kwargs=None,
+                                **sample_pipeline_kwargs):
     if train_or_transform == 'train':
-        train_or_trans_dict = config.train[step['train']]
+        if config and step:
+            train_or_trans_dict = config.train[step['train']]
+        else:
+            train_or_trans_dict = train_dict
         train_model_args = _make_model_args_from_config(config,
                                                         train_or_trans_dict,
                                                         step,
                                                         train_or_transform,
                                                         sample_pipeline,
-                                                        data_source)
+                                                        data_source,
+                                                        model_scoring=model_scoring,
+                                                        model_selection=model_selection,
+                                                        **sample_pipeline_kwargs)
         transform_model_args = None
     else:
+
         train_model_args = None
-        train_or_trans_dict = config.transform[step['transform']]
+        if config and step:
+            train_or_trans_dict = config.transform[step['transform']]
+        else:
+            train_or_trans_dict = train_dict or sample_pipeline_kwargs.get('transform_dict') or {}
         transform_model_args = _make_model_args_from_config(config,
                                                             train_or_trans_dict,
                                                             step,
                                                             train_or_transform,
                                                             sample_pipeline,
-                                                            data_source)
-    ensemble_kwargs = config.ensembles[train_or_trans_dict['ensemble']]
-    ensemble_kwargs['config'] = config
-    ensemble_kwargs['tag'] = step[train_or_transform]
-    if train_or_transform == 'transform':
-        ensemble_kwargs['base_output_dir'] = config.ELM_TRANSFORM_PATH
+                                                            data_source,
+                                                            None,
+                                                            **sample_pipeline_kwargs)
+    if not isinstance(ensemble_kwargs, dict):
+        ensemble_kwargs = config.ensembles[train_or_trans_dict['ensemble']]
+        ensemble_kwargs['tag'] = (train_model_args or transform_model_args).step_name
+    if not config:
+        env = parse_env_vars()
+        if train_or_transform == 'transform':
+            ensemble_kwargs['base_output_dir'] = env['ELM_TRANSFORM_PATH']
+        else:
+            ensemble_kwargs['base_output_dir'] = env['ELM_TRAIN_PATH']
     else:
-        ensemble_kwargs['base_output_dir'] = config.ELM_TRAIN_PATH
+        if train_or_transform == 'transform':
+            ensemble_kwargs['base_output_dir'] = config.ELM_TRANSFORM_PATH
+        else:
+            ensemble_kwargs['base_output_dir'] = config.ELM_TRAIN_PATH
     return (train_model_args or transform_model_args, ensemble_kwargs)
 
 
@@ -186,26 +228,30 @@ def _fit_one_model(*fit_args, **fit_kwargs):
     return run_model_method(*fit_args, **fit_kwargs)
 
 
-def run_train_dask(sample_pipeline_info, models,
-                   gen, fit_kwargs,
+def run_train_dask(config, sample_pipeline, data_source,
+                   transform_model, samples_per_batch, models,
+                   gen, fit_kwargs, sample_pipeline_kwargs=None,
                    get_func=None):
     train_dsk = {}
     sample_name = 'sample-{}'.format(gen)
-    sample_args = tuple(sample_pipeline_info) + (sample_name,)
+    sample_args = (config, sample_pipeline, data_source,
+                   transform_model,
+                   samples_per_batch,
+                   sample_name,
+                   sample_pipeline_kwargs)
     train_dsk.update(make_one_sample(*sample_args))
     keys = tuple(name for name, model in models)
     for idx, (name, model) in enumerate(models):
-
         if isinstance(fit_kwargs, (tuple, list)):
             kw = fit_kwargs[idx]
         else:
             kw = fit_kwargs
         fitter = partial(_fit_one_model, model, **kw)
         train_dsk[name] = (fitter, sample_name)
-    def tkeys(*args):
+    def tuple_of_args(*args):
         return tuple(args)
     new_models_name = _next_name()
-    train_dsk[new_models_name] = (tkeys, *keys)
+    train_dsk[new_models_name] = (tuple_of_args, *keys)
     if get_func is None:
         new_models = tuple(dask.get(train_dsk, new_models_name))
     else:

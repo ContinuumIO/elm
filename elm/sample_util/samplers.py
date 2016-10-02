@@ -1,13 +1,17 @@
 from collections import namedtuple
-import pandas as pd
+
+import attr
 import numpy as np
+import pandas as pd
 
 from elm.sample_util.band_selection import select_from_file
 from elm.sample_util.elm_store_concat import elm_store_concat
 from elm.sample_util.filename_selection import get_generated_args
-from elm.sample_util.util import InvalidSample
 from elm.sample_util.sample_pipeline import (get_sample_pipeline_action_data,
                                              run_sample_pipeline)
+
+
+
 
 def image_selection(band_specs,
                     **selection_kwargs):
@@ -35,18 +39,26 @@ def _next_name():
     return tag
 
 
-def make_one_sample_part(config, sample_pipeline, data_source, transform_model):
-
-    action_data = get_sample_pipeline_action_data(config, {},
-                                    data_source, sample_pipeline)
+def make_one_sample_part(config=None, sample_pipeline=None,
+                         data_source=None, transform_model=None,
+                         action_data=None, sample_pipeline_kwargs=None):
+    sample_pipeline_kwargs = sample_pipeline_kwargs or {}
+    if action_data is None:
+        action_data = get_sample_pipeline_action_data(sample_pipeline,
+                                                      config=config,
+                                                      step=None,
+                                                      data_source=data_source,
+                                                      **sample_pipeline_kwargs)
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                                           transform_model=transform_model)
     return (sample, sample_y, sample_weight)
 
 
-def make_one_sample(config, sample_pipeline, data_source, transform_model,
-                    samples_per_batch, sample_name):
-    func_args = (make_one_sample_part, config, sample_pipeline, data_source, transform_model)
+def make_one_sample(config=None, sample_pipeline=None,
+                    data_source=None, transform_model=None,
+                    samples_per_batch=None, sample_name=None,
+                    sample_pipeline_kwargs=None):
+    func_args = (make_one_sample_part, config, sample_pipeline, data_source, transform_model, None, sample_pipeline_kwargs)
     dsk = {_next_name(): func_args
            for _ in range(samples_per_batch)}
     dsk.update({sample_name: (elm_store_concat, list(dsk.keys()))})

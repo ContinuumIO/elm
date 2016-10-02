@@ -528,48 +528,6 @@ class ConfigParser(object):
         self.predict = self.config.get('predict', {}) or {}
         return True # TODO validate predict config
 
-    @classmethod
-    def _get_sample_pipeline(cls, config, step):
-        '''Get the "sample_pipeline" which may be composed of
-        several named "sample_pipeline" elements, e.g.
-        pipeline:
-            - method: partial_fit
-              sample_pipeline:
-              - {get_y: true}
-              - {sklearn_preprocessing: require_positive}
-              - {sample_pipeline: log10}
-              transform: pca
-        '''
-        has_seen = set()
-        sp = step.get('sample_pipeline') or []
-        err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
-        if isinstance(sp, str):
-            if not sp in config.sample_pipelines:
-                raise ElmConfigError('Pipeline step refers to a '
-                                     'sample_pipeline ({}) that is not in '
-                                     'config\'s sample_pipeline section'.format(sp))
-            return config.sample_pipelines[sp]
-        def clean(sp, has_seen):
-            sample_pipeline = []
-            for item in sp:
-                if 'sample_pipeline' in item:
-                    sp2 = item['sample_pipeline']
-                    if sp2 in has_seen:
-                        raise ElmConfigError('Recursive "sample_pipeline":{}'.format(sp2))
-                    has_seen.add(sp2)
-                    if isinstance(sp2, (tuple, list)):
-                        sample_pipeline.extend(sp2)
-                    elif sp2 and sp2 in config.sample_pipelines:
-                        sample_pipeline2, has_seen = clean(config.sample_pipelines[sp2], has_seen)
-                        sample_pipeline.extend(sample_pipeline2)
-                    else:
-                        raise ElmConfigError(err_msg.format(sp2))
-                else:
-                    sample_pipeline.append(item)
-            return sample_pipeline, has_seen
-        sample_pipeline, _ = clean(sp, has_seen)
-        return sample_pipeline
-
     def _validate_sample_pipelines(self):
         '''Validate the "sample_pipelines" section of config'''
         from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
@@ -608,8 +566,7 @@ class ConfigParser(object):
         self._validate_type(p, 'pipeline', (list, tuple))
         for step in p:
             self._validate_type(step, 'pipeline: {}'.format(step), dict)
-            if 'sample_pipeline' in step:
-                step['sample_pipeline'] = self._get_sample_pipeline(self, step)
+
 
     def _validate_param_grids(self):
         from elm.model_selection.evolve import get_param_grid
@@ -661,7 +618,10 @@ class ConfigParser(object):
                                        'be a dict but found {}'.format(action))
             if not 'sample_pipeline' in action:
                 raise ElmConfigError('Expected a sample_pipeline key in pipeline action {}'.format(action))
-            action['sample_pipeline'] = self._get_sample_pipeline(self.raw_config, action)
+            sample_pipeline = action['sample_pipeline']
+            if not isinstance(sample_pipeline, (list, tuple)):
+                sample_pipeline = self.sample_pipelines[sample_pipeline]
+                action['sample_pipeline'] = sample_pipeline
             data_source = action.get('data_source') or ''
             if not data_source in self.data_sources:
                 raise ElmConfigError('Expected a data_source key in pipeline action {}'.format(action))

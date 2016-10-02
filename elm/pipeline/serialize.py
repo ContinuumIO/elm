@@ -56,7 +56,7 @@ def dump(data, path):
     joblib.dump(data, path)
 
 
-def save_models_with_meta(models, elm_train_path, tag, meta):
+def save_models(models, elm_train_path, tag, **meta):
     logger.debug('Save models at {} with tag {}'.format(elm_train_path, tag))
     mkdir_p(elm_train_path)
     paths = get_paths_for_tag(elm_train_path, tag,
@@ -129,7 +129,13 @@ def get_file_name(base, tag, bounds):
 
 
 def predict_file_name(elm_predict_path, tag, bounds):
-    return get_file_name(elm_predict_path, tag, bounds)
+    fmt = '{:0.4f}_{:0.4f}_{:0.4f}_{:0.4f}'
+    return os.path.join(elm_predict_path,
+                        tag,
+                        fmt.format(bounds.left,
+                                   bounds.bottom,
+                                   bounds.right,
+                                   bounds.top))
 
 
 def transform_file_name(elm_transform_path, tag, bounds):
@@ -141,10 +147,24 @@ def serialize_models(models, **ensemble_kwargs):
         saved_models = models[:ensemble_kwargs['saved_ensemble_size']]
     else:
         saved_models = models
-    model_paths, meta_path = save_models_with_meta(saved_models,
+    model_paths, meta_path = save_models(saved_models,
                                  ensemble_kwargs['base_output_dir'],
-                                 ensemble_kwargs['tag'],
-                                 ensemble_kwargs['config'])
+                                 ensemble_kwargs['tag'])
     logger.info('Created model pickles: {} '
                 'and meta pickle {}'.format(model_paths, meta_path))
     return models
+
+
+def serialize_prediction(config, prediction, sample, tag):
+    if not config:
+        root = parse_env_vars()['ELM_PREDICT_PATH']
+    else:
+        root = config.ELM_PREDICT_PATH
+    for band in sample.data_vars:
+        band_arr = getattr(sample, band)
+        fname = predict_file_name(root,
+                                  tag,
+                                  getattr(band_arr, 'canvas', getattr(sample, 'canvas')).bounds)
+        predict_to_netcdf(prediction, fname)
+        predict_to_pickle(prediction, fname)
+    return True

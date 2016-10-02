@@ -193,6 +193,7 @@ def remove_pipeline_transforms(config):
                                             if not 'transform' in _]
 
     for item in config['pipeline']:
+        sp = item.get('sample_pipeline')
         item['sample_pipeline'] = [_ for _ in item['sample_pipeline']
-                                   if not 'transform' in _]
+                                       if not 'transform' in _]
 

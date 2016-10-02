@@ -14,6 +14,8 @@ from elm.sample_util.change_coords import (change_coords_action,
                                            CHANGE_COORDS_ACTIONS)
 from elm.sample_util.filename_selection import get_generated_args
 from elm.readers.util import row_col_to_xy
+from elm.readers import load_meta, load_array
+
 
 logger = logging.getLogger(__name__)
 
@@ -77,27 +79,17 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
         transform_model: An example:
                              [('tag_0', PCA(.....))]
     '''
-
     check_action_data(action_data)
-    if sample is not None:
-        if len(action_data) == 1:
-            return sample
-        start_idx = 1
-    else:
-        start_idx = 0
-    for action in action_data[start_idx:]:
+    for action in action_data:
         sample_pipeline_step, func_str, args, kwargs = action
         kwargs = kwargs.copy()
         kwargs['sample_y'] = sample_y
         kwargs['sample_weight'] = sample_weight
         logger.debug('On sample_pipeline step: {}'.format(sample_pipeline_step))
-        if func_str.endswith('transform_sample_pipeline_step'):
-            logger.debug('transform sample_pipeline step')
-            samp_pipeline_step = args[0]
-            args = tuple(args) + (transform_model,)
         func = import_callable(func_str, True, func_str)
         func_out = None
-        if sample is None:
+
+        if 'create_sample' in sample_pipeline_step and sample is None:
             logger.debug('sample create sample_pipeline step')
             required_args, default_kwargs, var_keyword = get_args_kwargs_defaults(func)
             kwargs = {k: v for k,v in kwargs.items() if k not in required_args}
@@ -106,21 +98,26 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
             sample, sample_y, sample_weight = _split_pipeline_output(output,
                                                sample, sample_y,
                                                sample_weight, repr(func))
-        elif 'get_y' in args:
+        elif 'create_sample' in sample_pipeline_step:
+            continue
+        elif 'transform' in sample_pipeline_step:
+            logger.debug('transform sample_pipeline step')
+            args = tuple(args) + (transform_model,)
+        elif 'get_y' in sample_pipeline_step:
             logger.debug('get_y sample_pipeline step')
             sample_y = func(sample, **kwargs)
             check_array(sample_y,
                         'get_y_func called on "sample", **{}'.format(kwargs),
                         ensure_2d=False)
             logger.debug('Defined sample_y with shape {}'.format(sample_y.shape))
-        elif 'get_weight' in args:
+        elif 'get_weight' in sample_pipeline_step:
             logger.debug('get_weight sample_pipeline step')
             sample_weight = func(sample, sample_y, **kwargs)
             check_array(sample_weight,
                         'get_weight_func called on (sample, sample_y, **{}'.format(kwargs),
                         ensure_2d=False)
             logger.debug('Defined sample_weight with shape {}'.format(sample_weight.shape))
-        elif func_str.endswith('feature_selection_base'):
+        elif 'feature_selection' in sample_pipeline_step:
             logger.debug('feature_selection sample_pipeline step')
             kw = copy.deepcopy(kwargs)
             kw['sample_y'] = sample_y
@@ -139,8 +136,8 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
     return (sample, sample_y, sample_weight)
 
 
-def get_sample_pipeline_action_data(config, step,
-                                    data_source, sample_pipeline):
+def get_sample_pipeline_action_data(sample_pipeline, config=None, step=None,
+                                    data_source=None, **sample_pipeline_kwargs):
     '''Given sampling specs in a pipeline train or predict step,
     return action_data, a list of (func, args, kwargs) actions
 
@@ -162,20 +159,24 @@ def get_sample_pipeline_action_data(config, step,
         sampler_args = (band_specs,) + tuple(sampler_args)
     reader_name = data_source.get('reader') or None
     if reader_name:
-        reader = config.readers[reader_name]
-        load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
-        load_array = import_callable(reader['load_array'], True, reader['load_array'])
+        if config and reader_name in config.readers:
+            reader = config.readers[reader_name]
+        elif isinstance(reader_name, dict):
+            reader = reader_name
+        _load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
+        _load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:
-        reader = load_array = load_meta = None
-    data_source['load_meta'] = load_meta
-    data_source['load_array'] = load_array
+        _load_array = load_array
+        _load_meta = load_meta
+    data_source['load_meta'] = _load_meta
+    data_source['load_array'] = _load_array
     for k in data_source:
         if '_filter' in k and data_source[k] and k != 'geo_filters':
             data_source[k] = import_callable(data_source[k])
     kw = {k: v for k, v in data_source.items() if not k in ('band_specs',)}
     sample_args_generator = data_source.get('sample_args_generator') or None
     if sample_args_generator:
-        if isinstance(sample_args_generator, (tuple, str)) and sample_args_generator in config.sample_args_generators:
+        if isinstance(sample_args_generator, (tuple, str)) and config and sample_args_generator in config.sample_args_generators:
             sample_args_generator = import_callable(config.sample_args_generators[sample_args_generator])
         else:
             sample_args_generator = import_callable(sample_args_generator)
@@ -189,46 +190,73 @@ def get_sample_pipeline_action_data(config, step,
                                           for _ in range(data_source.get('n_batches') or 1)]
 
     action_data = [('create_sample', sampler_func, sampler_args, data_source)]
-
-    sample_pipeline = sample_pipeline or step.get('sample_pipeline')
-    if sample_pipeline:
-        actions = make_sample_pipeline_func(config, step,
-                                            sample_pipeline=sample_pipeline,
-                                            data_source=data_source)
-        action_data.extend(actions)
+    actions = make_sample_pipeline_func(config=config, step=step,
+                                        sample_pipeline=sample_pipeline,
+                                        data_source=data_source,
+                                        **sample_pipeline_kwargs)
+    action_data.extend(actions)
     return tuple(action_data)
 
-def make_sample_pipeline_func(config, step, sample_pipeline=None, data_source=None):
+def make_sample_pipeline_func(config=None,
+                              step=None,
+                              sample_pipeline=None,
+                              data_source=None,
+                              feature_selection=None,
+                              transform_dict=None,
+                              sklearn_preprocessing=None,
+                              **kwargs):
     '''Make list of (func, args, kwargs) tuples to run sample_pipeline
     Params:
         config: validated config from elm.config.ConfigParser
         step:   a dictionary that is one step of a "pipeline" list
     '''
 
-    sample_pipeline = sample_pipeline or ConfigParser._get_sample_pipeline(config, step)
     actions = []
-    for action in sample_pipeline:
+    for action_idx, action in enumerate(sample_pipeline):
         if 'feature_selection' in action:
-
-            keep_columns = copy.deepcopy(data_source.get('keep_columns') or [])
+            if feature_selection is None and config:
+                _feature_selection = copy.deepcopy(config.feature_selection[action['feature_selection']])
+            elif feature_selection is None:
+                raise ValueError('Expected "feature_selection" or "config"')
+            elif action['feature_selection'] in feature_selection:
+                _feature_selection = feature_selection[action['feature_selection']]
+            else:
+                _feature_selection = feature_selection
+            keep_columns = copy.deepcopy(data_source.get('keep_columns', feature_selection.get('keep_columns')) or [])
             item = ('elm.sample_util.feature_selection:feature_selection_base',
-                    (copy.deepcopy(config.feature_selection[action['feature_selection']]),),
+                    (_feature_selection,),
                     {'keep_columns': keep_columns})
         elif 'random_sample' in action:
             item = ('elm.sample_util.random_rows:random_rows',
                     (action['random_sample'],),
                     {})
         elif 'transform' in action:
+            if transform_dict:
+                if action['transform'] in transform_dict:
+                    trans = transform_dict[action['transform']]
+                else:
+                    trans = transform_dict
+            elif config:
+                trans = config.transform[action['transform']]
+            else:
+                trans = {}
             item = ('elm.pipeline.transform:transform_sample_pipeline_step',
                     (action, config),
-                    config.transform[action['transform']])
+                     trans)
 
         elif 'sklearn_preprocessing' in action:
-            scaler_kwargs = config.sklearn_preprocessing[action['sklearn_preprocessing']]
-            scaler = scaler_kwargs['method']
+            if sklearn_preprocessing is None and config:
+                _sklearn_preprocessing = config.sklearn_preprocessing[action['sklearn_preprocessing']]
+            elif sklearn_preprocessing is None:
+                raise ValueError('Expected "config" if not giving "sklearn_preprocessing"')
+            elif action['sklearn_preprocessing'] in sklearn_preprocessing:
+                _sklearn_preprocessing = sklearn_preprocessing[action['sklearn_preprocessing']]
+            else:
+                _sklearn_preprocessing = sklearn_preprocessing
+            scaler = _sklearn_preprocessing['method']
             item = ('elm.sample_util.encoding_scaling:sklearn_preprocessing',
                     (scaler,),
-                    scaler_kwargs)
+                    _sklearn_preprocessing)
         elif 'get_y' in action:
             func = data_source['get_y_func']
             args = ('get_y',)
@@ -240,7 +268,7 @@ def make_sample_pipeline_func(config, step, sample_pipeline=None, data_source=No
             kwargs = data_source.get('get_weight_kwargs') or {}
             item = (func, args, kwargs)
         elif any(k in CHANGE_COORDS_ACTIONS for k in action):
-            func, args, kwargs = change_coords_action(config, step, action)
+            func, args, kwargs = change_coords_action(action)
             item = (func, args, kwargs)
         else:
             # add items to actions of the form:
@@ -269,6 +297,7 @@ def check_array(arr, msg, **kwargs):
                     '{}'.format(shp))
 
         raise ValueError('check_array ({}) failed with {}'.format(msg, repr(e)))
+
 
 def _has_arg(a):
     return not (a is None or a == [] or (hasattr(a, 'size') and a.size == 0))

@@ -517,8 +517,8 @@ def _get_evolve_meta(config):
     '''Returns parsed param_grids info or None if not used'''
     param_grid_name_to_deap = {}
     step_name_to_param_grid_name = {}
-    for idx, step1 in enumerate(config.pipeline):
-        for step in step1['steps']:
+    for step1 in config.pipeline:
+        for idx, step in enumerate(step1['steps']):
             pg = get_param_grid(config, step1, step)
             if pg:
                 param_grid_name_to_deap.update(pg)

@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 def ensemble(client,
              model_args,
              transform_model,
-             sample_pipeline_info,
+             sample_pipeline,
+             data_source,
+             samples_per_batch=1,
+             config=None,
+             sample_pipeline_kwargs=None,
              **ensemble_kwargs):
 
     '''Train model(s) in ensemble
@@ -44,7 +48,6 @@ def ensemble(client,
         map_function = client.map
     else:
         map_function = map
-    (config, sample_pipeline, data_source, transform_model, samples_per_batch) = sample_pipeline_info
     n_batches = data_source.get('n_batches') or 1
     get_results = partial(wait_for_futures, client=client)
     model_selection_kwargs = model_args.model_selection_kwargs or {}
@@ -66,8 +69,11 @@ def ensemble(client,
     final_names = []
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     for gen in range(ngen):
-        models = run_train_dask(sample_pipeline_info, models,
+        models = run_train_dask(config, sample_pipeline, data_source,
+                                transform_model,
+                                samples_per_batch, models,
                                 gen, fit_kwargs,
+                                sample_pipeline_kwargs=sample_pipeline_kwargs,
                                 get_func=get_func)
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,
@@ -80,6 +86,8 @@ def ensemble(client,
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing
                  # the model params
+    if not ensemble_kwargs.get('tag'):
+        ensemble_kwargs['tag'] = model_args.step_name
     serialize_models(models, **ensemble_kwargs)
     return models
 

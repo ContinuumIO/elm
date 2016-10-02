@@ -10,15 +10,13 @@ import numpy as np
 import xarray as xr
 
 
-from elm.config import import_callable
+from elm.config import import_callable, parse_env_vars
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.dask_settings import (wait_for_futures,
                                         no_client_submit)
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
-from elm.pipeline.serialize import (predict_to_netcdf,
-                                    predict_to_pickle,
-                                    load_models_from_tag,
-                                    predict_file_name)
+from elm.pipeline.serialize import (load_models_from_tag,
+                                    serialize_prediction)
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.readers import (flatten,
                          inverse_flatten,
@@ -36,26 +34,20 @@ def _next_name():
     return n
 
 
-def predict_file_name(elm_predict_path, tag, bounds):
-    fmt = '{:0.4f}_{:0.4f}_{:0.4f}_{:0.4f}'
-    return os.path.join(elm_predict_path,
-                        tag,
-                        fmt.format(bounds.left,
-                                   bounds.bottom,
-                                   bounds.right,
-                                   bounds.top))
 
 
 def _predict_one_sample(action_data, serialize, model,
-                        return_serialized=True, to_cube=True,
-                        sample=None, transform_model=None, canvas=None):
-    # TODO: control to_cube from config
+                        to_cube=True,
+                        sample=None,
+                        transform_model=None,
+                        canvas=None):
 
     name, model = model
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                  sample=sample,
                                  transform_model=transform_model)
-    assert hasattr(sample, 'flat')
+    if not hasattr(sample, 'flat'):
+        raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
     canvas = canvas or sample.canvas
     prediction = model.predict(sample.flat.values)
     if prediction.ndim == 1:
@@ -70,7 +62,6 @@ def _predict_one_sample(action_data, serialize, model,
 
     attrs = copy.deepcopy(sample.attrs)
     attrs.update(copy.deepcopy(sample.flat.attrs))
-    assert 'canvas' in attrs
     attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
     prediction = ElmStore({'flat': xr.DataArray(prediction,
                                      coords=[('space', sample.flat.space),
@@ -82,9 +73,9 @@ def _predict_one_sample(action_data, serialize, model,
         new_es = inverse_flatten(prediction)
     else:
         new_es = prediction
-    if return_serialized:
-        return serialize(new_es, sample)
-    return prediction
+    if serialize:
+        return serialize(new_es, sample, tag)
+    return new_es
 
 
 def _predict_one_sample_one_arg(action_data,
@@ -103,25 +94,19 @@ def _predict_one_sample_one_arg(action_data,
                                transform_model=transform_model)
 
 
-def _default_serialize(tag, config, prediction, sample):
-    for band in sample.data_vars:
-        band_arr = getattr(sample, band)
-        fname = predict_file_name(config.ELM_PREDICT_PATH,
-                                  tag,
-                                  getattr(band_arr, 'canvas', getattr(sample, 'canvas')).bounds)
-        predict_to_netcdf(prediction, fname)
-        predict_to_pickle(prediction, fname)
-    return True
-
-
-def predict_step(config, step, client,
-                 sample_pipeline_info=None,
+def predict_step(sample_pipeline,
+                 data_source,
+                 config=None,
+                 step=None,
+                 client=None,
+                 samples_per_batch=1,
                  models=None,
-                 serialize=None,
+                 serialize=serialize_prediction,
                  to_cube=True,
-                 transform_model=None):
-    (config, sample_pipeline, data_source,
-     transform_model, samples_per_batch) = sample_pipeline_info
+                 transform_model=None,
+                 transform_dict=None,
+                 tag=None,
+                 **sample_pipeline_kwargs):
     if hasattr(client, 'map'):
         map_function = client.map
     else:
@@ -131,13 +116,15 @@ def predict_step(config, step, client,
     else:
         submit_func = no_client_submit
     get_results = partial(wait_for_futures, client=client)
-    action_data = get_sample_pipeline_action_data(config, step,
-                                    data_source, sample_pipeline)
+    action_data = get_sample_pipeline_action_data(sample_pipeline,
+                                                  config=config, step=step,
+                                                  data_source=data_source,
+                                                  **sample_pipeline_kwargs)
     sampler_kwargs = action_data[0][-1]
 
-    tag = step['predict']
-    if serialize is None:
-        serialize = partial(_default_serialize, tag, config)
+    tag = tag or step['predict']
+    if serialize == serialize_prediction:
+        serialize = partial(serialize, config)
     if models is None:
         logger.info('Load pickled models from {} {}'.format(config.ELM_TRAIN_PATH, tag))
         models, meta = load_models_from_tag(config.ELM_TRAIN_PATH,

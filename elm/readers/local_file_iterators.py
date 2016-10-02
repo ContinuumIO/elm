@@ -5,7 +5,7 @@ import re
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['VIIRS_L2_PATTERN', 'get_all_filenames_for_product'
+__all__ = ['VIIRS_L2_PATTERN', 'get_all_filenames_for_product',
            'iter_files_recursively', 'iter_dirs_of_dirs']
 
 def VIIRS_L2_PATTERN(product_number, product_name, yr, data_day):

@@ -14,10 +14,19 @@ logger = logging.getLogger(__name__)
 
 
 def _train_or_transform_step(train_or_transform,
-                             config,
-                             step,
-                             client,
-                             **kwargs):
+                             sample_pipeline,
+                             data_source,
+                             config=None,
+                             step=None,
+                             train_dict=None,
+                             transform_model=None,
+                             transform_dict=None,
+                             client=None,
+                             model_args=None,
+                             ensemble_kwargs=None,
+                             evo_params=None,
+                             samples_per_batch=1,
+                             **sample_pipeline_kwargs):
     '''Evaluate a "train" step in a config's "pipeline"
 
     Params:
@@ -30,36 +39,51 @@ def _train_or_transform_step(train_or_transform,
         models: the fitted models in the ensemble
     '''
     from elm.pipeline.transform import get_new_or_saved_transform_model
-    (_, sample_pipeline, data_source, transform_model, samples_per_batch) = kwargs['sample_pipeline_info']
-    evo_params = kwargs.get('evo_params') or None
-    model_args, ensemble_kwargs = make_model_args_from_config(config,
-                                                              step,
-                                                              train_or_transform,
-                                                              sample_pipeline,
-                                                              data_source)
-    sample_pipeline_info = kwargs.get('sample_pipeline_info') or None
-    if not sample_pipeline_info:
-        raise ValueError('Expected sample_pipeline_info')
-    transform_model = kwargs.get('transform_model') or None
-
-    if transform_model is None:
+    if not train_dict and (not config or not step):
+        raise ValueError("Expected 'train_dict' and 'transform_dict' or 'config' and 'step'")
+    evo_params = evo_params or None
+    transform_model = transform_model or None
+    ensemble_kwargs = ensemble_kwargs or {}
+    sample_pipeline_kwargs['transform_dict'] = transform_dict
+    sample_pipeline_kwargs['transform_model'] = transform_model
+    model_args2, ensemble_kwargs2 = make_model_args_from_config(train_or_transform,
+                                                                sample_pipeline,
+                                                                data_source,
+                                                                config=config,
+                                                                step=step,
+                                                                train_dict=train_dict,
+                                                                ensemble_kwargs=ensemble_kwargs,
+                                                                **sample_pipeline_kwargs)
+    if not model_args:
+        model_args = model_args2
+    ensemble_kwargs.update(ensemble_kwargs2)
+    if transform_model is None and config and step:
         transform_model = get_new_or_saved_transform_model(config,
                                                            sample_pipeline,
                                                            data_source,
                                                            step)
+
     if evo_params is not None:
         args = (client,
                 step,
                 evo_params,
-                kwargs.get('transform_model') or None,
-                sample_pipeline_info,)
+                config,
+                sample_pipeline,
+                data_source,
+                transform_model,
+                samples_per_batch,)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
+
     models = ensemble(client,
                       model_args,
                       transform_model,
-                      sample_pipeline_info,
+                      sample_pipeline,
+                      data_source,
+                      samples_per_batch=samples_per_batch,
+                      config=config,
+                      sample_pipeline_kwargs=sample_pipeline_kwargs,
                       **ensemble_kwargs)
     return models
 

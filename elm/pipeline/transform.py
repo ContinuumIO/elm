@@ -21,7 +21,6 @@ def transform_pipeline_step(*args, **kwargs):
 
 def transform_sample_pipeline_step(sample_x,
                                    action,
-                                   config,
                                    transform_models,
                                    **kwargs):
 
@@ -29,8 +28,6 @@ def transform_sample_pipeline_step(sample_x,
     t = action['transform']
     method = action.get('method', 'fit_transform')
     logger.debug('Transform with method {} and model {}'.format(method, repr(transform_model)))
-    transform = config.transform[t]
-    logger.debug('transform config {}'.format(transform))
     output =  getattr(transform_model, method)(sample_x.flat.values)
     dims = ('space', 'band')
     components = np.array(['c_{}'.format(idx) for idx in range(output.shape[1])])

@@ -8,7 +8,6 @@ import re
 
 from elm.readers.util import BandSpec
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.sample_util.util import InvalidSample
 
 logger = logging.getLogger(__name__)
 
