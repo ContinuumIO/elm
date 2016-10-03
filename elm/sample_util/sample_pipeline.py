@@ -222,7 +222,9 @@ def make_sample_pipeline_func(config=None,
                 _feature_selection = feature_selection[action['feature_selection']]
             else:
                 _feature_selection = feature_selection
-            keep_columns = copy.deepcopy(data_source.get('keep_columns', feature_selection.get('keep_columns')) or [])
+            keep_columns = _feature_selection.get('keep_columns')
+            if not keep_columns and data_source:
+                keep_columns = data_source.get('keep_columns', [])
             item = ('elm.sample_util.feature_selection:feature_selection_base',
                     (_feature_selection,),
                     {'keep_columns': keep_columns})

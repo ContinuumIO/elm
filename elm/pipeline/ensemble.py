@@ -86,8 +86,6 @@ def ensemble(client,
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing
                  # the model params
-    if not ensemble_kwargs.get('tag'):
-        ensemble_kwargs['tag'] = model_args.step_name
     serialize_models(models, **ensemble_kwargs)
     return models
 

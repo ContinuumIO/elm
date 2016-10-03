@@ -37,6 +37,7 @@ def _next_name():
 
 
 def _predict_one_sample(action_data, serialize, model,
+                        tag=None,
                         to_cube=True,
                         sample=None,
                         transform_model=None,
@@ -82,6 +83,7 @@ def _predict_one_sample_one_arg(action_data,
                                 transform_model,
                                 serialize,
                                 to_cube,
+                                tag,
                                 model,
                                 filename):
     logger.info('Predict {}'.format(filename))
@@ -90,6 +92,7 @@ def _predict_one_sample_one_arg(action_data,
     return _predict_one_sample(action_data_copy,
                                serialize,
                                model,
+                               tag=tag,
                                to_cube=to_cube,
                                transform_model=transform_model)
 
@@ -123,6 +126,8 @@ def predict_step(sample_pipeline,
     sampler_kwargs = action_data[0][-1]
 
     tag = tag or step['predict']
+    if config and not serialize:
+        serialize = serialize_prediction
     if serialize == serialize_prediction:
         serialize = partial(serialize, config)
     if models is None:
@@ -143,6 +148,7 @@ def predict_step(sample_pipeline,
                              transform_model,
                              serialize,
                              to_cube,
+                             tag,
                              model,
                              filename)
 

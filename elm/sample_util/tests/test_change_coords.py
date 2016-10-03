@@ -14,8 +14,7 @@ data_source = {'sample_from_args_func': random_elm_store,
                'attrs': {}}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
-         'data_source': 'synthetic',
-         'ensemble': 'ex3'}
+         'output_tag': 'kmeans'}
 
 transform = {'model_init_class': 'sklearn.decomposition:PCA',
              'data_source': 'synthetic',
@@ -48,14 +47,13 @@ def tst_one_sample_pipeline(sample_pipeline, add_na_per_band=0):
             band_arr.attrs['valid-range'] = [-1e12, 1e12]
 
             assert val[np.isnan(val)].size == 0
-    config = {'data_sources': {'synthetic': data_source},
-              'ensembles': {'ex3': {'saved_ensemble_size': 1}},
-              'train': {'ex1': train},
-              'transform': {'ex2': transform},
-              'pipeline': make_pipeline(sample_pipeline, data_source)}
-    config = ConfigParser(config=config)
-    ma, _ = make_model_args_from_config(config, config.pipeline[0]['steps'][0], 'train',
-                                        sample_pipeline, data_source)
+    ensemble_kwargs ={'saved_ensemble_size': 1, 'init_ensemble_size': 1}
+    ma, _ = make_model_args_from_config('train',
+                                sample_pipeline,
+                                data_source,
+                                train_dict=train,
+                                ensemble_kwargs=ensemble_kwargs,
+                                transform_dict=transform)
     action_data = ma.fit_args[0]
     transform_model = [('tag_0', PCA(n_components=n_components))]
     new_es, _, _ = run_sample_pipeline(action_data,

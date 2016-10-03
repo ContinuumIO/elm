@@ -46,6 +46,13 @@ def _train_or_transform_step(train_or_transform,
     ensemble_kwargs = ensemble_kwargs or {}
     sample_pipeline_kwargs['transform_dict'] = transform_dict
     sample_pipeline_kwargs['transform_model'] = transform_model
+    if not ensemble_kwargs and config and step:
+        t = getattr(config, train_or_transform)[step[train_or_transform]]
+        e = t.get('ensemble')
+        if isinstance(e, dict):
+            ensemble_kwargs = e
+        else:
+            ensemble_kwargs = config.ensembles[e]
     model_args2, ensemble_kwargs2 = make_model_args_from_config(train_or_transform,
                                                                 sample_pipeline,
                                                                 data_source,
@@ -63,6 +70,9 @@ def _train_or_transform_step(train_or_transform,
                                                            data_source,
                                                            step)
 
+    if not ensemble_kwargs.get('tag'):
+        ensemble_kwargs['tag'] = model_args.step_name
+
     if evo_params is not None:
         args = (client,
                 step,
@@ -71,7 +81,8 @@ def _train_or_transform_step(train_or_transform,
                 sample_pipeline,
                 data_source,
                 transform_model,
-                samples_per_batch,)
+                samples_per_batch,
+                sample_pipeline_kwargs)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)

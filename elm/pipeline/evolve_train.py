@@ -29,6 +29,7 @@ def on_each_generation(individual_to_new_config,
                        step,
                        train_or_transform,
                        ensemble_kwargs,
+                       sample_pipeline_kwargs,
                        gen,
                        invalid_ind):
     '''Returns model, fit args, fit kwargs for Individual
@@ -52,27 +53,25 @@ def on_each_generation(individual_to_new_config,
         tuple of (args, kwargs) that go to elm.pipeline.run_model_method:run_model_method
     '''
     from elm.config.dask_settings import get_func
-    sample_pipeline_info = (config, sample_pipeline, data_source,
-                            transform_model, samples_per_batch)
-    sample_pipeline_infos = []
     new_models = []
     fit_kwargs = []
     for idx, ind in enumerate(invalid_ind):
         new_config = individual_to_new_config(ind)
-        spi = (new_config,) +  sample_pipeline_info[1:]
-        model_args, _ = make_model_args_from_config(new_config,
-                                                step,
-                                                train_or_transform,
-                                                sample_pipeline,
-                                                data_source)
+        model_args, _ = make_model_args_from_config(train_or_transform,
+                                                    sample_pipeline,
+                                                    data_source,
+                                                    config=new_config,
+                                                    step=step,
+                                                    ensemble_kwargs=ensemble_kwargs,
+                                                    **sample_pipeline_kwargs)
         fit_kwargs.append(_prepare_fit_kwargs(model_args,
                                          ensemble_kwargs))
         model_init_kwargs = model_args.model_init_kwargs or {}
         model = import_callable(model_args.model_init_class)(**model_init_kwargs)
         new_models.append((ind.name, model))
-
-    models = run_train_dask(*sample_pipeline_info,
-                   new_models, gen, fit_kwargs,
+    models = run_train_dask(config, sample_pipeline, data_source,
+                   transform_model, samples_per_batch, new_models,
+                   gen, fit_kwargs, sample_pipeline_kwargs=sample_pipeline_kwargs,
                    get_func=get_func)
     fitnesses = [model._score for name, model in models]
     fitnesses = [(item if isinstance(item, Sequence) else [item])
@@ -89,6 +88,7 @@ def _evolve_train_or_transform(train_or_transform,
                                data_source,
                                transform_model,
                                samples_per_batch,
+                               sample_pipeline_kwargs,
                                **ensemble_kwargs):
 
 
@@ -96,13 +96,15 @@ def _evolve_train_or_transform(train_or_transform,
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
     evo_args = [evo_params,]
+    sample_pipeline_kwargs = sample_pipeline_kwargs or {}
     fit_one_generation = partial(on_each_generation,
                                  evo_params.individual_to_new_config,
                                  config, sample_pipeline, data_source,
                                  transform_model, samples_per_batch,
                                  step,
                                  train_or_transform,
-                                 ensemble_kwargs)
+                                 ensemble_kwargs,
+                                 sample_pipeline_kwargs)
 
     try:
         param_history = []

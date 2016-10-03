@@ -79,14 +79,21 @@ def _make_model_args_from_config(config, train_or_trans_dict,
     }
     model_selection = train_or_trans_dict.get('model_selection') or None
     if model_selection:
-        if isinstance(model_selection, str) and model_selection not in ('no_selection', None):
-            model_selection = config.model_selection[model_selection]
-        model_selection_kwargs = copy.deepcopy(model_selection.get('kwargs') or {}) or {}
-        model_selection_kwargs.update({
-            'model_init_class': model_init_class,
-            'model_init_kwargs': model_init_kwargs,
-        })
-        model_selection_func = model_selection['func']
+        if isinstance(model_selection, str):
+            if model_selection == 'no_selection':
+                model_selection = None
+            else:
+                model_selection = config.model_selection[model_selection]
+        if model_selection:
+            model_selection_kwargs = copy.deepcopy(model_selection.get('kwargs') or {}) or {}
+            model_selection_kwargs.update({
+                'model_init_class': model_init_class,
+                'model_init_kwargs': model_init_kwargs,
+            })
+            model_selection_func = model_selection['func']
+        else:
+            model_selection_func = 'no_selection'
+            model_selection_kwargs = {}
     else:
         model_selection_func = 'no_selection'
         model_selection_kwargs = {}
