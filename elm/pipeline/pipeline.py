@@ -34,7 +34,7 @@ def _create_args_to_each_step(config, major_step,
         random_rows_per_file = random_rows // samples_per_batch
     else:
         random_rows_per_file = None
-    sample_pipeline = ConfigParser._get_sample_pipeline(config, major_step)
+    sample_pipeline = major_step['sample_pipeline']
     if sample_pipeline and not 'random_rows' in sample_pipeline[-1]:
         if random_rows_per_file:
             sample_pipeline = sample_pipeline + [{'random_rows': random_rows_per_file}]
@@ -57,18 +57,41 @@ def _create_args_to_each_step(config, major_step,
 
 def on_step(*args, **kwargs):
     '''Evaluate a step in the pipeline'''
-    step = args[1]
+    config, step, client = args
+    sample_pipeline_info = kwargs['sample_pipeline_info']
+    (_, sample_pipeline, data_source,
+     transform_model,
+     samples_per_batch) = sample_pipeline_info
+    if 'transform' in step or 'train' in step:
+        args2 = (sample_pipeline, data_source,)
+        kwargs2 = dict(config=config,
+                       step=step,
+                       client=client,
+                       evo_params=kwargs.get('evo_params') or None,
+                       samples_per_batch=samples_per_batch)
+    elif 'predict'in step:
+        args2 = (sample_pipeline, data_source,)
+        kwargs2 = dict(config=config,
+                         step=step,
+                         client=client,
+                         transform_model=transform_model,
+                         samples_per_batch=samples_per_batch,
+                         models=kwargs['models'],
+                         serialize=None, # arg not handled yet
+                         to_cube=True)
     if 'transform' in step:
-        return ('transform', transform_pipeline_step(*args, **kwargs))
+        return ('transform', transform_pipeline_step(*args2, **kwargs2))
     elif 'train' in step:
-        return ('train', train_step(*args, **kwargs))
+        return ('train', train_step(*args2, **kwargs2))
     elif 'predict' in step:
-        return ('predict', predict_step(*args, **kwargs))
+        return ('predict', predict_step(*args2, **kwargs2))
     else:
         raise NotImplementedError('Put other operations like "change_detection" here')
 
 
-def _run_steps(return_values, transform_dict, evo_params_dict, client, steps, config, sample_pipeline_info):
+def _run_steps(return_values, transform_dict, evo_params_dict,
+              client, steps, config, sample_pipeline_info,
+              step_num=0):
     '''Run the "steps" within a sample_pipeline dict's "steps"'''
 
     for idx, step in enumerate(steps):
@@ -91,11 +114,13 @@ def _run_steps(return_values, transform_dict, evo_params_dict, client, steps, co
         else:
             transform_model = None
 
-        kwargs = {'models': models,
-                  'transform_model': transform_model,
-                  'sample_pipeline_info': sample_pipeline_info}
-        if idx in evo_params_dict:
-            kwargs['evo_params'] = evo_params_dict[idx]
+        kwargs = {'transform_model': transform_model,
+                  'sample_pipeline_info': sample_pipeline_info,}
+        if 'predict' in step:
+            kwargs['models'] = models
+
+        if (step_num, idx) in evo_params_dict:
+            kwargs['evo_params'] = evo_params_dict[(step_num, idx)]
         step_type, ret_val = on_step(config, step, client, **kwargs)
         return_values[step_type][step[step_type]] = ret_val
         if step_type == 'transform':
@@ -119,7 +144,7 @@ def pipeline(config, client):
         rargs = (return_values, transform_dict, evo_params_dict,
                  client, step['steps'], config,
                  sample_pipeline_info)
-        return_values, transform_dict = _run_steps(*rargs)
+        return_values, transform_dict = _run_steps(*rargs, step_num=idx)
     return return_values
 
 

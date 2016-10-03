@@ -8,7 +8,6 @@ import re
 
 from elm.readers.util import BandSpec
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.sample_util.util import InvalidSample
 
 logger = logging.getLogger(__name__)
 
@@ -39,9 +38,11 @@ def _select_from_file_base(filename,
                          **kwargs):
     from elm.sample_util.geo_selection import _filter_band_data
     from elm.sample_util.filename_selection import _filename_filter
+
     keep_file = _filename_filter(filename,
                                  search=filename_search,
                                  func=filename_filter)
+    logger.debug('filename {} keep_file {}'.format(filename, keep_file))
     args_required, default_kwargs, _ = get_args_kwargs_defaults(load_meta)
     if len(args_required) == 1 and not 'band_specs' in default_kwargs:
         meta = load_meta(filename)

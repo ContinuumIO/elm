@@ -14,7 +14,7 @@ EXPECTED_SELECTION_KEYS = ('exclude_polys',
                            'include_polys',
                            'metadata_filter',
                            'data_filter',
-                           'geo_filters')
+                            'geo_filters')
 
 DEFAULTS2 = ConfigParser(config=DEFAULTS)
 
@@ -23,19 +23,27 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
     with patch_ensemble_predict() as (elmtrain, elmpredict):
         config = ConfigParser(config=DEFAULTS)
         transform_model = None
-        sample_pipeline_info = (config,
-                                [{'flatten': 'C'}],
-                                ds_dict,
-                                transform_model,
-                                1)
         for step1 in config.pipeline:
             for step in step1['steps']:
                 if 'train' in step:
                     break
         train_dict = config.train[step['train']]
-        args, kwargs = elmtrain.train_step(config, step, None,
-                                           sample_pipeline_info=sample_pipeline_info)
-        (client, model_args, transform_model, sample_pipeline_info) = args
+        args, kwargs = elmtrain.train_step([{'flatten': 'C'}],
+                                             ds_dict,
+                                             config=config,
+                                             step=step,
+                                             client=None,
+                                             model_args=None,
+                                             ensemble_kwargs=None,
+                                             transform_model=transform_model,
+                                             evo_params=None,
+                                             samples_per_batch=1,
+                                             )
+        (client,
+         model_args,
+         transform_model,
+         sample_pipeline,
+         data_source) = args
         for k, v in config.ensembles[train_dict['ensemble']].items():
             assert kwargs[k] == v
         (model_init_class,

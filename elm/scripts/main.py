@@ -79,7 +79,7 @@ def run_one_config(args=None, sys_argv=None,
 
 
 def _run_one_config_of_many(fname, **kwargs):
-    print('Run config', fname)
+    logger.info('Run config {}'.format(fname))
     args = copy.deepcopy(kwargs['args'])
     args.config = fname
     args.config_dir = None

@@ -154,7 +154,7 @@ def _make_cfg_replace_keys(train_config, transform_config,
             d = config.config
             for key in k:
                 if not key in d:
-                    raise ElmConfigError('Given param_grid spec {}, expected {} in {}'.format(k, key, d))
+                    raise ElmConfigError('Given param_grid spec {}, expected {} in config'.format(k, key))
                 d = d[key]
             return (k, v)
     return make_cfg_replace_keys
@@ -259,7 +259,6 @@ def get_param_grid(config, step1, step):
                                         make_cfg_replace_keys,
                                         param_grid)
     param_grid['control']['step'] = step
-    assert all(isinstance(v, list) for k, v in param_grid.items() if k != 'control'), (repr(param_grid))
     if not 'control' in param_grid:
         raise ValueError('Expected a control dict in param_grid:{}'.format(param_grid_name))
     return {param_grid_name: _to_param_meta(param_grid)}
@@ -518,12 +517,12 @@ def _get_evolve_meta(config):
     '''Returns parsed param_grids info or None if not used'''
     param_grid_name_to_deap = {}
     step_name_to_param_grid_name = {}
-    for idx, step1 in enumerate(config.pipeline):
-        for step in step1['steps']:
+    for idx1, step1 in enumerate(config.pipeline):
+        for idx2, step in enumerate(step1['steps']):
             pg = get_param_grid(config, step1, step)
             if pg:
                 param_grid_name_to_deap.update(pg)
-                idx_name = (idx, step.get('train', step.get('transform')))
+                idx_name = ((idx1, idx2), step.get('train', step.get('transform')))
                 step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
     if not param_grid_name_to_deap:
         return None
@@ -743,8 +742,6 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
     deap_params = evo_params.deap_params
 
     assign_names(pop)
-    assert isinstance(pop, list)
-    assert isinstance(pop[0][0], int)
     fitnesses = (yield (pop, invalid_ind, param_history))
     assign_check_fitness(invalid_ind, fitnesses,
                      param_history, deap_params['choices'],
@@ -758,9 +755,6 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
     original_fitness = toolbox.select(temp_pop, 1)[0].fitness.values
     del temp_pop
     eval_stop = eval_stop_wrapper(evo_params, original_fitness)
-    assert isinstance(invalid_ind, list)
-    assert isinstance(invalid_ind[0][0], int)
-    assert all(ind.fitness.valid for ind in pop)
     for gen in range(1, ngen):
         logger.info('Generation {} out of {} in evolutionary '
                     'algorithm'.format(gen + 1, ngen))
@@ -786,11 +780,10 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
 
         # Expect the fitnesses to be sent here
         # with ea_gen.send(fitnesses)
-        assert isinstance(invalid_ind, list)
-        assert isinstance(invalid_ind[0][0], int)
+        if not isinstance(invalid_ind, list) or not invalid_ind or not invalid_ind[0] or not all(isinstance(p, int) for p in invalid_ind[0]):
+            raise ValueError('Expected .send to be called with a list of tuples/lists of ints')
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         assign_names(invalid_ind)
-        assert invalid_ind
         fitnesses = (yield (pop, invalid_ind, param_history))
         # Assign the fitnesses to the invalid_ind
         # evaluated

@@ -8,7 +8,6 @@ import re
 
 from elm.readers.util import BandSpec
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.sample_util.util import InvalidSample
 
 logger = logging.getLogger(__name__)
 
@@ -77,35 +76,3 @@ def example_meta_is_day(filename, d):
     return False
 
 
-GRID_HEADER_WORDS = ('REGISTRATION', 'BINMETHOD',
-                     'LATITUDERESOLUTION', 'LONGITUDERESOLUTION',
-                     'NORTHBOUNDINGCOORD', 'SOUTHBOUNDINGCOORD',
-                     'EASTBOUNDINGCOORD', 'WESTBOUNDINGCOORD',
-                     'ORIGIN',)
-
-def grid_header_hdf5_to_geo_transform(**meta):
-    grid_header = {}
-    for word, v in meta.items():
-        word = word.upper()
-        word = [g for g in GRID_HEADER_WORDS if g in word]
-        if not word:
-            continue
-        word = word[0]
-        if "RESOLUTION" in word or "COORD" in word:
-            grid_header[word] = float(v)
-        else:
-            grid_header[word] = v
-    lat_res, s, n = (grid_header['LATITUDERESOLUTION'],
-           grid_header['SOUTHBOUNDINGCOORD'],
-           grid_header['NORTHBOUNDINGCOORD'])
-    lon_res, e, w = (grid_header['LONGITUDERESOLUTION'],
-           grid_header['EASTBOUNDINGCOORD'],
-           grid_header['WESTBOUNDINGCOORD'])
-    origin = grid_header['ORIGIN']
-    if origin == 'SOUTHWEST':
-        geo_transform = (w, lon_res, 0, s, 0, lat_res)
-    elif origin == 'NORTHWEST':
-        geo_transform = (w, lon_res, 0, n, 0, -lat_res)
-    else:
-        raise ValueError('Did not expect origin: {}'.format(origin))
-    return geo_transform

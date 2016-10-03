@@ -38,7 +38,6 @@ pipeline:
   - {drop_na_rows: true}
   - {method: fit_transform, transform: pca}
   steps:
-  - {method: partial_fit, transform: pca}
   - {method: partial_fit, train: kmeans}
   - {predict: kmeans}
 predict:

@@ -7,18 +7,21 @@ from elm.readers.util import (_extract_valid_xy, Canvas,
                               geotransform_to_bounds,
                               dummy_canvas)
 
+
 __all__ = ['ElmStore', ]
 
 logger = logging.getLogger(__name__)
 
+
+
 class ElmStore(xr.Dataset):
     _es_kwargs = {
                     'add_canvas': True,
-                    'lost_axis': None
-        }
+                    'lost_axis': None,
+                }
     def __init__(self, *args, **kwargs):
         es_kwargs = {k: kwargs.pop(k, v)
-                     for k,v in self._es_kwargs.items()}
+                     for k, v in self._es_kwargs.items()}
         super(ElmStore, self).__init__(*args, **kwargs)
         self.attrs['_dummy_canvas'] = not es_kwargs['add_canvas']
         if es_kwargs['add_canvas']:

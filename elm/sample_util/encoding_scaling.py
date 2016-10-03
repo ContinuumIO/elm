@@ -48,7 +48,6 @@ def _update_elm_store_for_changes(es, new_array, new_names=None):
                                         attrs=copy.deepcopy(es.flat.attrs))},
                         attrs=copy.deepcopy(es.attrs))
     else:
-        assert new_array.shape == old_shp, (repr((new_array.shape, old_shp)))
         es.flat.values= new_array
     return es
 

@@ -1,5 +1,8 @@
 from collections import namedtuple, OrderedDict, Sequence
+from itertools import product
 import logging
+import numbers
+import re
 
 import gdal
 import numpy as np
@@ -15,7 +18,8 @@ from elm.config import import_callable
 __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
-           'xy_canvas','dummy_canvas', 'BandSpec']
+           'xy_canvas','dummy_canvas', 'BandSpec',
+           'set_na_from_meta']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -48,6 +52,17 @@ class BandSpec(object):
     window = attr.ib(default=None)
     meta_to_geotransform = attr.ib(default=None)
     stored_coords_order = attr.ib(default=('y', 'x'))
+
+@attr.s
+class DataSource(object):
+    sample_args_generator = attr.ib()
+    sample_from_args_func = attr.ib(default="elm.sample_util.samplers:image_selection")
+    band_spec = attr.ib(default=None)
+    reader = attr.ib(default=None)
+    file_pattern = attr.ib(default=None)
+    top_dir = attr.ib(default=None)
+    batch_size = attr.ib(default=None)
+
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
@@ -91,7 +106,7 @@ def geotransform_to_coords(buf_xsize, buf_ysize, geo_transform):
 
 def geotransform_to_bounds(buf_xsize, buf_ysize, geo_transform):
     left, bottom = row_col_to_xy(0, 0, geo_transform)
-    right, top = row_col_to_xy(buf_xsize, buf_ysize, geo_transform)
+    right, top = row_col_to_xy(buf_ysize - 1, buf_xsize - 1, geo_transform)
     return BoundingBox(left, bottom, right, top)
 
 
@@ -191,13 +206,150 @@ def window_to_gdal_read_kwargs(**reader_kwargs):
     return reader_kwargs
 
 
-def take_geo_transform_from_meta(band_spec, **meta):
-    if band_spec.meta_to_geotransform:
+def take_geo_transform_from_meta(band_spec=None, required=True, **meta):
+    if band_spec and getattr(band_spec, 'meta_to_geotransform', False):
         func = import_callable(band_spec.meta_to_geotransform)
         geo_transform = func(**meta)
         if not isinstance(geo_transform, Sequence) or len(geo_transform) != 6:
             raise ValueError('band_spec.meta_to_geotransform {} did not return a sequence of len 6'.format(band_spec.meta_to_geotransform))
         return geo_transform
+    elif required:
+        geo_transform = grid_header_to_geo_transform(**meta)
+        return geo_transform
     return None
 
+GRID_HEADER_WORDS = ('REGISTRATION', 'BINMETHOD',
+                     'LATITUDERESOLUTION', 'LONGITUDERESOLUTION',
+                     ('NORTHBOUNDINGCOORD', 'NORTHERNMOSTLAT'),
+                     ('SOUTHBOUNDINGCOORD', 'SOUTHERNMOSTLAT'),
+                     ('EASTBOUNDINGCOORD', 'EASTERNMOSTLON'),
+                     ('WESTBOUNDINGCOORD', 'WESTERNMOSTLON'),
+                     'ORIGIN',)
+
+def grid_header_to_geo_transform(**meta):
+    '''Unwind an attrs dict, trying to find bounding box words
+    that can be used to make a geo_transform object.
+
+    Parameters:
+        **meta:  some dict
+    Returns:
+        geo_transform: tuple
+    '''
+    grid_header = {}
+    for word1, v in meta.items():
+        if isinstance(v, dict):
+            geo_transform1 = grid_header_to_geo_transform(**v)
+            if geo_transform1:
+                return geo_transform1
+            else:
+                continue
+        word1 = word1.upper()
+        word = None
+        for g in GRID_HEADER_WORDS:
+            if isinstance(g, tuple):
+                if any(gi for gi in g if gi in word1):
+                    word = g[0]
+            else:
+                if g in word1:
+                    word = g
+        if not word:
+            continue
+        if "RESOLUTION" in word or "COORD" in word or 'MOSTLAT' in word or 'MOSTLON' in word:
+            grid_header[word] = float(v)
+        else:
+            grid_header[word] = v
+    if not len(grid_header) >= 6:
+        return None
+    lat_res, s, n = (grid_header['LATITUDERESOLUTION'],
+           grid_header['SOUTHBOUNDINGCOORD'],
+           grid_header['NORTHBOUNDINGCOORD'])
+    lon_res, e, w = (grid_header['LONGITUDERESOLUTION'],
+           grid_header['EASTBOUNDINGCOORD'],
+           grid_header['WESTBOUNDINGCOORD'])
+    origin = grid_header.get('ORIGIN', 'NORTHWEST')
+    if origin == 'SOUTHWEST':
+        geo_transform = (w, lon_res, 0, s, 0, lat_res)
+    elif origin == 'NORTHWEST':
+        geo_transform = (w, lon_res, 0, n, 0, -lat_res)
+    else:
+        raise ValueError('Did not expect origin: {}'.format(origin))
+    return geo_transform
+
+
+
+VALID_RANGE_WORDS = ('^valid[\s\-_]*range',)
+INVALID_RANGE_WORDS = ('invalid[\s\-_]*range',)
+MISSING_VALUE_WORDS = ('missing[\s\-_]*value', 'invalid[\s\-\_]*value',)
+
+def _case_insensitive_lookup(dic, lookup_list, has_seen):
+    for k, pattern in product(dic, lookup_list):
+        match = re.search(pattern, k, re.IGNORECASE)
+        val = dic[k]
+        if match:
+            if isinstance(val, numbers.Number) or (isinstance(val, Sequence) and all(isinstance(v, numbers.Number) for v in val)):
+                return val
+        elif isinstance(val, dict):
+            if tuple(val) not in has_seen:
+                has_seen.add(tuple(val))
+                return _case_insensitive_lookup(val, lookup_list, has_seen)
+
+def extract_valid_range(**attrs):
+    return _case_insensitive_lookup(attrs, VALID_RANGE_WORDS, set())
+
+
+def extract_missing_value(**attrs):
+    return _case_insensitive_lookup(attrs, MISSING_VALUE_WORDS, set())
+
+
+def extract_invalid_range(**attrs):
+    return _case_insensitive_lookup(attrs, INVALID_RANGE_WORDS, set())
+
+
+def _set_invalid_na(values, invalid):
+    invalid = np.array(invalid, dtype=values.dtype)
+    if len(invalid) == 2:
+        values[(values > invalid[0])&(values < invalid[1])] = np.NaN
+    else:
+        values[values == invalid] = np.NaN
+
+
+def _set_na_from_valid_range(values, valid_range):
+    valid_range = np.array(valid_range, dtype=values.dtype)
+    if len(valid_range) == 2:
+        values[~((values >= valid_range[0])&(values <= valid_range[1]))] = np.NaN
+    else:
+        logger.info('Ignoring valid range metadata (does not have length of 2)')
+
+
+
+def set_na_from_meta(es, **kwargs):
+    attrs = es.attrs
+    invalid_range_o = extract_invalid_range(**attrs)
+    if invalid_range_o is not None:
+        logger.debug('Invalid range {}'.format(invalid_range_o))
+        _set_invalid_na(val, invalid_range_o)
+
+    valid_range_o   = extract_valid_range(**attrs)
+    if valid_range_o is not None:
+        logger.debug('Valid range {}'.format(valid_range_o))
+        _set_na_from_valid_range(val, valid_range_o)
+    missing_value_o = extract_missing_value(**attrs)
+    if missing_value_o is not None:
+        logger.debug('Missing value {}'.format(missing_value_o))
+        val[val == np.array([missing_value_o], dtype=val.dtype)[0]] = np.NaN
+    for idx, band in enumerate(es.data_vars):
+        band_arr = getattr(es, band)
+        val = band_arr.values
+        invalid_range_b = extract_invalid_range(**band_arr.attrs)
+        if invalid_range_b is not None:
+            logger.debug('Invalid range {}'.format(invalid_range_b))
+            _set_invalid_na(val, invalid_range_b)
+        valid_range_b = extract_valid_range(**band_arr.attrs)
+        if valid_range_b is not None:
+            logger.debug('Valid range {}'.format(valid_range_b))
+            _set_na_from_valid_range(val, valid_range_b)
+        missing_value_b = extract_missing_value(**band_arr.attrs)
+        if missing_value_b is not None:
+            logger.debug('Missing value {}'.format(missing_value_b))
+            val[val == np.array([missing_value_b], dtype=val.dtype)[0]] = np.NaN
 

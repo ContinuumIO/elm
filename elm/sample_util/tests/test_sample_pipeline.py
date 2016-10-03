@@ -27,6 +27,7 @@ def sampler():
     es.flat.values[:, len(BANDS) // 2:] *= 1e-7
     return es
 
+
 BASE['data_source'] = {'sample_args_generator': gen,
                        'sample_from_args_func': sampler}
 
@@ -51,13 +52,14 @@ def test_sample_pipeline_feature_selection():
                     'choices': BANDS,
                     'kwargs': {'threshold': 0.08,},
                 }
-                action_data = sample_pipeline.get_sample_pipeline_action_data(config, step,
-                                    data_source, sample_pipeline)
+                action_data = sample_pipeline.get_sample_pipeline_action_data(sample_pipeline, config, step,
+                                    data_source)
                 transform_models = None
                 for repeats in range(5):
                     s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_model=None)
                     assert s.flat.shape[1] < 40
                     assert set(s.flat.band.values) < set(BANDS)
+
 
 @pytest.mark.slow
 def test_elm_store_to_flat_to_elm_store():

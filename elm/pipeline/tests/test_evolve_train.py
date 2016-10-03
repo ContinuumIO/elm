@@ -59,10 +59,10 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
     config['train']['kmeans']['model_init_class'] =  'sklearn.cluster:KMeans'
     mb = 'elm.pipeline.tests.util:make_blobs_elm_store'
     syn['sample_from_args_func'] = mb
-    syn['sampler_kwargs'] = {'n_samples': 10000,
-                             'n_features': n_features,
-                             'centers': synthetic_centers(n_clusters, n_features),
-                             'cluster_std': 0.0000001,}
+    syn.update({'n_samples': 10000,
+                'n_features': n_features,
+                'centers': synthetic_centers(n_clusters, n_features),
+                'cluster_std': 0.0000001,})
     syn['sampler_args'] = None
     for step in config['pipeline']:
         step['sample_pipeline'] = 'nothing'
