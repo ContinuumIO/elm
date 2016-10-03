@@ -159,10 +159,10 @@ def get_sample_pipeline_action_data(sample_pipeline, config=None, step=None,
         sampler_args = (band_specs,) + tuple(sampler_args)
     reader_name = data_source.get('reader') or None
     if reader_name:
-        if config and reader_name in config.readers:
-            reader = config.readers[reader_name]
-        elif isinstance(reader_name, dict):
+        if isinstance(reader_name, dict):
             reader = reader_name
+        elif config and reader_name in config.readers:
+            reader = config.readers[reader_name]
         _load_meta = import_callable(reader['load_meta'], True, reader['load_meta'])
         _load_array = import_callable(reader['load_array'], True, reader['load_array'])
     else:

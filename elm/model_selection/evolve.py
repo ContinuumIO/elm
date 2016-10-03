@@ -154,7 +154,7 @@ def _make_cfg_replace_keys(train_config, transform_config,
             d = config.config
             for key in k:
                 if not key in d:
-                    raise ElmConfigError('Given param_grid spec {}, expected {} in {}'.format(k, key, d))
+                    raise ElmConfigError('Given param_grid spec {}, expected {} in config'.format(k, key))
                 d = d[key]
             return (k, v)
     return make_cfg_replace_keys
@@ -517,12 +517,12 @@ def _get_evolve_meta(config):
     '''Returns parsed param_grids info or None if not used'''
     param_grid_name_to_deap = {}
     step_name_to_param_grid_name = {}
-    for step1 in config.pipeline:
-        for idx, step in enumerate(step1['steps']):
+    for idx1, step1 in enumerate(config.pipeline):
+        for idx2, step in enumerate(step1['steps']):
             pg = get_param_grid(config, step1, step)
             if pg:
                 param_grid_name_to_deap.update(pg)
-                idx_name = (idx, step.get('train', step.get('transform')))
+                idx_name = ((idx1, idx2), step.get('train', step.get('transform')))
                 step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
     if not param_grid_name_to_deap:
         return None

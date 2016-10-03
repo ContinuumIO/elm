@@ -150,11 +150,14 @@ class ConfigParser(object):
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
         from elm.readers.util import BandSpec
+        if all(isinstance(bs, BandSpec) for bs in band_specs):
+            return band_specs
         if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
         if not all(isinstance(bs, (dict, str)) for bs in band_specs):
             raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
+
         new_band_specs = []
         for band_spec in band_specs:
             if isinstance(band_spec, str):
@@ -428,7 +431,7 @@ class ConfigParser(object):
         if not no_selection:
             mod = t.get('model_selection')
 
-            if mod is not None and not mod in self.model_selection:
+            if mod is not None and not isinstance(mod, dict) and not mod in self.model_selection:
                 raise ElmConfigError('{}:model_selection {} is not a '
                                      'key in config\'s model_selection'.format(train_or_transform, mod))
             if t.get('sort_fitness') is not None:
@@ -491,7 +494,7 @@ class ConfigParser(object):
         self._validate_type(self.sklearn_preprocessing, 'sklearn_preprocessing', dict)
         for k, v in self.sklearn_preprocessing.items():
             self._validate_type(v, 'sklearn_preprocessing:{}'.format(k), dict)
-            if v.get('method') in dir(skpre):
+            if v.get('method') in dir(skpre) or callable(v.get('method')):
                 pass
             else:
                 self._validate_custom_callable(v.get('method'),

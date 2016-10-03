@@ -124,15 +124,21 @@ def predict_step(sample_pipeline,
                                                   data_source=data_source,
                                                   **sample_pipeline_kwargs)
     sampler_kwargs = action_data[0][-1]
-
+    env = parse_env_vars()
     tag = tag or step['predict']
     if config and not serialize:
         serialize = serialize_prediction
     if serialize == serialize_prediction:
         serialize = partial(serialize, config)
     if models is None:
-        logger.info('Load pickled models from {} {}'.format(config.ELM_TRAIN_PATH, tag))
-        models, meta = load_models_from_tag(config.ELM_TRAIN_PATH,
+        if not config:
+            etp = env.get('ELM_TRAIN_PATH')
+            if not etp or not os.path.exists(etp):
+                raise IOError('Expected ELM_TRAIN_PATH in environment variables')
+        else:
+            etp = config.ELM_TRAIN_PATH
+        logger.info('Load pickled models from {} {}'.format(etp, tag))
+        models, meta = load_models_from_tag(etp,
                                             tag)
     filenames = sampler_kwargs['generated_args']
     args_gen = itertools.product(models, filenames)

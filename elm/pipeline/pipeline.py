@@ -89,7 +89,9 @@ def on_step(*args, **kwargs):
         raise NotImplementedError('Put other operations like "change_detection" here')
 
 
-def _run_steps(return_values, transform_dict, evo_params_dict, client, steps, config, sample_pipeline_info):
+def _run_steps(return_values, transform_dict, evo_params_dict,
+              client, steps, config, sample_pipeline_info,
+              step_num=0):
     '''Run the "steps" within a sample_pipeline dict's "steps"'''
 
     for idx, step in enumerate(steps):
@@ -117,8 +119,8 @@ def _run_steps(return_values, transform_dict, evo_params_dict, client, steps, co
         if 'predict' in step:
             kwargs['models'] = models
 
-        if idx in evo_params_dict:
-            kwargs['evo_params'] = evo_params_dict[idx]
+        if (step_num, idx) in evo_params_dict:
+            kwargs['evo_params'] = evo_params_dict[(step_num, idx)]
         step_type, ret_val = on_step(config, step, client, **kwargs)
         return_values[step_type][step[step_type]] = ret_val
         if step_type == 'transform':
@@ -142,7 +144,7 @@ def pipeline(config, client):
         rargs = (return_values, transform_dict, evo_params_dict,
                  client, step['steps'], config,
                  sample_pipeline_info)
-        return_values, transform_dict = _run_steps(*rargs)
+        return_values, transform_dict = _run_steps(*rargs, step_num=idx)
     return return_values
 
 

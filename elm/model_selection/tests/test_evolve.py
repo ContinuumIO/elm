@@ -75,7 +75,7 @@ def test_get_evolve_meta():
     (config,
      step_name_to_param_grid_name,
      param_grid_name_to_deap) = _setup_pg()
-    expected_key = (0, 'kmeans')
+    expected_key = ((0, 0), 'kmeans')
     assert expected_key in step_name_to_param_grid_name
     assert step_name_to_param_grid_name[expected_key] in param_grid_name_to_deap
     pg = param_grid_name_to_deap[step_name_to_param_grid_name[expected_key]]
@@ -92,7 +92,7 @@ def tst_evo_setup_evo_init_func(config=None):
      param_grid_name_to_deap) = _setup_pg(config=config)
     eps = ea_setup(config)
     assert isinstance(eps, dict) and len(eps) == 1
-    evo_params = eps[0]
+    evo_params = eps[(0, 0)]
     assert isinstance(evo_params, EvoParams)
     return config, evo_params
 

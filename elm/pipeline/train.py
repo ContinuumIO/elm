@@ -1,12 +1,13 @@
 import copy
-from functools import partial
+from functools import partial, wraps
 import logging
 import numbers
 
 from elm.config import import_callable
+from elm.model_selection.evolve import ea_setup
 from elm.model_selection.util import get_args_kwargs_defaults, ModelArgs
 from elm.pipeline.ensemble import ensemble
-from elm.pipeline.evolve_train import evolve_train, evolve_transform
+from elm.pipeline.evolve_train import evolve_train, evolve_transform,_make_config
 from elm.pipeline.serialize import load_models_from_tag
 from elm.pipeline.util import make_model_args_from_config
 
@@ -25,6 +26,7 @@ def _train_or_transform_step(train_or_transform,
                              model_args=None,
                              ensemble_kwargs=None,
                              evo_params=None,
+                             evo_dict=None,
                              samples_per_batch=1,
                              **sample_pipeline_kwargs):
     '''Evaluate a "train" step in a config's "pipeline"
@@ -42,6 +44,19 @@ def _train_or_transform_step(train_or_transform,
     if not train_dict and (not config or not step):
         raise ValueError("Expected 'train_dict' and 'transform_dict' or 'config' and 'step'")
     evo_params = evo_params or None
+    if model_args and evo_params:
+        raise ValueError('Do not pass "model_args" when using "evo_params"')
+    if evo_dict:
+        if evo_params:
+            raise ValueError('Cannot give evo_params and evo_dict')
+        config, step = _make_config( train_or_transform,
+                                     sample_pipeline, data_source,
+                                     samples_per_batch, train_dict,
+                                     transform_dict, ensemble_kwargs,
+                                     evo_dict, **sample_pipeline_kwargs)
+        evo_params_dict = ea_setup(config)
+        evo_params = tuple(evo_params_dict.values())[0]
+
     transform_model = transform_model or None
     ensemble_kwargs = ensemble_kwargs or {}
     sample_pipeline_kwargs['transform_dict'] = transform_dict
@@ -73,16 +88,19 @@ def _train_or_transform_step(train_or_transform,
     if not ensemble_kwargs.get('tag'):
         ensemble_kwargs['tag'] = model_args.step_name
 
-    if evo_params is not None:
+    if evo_params or evo_dict:
         args = (client,
                 step,
                 evo_params,
+                evo_dict,
                 config,
                 sample_pipeline,
                 data_source,
                 transform_model,
                 samples_per_batch,
-                sample_pipeline_kwargs)
+                train_dict,
+                transform_dict,
+                sample_pipeline_kwargs,)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
@@ -98,6 +116,10 @@ def _train_or_transform_step(train_or_transform,
                       **ensemble_kwargs)
     return models
 
+@wraps(_train_or_transform_step)
+def train_step(*args, **kwargs):
+    logger.debug('args/kwargs:')
+    logger.debug(repr((args, kwargs)))
 
-train_step = partial(_train_or_transform_step, 'train')
+    return _train_or_transform_step('train', *args, **kwargs)
 

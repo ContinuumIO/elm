@@ -1,10 +1,12 @@
 from collections import Sequence
 from functools import partial
+from pprint import pformat
+import logging
 
 import numpy as np
 import pandas as pd
 
-from elm.config import import_callable
+from elm.config import import_callable, ConfigParser
 from elm.model_selection.evolve import (ea_general,
                                         evo_init_func,
                                         assign_check_fitness)
@@ -19,6 +21,8 @@ from elm.pipeline.util import (_validate_ensemble_members,
                                run_train_dask)
 from elm.pipeline.serialize import serialize_models
 
+
+logger = logging.getLogger(__name__)
 
 def on_each_generation(individual_to_new_config,
                        config,
@@ -78,19 +82,68 @@ def on_each_generation(individual_to_new_config,
                  for item in fitnesses]
     return models, fitnesses
 
+def _make_config(train_or_transform,
+                 sample_pipeline, data_source,
+                 samples_per_batch, train_dict,
+                 transform_dict, ensemble_kwargs,
+                 evo_dict, **sample_pipeline_kwargs):
+    config = {}
+    if transform_dict:
+        config['transform'] =  transform_dict
+    if train_dict:
+        config['train'] = train_dict
+    for k, v in sample_pipeline_kwargs.items():
+        if k in ('sklearn_preprocessing', 'feature_selection'):
+            config[k] = v
+            continue
+        label = '{}0'.format(k)
+        if not k in config:
+            config[k] = {label: v}
+        else:
+            config[k][label] = v
+        if transform_dict:
+            for v2 in transform_dict.values():
+                v2[k] = label
+        if train_dict:
+            for v2 in train_dict.values():
+                v2[k] = label
+    if train_or_transform == 'transform':
+        if len(transform_dict) != 1:
+            raise ValueError('Expected a dict with one key for transform_dict')
+        key = tuple(transform_dict)[0]
+        minor_step = {'transform': key, 'param_grid': 'pg'}
+    else:
+        if len(train_dict) != 1:
+            raise ValueError('Expected a dict with one key for train_dict')
+        key = tuple(train_dict)[0]
+        minor_step = {'train': key, 'param_grid': 'pg'}
+    config['data_sources'] = {'ds': data_source}
+    major_step = {'data_source': 'ds',
+                  'sample_pipeline': sample_pipeline,
+                  'steps': [minor_step],}
+    config['pipeline'] = [major_step]
+    config['param_grids'] = {'pg': evo_dict}
+    logger.debug('Config: {}'.format(pformat(config)))
+    config = ConfigParser(config=config)
+    major_step = config.pipeline[0]['steps'][0]
+    return config, major_step
+
+
 
 def _evolve_train_or_transform(train_or_transform,
                                client,
                                step,
                                evo_params,
+                               evo_dict,
                                config,
                                sample_pipeline,
                                data_source,
                                transform_model,
                                samples_per_batch,
+                               train_dict,
+                               transform_dict,
                                sample_pipeline_kwargs,
                                **ensemble_kwargs):
-
 
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
