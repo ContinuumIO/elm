@@ -128,7 +128,7 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
         if func_out is not None:
             sample, sample_y, sample_weight = _split_pipeline_output(func_out, sample, sample_y,
                                                    sample_weight, repr(func))
-        if not isinstance(sample, ElmStore):
+        if not isinstance(sample, (ElmStore, xr.Dataset)):
             raise ValueError('Expected the return value of {} to be an '
                              'elm.readers:ElmStore'.format(func))
 
