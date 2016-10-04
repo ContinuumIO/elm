@@ -132,7 +132,6 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
             raise ValueError('Expected the return value of {} to be an '
                              'elm.readers:ElmStore'.format(func))
 
-        logger.debug('Shapes {}'.format(tuple(getattr(sample, b).values.shape for b in sample.data_vars)))
     return (sample, sample_y, sample_weight)
 
 
