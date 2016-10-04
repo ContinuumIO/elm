@@ -215,7 +215,7 @@ def inverse_flatten(flat, **attrs):
     if 'canvas' in attrs:
         new_coords = canvas_to_coords(attrs['canvas'])
     else:
-        raise ValueError('Cannot inverse_flatten without "canvas"')
+        new_coords = attrs['old_coords']
     for idx, (band, dims) in enumerate(band_list):
         if idx >= flat.flat.values.shape[1]:
             break
