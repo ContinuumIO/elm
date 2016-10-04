@@ -212,7 +212,10 @@ def inverse_flatten(flat, **attrs):
     band_list = zip(flat.flat.band_order, flat.old_dims)
     es_new_dict = OrderedDict()
     #attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
-    new_coords = canvas_to_coords(attrs['canvas'])
+    if 'canvas' in attrs:
+        new_coords = canvas_to_coords(attrs['canvas'])
+    else:
+        new_coords = canvas_to_coords(attr['old_dims'][0])
     for idx, (band, dims) in enumerate(band_list):
         if idx >= flat.flat.values.shape[1]:
             break
