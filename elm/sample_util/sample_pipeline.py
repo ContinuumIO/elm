@@ -183,6 +183,7 @@ def get_sample_pipeline_action_data(sample_pipeline, config=None, step=None,
         logger.debug('Calling sample_args_generator')
         generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
+                                            sampler_func,
                                             **kw)
         data_source['generated_args'] = generated_args
     else:
