@@ -40,8 +40,7 @@ def _predict_one_sample(action_data, serialize, model,
                         tag=None,
                         to_cube=True,
                         sample=None,
-                        transform_model=None,
-                        canvas=None):
+                        transform_model=None):
 
     name, model = model
     sample, sample_y, sample_weight = run_sample_pipeline(action_data,
@@ -49,7 +48,6 @@ def _predict_one_sample(action_data, serialize, model,
                                  transform_model=transform_model)
     if not hasattr(sample, 'flat'):
         raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
-    canvas = canvas or sample.canvas
     prediction = model.predict(sample.flat.values)
     if prediction.ndim == 1:
         prediction = prediction[:, np.newaxis]
