@@ -150,7 +150,7 @@ def tst_sklearn_method(model_init_class,
         method_args, method_kwargs, _ = get_args_kwargs_defaults(c.fit)
         kwargs['model_scoring'] = None
         if data_source_name is None:
-            data_source_name = DEFAULTS['pipeline'][0]['data_source']
+            data_source_name = [k for k in DEFAULTS['data_sources'] if 'hdf5' in k][0]
         data_sources = DEFAULTS['data_sources']
         data_source = copy.deepcopy(data_sources[data_source_name])
         if any(a.lower() == 'y' for a in method_args):
