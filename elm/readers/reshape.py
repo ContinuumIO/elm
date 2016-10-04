@@ -193,7 +193,7 @@ def check_is_flat(flat, raise_err=True):
     return True
 
 
-def inverse_flatten(flat, **attrs):
+def inverse_flatten(flat, add_canvas=False, **attrs):
     '''Given an ElmStore that has been flattened to (space, band) dims,
     return a 3-d ElmStore with dims (band, y, x).  Requires that metadata
     about x,y dims were preserved when the 2-d input ElmStore was created
@@ -227,5 +227,5 @@ def inverse_flatten(flat, **attrs):
                                 dims=dims,
                                 attrs=attrs)
         es_new_dict[band] = data_arr
-    return ElmStore(es_new_dict, attrs=attrs)
+    return ElmStore(es_new_dict, attrs=attrs, add_canvas=add_canvas)
 
