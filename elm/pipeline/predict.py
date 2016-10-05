@@ -34,16 +34,20 @@ def _next_name():
     return n
 
 
-
-
-def _predict_one_sample(action_data, serialize, models,
-                        tag=None,
-                        to_cube=True,
-                        sample=None,
-                        transform_model=None):
+def _predict_one_sample_one_arg(action_data,
+                                transform_model,
+                                serialize,
+                                to_cube,
+                                tag,
+                                models,
+                                filename,
+                                sample=None):
+    logger.info('Predict {}'.format(filename))
+    action_data_copy = copy.deepcopy(action_data)
+    action_data_copy[0][-1]['filename'] = filename
     out = []
     for idx, (name, model) in enumerate(models):
-        if idx == 0:
+        if sample is None:
             sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                          sample=sample,
                                          transform_model=transform_model)
@@ -79,23 +83,6 @@ def _predict_one_sample(action_data, serialize, models,
     return out
 
 
-def _predict_one_sample_one_arg(action_data,
-                                transform_model,
-                                serialize,
-                                to_cube,
-                                tag,
-                                model,
-                                filename):
-    logger.info('Predict {}'.format(filename))
-    action_data_copy = copy.deepcopy(action_data)
-    action_data_copy[0][-1]['filename'] = filename
-    return _predict_one_sample(action_data_copy,
-                               serialize,
-                               model,
-                               tag=tag,
-                               to_cube=to_cube,
-                               transform_model=transform_model)
-
 
 def predict_step(sample_pipeline,
                  data_source,
@@ -109,6 +96,7 @@ def predict_step(sample_pipeline,
                  transform_model=None,
                  transform_dict=None,
                  tag=None,
+                 sample=None,
                  **sample_pipeline_kwargs):
     if hasattr(client, 'map'):
         map_function = client.map
@@ -154,7 +142,8 @@ def predict_step(sample_pipeline,
                              to_cube,
                              tag,
                              models,
-                             arg)
+                             arg,
+                             sample)
 
 
         keys.append(name)
@@ -163,6 +152,4 @@ def predict_step(sample_pipeline,
         new = dask.get(predict_dsk, keys)
     else:
         new = client.get(predict_dsk, keys)
-    for pred in new:
-        preds.extend(new)
-    return tuple(preds)
+    return tuple(itertools.chain.from_iterable(new))

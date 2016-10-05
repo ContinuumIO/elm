@@ -52,7 +52,7 @@ def ensemble(client,
     model_selection_kwargs = model_args.model_selection_kwargs or {}
     ensemble_size = ensemble_kwargs.get('init_ensemble_size', None)
     if not ensemble_size:
-        logger.info('Setting ensemble_kwargs["init_ensemble_size"} = 1')
+        logger.info('Setting ensemble_kwargs["init_ensemble_size"] = 1')
         ensemble_kwargs['init_ensemble_size'] = ensemble_size = 1
     ngen = ensemble_kwargs['ngen']
     ensemble_init_func = ensemble_kwargs.get('ensemble_init_func') or None
