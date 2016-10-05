@@ -186,6 +186,9 @@ def _validate_ensemble_members(models):
         raise ValueError(err_msg + "Got {}".format(repr(models)))
     example = 'First item in models list: {}'.format(models[0])
     err_msg += example
+    if not any(isinstance(m, Sequence) for m in models):
+        # list of models with no tags - make some up
+        return [(_next_name(), m) for m in models]
     if not all(len(m) == 2 and isinstance(m, tuple) for m in models):
         raise ValueError(err_msg)
     return models
