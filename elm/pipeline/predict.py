@@ -42,13 +42,13 @@ def _predict_one_sample(action_data, serialize, models,
                         sample=None,
                         transform_model=None):
     out = []
-    for name, model in models:
-
-        sample, sample_y, sample_weight = run_sample_pipeline(action_data,
-                                     sample=sample,
-                                     transform_model=transform_model)
-        if not hasattr(sample, 'flat'):
-            raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
+    for idx, (name, model) in enumerate(models):
+        if idx == 0:
+            sample, sample_y, sample_weight = run_sample_pipeline(action_data,
+                                         sample=sample,
+                                         transform_model=transform_model)
+            if not hasattr(sample, 'flat'):
+                raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
         prediction = model.predict(sample.flat.values)
         if prediction.ndim == 1:
             prediction = prediction[:, np.newaxis]
