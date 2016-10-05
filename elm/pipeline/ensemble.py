@@ -10,7 +10,6 @@ from elm.pipeline.util import (_prepare_fit_kwargs,
                                _validate_ensemble_members,
                                _get_model_selection_func,
                                _run_model_selection_func,
-                               _fit_one_model,
                                run_train_dask)
 from elm.sample_util.samplers import make_one_sample
 
