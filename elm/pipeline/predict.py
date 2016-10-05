@@ -42,7 +42,7 @@ def _predict_one_sample(action_data, serialize, models,
                         sample=None,
                         transform_model=None):
     out = []
-    for name, model in models:
+    for tag, model in models:
 
         sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                      sample=sample,
