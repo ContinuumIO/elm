@@ -47,7 +47,7 @@ def _predict_one_sample_one_arg(action_data,
     action_data_copy[0][-1]['filename'] = filename
     out = []
     for idx, (name, model) in enumerate(models):
-        if sample is None:
+        if idx == 0:
             sample, sample_y, sample_weight = run_sample_pipeline(action_data,
                                          sample=sample,
                                          transform_model=transform_model)
