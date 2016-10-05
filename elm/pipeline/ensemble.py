@@ -68,7 +68,7 @@ def ensemble(client,
     final_names = []
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     for gen in range(ngen):
-
+        logger.info('Ensemble generation {} of {} - len(models): {} '.format(gen + 1, ngen, len(models)))
         models = run_train_dask(config, sample_pipeline, data_source,
                                 transform_model,
                                 samples_per_batch, models,
