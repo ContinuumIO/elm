@@ -158,7 +158,11 @@ def predict_step(sample_pipeline,
 
 
         keys.append(name)
+    preds = []
     if client is None:
-        return dask.get(predict_dsk, keys)
+        new = dask.get(predict_dsk, keys)
     else:
-        return client.get(predict_dsk, keys)
+        new = client.get(predict_dsk, keys)
+    for pred in new:
+        preds.extend(new)
+    return tuple(preds)
