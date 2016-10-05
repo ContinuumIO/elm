@@ -34,6 +34,7 @@ def on_each_generation(individual_to_new_config,
                        train_or_transform,
                        ensemble_kwargs,
                        sample_pipeline_kwargs,
+                       sample,
                        gen,
                        invalid_ind):
     '''Returns model, fit args, fit kwargs for Individual
@@ -143,6 +144,7 @@ def _evolve_train_or_transform(train_or_transform,
                                train_dict,
                                transform_dict,
                                sample_pipeline_kwargs,
+                               sample,
                                **ensemble_kwargs):
 
     get_results = partial(wait_for_futures, client=client)
@@ -157,7 +159,8 @@ def _evolve_train_or_transform(train_or_transform,
                                  step,
                                  train_or_transform,
                                  ensemble_kwargs,
-                                 sample_pipeline_kwargs)
+                                 sample_pipeline_kwargs,
+                                 sample)
 
     try:
         param_history = []

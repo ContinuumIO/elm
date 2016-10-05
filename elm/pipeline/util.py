@@ -237,14 +237,16 @@ def _run_model_selection_func(model_selection_func, model_args,
 def run_train_dask(config, sample_pipeline, data_source,
                    transform_model, samples_per_batch, models,
                    gen, fit_kwargs, sample_pipeline_kwargs=None,
-                   get_func=None):
+                   get_func=None, sample=None):
+
     train_dsk = {}
     sample_name = 'sample-{}'.format(gen)
     sample_args = (config, sample_pipeline, data_source,
                    transform_model,
                    samples_per_batch,
                    sample_name,
-                   sample_pipeline_kwargs)
+                   sample_pipeline_kwargs,
+                   sample)
     train_dsk.update(make_one_sample(*sample_args))
     keys = tuple(name for name, model in models)
     for idx, (name, model) in enumerate(models):

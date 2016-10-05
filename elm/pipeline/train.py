@@ -28,6 +28,7 @@ def _train_or_transform_step(train_or_transform,
                              evo_params=None,
                              evo_dict=None,
                              samples_per_batch=1,
+                             sample=None,
                              **sample_pipeline_kwargs):
     '''Evaluate a "train" step in a config's "pipeline"
 
@@ -100,7 +101,8 @@ def _train_or_transform_step(train_or_transform,
                 samples_per_batch,
                 train_dict,
                 transform_dict,
-                sample_pipeline_kwargs,)
+                sample_pipeline_kwargs,
+                sample)
         if train_or_transform == 'train':
             return evolve_train(*args, **ensemble_kwargs)
         return evolve_transform(*args, **ensemble_kwargs)
@@ -113,6 +115,7 @@ def _train_or_transform_step(train_or_transform,
                       samples_per_batch=samples_per_batch,
                       config=config,
                       sample_pipeline_kwargs=sample_pipeline_kwargs,
+                      sample=sample,
                       **ensemble_kwargs)
     return models
 

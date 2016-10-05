@@ -24,6 +24,7 @@ def ensemble(client,
              samples_per_batch=1,
              config=None,
              sample_pipeline_kwargs=None,
+             sample=None,
              **ensemble_kwargs):
 
     '''Train model(s) in ensemble
@@ -77,7 +78,8 @@ def ensemble(client,
                                 samples_per_batch, models,
                                 gen, fit_kwargs,
                                 sample_pipeline_kwargs=sample_pipeline_kwargs,
-                                get_func=get_func)
+                                get_func=get_func,
+                                sample=sample)
         if model_selection_func:
             models = _run_model_selection_func(model_selection_func,
                                                model_args,

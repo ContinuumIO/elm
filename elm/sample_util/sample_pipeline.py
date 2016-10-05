@@ -79,7 +79,11 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
         transform_model: An example:
                              [('tag_0', PCA(.....))]
     '''
-    check_action_data(action_data)
+    if sample is None:
+        check_action_data(action_data)
+    if any((_ is not None) for _ in (sample, sample_y, sample_weight)):
+        sample, sample_y, sample_weight = _split_pipeline_output(sample, sample, sample_y,
+                                                   sample_weight, repr(func))
     for action in action_data:
         sample_pipeline_step, func_str, args, kwargs = action
         kwargs = kwargs.copy()
