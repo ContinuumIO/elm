@@ -50,14 +50,17 @@ def ensemble(client,
     n_batches = data_source.get('n_batches') or 1
     get_results = partial(wait_for_futures, client=client)
     model_selection_kwargs = model_args.model_selection_kwargs or {}
-    ensemble_size = ensemble_kwargs['init_ensemble_size']
+    ensemble_size = ensemble_kwargs.get('init_ensemble_size', None)
+    if not ensemble_size:
+        logger.info('Setting ensemble_kwargs["init_ensemble_size"} = 1')
+        ensemble_kwargs['init_ensemble_size'] = ensemble_size = 1
     ngen = ensemble_kwargs['ngen']
     ensemble_init_func = ensemble_kwargs.get('ensemble_init_func') or None
     model_init_kwargs = model_args.model_init_kwargs
     model_init_class = model_args.model_init_class
     if not ensemble_init_func:
         models = tuple(model_init_class(**model_init_kwargs)
-                       for idx in range(ensemble_kwargs['init_ensemble_size']))
+                       for idx in range(ensemble_size))
     else:
         ensemble_init_func = import_callable(ensemble_init_func)
         models = ensemble_init_func(model_init_class,
