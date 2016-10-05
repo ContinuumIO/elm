@@ -146,6 +146,7 @@ def predict_step(sample_pipeline,
     keys = []
     last_file_name = None
     for idx, arg in enumerate(generated_args):
+        name = _next_name()
         predict_dsk[name] = (_predict_one_sample_one_arg,
                              action_data,
                              transform_model,
