@@ -27,7 +27,8 @@ def run_model_method(model,
                      scoring=None,
                      scoring_kwargs=None,
                      method='partial_fit',
-                     fit_kwargs=None,):
+                     fit_kwargs=None,
+                     return_sample=False):
     '''fit - call a method of scikit-learn which may be fit, fit_transform, or transform
     Parameters:
         model: sklearn model instance
@@ -74,5 +75,7 @@ def run_model_method(model,
                   if not k in ('scoring',)}
             model = score_one_model(model, scoring, *fit_args, **kw)
         iter_offset += getattr(model, 'n_iter', 1)
+    if return_sample:
+        return model, fit_args
     return model
 

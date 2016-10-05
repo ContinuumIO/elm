@@ -360,8 +360,10 @@ def final_on_sample_step(fitter,
         if classes is None:
             raise ValueError('With model {} expected "classes" (unique classes int\'s) to be passed in config\'s "train" or "transform" dictionary')
         fit_kwargs['classes'] = classes
-    if 'batch_size' in model.get_params():
+    params = model.get_params()
+    if 'batch_size' in params:
         logger.debug('set batch_size {}'.format(X.flat.values.shape[0]))
-        model.set_params(batch_size=X.flat.values.shape[0])
+        params['batch_size']  = X.flat.values.shape[0]
+        model.set_params(**params)
     return fit_args, fit_kwargs
 

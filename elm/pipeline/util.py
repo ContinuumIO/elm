@@ -231,10 +231,6 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-def _fit_one_model(*fit_args, **fit_kwargs):
-    return run_model_method(*fit_args, **fit_kwargs)
-
-
 def run_train_dask(config, sample_pipeline, data_source,
                    transform_model, samples_per_batch, models,
                    gen, fit_kwargs, sample_pipeline_kwargs=None,
@@ -253,7 +249,7 @@ def run_train_dask(config, sample_pipeline, data_source,
             kw = fit_kwargs[idx]
         else:
             kw = fit_kwargs
-        fitter = partial(_fit_one_model, model, **kw)
+        fitter = partial(run_model_method, model, **kw)
         train_dsk[name] = (fitter, sample_name)
     def tuple_of_args(*args):
         return tuple(args)
