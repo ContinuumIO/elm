@@ -34,67 +34,54 @@ def _next_name():
     return n
 
 
-
-
-def _predict_one_sample(action_data, serialize, model,
-                        tag=None,
-                        to_cube=True,
-                        sample=None,
-                        transform_model=None,
-                        canvas=None):
-
-    name, model = model
-    sample, sample_y, sample_weight = run_sample_pipeline(action_data,
-                                 sample=sample,
-                                 transform_model=transform_model)
-    if not hasattr(sample, 'flat'):
-        raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
-    canvas = canvas or sample.canvas
-    prediction = model.predict(sample.flat.values)
-    if prediction.ndim == 1:
-        prediction = prediction[:, np.newaxis]
-        ndim = 2
-    elif prediction.ndim == 2:
-        pass
-    else:
-        raise ValueError('Expected 1- or 2-d output of model.predict but found ndim of prediction: {}'.format(prediction.ndim))
-
-    bands = ['predict']
-
-    attrs = copy.deepcopy(sample.attrs)
-    attrs.update(copy.deepcopy(sample.flat.attrs))
-    attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
-    prediction = ElmStore({'flat': xr.DataArray(prediction,
-                                     coords=[('space', sample.flat.space),
-                                             ('band', bands)],
-                                     dims=('space', 'band'),
-                                     attrs=attrs)},
-                             attrs=attrs)
-    if to_cube:
-        new_es = inverse_flatten(prediction)
-    else:
-        new_es = prediction
-    if serialize:
-        return serialize(new_es, sample, tag)
-    return new_es
-
-
 def _predict_one_sample_one_arg(action_data,
                                 transform_model,
                                 serialize,
                                 to_cube,
                                 tag,
-                                model,
-                                filename):
+                                models,
+                                filename,
+                                sample=None):
     logger.info('Predict {}'.format(filename))
     action_data_copy = copy.deepcopy(action_data)
     action_data_copy[0][-1]['filename'] = filename
-    return _predict_one_sample(action_data_copy,
-                               serialize,
-                               model,
-                               tag=tag,
-                               to_cube=to_cube,
-                               transform_model=transform_model)
+    out = []
+    for idx, (name, model) in enumerate(models):
+        if idx == 0:
+            sample, sample_y, sample_weight = run_sample_pipeline(action_data,
+                                         sample=sample,
+                                         transform_model=transform_model)
+            if not hasattr(sample, 'flat'):
+                raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
+        prediction = model.predict(sample.flat.values)
+        if prediction.ndim == 1:
+            prediction = prediction[:, np.newaxis]
+            ndim = 2
+        elif prediction.ndim == 2:
+            pass
+        else:
+            raise ValueError('Expected 1- or 2-d output of model.predict but found ndim of prediction: {}'.format(prediction.ndim))
+
+        bands = ['predict']
+
+        attrs = copy.deepcopy(sample.attrs)
+        attrs.update(copy.deepcopy(sample.flat.attrs))
+        attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
+        prediction = ElmStore({'flat': xr.DataArray(prediction,
+                                         coords=[('space', sample.flat.space),
+                                                 ('band', bands)],
+                                         dims=('space', 'band'),
+                                         attrs=attrs)},
+                                 attrs=attrs)
+        if to_cube:
+            new_es = inverse_flatten(prediction)
+        else:
+            new_es = prediction
+        if serialize:
+            new_es = serialize(new_es, sample, tag)
+        out.append(new_es)
+    return out
+
 
 
 def predict_step(sample_pipeline,
@@ -109,6 +96,7 @@ def predict_step(sample_pipeline,
                  transform_model=None,
                  transform_dict=None,
                  tag=None,
+                 sample=None,
                  **sample_pipeline_kwargs):
     if hasattr(client, 'map'):
         map_function = client.map
@@ -140,27 +128,28 @@ def predict_step(sample_pipeline,
         logger.info('Load pickled models from {} {}'.format(etp, tag))
         models, meta = load_models_from_tag(etp,
                                             tag)
-    filenames = sampler_kwargs['generated_args']
-    args_gen = itertools.product(models, filenames)
+    generated_args = sampler_kwargs['generated_args']
+
     predict_dsk = {}
     keys = []
-    for idx, (model, filename) in enumerate(args_gen):
-        name = 'sample-' + _next_name()
-        predict_dsk[name] = (make_one_sample_part, config,
-                             sample_pipeline, data_source,
-                             transform_model)
+    last_file_name = None
+    for idx, arg in enumerate(generated_args):
+        name = _next_name()
         predict_dsk[name] = (_predict_one_sample_one_arg,
                              action_data,
                              transform_model,
                              serialize,
                              to_cube,
                              tag,
-                             model,
-                             filename)
+                             models,
+                             arg,
+                             sample)
 
 
         keys.append(name)
+    preds = []
     if client is None:
-        return dask.get(predict_dsk, keys)
+        new = dask.get(predict_dsk, keys)
     else:
-        return client.get(predict_dsk, keys)
+        new = client.get(predict_dsk, keys)
+    return tuple(itertools.chain.from_iterable(new))

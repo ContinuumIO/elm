@@ -186,6 +186,9 @@ def _validate_ensemble_members(models):
         raise ValueError(err_msg + "Got {}".format(repr(models)))
     example = 'First item in models list: {}'.format(models[0])
     err_msg += example
+    if not any(isinstance(m, Sequence) for m in models):
+        # list of models with no tags - make some up
+        return [(_next_name(), m) for m in models]
     if not all(len(m) == 2 and isinstance(m, tuple) for m in models):
         raise ValueError(err_msg)
     return models
@@ -231,21 +234,19 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-def _fit_one_model(*fit_args, **fit_kwargs):
-    return run_model_method(*fit_args, **fit_kwargs)
-
-
 def run_train_dask(config, sample_pipeline, data_source,
                    transform_model, samples_per_batch, models,
                    gen, fit_kwargs, sample_pipeline_kwargs=None,
-                   get_func=None):
+                   get_func=None, sample=None):
+
     train_dsk = {}
     sample_name = 'sample-{}'.format(gen)
     sample_args = (config, sample_pipeline, data_source,
                    transform_model,
                    samples_per_batch,
                    sample_name,
-                   sample_pipeline_kwargs)
+                   sample_pipeline_kwargs,
+                   sample)
     train_dsk.update(make_one_sample(*sample_args))
     keys = tuple(name for name, model in models)
     for idx, (name, model) in enumerate(models):
@@ -253,7 +254,7 @@ def run_train_dask(config, sample_pipeline, data_source,
             kw = fit_kwargs[idx]
         else:
             kw = fit_kwargs
-        fitter = partial(_fit_one_model, model, **kw)
+        fitter = partial(run_model_method, model, **kw)
         train_dsk[name] = (fitter, sample_name)
     def tuple_of_args(*args):
         return tuple(args)

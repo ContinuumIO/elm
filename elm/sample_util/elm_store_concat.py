@@ -31,6 +31,8 @@ def elm_store_concat(*elms):
         sample_weight = np.concatenate(sample_weights)
     else:
         sample_weight = None
+    if len(elms) == 1:
+        return (elms[0], sample_y, sample_weight)
     shp = set(es.flat.values.shape for es in elms)
     shp = tuple(shp)[0]
     new_shp = (len(elms) * shp[0], shp[1])

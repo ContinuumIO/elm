@@ -28,8 +28,9 @@ class ElmStore(xr.Dataset):
             self._add_band_order()
             self._add_es_meta()
         else:
-            self._add_band_order()
-            self._add_dummy_canvas(**es_kwargs)
+            if not hasattr(self, 'flat'):
+                self._add_band_order()
+                self._add_dummy_canvas(**es_kwargs)
 
     def _add_dummy_canvas(self, **es_kwargs):
         lost_axis = es_kwargs['lost_axis']

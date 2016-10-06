@@ -79,7 +79,11 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
         transform_model: An example:
                              [('tag_0', PCA(.....))]
     '''
-    check_action_data(action_data)
+    if sample is None:
+        check_action_data(action_data)
+    if any((_ is not None) for _ in (sample, sample_y, sample_weight)):
+        sample, sample_y, sample_weight = _split_pipeline_output(sample, sample, sample_y,
+                                                   sample_weight, 'run_sample_pipeline')
     for action in action_data:
         sample_pipeline_step, func_str, args, kwargs = action
         kwargs = kwargs.copy()
@@ -128,11 +132,10 @@ def run_sample_pipeline(action_data, sample=None, sample_y=None, sample_weight=N
         if func_out is not None:
             sample, sample_y, sample_weight = _split_pipeline_output(func_out, sample, sample_y,
                                                    sample_weight, repr(func))
-        if not isinstance(sample, ElmStore):
+        if not isinstance(sample, (ElmStore, xr.Dataset)):
             raise ValueError('Expected the return value of {} to be an '
                              'elm.readers:ElmStore'.format(func))
 
-        logger.debug('Shapes {}'.format(tuple(getattr(sample, b).values.shape for b in sample.data_vars)))
     return (sample, sample_y, sample_weight)
 
 
@@ -183,6 +186,7 @@ def get_sample_pipeline_action_data(sample_pipeline, config=None, step=None,
         logger.debug('Calling sample_args_generator')
         generated_args = get_generated_args(sample_args_generator,
                                             band_specs,
+                                            sampler_func,
                                             **kw)
         data_source['generated_args'] = generated_args
     else:
@@ -360,8 +364,10 @@ def final_on_sample_step(fitter,
         if classes is None:
             raise ValueError('With model {} expected "classes" (unique classes int\'s) to be passed in config\'s "train" or "transform" dictionary')
         fit_kwargs['classes'] = classes
-    if 'batch_size' in model.get_params():
+    params = model.get_params()
+    if 'batch_size' in params:
         logger.debug('set batch_size {}'.format(X.flat.values.shape[0]))
-        model.set_params(batch_size=X.flat.values.shape[0])
+        params['batch_size']  = X.flat.values.shape[0]
+        model.set_params(**params)
     return fit_args, fit_kwargs
 
