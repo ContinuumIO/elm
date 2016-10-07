@@ -69,6 +69,7 @@ def setup_test_env(remote_git_branch):
     sp.check_call('git clone git@github.com:ContinuumIO/elm {}'.format(tmp_elm_dpath), shell=True, executable='/bin/bash')
     # Below is a workaround for GitHub Deploy Keys disallowing access to more than one repo
     sp.check_call('git clone git@elm-examples.github.com:ContinuumIO/elm-examples {}'.format(tmp_elm_examples_dpath), shell=True, executable='/bin/bash')
+    sp.check_call('git clone git@github.com:ContinuumIO/elm-data {}'.format(os.path.join(tmp_elm_examples_dpath, 'example_data')))
 
 
     # Check out the "branch-under-test" from elm repository
