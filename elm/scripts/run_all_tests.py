@@ -135,9 +135,6 @@ def run_all_example_scripts(env, paths, glob_pattern):
         for fname in test_scripts:
             logger.info('Run script {}'.format(fname))
             with env_patch(**env) as new_env:
-                args = Namespace(config=fname2,
-                                 config_dir=None,
-                                 echo_config=False)
                 started = time.time()
                 try:
                     ret_val = subprocess.check_output('python '+fname, shell=True, executable='/bin/bash')
@@ -150,7 +147,7 @@ def run_all_example_scripts(env, paths, glob_pattern):
                 if not exe in ETIMES[fname]:
                     ETIMES[fname][exe] = {}
                 ETIMES[fname][exe] = time.time() - started if not ret_val else None
-                print_status(ret_val, fname2)
+                print_status(ret_val, fname)
 
 
 def proc_wrapper(proc):
