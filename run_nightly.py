@@ -61,7 +61,7 @@ def setup_test_env(remote_git_branch):
         shutil.rmtree(tmp_elm_examples_dpath, ignore_errors=True)
 
         print('Removing conda environment used for testing...')
-        sp.call('conda env remove -y -q -n {}'.format(test_env_name), shell=True, executable='/bin/bash', stdout='/dev/null')
+        sp.call('conda env remove -y -q -n {}'.format(test_env_name), shell=True, executable='/bin/bash', stdout=sp.DEVNULL)
     atexit.register(teardown_test_env)
 
 
