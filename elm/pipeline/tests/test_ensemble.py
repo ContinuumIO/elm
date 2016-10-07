@@ -20,7 +20,7 @@ DEFAULTS2 = ConfigParser(config=DEFAULTS)
 
 @pytest.mark.parametrize('ds_name, ds_dict', DEFAULTS2.data_sources.items())
 def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
-    with patch_ensemble_predict() as (elmtrain, elmpredict):
+    with patch_ensemble_predict() as (ensemble_module, elmpredict):
         config = ConfigParser(config=DEFAULTS)
         transform_model = None
         for step1 in config.pipeline:
@@ -28,7 +28,7 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
                 if 'train' in step:
                     break
         train_dict = config.train[step['train']]
-        args, kwargs = elmtrain.train_step([{'flatten': 'C'}],
+        args, kwargs = ensemble_module.ensemble([{'flatten': 'C'}],
                                              ds_dict,
                                              config=config,
                                              step=step,

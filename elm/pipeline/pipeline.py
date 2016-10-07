@@ -6,15 +6,16 @@ import dask
 
 from elm.config import ConfigParser
 from elm.model_selection.evolve import ea_setup
-from elm.pipeline.train import train_step
-from elm.pipeline.predict import predict_step
-from elm.pipeline.transform import transform_pipeline_step
+from elm.pipeline.ensemble import ensemble
+from elm.pipeline.evolve_train import evolve_train
+from elm.pipeline.predict import predict
 from elm.pipeline.util import get_transform_name_for_sample_pipeline
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.pipeline.transform import get_new_or_saved_transform_model
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['pipeline']
 
 def _create_args_to_each_step(config, major_step,
                               return_values, transform_dict):
@@ -80,13 +81,17 @@ def on_step(*args, **kwargs):
                          serialize=None, # arg not handled yet
                          to_cube=True)
     if 'transform' in step:
-        return ('transform', transform_pipeline_step(*args2, **kwargs2))
+        kwargs2['train_or_transform'] = label = 'transform'
     elif 'train' in step:
-        return ('train', train_step(*args2, **kwargs2))
-    elif 'predict' in step:
-        return ('predict', predict_step(*args2, **kwargs2))
+        kwargs2['train_or_transform'] = label = 'train'
     else:
-        raise NotImplementedError('Put other operations like "change_detection" here')
+        if 'predict' in step:
+            return ('predict', predict(*args2, **kwargs2))
+        else:
+            raise NotImplementedError('Put other operations like "change_detection" here')
+    if kwargs2.get('evo_params'):
+        return (label, evolve_train(*args2, **kwargs2))
+    return (label, ensemble(*args2, **kwargs2))
 
 
 def _run_steps(return_values, transform_dict, evo_params_dict,

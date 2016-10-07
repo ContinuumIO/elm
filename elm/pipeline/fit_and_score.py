@@ -19,7 +19,7 @@ FIT_FUNC_ERR = ('Expected model {} to have a '
                 '"partial_fit" method with partial_fit_batches = {}.\n'
                 'Set partial_fit_batches to 1 or use model with "partial_fit" method')
 
-def run_model_method(model,
+def fit_and_score(model,
                      x_y_sample_weight,
                      partial_fit_batches=None,
                      classes=None,

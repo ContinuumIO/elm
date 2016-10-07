@@ -10,6 +10,8 @@ import rasterio as rio
 
 from sklearn.externals import joblib
 
+__all__ = ['serialize_models', 'serialize_prediction']
+
 logger = logging.getLogger(__name__)
 
 BOUNDS_FORMAT = '{:0.4f}_{:0.4f}_{:0.4f}_{:0.4f}'

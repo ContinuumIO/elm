@@ -13,14 +13,16 @@ from elm.model_selection.evolve import (ea_general,
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.transform import get_new_or_saved_transform_model
-from elm.pipeline.util import (_validate_ensemble_members,
+from elm.pipeline.util import (_ensemble_ea_prep,
+                               _validate_ensemble_members,
                                _prepare_fit_kwargs,
                                _get_model_selection_func,
                                _run_model_selection_func,
-                               make_model_args_from_config,
-                               run_train_dask)
+                               make_model_args_from_config,)
+from elm.pipeline.ensemble import _run_fit_and_score_dask
 from elm.pipeline.serialize import serialize_models
 
+__all__ = ['evolve_train']
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +57,7 @@ def on_each_generation(individual_to_new_config,
                                    a transform)
         ind:                      Individual to evaluate
     Returns:
-        tuple of (args, kwargs) that go to elm.pipeline.run_model_method:run_model_method
+        tuple of (args, kwargs) that go to elm.pipeline.fit_and_score:fit_and_score
     '''
     from elm.config.dask_settings import get_func
     new_models = []
@@ -74,7 +76,7 @@ def on_each_generation(individual_to_new_config,
         model_init_kwargs = model_args.model_init_kwargs or {}
         model = import_callable(model_args.model_init_class)(**model_init_kwargs)
         new_models.append((ind.name, model))
-    models = run_train_dask(config, sample_pipeline, data_source,
+    models = _run_fit_and_score_dask(config, sample_pipeline, data_source,
                    transform_model, samples_per_batch, new_models,
                    gen, fit_kwargs, sample_pipeline_kwargs=sample_pipeline_kwargs,
                    get_func=get_func)
@@ -131,22 +133,22 @@ def _make_config(train_or_transform,
 
 
 
-def _evolve_train_or_transform(train_or_transform,
-                               client,
-                               step,
-                               evo_params,
-                               evo_dict,
-                               config,
-                               sample_pipeline,
-                               data_source,
-                               transform_model,
-                               samples_per_batch,
-                               train_dict,
-                               transform_dict,
-                               sample_pipeline_kwargs,
-                               sample,
-                               **ensemble_kwargs):
-
+def evolve_train(*args, **kwargs):
+    args, ensemble_kwargs = _ensemble_ea_prep(*args, **kwargs)
+    (train_or_transform,
+       client,
+       step,
+       evo_params,
+       evo_dict,
+       config,
+       sample_pipeline,
+       data_source,
+       transform_model,
+       samples_per_batch,
+       train_dict,
+       transform_dict,
+       sample_pipeline_kwargs,
+       sample,) = args
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
@@ -216,6 +218,3 @@ def _evolve_train_or_transform(train_or_transform,
                                  index_label='parameter_set')
     return models
 
-
-evolve_train = partial(_evolve_train_or_transform, 'train')
-evolve_transform = partial(_evolve_train_or_transform, 'transform')

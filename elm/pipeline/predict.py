@@ -25,6 +25,8 @@ from elm.sample_util.samplers import make_one_sample_part
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['predict',]
+
 _predict_idx = 0
 
 def _next_name():
@@ -84,7 +86,7 @@ def _predict_one_sample_one_arg(action_data,
 
 
 
-def predict_step(sample_pipeline,
+def predict(sample_pipeline,
                  data_source,
                  config=None,
                  step=None,

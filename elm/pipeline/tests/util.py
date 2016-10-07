@@ -17,14 +17,13 @@ from sklearn.datasets import make_blobs
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
 import elm.sample_util.sample_pipeline as sample_pipeline
-import elm.pipeline.train as elmtrain
-import elm.pipeline.predict as predict
+import elm.pipeline as elm_pipeline
 import elm.pipeline.transform as elmtransform
 from elm.readers import *
 from elm.scripts.main import main as elm_main
 
-old_ensemble = elmtrain.ensemble
-old_predict_step = predict.predict_step
+old_ensemble = elm_pipeline.ensemble
+old_predict = elm_pipeline.predict
 old_transform = elmtransform.transform_sample_pipeline_step
 old_init_transform = elmtransform.get_new_or_saved_transform_model
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
@@ -42,15 +41,15 @@ def patch_ensemble_predict():
         '''An empty function to return what is given to it'''
         return args, kwargs
     try:
-        elmtrain.ensemble = return_all
+        elm_pipeline.ensemble = return_all
         elmtransform.transform_sample_pipeline_step = return_all
         elmtransform.get_new_or_saved_transform_model = return_all
-        predict.predict_step = return_all
+        elm_pipeline.predict = return_all
 
-        yield (elmtrain, predict)
+        yield (ens, predict)
     finally:
-        elmtrain.ensemble = old_ensemble
-        predict.predict_step = old_predict_step
+        elm_pipeline.ensemble = old_ensemble
+        elm_pipeline.predict = old_predict
         elmtransform.transform_sample_pipeline_step = old_transform
         elmtransform.get_new_or_saved_transform_model = old_init_transform
 

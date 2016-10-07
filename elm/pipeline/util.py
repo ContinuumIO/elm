@@ -7,18 +7,24 @@ import logging
 import dask
 import numbers
 
+from elm.model_selection.util import get_args_kwargs_defaults, ModelArgs
+from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable, parse_env_vars
 from elm.model_selection.base import (base_selection, no_selection)
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
-from elm.pipeline.run_model_method import run_model_method
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
 from elm.sample_util.samplers import make_one_sample
 
 
 
 logger = logging.getLogger(__name__)
+
+NO_ENSEMBLE = {'init_ensemble_size': 1,
+               'ngen': 1,
+               'partial_fit_batches': 1,
+               'saved_ensemble_size': 1,}
 
 _next_idx = 0
 
@@ -234,36 +240,98 @@ def _run_model_selection_func(model_selection_func, model_args,
     return models
 
 
-def run_train_dask(config, sample_pipeline, data_source,
-                   transform_model, samples_per_batch, models,
-                   gen, fit_kwargs, sample_pipeline_kwargs=None,
-                   get_func=None, sample=None):
+def _ensemble_ea_prep(sample_pipeline,
+                      data_source,
+                      config=None,
+                      step=None,
+                      train_dict=None,
+                      transform_model=None,
+                      transform_dict=None,
+                      client=None,
+                      model_args=None,
+                      ensemble_kwargs=None,
+                      evo_params=None,
+                      evo_dict=None,
+                      samples_per_batch=1,
+                      sample=None,
+                      train_or_transform='train',
+                      **sample_pipeline_kwargs):
+    '''
+    '''
+    from elm.pipeline.transform import get_new_or_saved_transform_model
+    ensemble_kwargs = ensemble_kwargs or NO_ENSEMBLE.copy()
+    if not (train_dict or transform_dict) and (not config or not step):
+        raise ValueError("Expected 'train_dict' and 'transform_dict' or 'config' and 'step'")
+    evo_params = evo_params or None
+    if model_args and evo_params:
+        raise ValueError('Do not pass "model_args" when using "evo_params"')
+    if evo_dict:
+        if evo_params:
+            raise ValueError('Cannot give evo_params and evo_dict')
+        config, step = _make_config( train_or_transform,
+                                     sample_pipeline, data_source,
+                                     samples_per_batch, train_dict,
+                                     transform_dict, ensemble_kwargs,
+                                     evo_dict, **sample_pipeline_kwargs)
+        evo_params_dict = ea_setup(config)
+        evo_params = tuple(evo_params_dict.values())[0]
 
-    train_dsk = {}
-    sample_name = 'sample-{}'.format(gen)
-    sample_args = (config, sample_pipeline, data_source,
-                   transform_model,
-                   samples_per_batch,
-                   sample_name,
-                   sample_pipeline_kwargs,
-                   sample)
-    train_dsk.update(make_one_sample(*sample_args))
-    keys = tuple(name for name, model in models)
-    for idx, (name, model) in enumerate(models):
-        if isinstance(fit_kwargs, (tuple, list)):
-            kw = fit_kwargs[idx]
+    transform_model = transform_model or None
+    sample_pipeline_kwargs['transform_dict'] = transform_dict
+    sample_pipeline_kwargs['transform_model'] = transform_model
+    if not ensemble_kwargs and config and step:
+        t = getattr(config, train_or_transform)[step[train_or_transform]]
+        e = t.get('ensemble')
+        if isinstance(e, dict):
+            ensemble_kwargs = e
         else:
-            kw = fit_kwargs
-        fitter = partial(run_model_method, model, **kw)
-        train_dsk[name] = (fitter, sample_name)
-    def tuple_of_args(*args):
-        return tuple(args)
-    new_models_name = _next_name()
-    train_dsk[new_models_name] = (tuple_of_args, *keys)
-    if get_func is None:
-        new_models = tuple(dask.get(train_dsk, new_models_name))
-    else:
-        new_models = tuple(get_func(train_dsk, new_models_name))
-    models = tuple(zip(keys, new_models))
-    return models
+            ensemble_kwargs = config.ensembles[e]
+    model_args2, ensemble_kwargs2 = make_model_args_from_config(train_or_transform,
+                                                                sample_pipeline,
+                                                                data_source,
+                                                                config=config,
+                                                                step=step,
+                                                                train_dict=train_dict,
+                                                                ensemble_kwargs=ensemble_kwargs,
+                                                                **sample_pipeline_kwargs)
+    if not model_args:
+        model_args = model_args2
+    ensemble_kwargs.update(ensemble_kwargs2)
+    if transform_model is None and config and step:
+        transform_model = get_new_or_saved_transform_model(config,
+                                                           sample_pipeline,
+                                                           data_source,
+                                                           step)
+
+    if not ensemble_kwargs.get('tag'):
+        ensemble_kwargs['tag'] = model_args.step_name
+
+    if evo_params or evo_dict:
+        args = (train_or_transform,
+                client,
+                step,
+                evo_params,
+                evo_dict,
+                config,
+                sample_pipeline,
+                data_source,
+                transform_model,
+                samples_per_batch,
+                train_dict,
+                transform_dict,
+                sample_pipeline_kwargs,
+                sample)
+        return (args, ensemble_kwargs)
+    args = (client,
+            model_args,
+            transform_model,
+            sample_pipeline,
+            data_source,)
+    kwargs = dict(samples_per_batch=samples_per_batch,
+                  config=config,
+                  sample_pipeline_kwargs=sample_pipeline_kwargs,
+                  sample=sample,
+                  ensemble_kwargs=ensemble_kwargs)
+    return (args, kwargs)
+
 

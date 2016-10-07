@@ -12,11 +12,8 @@ from elm.pipeline.util import _make_model_args_from_config
 
 logger = logging.getLogger(__name__)
 
+__all__ = ['transform_sample_pipeline_step',]
 
-def transform_pipeline_step(*args, **kwargs):
-    from elm.pipeline.train import _train_or_transform_step
-    logger.debug('transform_pipeline_step')
-    return _train_or_transform_step('transform', *args, **kwargs)
 
 
 def transform_sample_pipeline_step(sample_x,
