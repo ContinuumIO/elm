@@ -23,7 +23,9 @@ def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), example_con
         elif val is not None:
             if isinstance(val, (list, tuple)):
                 val = ' '.join(val)
-            elif not isinstance(val, (str,)):
+            elif isinstance(val, (str,)):
+                val = '"{}"'.format(val)
+            else:
                 raise ValueError('Not sure how to handle argument value of type {}'.format(type(val)))
             test_cmd += ' {} {}'.format(actions[arg].option_strings[0], val)
 
@@ -46,8 +48,8 @@ def setup_test_env(remote_git_branch):
     Return the temp directory paths for the elm repo and elm-examples repo.
     """
     # Create temporary directories for cloning/testing
-    tmp_elm_dpath = tempfile.mkdtemp()
-    tmp_elm_examples_dpath = tempfile.mkdtemp()
+    tmp_elm_dpath = tempfile.mkdtemp('/tmp')
+    tmp_elm_examples_dpath = tempfile.mkdtemp('/tmp')
 
     test_env_name = os.path.basename(tmp_elm_dpath)
 
@@ -59,7 +61,7 @@ def setup_test_env(remote_git_branch):
         shutil.rmtree(tmp_elm_examples_dpath, ignore_errors=True)
 
         print('Removing conda environment used for testing...')
-        sp.call('conda env remove -y -n {}'.format(test_env_name), shell=True, executable='/bin/bash')
+        sp.call('conda env remove -y -q -n {}'.format(test_env_name), shell=True, executable='/bin/bash', stdout='/dev/null')
     atexit.register(teardown_test_env)
 
 
@@ -101,19 +103,23 @@ def main():
     # Setup test environment. This includes cloning, environment
     # setup / activation, library installation, etc...
     tmp_elm_dpath, tmp_elm_examples_dpath = setup_test_env(args.remote_git_branch)
+    tmp_elm_example_cfgs_dpath = os.path.join(tmp_elm_examples_dpath, 'example_configs')
 
 
     test_cmd = reconstruct_cmdline('elm-run-all-tests', parser, args,
                                    elm_dir=tmp_elm_dpath,
-                                   example_configs_dir=tmp_elm_examples_dpath)
+                                   example_configs_dir=tmp_elm_example_cfgs_dpath)
     print('\n####\nTEST COMMAND:\n\t{}\n####\n'.format(test_cmd))
+
+    if args.test:
+        sys.exit(1)
 
     # Run the nightly tests
     start_dt = datetime.datetime.now()
     sp.check_call(test_cmd, shell=True, cwd=tmp_elm_dpath, executable='/bin/bash')
     end_dt = datetime.datetime.now()
-    print('\nSTART TIME: {}'.format(start_dt.isoformat()))
-    print('\nEND TIME: {}'.format(end_dt.isoformat()))
+    print('START TIME: {}'.format(start_dt.isoformat()))
+    print('END TIME: {}'.format(end_dt.isoformat()))
 
 
 
