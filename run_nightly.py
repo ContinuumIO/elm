@@ -13,7 +13,7 @@ from elm.scripts import run_all_tests
 
 
 
-def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), example_configs_dir=os.path.join(os.getcwd(), 'example_configs')):
+def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), examples_dir=os.path.join(os.getcwd())):
     # Reconstruct command-line from parser and args
     actions = {action.dest: action for action in parser._actions}
     for arg, val in args._get_kwargs():
@@ -30,7 +30,7 @@ def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), example_con
             test_cmd += ' {} {}'.format(actions[arg].option_strings[0], val)
 
     # Add positional arguments
-    positional_args = (elm_dir, example_configs_dir)
+    positional_args = (elm_dir, examples_dir)
     test_cmd += ' '+' '.join(positional_args)
 
     return test_cmd
@@ -48,8 +48,8 @@ def setup_test_env(remote_git_branch):
     Return the temp directory paths for the elm repo and elm-examples repo.
     """
     # Create temporary directories for cloning/testing
-    tmp_elm_dpath = tempfile.mkdtemp('/tmp')
-    tmp_elm_examples_dpath = tempfile.mkdtemp('/tmp')
+    tmp_elm_dpath = tempfile.mkdtemp(dir='/tmp')
+    tmp_elm_examples_dpath = tempfile.mkdtemp(dir='/tmp')
 
     test_env_name = os.path.basename(tmp_elm_dpath)
 
@@ -103,12 +103,12 @@ def main():
     # Setup test environment. This includes cloning, environment
     # setup / activation, library installation, etc...
     tmp_elm_dpath, tmp_elm_examples_dpath = setup_test_env(args.remote_git_branch)
-    tmp_elm_example_cfgs_dpath = os.path.join(tmp_elm_examples_dpath, 'example_configs')
+    tmp_elm_examples_dpath = os.path.join(tmp_elm_examples_dpath)
 
 
     test_cmd = reconstruct_cmdline('elm-run-all-tests', parser, args,
                                    elm_dir=tmp_elm_dpath,
-                                   example_configs_dir=tmp_elm_example_cfgs_dpath)
+                                   examples_dir=tmp_elm_examples_dpath)
     print('\n####\nTEST COMMAND:\n\t{}\n####\n'.format(test_cmd))
 
     if args.test:

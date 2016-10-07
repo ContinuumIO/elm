@@ -126,6 +126,30 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                 print_status(ret_val, fname2)
 
 
+def run_all_example_scripts(env, path, glob_pattern):
+    global ETIMES
+    test_scripts = glob.glob(os.path.join(path, glob_pattern or '*.py'))
+    for fname in test_scripts:
+        logger.info('Run script {}'.format(fname))
+        with env_patch(**env) as new_env:
+            args = Namespace(config=fname2,
+                             config_dir=None,
+                             echo_config=False)
+            started = time.time()
+            try:
+                ret_val = subprocess.check_output('python '+fname, shell=True, executable='/bin/bash')
+            except Exception as e:
+                ret_val = repr(e)
+                print(e, traceback.format_exc())
+            exe = new_env.get("DASK_EXECUTOR")
+            if not fname in ETIMES:
+                ETIMES[fname] = {}
+            if not exe in ETIMES[fname]:
+                ETIMES[fname][exe] = {}
+            ETIMES[fname][exe] = time.time() - started if not ret_val else None
+            print_status(ret_val, fname2)
+
+
 def proc_wrapper(proc):
     def write(proc):
         line = proc.stdout.read(1).decode()
@@ -180,7 +204,7 @@ def build_cli_parser(include_positional=True):
     parser = ArgumentParser(description='Run longer-running tests of elm')
     if include_positional:
         parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
-        parser.add_argument('elm_configs_path', help='Path')
+        parser.add_argument('elm_examples_path', help='Assumes subdirectories "elm_configs" and "elm_scripts"')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
     parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
                         help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
@@ -211,7 +235,9 @@ def run_all_tests(args=None):
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
-        run_all_example_configs(new_env, path=args.elm_configs_path,
+        run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'elm_scripts'),
+                                glob_pattern=args.glob_pattern)
+        run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'elm_configs'),
                                 large_test_mode=args.add_large_test_settings,
                                 glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
