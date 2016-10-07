@@ -150,17 +150,25 @@ class ConfigParser(object):
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
         from elm.readers.util import BandSpec
+        if all(isinstance(bs, BandSpec) for bs in band_specs):
+            return band_specs
         if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
-        if not all(isinstance(bs, dict) for bs in band_specs):
-            raise ElmConfigError('Expected "band_specs" to be a list of dicts')
+        if not all(isinstance(bs, (dict, str)) for bs in band_specs):
+            raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
+
         new_band_specs = []
         for band_spec in band_specs:
-            if not all(k.name in band_spec for k in attr.fields(BandSpec)
+            if isinstance(band_spec, str):
+                new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
+                                                'search_value': band_spec,
+                                                'name': band_spec}))
+            elif not all(k.name in band_spec for k in attr.fields(BandSpec)
                        if not k.default == attr.NOTHING):
                 raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
-            new_band_specs.append(BandSpec(**band_spec))
+            else:
+                new_band_specs.append(BandSpec(**band_spec))
         return new_band_specs
 
     def _validate_one_data_source(self, name, ds):
@@ -188,13 +196,20 @@ class ConfigParser(object):
                                        ' section'.format(ds, download))
             s = ds.get('sample_args_generator')
             if not s in self.sample_args_generators:
+                try:
+                    sample_args_generator = import_callable(s)
+                except Exception as e:
+                    raise ElmConfigError('data_source:{} uses a sample_args_generator {} that '
+                                         'is neither importable nor in '
+                                         '"sample_args_generators" dict'.format(name, s))
                 raise ElmConfigError('Expected data_source: '
                                      'sample_args_generator {} to be in '
                                      'sample_args_generators.keys()')
-            sample_args_generator = self.sample_args_generators[s]
-            self._validate_custom_callable(sample_args_generator,
-                                    True,
-                                    'train:{} sample_args_generator'.format(name))
+            else:
+                sample_args_generator = self.sample_args_generators[s]
+                self._validate_custom_callable(sample_args_generator,
+                                        True,
+                                        'data_source:{} sample_args_generator'.format(name))
             self._validate_selection_kwargs(ds, name)
             keep_columns = ds.get('keep_columns') or []
             self._validate_type(keep_columns, 'keep_columns', (tuple, list))
@@ -240,19 +255,15 @@ class ConfigParser(object):
     def _validate_selection_kwargs(self, data_source, name):
         '''Validate the "selection_kwargs" related to
         sample pre-processing'''
-        selection_kwargs = data_source.get('selection_kwargs')
+        selection_kwargs = data_source # TODO renaming needed further
         if not selection_kwargs:
             return
-        if not isinstance(selection_kwargs, dict):
-            raise ElmConfigError('In data_source:{} expected '
-                                   '"selection_kwargs" to be '
-                                   'a dict'.format(selection_kwargs))
         selection_kwargs['geo_filters'] = selection_kwargs.get('geo_filters', {}) or {}
         for poly_field in ('include_polys', 'exclude_polys'):
             pf = selection_kwargs['geo_filters'].get(poly_field, []) or []
             for item in pf:
                 if not item in self.polys:
-                    raise ElmConfigError('config\'s selection_kwargs dict {} '
+                    raise ElmConfigError('config\'s data_source dict {} '
                                            '"include_polys" or "exclude_poly" '
                                            'must refer to a list of keys from config\'s '
                                            '"polys"'.format(self.selection_kwargs))
@@ -260,10 +271,10 @@ class ConfigParser(object):
             f = selection_kwargs.get(filter_name, {})
             if f:
                 self._validate_custom_callable(f, True,
-                                               'selection_kwargs:{} - {}'.format(name, filter_name))
+                                               'data_source:{} - {}'.format(name, filter_name))
             else:
                 selection_kwargs[filter_name] = None
-        self.data_sources[name]['selection_kwargs'] = selection_kwargs
+        self.data_sources[name] = selection_kwargs
 
 
     def _validate_resamplers(self):
@@ -420,7 +431,7 @@ class ConfigParser(object):
         if not no_selection:
             mod = t.get('model_selection')
 
-            if mod is not None and not mod in self.model_selection:
+            if mod is not None and not isinstance(mod, dict) and not mod in self.model_selection:
                 raise ElmConfigError('{}:model_selection {} is not a '
                                      'key in config\'s model_selection'.format(train_or_transform, mod))
             if t.get('sort_fitness') is not None:
@@ -483,7 +494,7 @@ class ConfigParser(object):
         self._validate_type(self.sklearn_preprocessing, 'sklearn_preprocessing', dict)
         for k, v in self.sklearn_preprocessing.items():
             self._validate_type(v, 'sklearn_preprocessing:{}'.format(k), dict)
-            if v.get('method') in dir(skpre):
+            if v.get('method') in dir(skpre) or callable(v.get('method')):
                 pass
             else:
                 self._validate_custom_callable(v.get('method'),
@@ -519,49 +530,6 @@ class ConfigParser(object):
         '''Validate the "predict" section of config'''
         self.predict = self.config.get('predict', {}) or {}
         return True # TODO validate predict config
-
-    @classmethod
-    def _get_sample_pipeline(cls, config, step):
-        '''Get the "sample_pipeline" which may be composed of
-        several named "sample_pipeline" elements, e.g.
-        pipeline:
-            - method: partial_fit
-              sample_pipeline:
-              - {get_y: true}
-              - {sklearn_preprocessing: require_positive}
-              - {sample_pipeline: log10}
-              transform: pca
-        '''
-        has_seen = set()
-        sp = step.get('sample_pipeline') or []
-        err_msg = 'Invalid reference {} is not a key in "sample_pipelines"'
-        if isinstance(sp, str):
-            if not sp in config.sample_pipelines:
-                raise ElmConfigError('Pipeline step refers to a '
-                                     'sample_pipeline ({}) that is not in '
-                                     'config\'s sample_pipeline section'.format(sp))
-            return config.sample_pipelines[sp]
-        def clean(sp, has_seen):
-            sample_pipeline = []
-            for item in sp:
-                if 'sample_pipeline' in item:
-                    sp2 = item['sample_pipeline']
-                    if sp2 in has_seen:
-                        raise ElmConfigError('Recursive "sample_pipeline":{}'.format(sp2))
-                    has_seen.add(sp2)
-                    if isinstance(sp2, (tuple, list)):
-                        sample_pipeline.extend(sp2)
-                    elif sp2 and sp2 in config.sample_pipelines:
-                        sample_pipeline2, has_seen = clean(config.sample_pipelines[sp2], has_seen)
-                        sample_pipeline.extend(sample_pipeline2)
-                    else:
-                        raise ElmConfigError(err_msg.format(sp2))
-                else:
-                    sample_pipeline.append(item)
-            return sample_pipeline, has_seen
-        sample_pipeline, _ = clean(sp, has_seen)
-        assert not any('sample_pipeline' in item for item in sample_pipeline),(repr(sample_pipeline))
-        return sample_pipeline
 
     def _validate_sample_pipelines(self):
         '''Validate the "sample_pipelines" section of config'''
@@ -601,8 +569,7 @@ class ConfigParser(object):
         self._validate_type(p, 'pipeline', (list, tuple))
         for step in p:
             self._validate_type(step, 'pipeline: {}'.format(step), dict)
-            if 'sample_pipeline' in step:
-                step['sample_pipeline'] = self._get_sample_pipeline(self, step)
+
 
     def _validate_param_grids(self):
         from elm.model_selection.evolve import get_param_grid
@@ -638,11 +605,6 @@ class ConfigParser(object):
 
     def _validate_pipeline_predict(self, step):
         '''Validate a "predict" step within config's "pipeline"'''
-        predict = step.get('predict')
-        if not predict in self.predict:
-            raise ElmConfigError('Pipeline refers to an undefined "predict"'
-                                   ' key: {}'.format(repr(predict)))
-        step['predict'] = predict
         return step
 
     def _validate_pipeline(self):
@@ -659,7 +621,10 @@ class ConfigParser(object):
                                        'be a dict but found {}'.format(action))
             if not 'sample_pipeline' in action:
                 raise ElmConfigError('Expected a sample_pipeline key in pipeline action {}'.format(action))
-            action['sample_pipeline'] = self._get_sample_pipeline(self.raw_config, action)
+            sample_pipeline = action['sample_pipeline']
+            if not isinstance(sample_pipeline, (list, tuple)):
+                sample_pipeline = self.sample_pipelines[sample_pipeline]
+                action['sample_pipeline'] = sample_pipeline
             data_source = action.get('data_source') or ''
             if not data_source in self.data_sources:
                 raise ElmConfigError('Expected a data_source key in pipeline action {}'.format(action))
@@ -686,7 +651,6 @@ class ConfigParser(object):
         for key, typ in self.config_keys:
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
-            assert isinstance(getattr(self, key), typ)
 
     def __str__(self):
         return yaml.dump(self.raw_config)

@@ -26,7 +26,7 @@ def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
         aic float
 
     '''
-    assert x.ndim == 2
+
     k, m = model.cluster_centers_.shape
     n = x.shape[0]
     d = model.inertia_

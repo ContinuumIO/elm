@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+from collections import OrderedDict
 import logging
 
 from affine import Affine
@@ -7,7 +8,8 @@ import netCDF4 as nc
 import xarray as xr
 
 from elm.readers.util import (geotransform_to_bounds,
-                              VALID_X_NAMES, VALID_Y_NAMES)
+                              VALID_X_NAMES, VALID_Y_NAMES,
+                              take_geo_transform_from_meta)
 from elm.readers import ElmStore
 from elm.sample_util.metadata_selection import match_meta
 
@@ -15,47 +17,21 @@ __all__ = ['load_netcdf_meta', 'load_netcdf_array']
 
 logger = logging.getLogger(__name__)
 
+
 def _nc_str_to_dict(nc_str):
-    str_list = [g.split('=') for g in nc_str.split(';\n')]
-    return dict([g for g in str_list if len(g) == 2])
-
-
-def _assert_nc_attr(nc_dataset, attr_name):
-    assert attr_name in nc_dataset.ncattrs(), 'NetCDF Header {} not found'.format(attr_name)
-
-
-def _get_grid_headers(nc_dataset):
-    _assert_nc_attr(nc_dataset, 'Grid.GridHeader')
-    return _nc_str_to_dict(nc_dataset.getncattr('Grid.GridHeader'))
+    if isinstance(nc_str, str):
+        str_list = [g.split('=') for g in nc_str.split(';\n')]
+        d = dict([g for g in str_list if len(g) == 2])
+        if d:
+            return d
+        return nc_str
+    return nc_str
 
 
 def _get_nc_attrs(nc_dataset):
-    _assert_nc_attr(nc_dataset, 'Grid.GridHeader')
-    _assert_nc_attr(nc_dataset, 'HDF5_GLOBAL.FileHeader')
-    _assert_nc_attr(nc_dataset, 'HDF5_GLOBAL.FileInfo')
 
-    grid_header = _nc_str_to_dict(nc_dataset.getncattr('Grid.GridHeader'))
-    file_header = _nc_str_to_dict(nc_dataset.getncattr('HDF5_GLOBAL.FileHeader'))
-    file_info = _nc_str_to_dict(nc_dataset.getncattr('HDF5_GLOBAL.FileInfo'))
-
-    return {**grid_header, **file_header, **file_info}  # PY3 specific - should this change?
-
-
-def _get_bandmeta(nc_dataset):
-    _assert_nc_attr(nc_dataset, 'Grid.GridHeader')
-    return _nc_str_to_dict(nc_dataset.getncattr('Grid.GridHeader'))
-
-
-def _get_geotransform(nc_info):
-
-    # rotation not taken into account
-    x_range = (float(nc_info['WestBoundingCoordinate']), float(nc_info['EastBoundingCoordinate']))
-    y_range = (float(nc_info['SouthBoundingCoordinate']), float(nc_info['NorthBoundingCoordinate']))
-
-    aform = Affine(float(nc_info['LongitudeResolution']), 0.0, x_range[0],
-                   0.0, -float(nc_info['LatitudeResolution']), y_range[1])
-
-    return aform.to_gdal()
+    return {k: _nc_str_to_dict(nc_dataset.getncattr(k))
+            for k in nc_dataset.ncattrs()}
 
 
 def _get_subdatasets(nc_dataset):
@@ -99,22 +75,16 @@ def load_netcdf_meta(datafile):
     '''
     ras = nc.Dataset(datafile)
     attrs = _get_nc_attrs(ras)
-    geotrans = _get_geotransform(attrs)
-    x_size = ras.dimensions['lon'].size  # TODO: remove hardcoded lon variable name
-    y_size = ras.dimensions['lat'].size  # TODO: remove hardcoded lat variable name
-
+    sds = _get_subdatasets(ras)
     meta = {'meta': attrs,
-            'band_meta': _get_bandmeta(ras),
-            'geo_transform': geotrans,
-            'sub_datasets': _get_subdatasets(ras),
-            'height': y_size,
-            'width': x_size,
+            'band_meta': sds,
             'name': datafile,
+            'variables': list(ras.variables.keys()),
             }
     return meta
 
 
-def load_netcdf_array(datafile, meta, variables):
+def load_netcdf_array(datafile, meta, band_specs=None):
     '''
     loads metadata for NetCDF
 
@@ -130,15 +100,26 @@ def load_netcdf_array(datafile, meta, variables):
     '''
     logger.debug('load_netcdf_array: {}'.format(datafile))
     ds = xr.open_dataset(datafile)
-
-    if isinstance(variables, dict):
-        data = { k: ds[v] for k, v in variables.items() }
-
-    if isinstance(variables, (list, tuple)):
-        data = { v: ds[v] for v in variables }
+    if band_specs:
+        data = []
+        if isinstance(band_specs, dict):
+            data = { k: ds[getattr(v, 'name', v)] for k, v in band_specs.items() }
+            band_spec = tuple(band_specs.values())[0]
+        if isinstance(band_specs, (list, tuple)):
+            data = {getattr(v, 'name', v): ds[getattr(v, 'name', v)]
+                    for v in band_specs }
+            band_spec = band_specs[0]
+        data = OrderedDict(data)
+    else:
+        data = OrderedDict([(v, ds[v]) for v in meta['variables']])
+        band_spec = None
+    geo_transform = take_geo_transform_from_meta(band_spec=band_spec,
+                                                  required=True,
+                                                  **meta['meta'])
+    for b, sub_dataset_name in zip(meta['band_meta'], data):
+        b['geo_transform'] = meta['geo_transform'] = geo_transform
+        b['sub_dataset_name'] = sub_dataset_name
     new_es = ElmStore(data,
                     coords=_normalize_coords(ds),
                     attrs=meta)
-    for band in new_es.data_vars:
-        getattr(new_es, band).attrs['geo_transform'] = meta['geo_transform']
     return new_es

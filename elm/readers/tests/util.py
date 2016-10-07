@@ -40,7 +40,7 @@ def assertions_on_metadata(meta):
         assert key in meta
 
 def assertions_on_band_metadata(band_meta):
-    required_keys = ('geo_transform', 'canvas')
+    required_keys = ('sub_dataset_name', )
     for key in required_keys:
         assert key in band_meta
 

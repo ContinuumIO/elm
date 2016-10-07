@@ -44,14 +44,14 @@ def feature_selection_base(sample_x,
         if isinstance(feature_scoring, str):
             feature_scoring = getattr(skfeat, feature_scoring, None)
         else:
-            feature_scoring = import_callable(selection_dict['scoring'])
+            feature_scoring = import_callable(feature_scoring)
         if scoring_kwargs:
             feature_scoring = partial(feature_scoring, **scoring_kwargs)
         feature_selection_args = (feature_scoring,)
     else:
         feature_selection_args = ()
     selection = feature_selection(*feature_selection_args,
-                                **feature_selection_kwargs)
+                                  **feature_selection_kwargs)
     if feature_choices == 'all':
         feature_choices = list(sample_x.flat.band)
     band_idx = np.array([idx for idx, band in enumerate(sample_x.flat.band)

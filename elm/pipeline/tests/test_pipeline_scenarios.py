@@ -150,7 +150,7 @@ def tst_sklearn_method(model_init_class,
         method_args, method_kwargs, _ = get_args_kwargs_defaults(c.fit)
         kwargs['model_scoring'] = None
         if data_source_name is None:
-            data_source_name = DEFAULTS['pipeline'][0]['data_source']
+            data_source_name = [k for k in DEFAULTS['data_sources'] if 'hdf5' in k][0]
         data_sources = DEFAULTS['data_sources']
         data_source = copy.deepcopy(data_sources[data_source_name])
         if any(a.lower() == 'y' for a in method_args):
@@ -187,16 +187,12 @@ def tst_sklearn_method(model_init_class,
         else:
             kwargs['fit_method'] = 'fit'
         with new_training_config(**kwargs) as config:
-            if not use_transform:
-                remove_pipeline_transforms(config)
-            if n_rows or data_source_name == 'S3_LANDSAT_L2_TIFS':
-                # TIF test is already quite slow
-                # with the loading of files
-                if not n_rows:
-                    n_rows = 10000
-                adjust_config_sample_size(config, n_rows)
             for step in config['pipeline']:
                 steps = []
+                sp = step.get('sample_pipeline')
+                if not isinstance(sp, (tuple, list)):
+                    sp = config['sample_pipelines'][sp]
+                step['sample_pipeline'] = sp
                 if data_source_name is not None:
                     step['data_source'] = data_source_name
                 for item in step['steps']:
@@ -211,6 +207,14 @@ def tst_sklearn_method(model_init_class,
                 if data_source.get('get_y_func'):
                     step['sample_pipeline'] += [{'get_y': True}]
                 step['steps'] = steps
+            if n_rows or data_source_name == 'S3_LANDSAT_L2_TIFS':
+                # TIF test is already quite slow
+                # with the loading of files
+                if not n_rows:
+                    n_rows = 10000
+                adjust_config_sample_size(config, n_rows)
+            if not use_transform:
+                remove_pipeline_transforms(config)
             if not has_predict:
                 for step in config['pipeline']:
                     step['steps'] = [s for s in step['steps']

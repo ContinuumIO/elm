@@ -10,15 +10,13 @@ import numpy as np
 import xarray as xr
 
 
-from elm.config import import_callable
+from elm.config import import_callable, parse_env_vars
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.dask_settings import (wait_for_futures,
                                         no_client_submit)
 from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
-from elm.pipeline.serialize import (predict_to_netcdf,
-                                    predict_to_pickle,
-                                    load_models_from_tag,
-                                    predict_file_name)
+from elm.pipeline.serialize import (load_models_from_tag,
+                                    serialize_prediction)
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.readers import (flatten,
                          inverse_flatten,
@@ -36,92 +34,70 @@ def _next_name():
     return n
 
 
-def predict_file_name(elm_predict_path, tag, bounds):
-    fmt = '{:0.4f}_{:0.4f}_{:0.4f}_{:0.4f}'
-    return os.path.join(elm_predict_path,
-                        tag,
-                        fmt.format(bounds.left,
-                                   bounds.bottom,
-                                   bounds.right,
-                                   bounds.top))
-
-
-def _predict_one_sample(action_data, serialize, model,
-                        return_serialized=True, to_cube=True,
-                        sample=None, transform_model=None, canvas=None):
-    # TODO: control to_cube from config
-
-    name, model = model
-    sample, sample_y, sample_weight = run_sample_pipeline(action_data,
-                                 sample=sample,
-                                 transform_model=transform_model)
-    assert hasattr(sample, 'flat')
-    canvas = canvas or sample.canvas
-    prediction = model.predict(sample.flat.values)
-    if prediction.ndim == 1:
-        prediction = prediction[:, np.newaxis]
-        ndim = 2
-    elif prediction.ndim == 2:
-        pass
-    else:
-        raise ValueError('Expected 1- or 2-d output of model.predict but found ndim of prediction: {}'.format(prediction.ndim))
-
-    bands = ['predict']
-
-    attrs = copy.deepcopy(sample.attrs)
-    attrs.update(copy.deepcopy(sample.flat.attrs))
-    assert 'canvas' in attrs
-    attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
-    prediction = ElmStore({'flat': xr.DataArray(prediction,
-                                     coords=[('space', sample.flat.space),
-                                             ('band', bands)],
-                                     dims=('space', 'band'),
-                                     attrs=attrs)},
-                             attrs=attrs)
-    if to_cube:
-        new_es = inverse_flatten(prediction)
-    else:
-        new_es = prediction
-    if return_serialized:
-        return serialize(new_es, sample)
-    return prediction
-
-
 def _predict_one_sample_one_arg(action_data,
                                 transform_model,
                                 serialize,
                                 to_cube,
-                                model,
-                                filename):
+                                tag,
+                                models,
+                                filename,
+                                sample=None):
     logger.info('Predict {}'.format(filename))
     action_data_copy = copy.deepcopy(action_data)
     action_data_copy[0][-1]['filename'] = filename
-    return _predict_one_sample(action_data_copy,
-                               serialize,
-                               model,
-                               to_cube=to_cube,
-                               transform_model=transform_model)
+    out = []
+    for idx, (name, model) in enumerate(models):
+        if idx == 0:
+            sample, sample_y, sample_weight = run_sample_pipeline(action_data,
+                                         sample=sample,
+                                         transform_model=transform_model)
+            if not hasattr(sample, 'flat'):
+                raise ValueError('Expected "sample" to have an attribute "flat".  Adjust sample pipeline to use {"flatten": "C"}')
+        prediction = model.predict(sample.flat.values)
+        if prediction.ndim == 1:
+            prediction = prediction[:, np.newaxis]
+            ndim = 2
+        elif prediction.ndim == 2:
+            pass
+        else:
+            raise ValueError('Expected 1- or 2-d output of model.predict but found ndim of prediction: {}'.format(prediction.ndim))
+
+        bands = ['predict']
+
+        attrs = copy.deepcopy(sample.attrs)
+        attrs.update(copy.deepcopy(sample.flat.attrs))
+        attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
+        prediction = ElmStore({'flat': xr.DataArray(prediction,
+                                         coords=[('space', sample.flat.space),
+                                                 ('band', bands)],
+                                         dims=('space', 'band'),
+                                         attrs=attrs)},
+                                 attrs=attrs)
+        if to_cube:
+            new_es = inverse_flatten(prediction)
+        else:
+            new_es = prediction
+        if serialize:
+            new_es = serialize(new_es, sample, tag)
+        out.append(new_es)
+    return out
 
 
-def _default_serialize(tag, config, prediction, sample):
-    for band in sample.data_vars:
-        band_arr = getattr(sample, band)
-        fname = predict_file_name(config.ELM_PREDICT_PATH,
-                                  tag,
-                                  getattr(band_arr, 'canvas', getattr(sample, 'canvas')).bounds)
-        predict_to_netcdf(prediction, fname)
-        predict_to_pickle(prediction, fname)
-    return True
 
-
-def predict_step(config, step, client,
-                 sample_pipeline_info=None,
+def predict_step(sample_pipeline,
+                 data_source,
+                 config=None,
+                 step=None,
+                 client=None,
+                 samples_per_batch=1,
                  models=None,
-                 serialize=None,
+                 serialize=serialize_prediction,
                  to_cube=True,
-                 transform_model=None):
-    (config, sample_pipeline, data_source,
-     transform_model, samples_per_batch) = sample_pipeline_info
+                 transform_model=None,
+                 transform_dict=None,
+                 tag=None,
+                 sample=None,
+                 **sample_pipeline_kwargs):
     if hasattr(client, 'map'):
         map_function = client.map
     else:
@@ -131,38 +107,49 @@ def predict_step(config, step, client,
     else:
         submit_func = no_client_submit
     get_results = partial(wait_for_futures, client=client)
-    predict_dict = config.predict[step['predict']]
-    action_data = get_sample_pipeline_action_data(config, step,
-                                    data_source, sample_pipeline)
+    action_data = get_sample_pipeline_action_data(sample_pipeline,
+                                                  config=config, step=step,
+                                                  data_source=data_source,
+                                                  **sample_pipeline_kwargs)
     sampler_kwargs = action_data[0][-1]
-
-    tag = step['predict']
-    if serialize is None:
-        serialize = partial(_default_serialize, tag, config)
+    env = parse_env_vars()
+    tag = tag or step['predict']
+    if config and not serialize:
+        serialize = serialize_prediction
+    if serialize == serialize_prediction:
+        serialize = partial(serialize, config)
     if models is None:
-        logger.info('Load pickled models from {} {}'.format(config.ELM_TRAIN_PATH, tag))
-        models, meta = load_models_from_tag(config.ELM_TRAIN_PATH,
+        if not config:
+            etp = env.get('ELM_TRAIN_PATH')
+            if not etp or not os.path.exists(etp):
+                raise IOError('Expected ELM_TRAIN_PATH in environment variables')
+        else:
+            etp = config.ELM_TRAIN_PATH
+        logger.info('Load pickled models from {} {}'.format(etp, tag))
+        models, meta = load_models_from_tag(etp,
                                             tag)
-    filenames = sampler_kwargs['generated_args']
-    args_gen = itertools.product(models, filenames)
+    generated_args = sampler_kwargs['generated_args']
+
     predict_dsk = {}
     keys = []
-    for idx, (model, filename) in enumerate(args_gen):
-        name = 'sample-' + _next_name()
-        predict_dsk[name] = (make_one_sample_part, config,
-                             sample_pipeline, data_source,
-                             transform_model)
+    last_file_name = None
+    for idx, arg in enumerate(generated_args):
+        name = _next_name()
         predict_dsk[name] = (_predict_one_sample_one_arg,
                              action_data,
                              transform_model,
                              serialize,
                              to_cube,
-                             model,
-                             filename)
+                             tag,
+                             models,
+                             arg,
+                             sample)
 
 
         keys.append(name)
+    preds = []
     if client is None:
-        return dask.get(predict_dsk, keys)
+        new = dask.get(predict_dsk, keys)
     else:
-        return client.get(predict_dsk, keys)
+        new = client.get(predict_dsk, keys)
+    return tuple(itertools.chain.from_iterable(new))

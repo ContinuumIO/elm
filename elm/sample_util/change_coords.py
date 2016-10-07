@@ -64,15 +64,15 @@ def agg(es, key, value, **kwargs):
     return aggregate_simple(es, **value)
 
 
-def _check_change_coords_action(config, step, sample_pipeline_step):
+def _check_change_coords_action(sample_pipeline_step):
     matches = [k for k in sample_pipeline_step if k in CHANGE_COORDS_ACTIONS]
     if not matches or len(matches) > 1:
         raise ElmConfigError('A sample_pipeline step may have exactly 1 key among {}'.format(CHANGE_COORDS_ACTIONS))
     return matches[0]
 
 
-def change_coords_action(config, step, sample_pipeline_step):
-    key = _check_change_coords_action(config, step, sample_pipeline_step)
+def change_coords_action(sample_pipeline_step):
+    key = _check_change_coords_action(sample_pipeline_step)
     value = sample_pipeline_step[key]
     func = 'elm.sample_util.change_coords:{}'.format(key)
     args = (key, value,)
