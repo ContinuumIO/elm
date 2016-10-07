@@ -100,6 +100,7 @@ def modify_config_file(fname, env, large_test_mode):
 def run_all_example_configs(env, path, large_test_mode, glob_pattern):
     global ETIMES
     test_configs = glob.glob(os.path.join(path, glob_pattern or '*.yaml'))
+    logger.info('Found test configs: {}'.format(test_configs))
     for fname in test_configs:
         if any(s in fname for s in SKIP_TOKENS):
             print_status('XFAIL', fname)
@@ -124,6 +125,28 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                     ETIMES[fname][exe] = {}
                 ETIMES[fname][exe] = time.time() - started if not ret_val else None
                 print_status(ret_val, fname2)
+
+
+def run_all_example_scripts(env, path, glob_pattern):
+    global ETIMES
+    test_scripts = glob.glob(os.path.join(path, glob_pattern or '*.py'))
+    logger.info('Found test scripts: {}'.format(test_scripts))
+    for fname in test_scripts:
+        logger.info('Run script {}'.format(fname))
+        with env_patch(**env) as new_env:
+            started = time.time()
+            try:
+                ret_val = sp.check_output('python '+fname, shell=True, executable='/bin/bash')
+            except Exception as e:
+                ret_val = repr(e)
+                print(e, traceback.format_exc())
+            exe = new_env.get("DASK_EXECUTOR")
+            if not fname in ETIMES:
+                ETIMES[fname] = {}
+            if not exe in ETIMES[fname]:
+                ETIMES[fname][exe] = {}
+            ETIMES[fname][exe] = time.time() - started if not ret_val else None
+            print_status(ret_val, fname)
 
 
 def proc_wrapper(proc):
@@ -180,7 +203,7 @@ def build_cli_parser(include_positional=True):
     parser = ArgumentParser(description='Run longer-running tests of elm')
     if include_positional:
         parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
-        parser.add_argument('elm_configs_path', help='Path')
+        parser.add_argument('elm_examples_path', help='Path to a directory which contains subdirectories "example_configs", "example_scripts", and "example_data" with yaml-configs, python-scripts, and example data, respectively')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
     parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
                         help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
@@ -207,11 +230,14 @@ def run_all_tests(args=None):
     assert os.path.exists(args.repo_dir)
     for client in args.dask_clients:
         new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
-                   'DASK_EXECUTOR': client}
+                   'DASK_EXECUTOR': client,
+                   'ELM_EXAMPLE_DATA_PATH': os.path.join(args.elm_examples_path, 'example_data')}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
-        run_all_example_configs(new_env, path=args.elm_configs_path,
+        run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'example_scripts'),
+                                glob_pattern=args.glob_pattern)
+        run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'example_configs'),
                                 large_test_mode=args.add_large_test_settings,
                                 glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
