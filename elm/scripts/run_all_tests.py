@@ -100,7 +100,7 @@ def modify_config_file(fname, env, large_test_mode):
 def run_all_example_configs(env, path, large_test_mode, glob_pattern):
     global ETIMES
     test_configs = glob.glob(os.path.join(path, glob_pattern or '*.yaml'))
-    logger.info('Found test configs:', test_configs)
+    logger.info('Found test configs: {}'.format(test_configs))
     for fname in test_configs:
         if any(s in fname for s in SKIP_TOKENS):
             print_status('XFAIL', fname)
@@ -131,7 +131,7 @@ def run_all_example_scripts(env, paths, glob_pattern):
     global ETIMES
     for path in paths:
         test_scripts = glob.glob(os.path.join(path, glob_pattern or '*.py'))
-        logger.info('Found test scripts:', test_scripts)
+        logger.info('Found test scripts: {}'.format(test_scripts))
         for fname in test_scripts:
             logger.info('Run script {}'.format(fname))
             with env_patch(**env) as new_env:
