@@ -137,7 +137,7 @@ def run_all_example_scripts(env, paths, glob_pattern):
             with env_patch(**env) as new_env:
                 started = time.time()
                 try:
-                    ret_val = subprocess.check_output('python '+fname, shell=True, executable='/bin/bash')
+                    ret_val = sp.check_output('python '+fname, shell=True, executable='/bin/bash')
                 except Exception as e:
                     ret_val = repr(e)
                     print(e, traceback.format_exc())
