@@ -37,7 +37,7 @@ def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), examples_di
 
 
 
-def setup_test_env(remote_git_branch):
+def setup_test_env(remote_git_branch, keep_tmp_dirs):
     """This function clones the necessary repositories into temporary directories,
     pulls / checks out branches, creates a conda environment for testing,
     activates the environment, and installs necessary libraries into it.
@@ -56,9 +56,10 @@ def setup_test_env(remote_git_branch):
     def teardown_test_env():
         """Remove temporary directories and test conda env.
         """
-        print('\nCleaning up temporary directories...')
-        shutil.rmtree(tmp_elm_dpath, ignore_errors=True)
-        shutil.rmtree(tmp_elm_examples_dpath, ignore_errors=True)
+        if not keep_tmp_dirs:
+            print('\nCleaning up temporary directories...')
+            shutil.rmtree(tmp_elm_dpath, ignore_errors=True)
+            shutil.rmtree(tmp_elm_examples_dpath, ignore_errors=True)
 
         print('Removing conda environment used for testing...')
         sp.call('conda env remove -y -q -n {}'.format(test_env_name), shell=True, executable='/bin/bash', stdout=sp.DEVNULL)
@@ -103,7 +104,7 @@ def main():
 
     # Setup test environment. This includes cloning, environment
     # setup / activation, library installation, etc...
-    tmp_elm_dpath, tmp_elm_examples_dpath = setup_test_env(args.remote_git_branch)
+    tmp_elm_dpath, tmp_elm_examples_dpath = setup_test_env(args.remote_git_branch, args.test)
     tmp_elm_examples_dpath = os.path.join(tmp_elm_examples_dpath)
 
 
