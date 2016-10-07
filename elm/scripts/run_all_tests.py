@@ -127,27 +127,26 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                 print_status(ret_val, fname2)
 
 
-def run_all_example_scripts(env, paths, glob_pattern):
+def run_all_example_scripts(env, path, glob_pattern):
     global ETIMES
-    for path in paths:
-        test_scripts = glob.glob(os.path.join(path, glob_pattern or '*.py'))
-        logger.info('Found test scripts: {}'.format(test_scripts))
-        for fname in test_scripts:
-            logger.info('Run script {}'.format(fname))
-            with env_patch(**env) as new_env:
-                started = time.time()
-                try:
-                    ret_val = sp.check_output('python '+fname, shell=True, executable='/bin/bash')
-                except Exception as e:
-                    ret_val = repr(e)
-                    print(e, traceback.format_exc())
-                exe = new_env.get("DASK_EXECUTOR")
-                if not fname in ETIMES:
-                    ETIMES[fname] = {}
-                if not exe in ETIMES[fname]:
-                    ETIMES[fname][exe] = {}
-                ETIMES[fname][exe] = time.time() - started if not ret_val else None
-                print_status(ret_val, fname)
+    test_scripts = glob.glob(os.path.join(path, glob_pattern or '*.py'))
+    logger.info('Found test scripts: {}'.format(test_scripts))
+    for fname in test_scripts:
+        logger.info('Run script {}'.format(fname))
+        with env_patch(**env) as new_env:
+            started = time.time()
+            try:
+                ret_val = sp.check_output('python '+fname, shell=True, executable='/bin/bash')
+            except Exception as e:
+                ret_val = repr(e)
+                print(e, traceback.format_exc())
+            exe = new_env.get("DASK_EXECUTOR")
+            if not fname in ETIMES:
+                ETIMES[fname] = {}
+            if not exe in ETIMES[fname]:
+                ETIMES[fname][exe] = {}
+            ETIMES[fname][exe] = time.time() - started if not ret_val else None
+            print_status(ret_val, fname)
 
 
 def proc_wrapper(proc):
@@ -236,8 +235,7 @@ def run_all_tests(args=None):
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
-        run_all_example_scripts(new_env, paths=[os.path.join(args.elm_examples_path, 'example_scripts'),
-                                                os.path.join(args.elm_examples_path, 'example_configs')],
+        run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'example_scripts'),
                                 glob_pattern=args.glob_pattern)
         run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'example_configs'),
                                 large_test_mode=args.add_large_test_settings,
