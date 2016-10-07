@@ -207,7 +207,7 @@ def build_cli_parser(include_positional=True):
     parser = ArgumentParser(description='Run longer-running tests of elm')
     if include_positional:
         parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
-        parser.add_argument('elm_examples_path', help='Assumes subdirectories "elm_configs" and "elm_scripts"')
+        parser.add_argument('elm_examples_path', help='Path to a directory which contains subdirectories "example_configs" and "example_scripts" with yaml-configs and python-scripts, respectively')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
     parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
                         help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
