@@ -49,12 +49,6 @@ def fit_and_score(model, X, y=None, sample_weight=None,
         if out is not None: # allow fitter func to modify in place
                             # or return a fitted model
             model = out
-        if scoring or scoring_kwargs:
-            kw = copy.deepcopy(scoring_kwargs or {})
-            kw.update(fit_kwargs)
-            kw = {k: v for k,v in kw.items()
-                  if not k in ('scoring',)}
-            model = score_one_model(model, scoring, *fit_args, **kw)
         iter_offset += getattr(model, 'n_iter', 1)
     if return_sample:
         return model, fit_args

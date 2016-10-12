@@ -28,7 +28,7 @@ def sampler():
     return es
 
 
-BASE['data_source'] = {'args_gen': gen,
+BASE['data_source'] = {'args_list': gen,
                        'sampler': sampler}
 
 

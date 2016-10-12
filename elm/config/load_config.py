@@ -21,7 +21,7 @@ from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
 
-def args_gen_from_list(some_list, *args, **kwargs):
+def args_list_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
 
@@ -194,22 +194,22 @@ class ConfigParser(object):
                 raise ElmConfigError('data_source {} refers to a '
                                        '"download" {} not defined in "downloads"'
                                        ' section'.format(ds, download))
-            s = ds.get('args_gen')
-            if not s in self.args_gen:
+            s = ds.get('args_list')
+            if not s in self.args_list:
                 try:
-                    args_gen = import_callable(s)
+                    args_list = import_callable(s)
                 except Exception as e:
-                    raise ElmConfigError('data_source:{} uses a args_gen {} that '
+                    raise ElmConfigError('data_source:{} uses a args_list {} that '
                                          'is neither importable nor in '
-                                         '"args_gen" dict'.format(name, s))
+                                         '"args_list" dict'.format(name, s))
                 raise ElmConfigError('Expected data_source: '
-                                     'args_gen {} to be in '
-                                     'args_gen.keys()')
+                                     'args_list {} to be in '
+                                     'args_list.keys()')
             else:
-                args_gen = self.args_gen[s]
-                self._validate_custom_callable(args_gen,
+                args_list = self.args_list[s]
+                self._validate_custom_callable(args_list,
                                         True,
-                                        'data_source:{} args_gen'.format(name))
+                                        'data_source:{} args_list'.format(name))
             self._validate_selection_kwargs(ds, name)
             keep_columns = ds.get('keep_columns') or []
             self._validate_type(keep_columns, 'keep_columns', (tuple, list))
@@ -225,17 +225,17 @@ class ConfigParser(object):
         for name, ds in self.data_sources.items():
             self._validate_one_data_source(name, ds)
 
-    def _validate_args_gen(self):
-        '''Validate the "args_gen" section of config'''
-        self.args_gen = self.config.get('args_gen', {}) or {}
-        if not isinstance(self.args_gen, dict):
-            raise ElmConfigError('Expected args_gen to be a dict, but '
-                                   'got {}'.format(self.args_gen))
-        for name, file_gen in self.args_gen.items():
+    def _validate_args_list(self):
+        '''Validate the "args_list" section of config'''
+        self.args_list = self.config.get('args_list', {}) or {}
+        if not isinstance(self.args_list, dict):
+            raise ElmConfigError('Expected args_list to be a dict, but '
+                                   'got {}'.format(self.args_list))
+        for name, file_gen in self.args_list.items():
             if not name or not isinstance(name, str):
-                raise ElmConfigError('Expected "name" key in args_gen {} ')
+                raise ElmConfigError('Expected "name" key in args_list {} ')
             self._validate_custom_callable(file_gen, True,
-                                           'args_gen:{}'.format(name))
+                                           'args_list:{}'.format(name))
 
     def _validate_positive_int(self, val, context):
         '''Validate that a positive int was given'''

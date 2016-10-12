@@ -82,7 +82,7 @@ data_sources: {
   [long_name, "Band 9 ", band_9],
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
-  args_gen: iter_files_recursively,
+  args_list: iter_files_recursively,
 
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   file_pattern: "\\.hdf",
@@ -130,7 +130,7 @@ pipeline:
     {predict: kmeans},
     ]
   }
-args_gen: {
+args_list: {
   tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
   iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }

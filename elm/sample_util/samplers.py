@@ -24,7 +24,7 @@ def image_selection(band_specs,
         if not generated_args:
             raise ValueError('image_selection tried to choose randomly from '
                              'generated_args but no args were generated.\n'
-                             'Check "args_gen"')
+                             'Check "args_list"')
         filename = np.random.choice(generated_args)
 
     return select_from_file(filename, band_specs, **selection_kwargs)

@@ -96,10 +96,10 @@ def test_readers():
     bad_config = tst_bad_config(bad_config)
 
 
-def test_args_gen():
+def test_args_list():
     bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['args_gen'].keys())[0]
+    name = tuple(bad_config['args_list'].keys())[0]
     for item in NOT_DICT:
-        bad_config['args_gen'] = item
+        bad_config['args_list'] = item
         bad_config = tst_bad_config(bad_config)
-    bad_config['args_gen'][name] = NOT_FUNCTION
+    bad_config['args_list'][name] = NOT_FUNCTION

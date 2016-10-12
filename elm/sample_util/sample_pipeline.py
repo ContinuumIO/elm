@@ -24,10 +24,11 @@ _SAMPLE_PIPELINE_SPECS = {}
 
 def _split_pipeline_output(output, X, y,
                            sample_weight, context):
+    logger.debug(type(output))
     if not isinstance(output, (tuple, list)):
         return output, y, sample_weight
-    if not output:
-        raise ValueError('{} sample_pipeline func returned falsy {}'.format(context, repr(output)))
+    if output is None:
+        return X, y, sample_weight
     if len(output) == 1:
         return output[0], y, sample_weight
     elif len(output) == 2:
@@ -43,8 +44,6 @@ def _split_pipeline_output(output, X, y,
         raise ValueError('{} sample_pipeline func returned '
                          'more than 3 outputs in a '
                          'tuple/list'.format(context))
-
-
 
 
 def create_sample_from_data_source(config=None, **data_source):
@@ -86,23 +85,7 @@ def create_sample_from_data_source(config=None, **data_source):
     for k in data_source:
         if '_filter' in k and data_source[k] and k != 'geo_filters':
             data_source[k] = import_callable(data_source[k])
-    kw = {k: v for k, v in data_source.items() if not k in ('band_specs',)}
-    args_gen = data_source.get('args_gen') or None
-    if args_gen:
-        if isinstance(args_gen, (tuple, str)) and config and args_gen in config.args_gen:
-            args_gen = import_callable(config.args_gen[args_gen])
-        else:
-            args_gen = import_callable(args_gen)
-        logger.debug('Calling args_gen')
-        generated_args = get_generated_args(args_gen,
-                                            band_specs,
-                                            sampler_func,
-                                            **kw)
-        data_source['generated_args'] = generated_args
-    else:
-        data_source['generated_args'] = [(sampler_args, data_source)
-                                          for _ in range(data_source.get('n_batches') or 1)]
-    return sampler_func, sampler_args, data_source
+    return sampler_func(*sampler_args, **data_source)
 
 # MOve this logic somwehre
 # pipe = [('create_sample', sampler_func, sampler_args, data_source)]

@@ -29,9 +29,10 @@ __all__ = ['ensemble']
 
 def _fit_once(method, model, fit_score_kwargs, args):
     X, y, sample_weight = args
-    return fit_and_score(model, X, y=y,
-                         sample_weight=sample_weight,
-                         **fit_score_kwargs)
+    fitting_func = getattr(model, method, None)
+    if fitting_func is None:
+        raise ValueError("Estimator {} has no method {}".format(model, fitting_func))
+    return fitting_func(X, y, sample_weight, **fit_score_kwargs)
 
 
 def _run_fit_and_score_dask(dsk,
@@ -39,11 +40,11 @@ def _run_fit_and_score_dask(dsk,
                             fit_score_kwargs,
                             get_func,
                             models_share_sample,
+                            sample_keys,
                             method='fit',
                             sample_key=None):
 
     # Samples before Pipeline actions applied
-    sample_keys = tuple(dsk)
     model_keys = [_[0] for _ in models]
     collect_keys = []
     if not models_share_sample:
@@ -65,19 +66,19 @@ def _run_fit_and_score_dask(dsk,
         new_models = tuple(dask.get(dsk, new_models_name))
     else:
         new_models = tuple(get_func(dsk, new_models_name))
-    models = tuple(zip(keys, new_models))
+    models = tuple(zip(model_keys, new_models))
     return models
 
 
 def _make_sample(pipe, args, sampler):
-    return pipe.create_sample(X=None, y=None, sample_weight=None,
+    out = pipe.create_sample(X=None, y=None, sample_weight=None,
                               sampler=sampler, sampler_args=args)
+    assert isinstance(out, tuple) and len(out) == 3, repr(out) # TODO remove
+    return out
 
-def make_samples(pipe, args_gen, sampler):
+def make_samples(pipe, args_list, sampler):
     dsk = {}
-    if callable(args_gen):
-        args_gen = args_gen()
-    for arg in args_gen:
+    for arg in args_list:
         sample_name = _next_name()
         dsk[sample_name] = (_make_sample, pipe, arg, sampler)
     return dsk
@@ -89,7 +90,7 @@ def ensemble(pipe,
              y=None,
              sample_weight=None,
              sampler=None,
-             args_gen=None,
+             args_list=None,
              client=None,
              init_ensemble_size=1,
              ensemble_init_func=None,
@@ -124,17 +125,17 @@ def ensemble(pipe,
     if model_selection:
         model_selection = import_callable(model_selection)
     fit_score_kwargs = {}
-    fit_score_kwargs['scoring'] = scoring
-    fit_score_kwargs['scoring_kwargs'] = scoring_kwargs or {}
-    fit_score_kwargs['method'] = method
-    fit_score_kwargs['partial_fit_batches'] = partial_fit_batches or 1
+    if 'partial_fit' in method:
+        method = 'partial_fit_n_batches'
+        fit_score_kwargs['partial_fit_batches'] = partial_fit_batches or 1
     fit_score_kwargs['classes'] = classes
     final_names = []
     if X is None:
-        dsk = make_samples(pipe, args_gen, sampler)
+        dsk = make_samples(pipe, args_list, sampler)
     else:
         dsk = {_next_name(): (lambda: X, y, sample_weight,)}
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
+    sample_keys = tuple(dsk)
     for gen in range(ngen):
         logger.info('Ensemble generation {} of {} - len(models): {} '.format(gen + 1, ngen, len(models)))
         models = _run_fit_and_score_dask(dsk,
@@ -142,6 +143,7 @@ def ensemble(pipe,
                                          fit_score_kwargs,
                                          get_func,
                                          models_share_sample,
+                                         sample_keys=sample_keys,
                                          method=method,
                                          sample_key=None)
         if model_selection:
