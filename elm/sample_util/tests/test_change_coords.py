@@ -10,7 +10,7 @@ from elm.pipeline.tests.util import (random_elm_store,
 from elm.readers import *
 from elm.sample_util.sample_pipeline import run_sample_pipeline
 n_components = 3
-data_source = {'sample_from_args_func': random_elm_store,
+data_source = {'sampler': random_elm_store,
                'attrs': {}}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
@@ -54,9 +54,9 @@ def tst_one_sample_pipeline(sample_pipeline, add_na_per_band=0):
                                 train_dict=train,
                                 ensemble_kwargs=ensemble_kwargs,
                                 transform_dict=transform)
-    action_data = ma.fit_args[0]
+    pipe = ma.fit_args[0]
     transform_model = [('tag_0', PCA(n_components=n_components))]
-    new_es, _, _ = run_sample_pipeline(action_data,
+    new_es, _, _ = run_sample_pipeline(pipe,
                                        sample=sample,
                                        transform_model=transform_model)
     return sample, new_es

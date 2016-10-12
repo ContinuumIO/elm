@@ -1,155 +1,213 @@
-from collections import defaultdict
+from collections import Sequence
+from functools import partial, wraps
 import copy
-import logging
 
-import dask
+import numpy as np
+import xarray as xr
 
-from elm.config import ConfigParser
-from elm.model_selection.evolve import ea_setup
-from elm.pipeline.ensemble import ensemble
-from elm.pipeline.evolve_train import evolve_train
-from elm.pipeline.predict import predict
-from elm.pipeline.util import get_transform_name_for_sample_pipeline
-from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
-from elm.pipeline.transform import get_new_or_saved_transform_model
+from elm.model_selection import get_args_kwargs_defaults
+from elm.readers import ElmStore
+from elm.pipeline import (predict_many,
+                          steps as STEPS,
+                          ensemble)
+from elm.sample_util.sample_pipeline import (final_on_sample_step,
+                                             _split_pipeline_output,
+                                             create_sample_from_data_source)
 
-logger = logging.getLogger(__name__)
 
-__all__ = ['pipeline']
 
-def _create_args_to_each_step(config, major_step,
-                              return_values, transform_dict):
-    '''Create the args that go to each step in a pipeline's "steps"
-    Params:
+class Pipeline(object):
 
-        config:  elm.config.ConfigParser instance
-        major_step: the step dictionary in the pipeline, e.g config.pipeline[0]
-        return_values: dict of return values from previous pipeline steps
-        transform_dict: dict of transform models to be
-                        used in sample_pipeline if needed
-    '''
-    samples_per_batch = major_step.get('samples_per_batch') or 1
-    random_rows = major_step.get('random_rows')
-    if random_rows:
-        random_rows = int(random_rows)
-        random_rows_per_file = random_rows // samples_per_batch
-    else:
-        random_rows_per_file = None
-    sample_pipeline = major_step['sample_pipeline']
-    if sample_pipeline and not 'random_rows' in sample_pipeline[-1]:
-        if random_rows_per_file:
-            sample_pipeline = sample_pipeline + [{'random_rows': random_rows_per_file}]
-    data_source = config.data_sources[major_step['data_source']]
-    for step in major_step['steps']:
-        if step.get('transform') in transform_dict:
-            transform_model = transform_dict[step['transform']]
+    def __init__(self, steps):
+        self.steps = steps
+        self._validate_steps()
+        self._names = [_[0] for _ in self.steps]
+
+    def _run_steps(self, X=None, y=None,
+                  sample_weight=None,
+                  sampler=None, args_gen=None,
+                  sklearn_method='fit',
+                  iter_offset=0, config=None,
+                  method_kwargs=None,
+                  **new_params):
+
+        X, y, sample_weight = _split_pipeline_output(X, X, y,
+                                                   sample_weight,
+                                                   'run_steps_once')
+        if all(_ is None for _ in (X, y, sample_weight)):
+            kw = dict(sampler=sampler, args_gen=args_gen, y=y, sample_weight=sample_weight)
+            X, y, sample_weight = self.create_sample(config=config, **kw)
+        if new_params:
+            pipe = copy.deepcopy(self)
+            pipe.set_params(**new_params)
         else:
-            transform_model = get_new_or_saved_transform_model(config,
-                                                               sample_pipeline,
-                                                               data_source,
-                                                               step)
-        if transform_model:
-            break
-    sample_pipeline_info = (config, sample_pipeline, data_source,
-                           transform_model,
-                           samples_per_batch)
-    return sample_pipeline_info
+            pipe = copy.deepcopy(self)
+        fit_func = None
+        for idx, (_, step_cls) in enumerate(pipe.steps[:-1]):
+            fit_func = step_cls.fit_transform
+            func_out = fit_func(X, y=y, sample_weight=sample_weight)
+            if func_out is not None:
+                X, y, sample_weight = _split_pipeline_output(func_out, X, y,
+                                                       sample_weight, repr(fit_func))
+        if fit_func and not isinstance(X, (ElmStore, xr.Dataset)):
+            raise ValueError('Expected the return value of {} to be an '
+                             'elm.readers:ElmStore'.format(fit_func))
+        fitter_or_predict = getattr(self._estimator, sklearn_method, None)
+        if fitter_or_predict is None:
+            raise ValueError('Final estimator in Pipeline {} has no method {}'.format(self._estimator, sklearn_method))
+        if not isinstance(self._estimator, STEPS.StepMixin):
+            args, kwargs = self._post_run_pipeline(fitter_or_predict,
+                                                   self._estimator,
+                                                   X,
+                                                   iter_offset=iter_offset,
+                                                   y=y,
+                                                   sample_weight=sample_weight)
 
 
-def on_step(*args, **kwargs):
-    '''Evaluate a step in the pipeline'''
-    config, step, client = args
-    sample_pipeline_info = kwargs['sample_pipeline_info']
-    (_, sample_pipeline, data_source,
-     transform_model,
-     samples_per_batch) = sample_pipeline_info
-    if 'transform' in step or 'train' in step:
-        args2 = (sample_pipeline, data_source,)
-        kwargs2 = dict(config=config,
-                       step=step,
-                       client=client,
-                       evo_params=kwargs.get('evo_params') or None,
-                       samples_per_batch=samples_per_batch)
-    elif 'predict'in step:
-        args2 = (sample_pipeline, data_source,)
-        kwargs2 = dict(config=config,
-                         step=step,
-                         client=client,
-                         transform_model=transform_model,
-                         samples_per_batch=samples_per_batch,
-                         models=kwargs['models'],
-                         serialize=None, # arg not handled yet
-                         to_cube=True)
-    if 'transform' in step:
-        kwargs2['train_or_transform'] = label = 'transform'
-    elif 'train' in step:
-        kwargs2['train_or_transform'] = label = 'train'
-    else:
-        if 'predict' in step:
-            return ('predict', predict(*args2, **kwargs2))
         else:
-            raise NotImplementedError('Put other operations like "change_detection" here')
-    if kwargs2.get('evo_params'):
-        return (label, evolve_train(*args2, **kwargs2))
-    return (label, ensemble(*args2, **kwargs2))
+            kwargs = {'y': y, 'sample_weight': sample_weight}
+            args = (X,)
+        kwargs.update(method_kwargs or {})
+        output = fitter_or_predict(*args, **kwargs)
+        if 'predict' == sklearn_method:
+            return output
+        if sklearn_method == 'fit':
+            return self
+        # transform or fit_transform most likely
+        return _split_pipeline_output(output, X, y, sample_weight, 'fit_transform')
 
+    def _post_run_pipeline(self, fitter_or_predict, estimator,
+                           X, iter_offset=None,
+                           y=None, sample_weight=None,
+                           classes=None, **kwargs_to_method):
 
-def _run_steps(return_values, transform_dict, evo_params_dict,
-              client, steps, config, sample_pipeline_info,
-              step_num=0):
-    '''Run the "steps" within a sample_pipeline dict's "steps"'''
+        return final_on_sample_step(fitter_or_predict,
+                         estimator, X,
+                         iter_offset,
+                         kwargs_to_method,
+                         y=y,
+                         sample_weight=sample_weight,
+                         classes=classes,
+                         require_flat=True,
+                      )
 
-    for idx, step in enumerate(steps):
-        logger.info('Pipeline step: {}'.format(repr(step)))
-        logger.info('Run pipeline step {}'.format(step))
-        models = None
-        if 'predict' in step and 'train' in return_values:
-            if step['predict'] in return_values['train']:
-                # instead of loading from disk the
-                # models that were just created, use the
-                # in-memory models returned by train step
-                # already run
-                models = return_values['train'][step['predict']]
-        transform_key = None
-        transform_key = get_transform_name_for_sample_pipeline(step)
-        if 'transform' in step:
-            transform_key = step['transform']
-        if transform_key in transform_dict:
-            transform_model = transform_dict[transform_key]
+    def create_sample(self, config=None, **data_source):
+        X = data_source.get("X", None)
+        y = data_source.get('y', None)
+        sample_weight = data_source.get('sample_weight', None)
+        if not ('sampler' in data_source or 'args_gen' in data_source):
+            if not any(data_source.get(_, None) is not None for _ in ('X', 'y', 'sample_weight')):
+                raise ValueError('Expected "sampler" or "args_gen" in "data_source" or X, y, and/or sample_weight')
+        if data_source.get('sampler'):
+            func, args, kwargs = create_sample_from_data_source(config=config, **data_source)
+            output = func(*args, **kwargs)
         else:
-            transform_model = None
+            output = (X, y, sample_weight)
+        return _split_pipeline_output(output, X=X, y=y,
+                           sample_weight=sample_weight,
+                           context=getattr(self, '_context', repr(data_source)))
 
-        kwargs = {'transform_model': transform_model,
-                  'sample_pipeline_info': sample_pipeline_info,}
-        if 'predict' in step:
-            kwargs['models'] = models
+    def _validate_steps(self):
+        steps = []
+        for idx, s in enumerate(self.steps):
+            if not isinstance(s, Sequence):
+                name, callable_ = 'step_{}'.format(idx), s
+            else:
+                name, callable_ = s
+            steps.append((name, callable_))
+            if idx < len(self.steps) - 1:
+                if not hasattr(callable_, 'fit_transform') and not (hasattr(callable_, 'fit') and hasattr(callable_, 'transform')):
+                    raise ValueError("{} has no attribute 'fit_transform', or 'fit' and 'transform'".format(callable_))
+            else:
+                if not any(hasattr(callable_, m) for m in ('fit', 'partial_fit', 'fit_transform')):
+                    raise ValueError('')
+        self.steps = steps
+        self._estimator = self.steps[-1][-1]
+        self._transformers = self.steps[:-1]
 
-        if (step_num, idx) in evo_params_dict:
-            kwargs['evo_params'] = evo_params_dict[(step_num, idx)]
-        step_type, ret_val = on_step(config, step, client, **kwargs)
-        return_values[step_type][step[step_type]] = ret_val
-        if step_type == 'transform':
-            transform_dict[step[step_type]] = ret_val
-    return return_values, transform_dict
+    def get_params(self):
+        params = {}
+        for name, estimator in self.steps:
+            for k, v in estimator.get_params().items():
+                params['{}__{}'.format(name, k)] = v
+        return params
 
+    def _validate_key(self, k, context=''):
+        if not k in self._names:
+            raise ValueError('{} parameter - {} is not in {}'.format(context, k, self._names))
 
-def pipeline(config, client):
-    '''Run all steps of a config's "pipeline"
-    Parameters:
-        config: elm.config.ConfigParser instance
-        client: Executor/client from Distributed, thread pool
-                or None for serial evaluation
-    '''
-    sample_pipeline_info = None
-    return_values = defaultdict(lambda: {})
-    transform_dict = {}
-    evo_params_dict = ea_setup(config)
-    for idx, step in enumerate(config.pipeline):
-        sample_pipeline_info = _create_args_to_each_step(config, step, return_values, transform_dict)
-        rargs = (return_values, transform_dict, evo_params_dict,
-                 client, step['steps'], config,
-                 sample_pipeline_info)
-        return_values, transform_dict = _run_steps(*rargs, step_num=idx)
-    return return_values
+    def _split_key(self, k):
+        parts = k.split('__')
+        if len(parts) == 1:
+            step_key, param_key = (self.steps[-1][0], parts[0])
+        elif len(parts) != 2:
+            raise ValueError('Cannot parse key: {} (expected one "__" token)'.format(k))
+        else:
+            step_key, param_key = parts
+        self._validate_key(step_key)
+        step = self.steps[self._names.index(step_key)]
+        _, estimator = step
+        if not param_key in estimator.get_params():
+            raise ValueError('Parameter {} is not a keyword to {}'.format(param_key, estimator))
+        return step_key, param_key, estimator
 
+    def set_params(self, **params):
+        for k, v in params.items():
+            step_key, param_key, estimator = self._split_key(k)
+            estimator.set_params(**{param_key: v})
+        return self
 
+    def fit(self, *args, **kwargs):
+        return self._run_steps(*args, **dict(sklearn_method='fit', **kwargs))
+
+    def transform(self, *args, **kwargs):
+        return self._run_steps(*args, **dict(sklearn_method='transform', **kwargs))
+
+    def fit_transform(self, *args, **kwargs):
+        return self._run_steps(*args, **dict(sklearn_method='fit_transform', **kwargs))
+
+    def ensemble_fit(self, X=None, y=None, sample_weight=None, ngen=3,
+                     sampler=None, args_gen=None, client=None,
+                     init_ensemble_size=1, ensemble_init_func=None,
+                     models_share_sample=True,
+                     model_selection=None, model_selection_kwargs=None,
+                     scoring=None, scoring_kwargs=None, method='fit',
+                     partial_fit_batches=1, classes=None, serialize_models=None,
+                     **kwargs):
+        return ensemble(self, ngen, X=X, y=y, sample_weight=sample_weight,
+                     sampler=sampler, args_gen=args_gen, client=client,
+                     init_ensemble_size=init_ensemble_size,
+                     ensemble_init_func=ensemble_init_func,
+                     models_share_sample=models_share_sample,
+                     model_selection=model_selection,
+                     model_selection_kwargs=model_selection_kwargs,
+                     scoring=scoring, scoring_kwargs=scoring_kwargs,
+                     method=method, partial_fit_batches=partial_fit_batches,
+                     classes=classes, serialize_models=serialize_models,
+                     **kwargs)
+
+    def fit_transform_ensemble(self, *args, **kwargs):
+        kw = dict(**kwargs)
+        kw['method'] = 'fit_transform'
+        return self.ensemble_fit(*args, **kw)
+
+    def transform_ensemble(self, *args, **kwargs):
+        kw = dict(**kwargs)
+        kw['method'] = 'transform'
+        return self.ensemble_fit(*args, **kw)
+
+    def fit_ea(self, method, *args, **kwargs):
+        raise NotImplementedError('')
+
+    def predict(self, X=None, y=None, sample_weight=None, **kwargs):
+        args = (X,)
+        kw = dict(y=y, sample_weight=sample_weight,
+                  sklearn_method='predict',**kwargs)
+        return self._run_steps(*args, **kw)
+
+    def fit_and_predict(self, *args, **kwargs):
+        return self.fit(*args, **kwargs).predict(*args, **kwargs)
+
+    @wraps(predict_many)
+    def predict_many(self, *args, **kwargs):
+        return predict_many(*args, **kwargs)

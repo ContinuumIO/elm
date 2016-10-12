@@ -89,7 +89,7 @@ param_grids: {
 
 data_sources: {
   synthetic: {
-    sample_from_args_func: 'elm.pipeline.tests.util:random_elm_store',
+    sampler: 'elm.pipeline.tests.util:random_elm_store',
     sampler_args: [],
   }
 }

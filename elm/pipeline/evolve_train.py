@@ -16,8 +16,8 @@ from elm.pipeline.transform import get_new_or_saved_transform_model
 from elm.pipeline.util import (_ensemble_ea_prep,
                                _validate_ensemble_members,
                                _prepare_fit_kwargs,
-                               _get_model_selection_func,
-                               _run_model_selection_func,
+                               _get_model_selection,
+                               _run_model_selection,
                                make_model_args_from_config,)
 from elm.pipeline.ensemble import _run_fit_and_score_dask
 from elm.pipeline.serialize import serialize_models

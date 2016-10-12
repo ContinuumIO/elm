@@ -71,7 +71,7 @@ sample_pipelines: {
 data_sources: {
  NPP_DSRF1KD_L2GD: {
   reader: hdf4_example,
-  sample_from_args_func: "elm.sample_util.samplers:image_selection",
+  sampler: "elm.sample_util.samplers:image_selection",
   band_specs: [[long_name, "Band 1 ", band_1],
   [long_name, "Band 2 ", band_2],
   [long_name, "Band 3 ", band_3],
@@ -82,7 +82,7 @@ data_sources: {
   [long_name, "Band 9 ", band_9],
   [long_name, "Band 10 ", band_10],
   [long_name, "Band 11 ", band_11]],
-  sample_args_generator: iter_files_recursively,
+  args_gen: iter_files_recursively,
 
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   file_pattern: "\\.hdf",
@@ -130,7 +130,7 @@ pipeline:
     {predict: kmeans},
     ]
   }
-sample_args_generators: {
+args_gen: {
   tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
   iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }

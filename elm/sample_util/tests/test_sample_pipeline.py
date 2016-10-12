@@ -28,8 +28,8 @@ def sampler():
     return es
 
 
-BASE['data_source'] = {'sample_args_generator': gen,
-                       'sample_from_args_func': sampler}
+BASE['data_source'] = {'args_gen': gen,
+                       'sampler': sampler}
 
 
 def test_sample_pipeline_feature_selection():
@@ -52,11 +52,11 @@ def test_sample_pipeline_feature_selection():
                     'choices': BANDS,
                     'kwargs': {'threshold': 0.08,},
                 }
-                action_data = sample_pipeline.get_sample_pipeline_action_data(sample_pipeline, config, step,
+                pipe = sample_pipeline.create_sample_from_data_source(sample_pipeline, config, step,
                                     data_source)
                 transform_models = None
                 for repeats in range(5):
-                    s, _, _ = sample_pipeline.run_sample_pipeline(action_data, transform_model=None)
+                    s, _, _ = sample_pipeline.run_sample_pipeline(pipe, transform_model=None)
                     assert s.flat.shape[1] < 40
                     assert set(s.flat.band.values) < set(BANDS)
 

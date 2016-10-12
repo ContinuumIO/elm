@@ -21,7 +21,7 @@ from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
 
-def sample_args_generator_from_list(some_list, *args, **kwargs):
+def args_gen_from_list(some_list, *args, **kwargs):
     yield from iter(some_list)
 
 
@@ -177,13 +177,13 @@ class ConfigParser(object):
 
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
-        sample_from_args_func = ds.get('sample_from_args_func')
-        self._validate_custom_callable(sample_from_args_func,
+        sampler = ds.get('sampler')
+        self._validate_custom_callable(sampler,
                                 True,
-                                'train:{} sample_from_args_func'.format(name))
+                                'train:{} sampler'.format(name))
         if 'band_specs' in ds:
             ds['band_specs'] = self._validate_band_specs(ds.get('band_specs'), name)
-        if not sample_from_args_func:
+        if not sampler:
             reader = ds.get('reader')
             if not reader in self.readers:
                 raise ElmConfigError('Data source config dict {} '
@@ -194,22 +194,22 @@ class ConfigParser(object):
                 raise ElmConfigError('data_source {} refers to a '
                                        '"download" {} not defined in "downloads"'
                                        ' section'.format(ds, download))
-            s = ds.get('sample_args_generator')
-            if not s in self.sample_args_generators:
+            s = ds.get('args_gen')
+            if not s in self.args_gen:
                 try:
-                    sample_args_generator = import_callable(s)
+                    args_gen = import_callable(s)
                 except Exception as e:
-                    raise ElmConfigError('data_source:{} uses a sample_args_generator {} that '
+                    raise ElmConfigError('data_source:{} uses a args_gen {} that '
                                          'is neither importable nor in '
-                                         '"sample_args_generators" dict'.format(name, s))
+                                         '"args_gen" dict'.format(name, s))
                 raise ElmConfigError('Expected data_source: '
-                                     'sample_args_generator {} to be in '
-                                     'sample_args_generators.keys()')
+                                     'args_gen {} to be in '
+                                     'args_gen.keys()')
             else:
-                sample_args_generator = self.sample_args_generators[s]
-                self._validate_custom_callable(sample_args_generator,
+                args_gen = self.args_gen[s]
+                self._validate_custom_callable(args_gen,
                                         True,
-                                        'data_source:{} sample_args_generator'.format(name))
+                                        'data_source:{} args_gen'.format(name))
             self._validate_selection_kwargs(ds, name)
             keep_columns = ds.get('keep_columns') or []
             self._validate_type(keep_columns, 'keep_columns', (tuple, list))
@@ -225,17 +225,17 @@ class ConfigParser(object):
         for name, ds in self.data_sources.items():
             self._validate_one_data_source(name, ds)
 
-    def _validate_sample_args_generators(self):
-        '''Validate the "sample_args_generators" section of config'''
-        self.sample_args_generators = self.config.get('sample_args_generators', {}) or {}
-        if not isinstance(self.sample_args_generators, dict):
-            raise ElmConfigError('Expected sample_args_generators to be a dict, but '
-                                   'got {}'.format(self.sample_args_generators))
-        for name, file_gen in self.sample_args_generators.items():
+    def _validate_args_gen(self):
+        '''Validate the "args_gen" section of config'''
+        self.args_gen = self.config.get('args_gen', {}) or {}
+        if not isinstance(self.args_gen, dict):
+            raise ElmConfigError('Expected args_gen to be a dict, but '
+                                   'got {}'.format(self.args_gen))
+        for name, file_gen in self.args_gen.items():
             if not name or not isinstance(name, str):
-                raise ElmConfigError('Expected "name" key in sample_args_generators {} ')
+                raise ElmConfigError('Expected "name" key in args_gen {} ')
             self._validate_custom_callable(file_gen, True,
-                                           'sample_args_generators:{}'.format(name))
+                                           'args_gen:{}'.format(name))
 
     def _validate_positive_int(self, val, context):
         '''Validate that a positive int was given'''
@@ -392,7 +392,7 @@ class ConfigParser(object):
         has_fit_func = False
         has_funcs = {}
         sel = t.get('model_selection')
-        no_selection = not sel or sel in ('no_selection',)
+        no_selection = not sel
         for f, required in training_funcs:
             cls_or_func = self._validate_custom_callable(t.get(f), required,
                                            'train:{} - {}'.format(name, f))

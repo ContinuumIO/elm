@@ -14,10 +14,9 @@ from elm.config import import_callable, parse_env_vars
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.dask_settings import (wait_for_futures,
                                         no_client_submit)
-from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
+from elm.sample_util.sample_pipeline import create_sample_from_data_source
 from elm.pipeline.serialize import (load_models_from_tag,
                                     serialize_prediction)
-from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.readers import (flatten,
                          inverse_flatten,
                          ElmStore,)
@@ -25,7 +24,7 @@ from elm.sample_util.samplers import make_one_sample_part
 
 logger = logging.getLogger(__name__)
 
-__all__ = ['predict',]
+__all__ = ['predict_many',]
 
 _predict_idx = 0
 
@@ -36,7 +35,7 @@ def _next_name():
     return n
 
 
-def _predict_one_sample_one_arg(action_data,
+def _predict_one_sample_one_arg(pipe,
                                 transform_model,
                                 serialize,
                                 to_cube,
@@ -45,12 +44,12 @@ def _predict_one_sample_one_arg(action_data,
                                 filename,
                                 sample=None):
     logger.info('Predict {}'.format(filename))
-    action_data_copy = copy.deepcopy(action_data)
-    action_data_copy[0][-1]['filename'] = filename
+    pipe_copy = copy.deepcopy(pipe)
+    pipe_copy[0][-1]['filename'] = filename
     out = []
     for idx, (name, model) in enumerate(models):
         if idx == 0:
-            sample, sample_y, sample_weight = run_sample_pipeline(action_data,
+            sample, sample_y, sample_weight = run_sample_pipeline(pipe,
                                          sample=sample,
                                          transform_model=transform_model)
             if not hasattr(sample, 'flat'):
@@ -86,7 +85,7 @@ def _predict_one_sample_one_arg(action_data,
 
 
 
-def predict(sample_pipeline,
+def predict_many(sample_pipeline,
                  data_source,
                  config=None,
                  step=None,
@@ -109,11 +108,11 @@ def predict(sample_pipeline,
     else:
         submit_func = no_client_submit
     get_results = partial(wait_for_futures, client=client)
-    action_data = get_sample_pipeline_action_data(sample_pipeline,
+    pipe = create_sample_from_data_source(sample_pipeline,
                                                   config=config, step=step,
                                                   data_source=data_source,
                                                   **sample_pipeline_kwargs)
-    sampler_kwargs = action_data[0][-1]
+    sampler_kwargs = pipe[0][-1]
     env = parse_env_vars()
     tag = tag or step['predict']
     if config and not serialize:
@@ -138,7 +137,7 @@ def predict(sample_pipeline,
     for idx, arg in enumerate(generated_args):
         name = _next_name()
         predict_dsk[name] = (_predict_one_sample_one_arg,
-                             action_data,
+                             pipe,
                              transform_model,
                              serialize,
                              to_cube,

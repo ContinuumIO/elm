@@ -12,7 +12,7 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      test_one_config as tst_one_config,
                                      BANDS)
 from elm.readers import *
-from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data, run_sample_pipeline
+from elm.sample_util.sample_pipeline import create_sample_from_data_source, run_sample_pipeline
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH)
 transform_model = [('tag_0', PCA(n_components=3))]
@@ -39,9 +39,9 @@ def tst_one_sample_pipeline(sample_pipeline,
         step = config.pipeline[0]['steps'][0]
         for step1 in config.pipeline:
             step1['sample_pipeline'] = sample_pipeline
-            action_data = get_sample_pipeline_action_data(sample_pipeline, config, step,
+            pipe = create_sample_from_data_source(sample_pipeline, config, step,
                                     data_source)
-            sample, sample_y, sample_weight = run_sample_pipeline(action_data, sample=es,
+            sample, sample_y, sample_weight = run_sample_pipeline(pipe, sample=es,
                                          transform_model=transform_model)
 
             return sample

@@ -7,7 +7,7 @@ import tempfile
 import pytest
 import yaml
 
-from elm.pipeline import pipeline
+from elm.pipeline import parse_run_config
 from elm.config import DEFAULTS, DEFAULTS_FILE, import_callable
 from elm.example_data import EXAMPLE_FILES
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
@@ -134,7 +134,7 @@ def tst_sklearn_method(model_init_class,
         if 'n_neighbors' in ks:
             models_defaults['n_neighbors'] = 1
         kwargs = {'model_init_class': model_init_class,
-                  'model_selection': 'no_selection',
+                  'model_selection': None,
                   'ensemble_kwargs': default_ensemble,
                   'model_init_kwargs': models_defaults}
         if 'BernoulliRBM' in model_init_class:

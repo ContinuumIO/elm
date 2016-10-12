@@ -18,7 +18,7 @@ def _import_scaler(scaler_str):
     if scaler_str in DIR_SKPRE:
         scaler = getattr(sklearn_pre, scaler_str)
     else:
-        scaler = import_callable(scaler)
+        scaler = import_callable(scaler_str)
     a, k, d = get_args_kwargs_defaults(scaler)
     if 'X' in a or 'x' in a:
         is_preproc_class = False
@@ -31,25 +31,21 @@ def _import_scaler(scaler_str):
     return (scaler, is_preproc_class, requires_classes)
 
 
-def _update_elm_store_for_changes(es, new_array, new_names=None):
+def _update_elm_store_for_changes(es, estimator, new_array):
     '''Update an ElmStore for a change in the column dimension'''
     old_shp = es.flat.shape
-    if new_array.shape[1] != old_shp[1]:
-        if (new_names and len(new_names) != es.shape[1]) or new_array.shape[1] < old_shp[1]:
-            raise ValueError('Expected "new_names" to have length {} but got '
-                             '{} (expected because scaler decreases column size of input '
-                             'matrix)'.format(es.flat.shape[1], new_names))
+    support = np.arange(es.flat.band.size)
+    if new_array.shape[1] >= old_shp[1]:
         inds = range(old_shp[1], new_array.shape[1])
-        new_names = list(es.flat.band) + ['band_{}'.format(idx) for idx in inds]
-        return ElmStore({'flat': xr.DataArray(new_array,
-                                        coords=[(es.flat.dims[0], getattr(es.flat, es.flat.dims[0])),
-                                                ('band', new_names)],
-                                        dims=es.flat.dims,
-                                        attrs=copy.deepcopy(es.flat.attrs))},
-                        attrs=copy.deepcopy(es.attrs))
+        new_names = list(es.flat.band[support]) + ['band_{}'.format(idx) for idx in inds]
     else:
-        es.flat.values= new_array
-    return es
+        new_names = es.flat.band[support]
+    return ElmStore({'flat': xr.DataArray(new_array,
+                                    coords=[(es.flat.dims[0], getattr(es.flat, es.flat.dims[0])),
+                                            ('band', new_names)],
+                                    dims=es.flat.dims,
+                                    attrs=copy.deepcopy(es.flat.attrs))},
+                    attrs=copy.deepcopy(es.attrs))
 
 
 def _filter_kwargs(**scaler_kwargs):
@@ -62,15 +58,15 @@ def _scale_with_sklearn_pre_class(X, scaler, requires_classes=False, **scaler_kw
     s = scaler(**_filter_kwargs(**scaler_kwargs))
     scaled = s.fit_transform(X.flat.values)
     return _update_elm_store_for_changes(X,
-                                         scaled,
-                                         new_names=scaler_kwargs.get('new_names'))
+                                         scaler,
+                                         scaled)
 
 def _scale_with_sklearn_func(X, scaler, **scaler_kwargs):
     '''Use a function from sklearn.preprocessing'''
     scaled = scaler(X, **_filter_kwargs(**scaler_kwargs))
     return _update_elm_store_for_changes(X,
-                                         scaled,
-                                         new_names=scaler_kwargs.get('new_names'))
+                                         scaler,
+                                         scaled)
 
 
 def sklearn_preprocessing(X, scaler, **scaler_kwargs):

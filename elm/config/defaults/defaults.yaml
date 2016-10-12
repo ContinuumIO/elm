@@ -20,7 +20,7 @@ readers: {
 data_sources: {
  hdf5_precip_hourly: {
    reader: hdf5_example,
-   sample_from_args_func: "elm.sample_util.samplers:image_selection",
+   sampler: "elm.sample_util.samplers:image_selection",
    band_specs: [{search_key: sub_dataset_name,
                  search_value: /precipitation,
                  name: band_1,
@@ -31,11 +31,11 @@ data_sources: {
    file_pattern: "3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5",
    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
    batch_size: 1440000,
-   sample_args_generator: "elm.readers.local_file_iterators:iter_files_recursively",
+   args_gen: "elm.readers.local_file_iterators:iter_files_recursively",
   },
  NPP_DSRF1KD_L2GD: {
   reader: hdf4_example,
-  sample_from_args_func: "elm.sample_util.samplers:image_selection",
+  sampler: "elm.sample_util.samplers:image_selection",
   band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
   {search_key: long_name, search_value: "Band 2 ", name: band_2},
   {search_key: long_name, search_value: "Band 3 ", name: band_3},
@@ -46,18 +46,18 @@ data_sources: {
   {search_key: long_name, search_value: "Band 9 ", name: band_9},
   {search_key: long_name, search_value: "Band 10 ", name: band_10},
   {search_key: long_name, search_value: "Band 11 ", name: band_11}],
-  sample_args_generator: iter_files_recursively,
+  args_gen: iter_files_recursively,
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
   file_pattern: "\\.hdf",
   batch_size: 1440000,
  },
  S3_LANDSAT_L2_TIFS: {
-  sample_args_generator: tif_file_gen,
+  args_gen: tif_file_gen,
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   file_pattern: ".TIF",
   reader: tif_example,
-  sample_from_args_func: "elm.sample_util.samplers:image_selection",
+  sampler: "elm.sample_util.samplers:image_selection",
   band_specs: [
   {search_key: name, search_value: "_B1.TIF", name: band_1},
   {search_key: name, search_value: "_B2.TIF", name: band_2},
@@ -67,7 +67,7 @@ data_sources: {
   batch_size: 1440000,
   },
 }
-sample_args_generators: {
+args_gen: {
   tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
   iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }

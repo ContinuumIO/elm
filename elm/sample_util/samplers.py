@@ -7,8 +7,7 @@ import pandas as pd
 from elm.sample_util.band_selection import select_from_file
 from elm.sample_util.elm_store_concat import elm_store_concat
 from elm.sample_util.filename_selection import get_generated_args
-from elm.sample_util.sample_pipeline import (get_sample_pipeline_action_data,
-                                             run_sample_pipeline)
+from elm.sample_util.sample_pipeline import create_sample_from_data_source
 
 
 
@@ -25,7 +24,7 @@ def image_selection(band_specs,
         if not generated_args:
             raise ValueError('image_selection tried to choose randomly from '
                              'generated_args but no args were generated.\n'
-                             'Check "sample_args_generators"')
+                             'Check "args_gen"')
         filename = np.random.choice(generated_args)
 
     return select_from_file(filename, band_specs, **selection_kwargs)
@@ -41,16 +40,16 @@ def _next_name():
 
 def make_one_sample_part(config=None, sample_pipeline=None,
                          data_source=None, transform_model=None,
-                         action_data=None, sample_pipeline_kwargs=None,
+                         pipe=None, sample_pipeline_kwargs=None,
                          sample=None):
     sample_pipeline_kwargs = sample_pipeline_kwargs or {}
-    if action_data is None and sample is None:
-        action_data = get_sample_pipeline_action_data(sample_pipeline,
+    if pipe is None and sample is None:
+        pipe = create_sample_from_data_source(sample_pipeline,
                                                       config=config,
                                                       step=None,
                                                       data_source=data_source,
                                                       **sample_pipeline_kwargs)
-    sample, sample_y, sample_weight = run_sample_pipeline(action_data,
+    sample, sample_y, sample_weight = run_sample_pipeline(pipe,
                                                           transform_model=transform_model,
                                                           sample=sample)
     return (sample, sample_y, sample_weight)

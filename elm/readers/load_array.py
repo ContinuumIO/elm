@@ -35,7 +35,7 @@ def _find_file_type(filename):
     return ftype
 
 
-def load_array(filename, meta=None, band_specs=None):
+def load_array(filename, meta=None, band_specs=None, reader=None):
     '''Create ElmStore from HDF4 / 5 or NetCDF files or TIF directories
 
     Parameters:
@@ -44,12 +44,14 @@ def load_array(filename, meta=None, band_specs=None):
                     directory name (TIF)
         meta:       meta data from "filename" already loaded
         band_specs: list of strings or elm.readers.BandSpec objects
+        reader:     named reader from elm.readers - one of:
+                     ('tif', 'hdf4', 'hdf5', 'netcdf')
 
     Returns:
         es:         ElmStore (xarray.Dataset) with bands specified
                     by band_specs as DataArrays in "data_vars" attribute
     '''
-    ftype = _find_file_type(filename)
+    ftype = reader or _find_file_type(filename)
     if meta is None:
         if ftype == 'tif':
             meta = _load_meta(filename, ftype, band_specs=band_specs)
@@ -103,6 +105,7 @@ def load_meta(filename, **kwargs):
         meta:           dict with the following keys
     '''
 
-    ftype = _find_file_type(filename)
-    return _load_meta(filename, ftype, **kwargs)
+    reader = kwargs.get('reader')
+    kw = {k: v for k, v in reader.items() if k != 'reader'}
+    return _load_meta(filename, ftype, **kw)
 

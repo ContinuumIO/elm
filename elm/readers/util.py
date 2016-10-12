@@ -55,8 +55,8 @@ class BandSpec(object):
 
 @attr.s
 class DataSource(object):
-    sample_args_generator = attr.ib()
-    sample_from_args_func = attr.ib(default="elm.sample_util.samplers:image_selection")
+    args_gen = attr.ib()
+    sampler = attr.ib(default="elm.sample_util.samplers:image_selection")
     band_spec = attr.ib(default=None)
     reader = attr.ib(default=None)
     file_pattern = attr.ib(default=None)

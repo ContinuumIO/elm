@@ -11,11 +11,9 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 
 
-def feature_selection_base(sample_x,
-                          selection_dict,
-                          sample_y=None,
-                          keep_columns=None,
-                          **kwargs):
+def feature_selection_base(X,
+                          y=None,
+                          **selection_dict):
     '''feature_selection_base returns indices of columns to keep
     Params:
         sample:  a data frame sample with column names used in the
@@ -29,15 +27,21 @@ def feature_selection_base(sample_x,
                         (exclude metadata columns from thresholding)
         keep_columns: columns to keep regardless of selection's selection
     Returns:
-        sample_x: dataframe subset of selection's chosen columns
+        X: dataframe subset of selection's chosen columns
                    among choices
     '''
+    keep_columns = selection_dict.get('keep_columns') or []
     feature_selection = selection_dict['selection']
     if feature_selection == 'all':
-        return sample_x
-    feature_selection_kwargs = selection_dict['kwargs']
+        return X
+    feature_selection_kwargs = selection_dict.get('kwargs') or {}
+    if not feature_selection_kwargs:
+        feature_selection_kwargs = {k: v for k,v in selection_dict.items()
+                                    if k != 'selection'}
     scoring_kwargs = selection_dict.get('scoring_kwargs') or {}
-    feature_choices = selection_dict['choices']
+    feature_choices = selection_dict.get('choices') or 'all'
+    if feature_choices == 'all':
+        feature_choices = list(X.flat.band)
     feature_selection = import_callable(feature_selection)
     feature_scoring = selection_dict.get('scoring')
     if feature_scoring is not None:
@@ -52,11 +56,9 @@ def feature_selection_base(sample_x,
         feature_selection_args = ()
     selection = feature_selection(*feature_selection_args,
                                   **feature_selection_kwargs)
-    if feature_choices == 'all':
-        feature_choices = list(sample_x.flat.band)
-    band_idx = np.array([idx for idx, band in enumerate(sample_x.flat.band)
+    band_idx = np.array([idx for idx, band in enumerate(X.flat.band)
                          if band in feature_choices])
-    subset = sample_x.flat[:, band_idx]
+    subset = X.flat[:, band_idx]
     check_array(subset.values, 'feature_selection:{} X subset'.format(selection))
 
     required_args, _, _ = get_args_kwargs_defaults(selection.fit)
@@ -65,15 +67,15 @@ def feature_selection_base(sample_x,
                'Y data but the sample_pipeline has not '
                'positioned a {{"get_y": True}} action before '
                'feature_selection'.format(feature_selection,))
-        check_array(sample_y, msg, ensure_2d=False)
+        check_array(y, msg, ensure_2d=False)
 
-    selection.fit(subset.values, y=sample_y)
+    selection.fit(subset.values, y=y)
     ml_columns = selection.get_support(indices=True)
-    sample_x_dropped_bands =  ElmStore({'flat': xr.DataArray(sample_x.flat[:, band_idx[ml_columns]].copy(),
-                                              coords=[('space', sample_x.flat.space),
-                                                      ('band', sample_x.flat.band[band_idx[ml_columns]])],
+    X_dropped_bands =  ElmStore({'flat': xr.DataArray(X.flat[:, band_idx[ml_columns]].copy(),
+                                              coords=[('space', X.flat.space),
+                                                      ('band', X.flat.band[band_idx[ml_columns]])],
                                               dims=('space','band'),
-                                              attrs=sample_x.flat.attrs)},
-                                          attrs=sample_x.attrs)
-    del sample_x
-    return sample_x_dropped_bands
+                                              attrs=X.flat.attrs)},
+                                          attrs=X.attrs)
+    del X
+    return X_dropped_bands

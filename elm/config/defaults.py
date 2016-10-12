@@ -12,7 +12,7 @@ DEFAULTS = read_from_egg(
                 )
 
 CONFIG_KEYS = [('readers',  dict),
-                ('sample_args_generators', dict),
+                ('args_gen', dict),
                 ('ensembles', dict),
                 ('data_sources', dict),
                 ('polys', dict),

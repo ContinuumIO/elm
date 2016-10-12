@@ -10,11 +10,11 @@ import numbers
 from elm.model_selection.util import get_args_kwargs_defaults, ModelArgs
 from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable, parse_env_vars
-from elm.model_selection.base import (base_selection, no_selection)
+from elm.model_selection.base import base_selection
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.util import ModelArgs
-from elm.sample_util.sample_pipeline import get_sample_pipeline_action_data
+from elm.sample_util.sample_pipeline import create_sample_from_data_source
 from elm.sample_util.samplers import make_one_sample
 
 
@@ -44,7 +44,7 @@ def _make_model_args_from_config(config, train_or_trans_dict,
     from elm.model_selection.util import get_args_kwargs_defaults
     classes = train_or_trans_dict.get('classes', None)
 
-    action_data = get_sample_pipeline_action_data(sample_pipeline, config, step,
+    pipe = create_sample_from_data_source(sample_pipeline, config, step,
                                                   data_source, **sample_pipeline_kwargs)
     if not model_scoring:
         model_scoring = train_or_trans_dict.get('model_scoring')
@@ -79,17 +79,14 @@ def _make_model_args_from_config(config, train_or_trans_dict,
                              'transform when partial_fit is used as a method')
         if method == 'partial_fit':
             model_init_kwargs['batch_size'] = batch_size
-    fit_args = (action_data,)
+    fit_args = (pipe,)
     fit_kwargs = {
         'fit_kwargs': train_or_trans_dict.get('fit_kwargs') or {},
     }
     model_selection = train_or_trans_dict.get('model_selection') or None
     if model_selection:
         if isinstance(model_selection, str):
-            if model_selection == 'no_selection':
-                model_selection = None
-            else:
-                model_selection = config.model_selection[model_selection]
+            model_selection = config.model_selection[model_selection]
         if model_selection:
             model_selection_kwargs = copy.deepcopy(model_selection.get('kwargs') or {}) or {}
             model_selection_kwargs.update({
@@ -98,10 +95,10 @@ def _make_model_args_from_config(config, train_or_trans_dict,
             })
             model_selection_func = model_selection['func']
         else:
-            model_selection_func = 'no_selection'
+            model_selection_func = None
             model_selection_kwargs = {}
     else:
-        model_selection_func = 'no_selection'
+        model_selection_func = None
         model_selection_kwargs = {}
     step_name = step[train_or_transform] if step else train_or_trans_dict['output_tag']
     model_args = ModelArgs(model_init_class,
@@ -210,15 +207,15 @@ def _prepare_fit_kwargs(model_args, ensemble_kwargs):
     return fit_kwargs
 
 
-def _get_model_selection_func(model_args):
-    if model_args.model_selection_func and model_args.model_selection_func != 'no_selection':
-        model_selection_func = import_callable(model_args.model_selection_func)
+def _get_model_selection(model_args):
+    if model_args.model_selection:
+        model_selection = import_callable(model_args.model_selection)
     else:
-        model_selection_func = no_selection
-    return model_selection_func
+        model_selection = None
+    return model_selection
 
 
-def _run_model_selection_func(model_selection_func, model_args,
+def _run_model_selection(model_selection, model_args,
                               ngen, generation,
                               fit_kwargs, models):
     model_selection_kwargs = copy.deepcopy(model_args.model_selection_kwargs)
@@ -230,9 +227,9 @@ def _run_model_selection_func(model_selection_func, model_args,
         sort_fitness = pareto_front
     else:
         sort_fitness = import_callable(sort_fitness)
-    logger.debug('base_selection {}'.format(repr((models, model_args.model_selection_func, sort_fitness, score_weights, model_selection_kwargs))))
+    logger.debug('base_selection {}'.format(repr((models, model_args.model_selection, sort_fitness, score_weights, model_selection_kwargs))))
     models = base_selection(models,
-                            model_selection_func=model_selection_func,
+                            model_selection=model_selection,
                             sort_fitness=sort_fitness,
                             score_weights=score_weights,
                             **model_selection_kwargs)
@@ -242,6 +239,7 @@ def _run_model_selection_func(model_selection_func, model_args,
 
 def _ensemble_ea_prep(sample_pipeline,
                       data_source,
+                      models=None,
                       config=None,
                       step=None,
                       train_dict=None,
@@ -275,7 +273,9 @@ def _ensemble_ea_prep(sample_pipeline,
                                      evo_dict, **sample_pipeline_kwargs)
         evo_params_dict = ea_setup(config)
         evo_params = tuple(evo_params_dict.values())[0]
-
+    if evo_params:
+        if models:
+            raise ValueError('Pass "train_dict" not "models" when using evolutionary algorithm.')
     transform_model = transform_model or None
     sample_pipeline_kwargs['transform_dict'] = transform_dict
     sample_pipeline_kwargs['transform_model'] = transform_model
@@ -293,6 +293,7 @@ def _ensemble_ea_prep(sample_pipeline,
                                                                 step=step,
                                                                 train_dict=train_dict,
                                                                 ensemble_kwargs=ensemble_kwargs,
+                                                                models=models,
                                                                 **sample_pipeline_kwargs)
     if not model_args:
         model_args = model_args2
@@ -322,16 +323,17 @@ def _ensemble_ea_prep(sample_pipeline,
                 sample_pipeline_kwargs,
                 sample)
         return (args, ensemble_kwargs)
-    args = (client,
+    args = ()
+    return (models,
+            client,
             model_args,
+            data_source,
+            samples_per_batch,
+            config,
+            sample_pipeline_kwargs,
+            sample,
+            ensemble_kwargs,
             transform_model,
-            sample_pipeline,
-            data_source,)
-    kwargs = dict(samples_per_batch=samples_per_batch,
-                  config=config,
-                  sample_pipeline_kwargs=sample_pipeline_kwargs,
-                  sample=sample,
-                  ensemble_kwargs=ensemble_kwargs)
-    return (args, kwargs)
+            sample_pipeline)
 
 

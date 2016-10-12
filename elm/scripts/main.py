@@ -14,7 +14,7 @@ from elm.config.cli import add_config_file_argument, add_cmd_line_options
 from elm.config import (DEFAULTS, ConfigParser,
                         client_context, ElmConfigError,
                         parse_env_vars)
-from elm.pipeline import pipeline
+from elm.pipeline import parse_run_config
 from elm.config.dask_settings import wait_for_futures
 
 logger = logging.getLogger(__name__)
@@ -69,9 +69,9 @@ def run_one_config(args=None, sys_argv=None,
                 # of deprecation warnings for kmeans
                 warnings.simplefilter("ignore")
                 with client_context(dask_client, dask_scheduler) as client:
-                    return_values = pipeline(config, client)
+                    return_values = parse_run_config(config, client)
         else:
-            return_values = pipeline(config, client)
+            return_values = parse_run_config(config, client)
 
     if return_0_if_ok:
         return 0

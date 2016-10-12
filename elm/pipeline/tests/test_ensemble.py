@@ -6,7 +6,7 @@ import pytest
 
 from elm.config import DEFAULTS, ConfigParser, import_callable
 from elm.pipeline.tests.util import patch_ensemble_predict
-from elm.sample_util.sample_pipeline import check_action_data
+from elm.sample_util.sample_pipeline import check_pipe
 
 
 EXPECTED_SELECTION_KEYS = ('exclude_polys',
@@ -53,7 +53,7 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
          fit_kwargs,
          model_scoring,
          model_scoring_kwargs,
-         model_selection_func,
+         model_selection,
          model_selection_kwargs,
          step_type,
          step_name,
@@ -72,7 +72,7 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
                 assert model_init_kwargs.get(k) == v
         # assert fit_func, typically "fit" or "partial_fit"
         # is a method of model_init_class
-        check_action_data(fit_args[0])
+        check_pipe(fit_args[0])
         # fit_kwargs
         data_source = config.data_sources[config.pipeline[0]['data_source']]
         ensemble = config.ensembles[train_dict['ensemble']]
@@ -82,7 +82,7 @@ def test_train_makes_args_kwargs_ok(ds_name, ds_dict):
         # model scoring kwargs
 
         assert isinstance(model_scoring_kwargs, dict)
-        assert not model_selection_func or (':' in model_selection_func and import_callable(model_selection_func))
+        assert not model_selection or (':' in model_selection and import_callable(model_selection))
         assert isinstance(model_selection_kwargs, dict)
         assert model_selection_kwargs.get('model_init_kwargs') == model_init_kwargs
         assert callable(model_selection_kwargs.get('model_init_class'))

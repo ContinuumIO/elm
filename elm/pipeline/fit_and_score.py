@@ -6,43 +6,28 @@ import numbers
 import numpy as np
 from sklearn.cross_validation import cross_val_score
 
-from elm.sample_util.sample_pipeline import run_sample_pipeline
 from elm.sample_util.sample_pipeline import final_on_sample_step
 from elm.config import import_callable
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import (score_one_model,
                                       make_scorer)
 
+
+__all__ = ['fit_and_score']
 logger = logging.getLogger(__name__)
 
 FIT_FUNC_ERR = ('Expected model {} to have a '
                 '"partial_fit" method with partial_fit_batches = {}.\n'
                 'Set partial_fit_batches to 1 or use model with "partial_fit" method')
 
-def fit_and_score(model,
-                     x_y_sample_weight,
-                     partial_fit_batches=None,
-                     classes=None,
-                     scoring=None,
-                     scoring_kwargs=None,
-                     method='partial_fit',
-                     fit_kwargs=None,
-                     return_sample=False):
-    '''fit - call a method of scikit-learn which may be fit, fit_transform, or transform
-    Parameters:
-        model: sklearn model instance
-        x_y_sample_weight: tuple of (X, Y, sample_weight)
-                                       X: ElmStore with DataArray "flat"
-                                       Y: None or 1-d np.array
-                                       sample_weight: None or 1-d np.array
-
-        partial_fit_batches:  how many partial_fit_batches
-        classes:              1-d integer np.array of all possible classes
-        scoring:              scoring function, defaults to model.score()
-        scoring_kwargs:       kwargs passed to "scoring" function
-        method:           model's method to call, e.g. "fit" or "fit_transform"
-        fit_kwargs:           kwargs passed to model's "method"
-    '''
+def fit_and_score(model, X, y=None, sample_weight=None,
+                  partial_fit_batches=None,
+                  classes=None,
+                  scoring=None,
+                  scoring_kwargs=None,
+                  method='partial_fit',
+                  fit_kwargs=None,
+                  return_sample=False):
 
     if partial_fit_batches > 1:
         if not hasattr(model, 'partial_fit') and method == 'partial_fit':
@@ -52,15 +37,12 @@ def fit_and_score(model,
     for idx in range(partial_fit_batches):
         logger.info('Partial fit batch {} of {} in '
                     'current ensemble'.format(idx + 1, partial_fit_batches))
-
-        assert len(x_y_sample_weight) == 3, repr(len(x_y_sample_weight))
-        sample, sample_y, sample_weight = x_y_sample_weight
         fitter = getattr(model, method, getattr(model, 'fit'))
-        fit_args, fit_kwargs = final_on_sample_step(fitter, model, sample,
+        fit_args, fit_kwargs = final_on_sample_step(fitter, model, X,
                                                     iter_offset,
                                                     fit_kwargs,
                                                     classes=classes, # TODO these need to be passed in some cases
-                                                    sample_y=sample_y,
+                                                    y=y,
                                                     sample_weight=sample_weight)
         logger.debug('fit_args {} fit_kwargs {}'.format(fit_args, fit_kwargs))
         out = fitter(*fit_args, **fit_kwargs)
