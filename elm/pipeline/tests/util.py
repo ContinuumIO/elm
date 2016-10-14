@@ -24,8 +24,6 @@ from elm.scripts.main import main as elm_main
 
 old_ensemble = elm_pipeline.ensemble
 old_predict = elm_pipeline.predict_many
-old_transform = elmtransform.transform_pipeline_step
-old_init_transform = elmtransform.get_new_or_saved_transform_model
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
@@ -42,16 +40,11 @@ def patch_ensemble_predict():
         return args, kwargs
     try:
         elm_pipeline.ensemble = return_all
-        elmtransform.transform_pipeline_step = return_all
-        elmtransform.get_new_or_saved_transform_model = return_all
         elm_pipeline.predict = return_all
-
         yield (ens, predict)
     finally:
         elm_pipeline.ensemble = old_ensemble
         elm_pipeline.predict_many = old_predict
-        elmtransform.transform_pipeline_step = old_transform
-        elmtransform.get_new_or_saved_transform_model = old_init_transform
 
 
 @contextlib.contextmanager

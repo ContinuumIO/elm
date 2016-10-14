@@ -13,9 +13,7 @@ from deap import creator
 from deap import tools
 import numpy as np
 
-from elm.model_selection.util import (MODEL_FIELDS,
-                                      ModelArgs,
-                                      get_args_kwargs_defaults)
+from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config import (import_callable,
                         ElmConfigError,
                         ConfigParser)

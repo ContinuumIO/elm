@@ -39,7 +39,7 @@ sklearn_preprocessing: {
   },
   require_positive: {
     method: FunctionTransformer,
-    func: "elm.sample_util.encoding_scaling:require_positive",
+    func: "elm.pipeline.preproc_scale:require_positive",
     func_kwargs: {small_num: 0.0001},
   },
 }

@@ -18,62 +18,31 @@ def _next_name():
     return tag
 
 
-def _make_sample(pipe, args, sampler):
+def _make_sample(pipe, args, sampler, data_source):
     out = pipe.create_sample(X=None, y=None, sample_weight=None,
-                              sampler=sampler, sampler_args=args)
+                             sampler=sampler, sampler_args=args,
+                             **data_source)
     return out
 
 
-def make_samples(pipe, args_list, sampler):
+def make_samples(pipe, args_list, sampler, data_source):
     dsk = {}
     for arg in args_list:
         sample_name = _next_name()
-        dsk[sample_name] = (_make_sample, pipe, arg, sampler)
+        dsk[sample_name] = (_make_sample, pipe, arg, sampler, data_source)
     return dsk
 
 
-def make_samples_dask(X, y, sample_weight, pipe, args_list, sampler):
+def make_samples_dask(X, y, sample_weight, pipe, args_list, sampler, data_source):
     if X is None:
-        dsk = make_samples(pipe, args_list, sampler)
+        dsk = make_samples(pipe, args_list, sampler, data_source)
     else:
         dsk = {_next_name(): (lambda: (X, y, sample_weight),)}
     return dsk
 
 
-def image_selection(band_specs,
-                    **selection_kwargs):
+def image_selection(filename, **selection_kwargs):
 
+    band_specs = selection_kwargs.get('band_specs', None)
     args_list = selection_kwargs['args_list']
-    filename = np.random.choice(args_list)
     return select_from_file(filename, band_specs, **selection_kwargs)
-
-
-
-def make_one_sample_part(config=None, pipeline=None,
-                         data_source=None, transform_model=None,
-                         pipe=None, pipeline_kwargs=None,
-                         sample=None):
-    pipeline_kwargs = pipeline_kwargs or {}
-    if pipe is None and sample is None:
-        pipe = create_sample_from_data_source(pipeline,
-                                                      config=config,
-                                                      step=None,
-                                                      data_source=data_source,
-                                                      **pipeline_kwargs)
-    sample, sample_y, sample_weight = run_pipeline(pipe,
-                                                          transform_model=transform_model,
-                                                          sample=sample)
-    return (sample, sample_y, sample_weight)
-
-
-def make_one_sample(config=None, pipeline=None,
-                    data_source=None, transform_model=None,
-                    samples_per_batch=None, sample_name=None,
-                    pipeline_kwargs=None, sample=None):
-    func_args = (make_one_sample_part, config, pipeline,
-                 data_source, transform_model, None,
-                 pipeline_kwargs, sample)
-    dsk = {_next_name(): func_args
-           for _ in range(samples_per_batch)}
-    dsk.update({sample_name: (elm_store_concat, list(dsk.keys()))})
-    return dsk

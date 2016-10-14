@@ -9,14 +9,12 @@ import dask
 
 from elm.config import import_callable
 from elm.config.dask_settings import _find_get_func_for_client
-from elm.pipeline.fit_and_score import fit_and_score
 from elm.pipeline.serialize import (load_models_from_tag,
                                     serialize_models as _serialize_models)
 from elm.pipeline.util import (_validate_ensemble_members,
                                _run_model_selection,
                                _next_name)
 from elm.sample_util.samplers import make_samples_dask
-from elm.pipeline.fit_and_score import fit_and_score
 
 logger = logging.getLogger(__name__)
 
@@ -92,7 +90,7 @@ def ensemble(pipe,
              partial_fit_batches=1,
              classes=None,
              serialize_models=None,
-             **kwargs):
+             **data_source):
 
     '''Train model(s) in ensemble
 
@@ -101,7 +99,7 @@ def ensemble(pipe,
     model_selection_kwargs = model_selection_kwargs or {}
     ensemble_size = init_ensemble_size or 1
     if not ensemble_init_func:
-        models = tuple(copy.deepcopy(pipe) for _ in range(ensemble_size))
+        models = tuple(pipe._copy() for _ in range(ensemble_size))
     else:
         ensemble_init_func = import_callable(ensemble_init_func)
         models = ensemble_init_func(pipe, ensemble_size=ensemble_size)
@@ -114,7 +112,7 @@ def ensemble(pipe,
     if classes is not None:
         fit_score_kwargs['classes'] = classes
     final_names = []
-    dsk = make_samples_dask(X, y, sample_weight, pipe, args_list, sampler)
+    dsk = make_samples_dask(X, y, sample_weight, pipe, args_list, sampler, data_source)
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     sample_keys = tuple(dsk)
 

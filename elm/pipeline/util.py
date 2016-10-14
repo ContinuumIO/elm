@@ -7,16 +7,13 @@ import logging
 import dask
 import numbers
 
-from elm.model_selection.util import get_args_kwargs_defaults, ModelArgs
+from elm.model_selection.util import get_args_kwargs_defaults
 from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable, parse_env_vars
 from elm.model_selection.base import base_selection
 from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
-from elm.model_selection.util import ModelArgs
 from elm.sample_util.sample_pipeline import create_sample_from_data_source
-from elm.sample_util.samplers import make_one_sample
-
 
 
 logger = logging.getLogger(__name__)

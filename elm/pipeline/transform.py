@@ -104,10 +104,10 @@ def _get_saved_transform_models(action, config, **kwargs):
     return transform_models
 
 
-def init_saved_transform_models(config, pipeline):
+def init_saved_transform_models(config, run):
 
     transform_model = None
-    for action in pipeline:
+    for action in run:
         if 'transform' in action:
             transform = copy.deepcopy(config.transform[action['transform']])
             transform_model = _get_saved_transform_models(action,
@@ -117,23 +117,3 @@ def init_saved_transform_models(config, pipeline):
     return transform_model
 
 
-def get_new_or_saved_transform_model(config, pipeline, data_source, step):
-    transform_model = None
-    train_or_transform = 'train' if 'train' in step else 'transform'
-    for item in pipeline:
-        if 'transform' in item:
-            method = item.get('method', config.transform.get('method', None))
-            if method is None:
-                raise ValueError('Expected a "method" for transform')
-            if 'fit' not in method:
-                return init_saved_transform_models(config, pipeline)
-            else:
-                model_args = _make_model_args_from_config(config,
-                                                          config.transform[item['transform']],
-                                                          step,
-                                                          train_or_transform,
-                                                          pipeline,
-                                                          data_source)
-                model = model_args.model_init_class(**model_args.model_init_kwargs)
-                return [('tag_0', model)]
-    return None

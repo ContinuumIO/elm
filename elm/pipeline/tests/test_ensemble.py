@@ -68,18 +68,10 @@ def test_simple():
 args_list = [(300, 200, 8)] * 10 # (height, width, bands) 10 samples
 SAMPLER_DATA_SOURCE = dict(sampler=example_sampler, args_list=args_list)
 
-
-
 X = example_sampler(600, 600, 8)
 X_Y_DATA_SOURCE = {'X': X, 'y':example_get_y(flatten(X))[1]}
 
 DATA_SOURCES = [SAMPLER_DATA_SOURCE, X_Y_DATA_SOURCE]
-def tst_ensemble_scenarios(scenario, supervised, pipe):
-
-        data_source = scenario(supervised=supervised)
-        ensemble_kw = dict(client=client, **ENSEMBLE_KWARGS)
-        fitted = copy.deepcopy(pipe).fit_ensemble(**data_source, **ensemble_kw)
-        pred = fitted.predict_many(**data_source)
 
 def dist_test(func):
     with client_context() as client: # taking dask env variables
@@ -147,16 +139,17 @@ def test_supervised_feat_select_X_y(client=None):
 
 @dist_test
 def test_kmeans_model_selection(client=None):
+
     pipe = Pipeline([steps.Flatten('C'),
                     ('kmeans', MiniBatchKMeans(n_clusters=5))],
                     scoring=kmeans_aic,
                     scoring_kwargs={'score_weights': [-1]})
     en = ENSEMBLE_KWARGS.copy()
-    choices = {'kmeans__n_clusters': list(range(3, 10))}
+    n_clusters_choices = list(range(3, 10))
     def init(pipe, **kwargs):
         estimators = []
         for _ in range(24):
-            n_clusters = np.random.choice(choices['kmeans__n_clusters'])
+            n_clusters = np.random.choice(n_clusters_choices)
             estimator = copy.deepcopy(pipe)
             estimator.set_params(kmeans__n_clusters=n_clusters)
             estimators.append(estimator)
@@ -164,7 +157,7 @@ def test_kmeans_model_selection(client=None):
 
     en['ensemble_init_func'] = init
     en['model_selection_kwargs'] = dict(drop_n=8, evolve_n=16,
-                                        init_n=8, choices=choices)
+                                        init_n=8, choices=n_clusters_choices)
     en['model_selection'] = kmeans_model_averaging
     fitted = pipe.fit_ensemble(**SAMPLER_DATA_SOURCE, **en)
     assert len(fitted.ensemble) == 24

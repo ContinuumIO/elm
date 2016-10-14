@@ -10,9 +10,9 @@ from sklearn.exceptions import NotFittedError
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import score_one_model
 from elm.readers import ElmStore
-from elm.pipeline import (predict_many,
-                          steps as STEPS,
-                          ensemble as _ensemble)
+from elm.pipeline.predict_many import predict_many
+from elm.pipeline import steps as STEPS
+from elm.pipeline.ensemble import ensemble as _ensemble
 from elm.pipeline.util import _next_name
 from elm.sample_util.sample_pipeline import (final_on_sample_step,
                                              _split_pipeline_output,
@@ -29,15 +29,21 @@ class Pipeline(object):
         self.scoring_kwargs = scoring_kwargs
         self.scoring = scoring
 
-    def get_params(self):
+    def _get_pipe_params(self):
         return {'scoring': self.scoring,
                 'scoring_kwargs': self.scoring_kwargs,
                 'steps': self.steps,}
 
-    def set_params(self, **params):
-        p2 = self.get_params()
+    def _set_pipe_params(self, **params):
+        p2 = self._get_pipe_params()
         p2.update(**params)
-        self.__init__(**p2)
+        return p2
+
+    def _copy(self, **new_params):
+        params = self._get_pipe_params()
+        pipe = Pipeline(**params)
+        pipe.set_params(**new_params)
+        return pipe
 
     def _run_steps(self, X=None, y=None,
                   sample_weight=None,
@@ -58,11 +64,9 @@ class Pipeline(object):
             kw = dict(sampler=sampler, args_list=args_list, y=y, sample_weight=sample_weight)
             kw.update(data_source or {})
             X, y, sample_weight = self.create_sample(config=config, **kw)
+
         if new_params:
-            self = copy.deepcopy(self)
-            self.set_params(**new_params)
-        else:
-            self = copy.deepcopy(self)
+            self = self._copy(**new_params)
         fit_func = None
         for idx, (_, step_cls) in enumerate(self.steps[:-1]):
             if prepare_for == 'train':
@@ -120,7 +124,7 @@ class Pipeline(object):
                          require_flat=True,
                       )
 
-    def create_sample(self, config=None, **data_source):
+    def create_sample(self, **data_source):
         X = data_source.get("X", None)
         y = data_source.get('y', None)
         sample_weight = data_source.get('sample_weight', None)
@@ -128,7 +132,7 @@ class Pipeline(object):
             if not any(_ is not None for _ in (X, y, sample_weight)):
                 raise ValueError('Expected "sampler" or "args_list" in "data_source" or X, y, and/or sample_weight')
         if data_source.get('sampler'):
-            output = create_sample_from_data_source(config=config, **data_source)
+            output = create_sample_from_data_source(**data_source)
         else:
             output = (X, y, sample_weight)
         out = _split_pipeline_output(output, X=X, y=y,
@@ -211,9 +215,10 @@ class Pipeline(object):
                      model_selection=None, model_selection_kwargs=None,
                      scoring=None, scoring_kwargs=None, method='fit',
                      partial_fit_batches=1, classes=None, serialize_models=None,
-                     **kwargs):
-        self.ensemble = _ensemble(self, ngen, X=X, y=y, sample_weight=sample_weight,
-                         sampler=sampler, args_list=args_list, client=client,
+                     **data_source):
+        data_source = dict(X=X, y=y, sample_weight=sample_weight, sampler=sampler,
+                           args_list=args_list, **data_source)
+        self.ensemble = _ensemble(self, ngen, client=client,
                          init_ensemble_size=init_ensemble_size,
                          ensemble_init_func=ensemble_init_func,
                          models_share_sample=models_share_sample,
@@ -222,7 +227,7 @@ class Pipeline(object):
                          scoring=scoring, scoring_kwargs=scoring_kwargs,
                          method=method, partial_fit_batches=partial_fit_batches,
                          classes=classes, serialize_models=serialize_models,
-                         **kwargs)
+                         **data_source)
         return self
 
     def fit_transform_ensemble(self, *args, **kwargs):
@@ -249,11 +254,11 @@ class Pipeline(object):
     def predict_many(self, X=None, y=None, sampler=None, args_list=None,
                      client=None, ensemble=None, to_cube=True, tag=None,
                      elm_train_path=None, saved_model_tag=None,
-                     serialize=None):
+                     serialize=None, **data_source):
         ensemble = ensemble or self.ensemble
         if not ensemble:
             raise ValueError('Must call fit_ensemble first or give ensemble=<a list of ("tag_0", fitted_estimator) tuples>')
-        data_source = dict(X=X, y=y, sampler=sampler, args_list=args_list)
+        data_source = dict(X=X, y=y, sampler=sampler, args_list=args_list, **data_source)
         return predict_many(data_source, tagged_models=ensemble,
                  client=client,
                  serialize=serialize,

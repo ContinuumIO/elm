@@ -8,8 +8,6 @@ from elm.pipeline.transform import Transform
 from elm.readers import ElmStore
 from elm.config import ElmConfigError
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.sample_util import encoding_scaling as elmpre
-from elm.sample_util.feature_selection import feature_selection_base
 from elm.sample_util.sample_pipeline import _split_pipeline_output
 import elm.sample_util.change_coords as change_coords
 

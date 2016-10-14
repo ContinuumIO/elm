@@ -609,31 +609,6 @@ class ConfigParser(object):
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
 
-    def to_pipeline_func(self, client=None):
-        from elm.pipeline import Pipeline
-        from elm.sample_util.sample_pipeline import make_pipeline_func
-
-        for step in self.run:
-            pipeline = step['pipeline']
-            train = self.train[step['train']]
-            pipe_steps = make_pipeline_func(self, pipeline)
-            cls = import_callable(train['model_init_class'])
-            estimator = cls(**(train.get('model_init_kwargs') or {}))
-            pipe_steps.append(estimator)
-            ensemble_kwargs = train.get('ensemble')
-            if isinstance(ensemble_kwargs, str):
-                ensemble_kwargs = self.ensembles[ensemble_kwargs]
-            ensemble_kwargs['client'] = client
-            data_source = step['data_source']
-            if not isinstance(data_source, dict):
-                data_source = self.data_sources[data_source]
-            if callable(data_source['args_list']):
-                kw = {k: v for k, v in data_source.items() if k != 'args_list'}
-                data_source['args_list'] = tuple(data_source['args_list'](**kw))
-
-            pipe = Pipeline(pipe_steps, scoring=train.get('scoring'), scoring_kwargs=train.get('scoring_kwargs'))
-            models = pipe.fit(**data_source, **ensemble_kwargs)
-            pipe.predict_many(**data_source)
 
     def __str__(self):
         return yaml.dump(self.raw_config)

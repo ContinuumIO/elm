@@ -1,3 +1,4 @@
+from collections import Sequence
 import copy
 from functools import partial
 import logging
@@ -9,15 +10,10 @@ from sklearn.utils import check_array as _check_array
 import sklearn.preprocessing as skpre
 import sklearn.feature_selection as skfeat
 
-from elm.config import import_callable, ConfigParser
+from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.model_selection.util import filter_kwargs_to_func
-from elm.readers import (ElmStore, flatten as _flatten)
-from elm.sample_util.change_coords import (change_coords_dict_action,
-                                           CHANGE_COORDS_ACTIONS)
-from elm.sample_util.filename_selection import get_args_list
-from elm.readers.util import row_col_to_xy
-from elm.readers import load_meta, load_array, ElmStore
+from elm.readers import (ElmStore, flatten as _flatten, load_meta, load_array)
+from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
 
 
 logger = logging.getLogger(__name__)
@@ -64,9 +60,9 @@ def create_sample_from_data_source(config=None, **data_source):
                                                         # added to ConfigParser
                                                         # validation (sampler requirement)
     sampler_func = import_callable(sampler_func)
-    band_specs = data_source.get('band_specs') or None
     sampler_args = data_source.get('sampler_args') or ()
-
+    if not isinstance(sampler_args, (tuple, list)):
+        sampler_args = (sampler_args,)
     reader_name = data_source.get('reader') or None
     if isinstance(reader_name, str) and reader_name:
         if config and reader_name in config.readers:
@@ -86,15 +82,6 @@ def create_sample_from_data_source(config=None, **data_source):
         if '_filter' in k and data_source[k] and k != 'geo_filters':
             data_source[k] = import_callable(data_source[k])
     return sampler_func(*sampler_args, **data_source)
-
-# MOve this logic somwehre
-# pipe = [('create_sample', sampler_func, sampler_args, data_source)]
-# actions = make_pipeline_func(config=config, step=step,
-#                                    pipeline=pipeline,
-#                                    data_source=data_source,
-#                                    **pipeline_kwargs)
-# pipe.extend(actions)
-# return tuple(pipe)
 
 
 def make_pipeline_func(config, pipeline):
@@ -135,6 +122,8 @@ def make_pipeline_func(config, pipeline):
             scaler = getattr(skpre, scaler, scaler)
             kw = {k: v for k, v in _sklearn_preprocessing.items()
                   if not k in ('method','func_kwargs')}
+            if 'func' in _sklearn_preprocessing:
+                kw['func'] = import_callable(_sklearn_preprocessing['func'])
             step_cls = steps.SklearnBase(_method=scaler, _mod=skpre, **kw)
         elif any(k in CHANGE_COORDS_ACTIONS for k in action):
             _sp_step = [k for k in action if k in CHANGE_COORDS_ACTIONS][0]
@@ -151,7 +140,7 @@ def make_pipeline_func(config, pipeline):
             # elm.config.load_config global variable:
             # "SAMPLE_PIPELINE_ACTIONS"
             raise NotImplementedError('pipeline action {} not recognized.'.format(action))
-        actions.append((action, step_cls) )
+        actions.append(step_cls)
     return actions
 
 

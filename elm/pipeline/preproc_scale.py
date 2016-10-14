@@ -1,8 +1,13 @@
+import copy
 from functools import WRAPPER_ASSIGNMENTS, wraps, partial
 
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
+import numpy as np
+import xarray as xr
 
+from elm.model_selection.util import get_args_kwargs_defaults
+from elm.readers import *
 from elm.pipeline.step_mixin import StepMixin
 
 class SklearnBase(StepMixin):
@@ -57,8 +62,8 @@ class SklearnBase(StepMixin):
         return self._estimator.fit(*args, **kwargs)
 
     def _to_elm_store(self, X, old_X):
-        attrs = old_X.attrs
-        attrs.update(old_X.flat.attrs)
+        attrs = copy.deepcopy(old_X.attrs)
+        attrs.update(copy.deepcopy(old_X.flat.attrs))
         band = ['feat_{}'.format(idx) for idx in range(X.shape[1])]
         flat = xr.DataArray(X,
                             coords=[('space', old_X.flat.space), ('band', band)],
@@ -216,5 +221,15 @@ gs = tuple(globals().items())
 clses = [v for k, v in gs if isinstance(v, type) and issubclass(v, SklearnBase)]
 for cls in clses:
     _set_wrapper_info(cls)
+
+def require_positive(X, small_num=0.0001):
+    '''Helper function to ensure positivity before functions like "log"
+    Params:
+        X:  numpy array
+        small_num: small float number which should replace values <= 0'''
+    if X.dtype.kind != 'f':
+        X = X.astype(np.float32)
+    X[np.where(X <= 0)] = small_num
+    return X
 
 __all__ = [k for k,v in gs if k[0].isupper() and k[0] != '_']
