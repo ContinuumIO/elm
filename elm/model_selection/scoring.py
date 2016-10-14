@@ -33,7 +33,7 @@ def make_scorer(scoring, **scoring_kwargs):
 
 def _score_one_model_with_y_true(model,
                                 scoring,
-                                x,
+                                X,
                                 y_true,
                                 sample_weight=None,
                                 **kwargs):
@@ -41,37 +41,37 @@ def _score_one_model_with_y_true(model,
         kw = copy.deepcopy(kwargs)
         kw['sample_weight'] = sample_weight
         kwargs_to_scoring = filter_kwargs_to_func(model.score, **kw)
-        return model.score(x, y_true, **kwargs)
+        return model._estimator.score(X, y_true, **kwargs)
     if not isinstance(scoring, sk_metrics.scorer._PredictScorer):
         scorer = make_scorer(scoring, **kwargs)
     else:
         scorer = scoring
     # now scorer has signature:
-    #__call__(self, estimator, x, y_true, sample_weight=None)
-    return scorer(model, x, y_true, sample_weight=sample_weight)
+    #__call__(self, estimator, X, y_true, sample_weight=None)
+    return scorer(model, X, y_true, sample_weight=sample_weight)
 
 
 
 def _score_one_model_no_y_true(model,
                                scoring,
-                               x,
+                               X,
                                sample_weight=None,
                                **kwargs):
     kwargs_to_scoring = copy.deepcopy(kwargs)
     kwargs_to_scoring['sample_weight'] = sample_weight
     if scoring is None:
         kwargs = filter_kwargs_to_func(model.score, **kwargs_to_scoring)
-        return model.score(x, **kwargs)
+        return model.score(X, **kwargs)
     kwargs_to_scoring = filter_kwargs_to_func(scoring,
                                             **kwargs_to_scoring)
 
-    return scoring(model, x, **kwargs_to_scoring)
+    return scoring(model, X, **kwargs_to_scoring)
 
 
 
 def score_one_model(model,
                     scoring,
-                    x,
+                    X,
                     y=None,
                     sample_weight=None,
                     **kwargs):
@@ -85,14 +85,14 @@ def score_one_model(model,
     if requires_y:
         model._score = _score_one_model_with_y_true(model,
                                                     scoring,
-                                                    x,
+                                                    X,
                                                     y_true=y,
                                                     sample_weight=None,
                                                     **kwargs)
     else:
         model._score = _score_one_model_no_y_true(model,
                         scoring,
-                        x,
+                        X,
                         sample_weight=None,
                         **kwargs)
     return model

@@ -50,4 +50,8 @@ str_fields_specs:
     default: ~/elm-configs-path,
     expanduser: True,
     required: False}
+ - {name: ELM_LARGE_TEST,
+    default: Null,
+    required: False,
+    expanduser: False}
 

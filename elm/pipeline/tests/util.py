@@ -16,7 +16,7 @@ from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
-import elm.sample_util.sample_pipeline as sample_pipeline
+import elm.sample_util.sample_pipeline as pipeline
 import elm.pipeline as elm_pipeline
 import elm.pipeline.transform as elmtransform
 from elm.readers import *
@@ -24,7 +24,7 @@ from elm.scripts.main import main as elm_main
 
 old_ensemble = elm_pipeline.ensemble
 old_predict = elm_pipeline.predict_many
-old_transform = elmtransform.transform_sample_pipeline_step
+old_transform = elmtransform.transform_pipeline_step
 old_init_transform = elmtransform.get_new_or_saved_transform_model
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
@@ -42,7 +42,7 @@ def patch_ensemble_predict():
         return args, kwargs
     try:
         elm_pipeline.ensemble = return_all
-        elmtransform.transform_sample_pipeline_step = return_all
+        elmtransform.transform_pipeline_step = return_all
         elmtransform.get_new_or_saved_transform_model = return_all
         elm_pipeline.predict = return_all
 
@@ -50,7 +50,7 @@ def patch_ensemble_predict():
     finally:
         elm_pipeline.ensemble = old_ensemble
         elm_pipeline.predict_many = old_predict
-        elmtransform.transform_sample_pipeline_step = old_transform
+        elmtransform.transform_pipeline_step = old_transform
         elmtransform.get_new_or_saved_transform_model = old_init_transform
 
 
@@ -93,7 +93,7 @@ def example_get_y_func_binary(flat_sample, **kwargs):
     np.random.shuffle(inds)
     ret[inds[:3]] = 1
     ret[inds[-3:]] = 0
-    return ret
+    return (flat_sample, ret, kwargs.get('sample_weight'))
 
 
 def example_get_y_func_continuous(flat_sample, **kwargs):
@@ -192,7 +192,7 @@ def remove_pipeline_transforms(config):
                                             if not 'transform' in _]
 
     for item in config['pipeline']:
-        sp = item.get('sample_pipeline')
-        item['sample_pipeline'] = [_ for _ in item['sample_pipeline']
+        sp = item.get('pipeline')
+        item['pipeline'] = [_ for _ in item['pipeline']
                                        if not 'transform' in _]
 

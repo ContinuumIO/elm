@@ -44,7 +44,7 @@ feature_selection: {
   }
 }
 
-sample_pipelines: {
+pipelines: {
   minimal: [
     {flatten: C},
     {sklearn_preprocessing: require_positive},
@@ -54,7 +54,7 @@ sample_pipelines: {
   ],
   top_n: [
     {flatten: C},
-    {sample_pipeline: minimal},
+    {pipeline: minimal},
     {feature_selection: top_n},
     {transform: pca, method: fit_transform},
 
@@ -66,7 +66,7 @@ param_grids: {
   example_param_grid: {
     kmeans__n_clusters: [3,4,5,6,7,8],
     pca__n_components: [2,3,4,5],
-    sample_pipeline: [minimal, top_n],
+    pipeline: [minimal, top_n],
     feature_selection: {top_n: {kwargs: {percentile: [30, 40, 50, 60, 70, 80, 90],}}},
     control: {
       select_method: selNSGA2,
@@ -114,7 +114,7 @@ train: {
 }
 
 pipeline:
-- sample_pipeline: minimal
+- pipeline: minimal
   data_source: synthetic
   steps: [{train: kmeans, param_grid: example_param_grid}]
 

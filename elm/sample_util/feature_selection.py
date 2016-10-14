@@ -12,8 +12,8 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 
 def feature_selection_base(X,
-                          y=None,
-                          **selection_dict):
+                           y=None,
+                           **selection_dict):
     '''feature_selection_base returns indices of columns to keep
     Params:
         sample:  a data frame sample with column names used in the
@@ -37,7 +37,7 @@ def feature_selection_base(X,
     feature_selection_kwargs = selection_dict.get('kwargs') or {}
     if not feature_selection_kwargs:
         feature_selection_kwargs = {k: v for k,v in selection_dict.items()
-                                    if k != 'selection'}
+                                    if k not in ('selection', 'method')}
     scoring_kwargs = selection_dict.get('scoring_kwargs') or {}
     feature_choices = selection_dict.get('choices') or 'all'
     if feature_choices == 'all':
@@ -60,16 +60,17 @@ def feature_selection_base(X,
                          if band in feature_choices])
     subset = X.flat[:, band_idx]
     check_array(subset.values, 'feature_selection:{} X subset'.format(selection))
-
     required_args, _, _ = get_args_kwargs_defaults(selection.fit)
-    if ('y' in required_args or 'Y' in required_args):
-        msg = ('feature_selection [{}] requires '
-               'Y data but the sample_pipeline has not '
-               'positioned a {{"get_y": True}} action before '
-               'feature_selection'.format(feature_selection,))
-        check_array(y, msg, ensure_2d=False)
-
-    selection.fit(subset.values, y=y)
+    method = selection_dict['method']
+    func = getattr(selection, method)
+    if 'fit' in method:
+        if ('y' in required_args or 'Y' in required_args):
+            msg = ('feature_selection [{}] requires '
+                   'Y data but the pipeline has not '
+                   'positioned a {{"get_y": True}} action before '
+                   'feature_selection'.format(feature_selection,))
+            check_array(y, msg, ensure_2d=False)
+        selection.fit(subset.values, y=y)
     ml_columns = selection.get_support(indices=True)
     X_dropped_bands =  ElmStore({'flat': xr.DataArray(X.flat[:, band_idx[ml_columns]].copy(),
                                               coords=[('space', X.flat.space),

@@ -39,7 +39,7 @@ OK_PARAM_FIRST_KEYS = ['transform',
                        'model_scoring',
                        'data_sources',
                        'sklearn_preprocessing',
-                       'sample_pipeline',]
+                       'pipeline',]
 
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
@@ -142,8 +142,8 @@ def _make_cfg_replace_keys(train_config, transform_config,
                               'pipeline'.format(k,
                                                 train_or_transform,
                                                 train_step_name or transform_step_name))
-            elif k[0] == 'sample_pipeline':
-                return (('sample_pipeline_variable',), v)
+            elif k[0] == 'pipeline':
+                return (('pipeline_variable',), v)
             else:
                 raise ElmConfigError('Expected param_grid key to be in "train" '
                                      'or "transform" model_init_kwargs, '
@@ -218,9 +218,9 @@ def get_param_grid(config, step1, step):
         raise ElmConfigError('Expected param_grid to be used with a "train" '
                          'or "transform" step of a pipeline, but found param_grid '
                          'was used in step {}'.format(step))
-    if 'sample_pipeline' in step1 and transform_step_name is None:
-        sample_pipeline = step1['sample_pipeline']
-        transform_steps = [_ for _ in sample_pipeline if 'transform' in _]
+    if 'pipeline' in step1 and transform_step_name is None:
+        pipeline = step1['pipeline']
+        transform_steps = [_ for _ in pipeline if 'transform' in _]
         transform_names = set(_.get('transform') for _ in transform_steps)
         if len(transform_names) > 1:
             raise ElmConfigError('Expected a single transform model but got {}'.format(transform_names))
@@ -432,10 +432,10 @@ def individual_to_new_config(config, deap_params, ind):
                  deap_params['choices'],
                  ind)
     new_config = copy.deepcopy(config.config)
-    sample_pipeline = None
+    pipeline = None
     for keys, choices, idx in zipped:
-        if keys[0] == 'sample_pipeline_variable':
-            sample_pipeline = choices[idx]
+        if keys[0] == 'pipeline_variable':
+            pipeline = choices[idx]
             continue
         _set_from_keys(new_config,
                        keys,

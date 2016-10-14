@@ -53,7 +53,7 @@ feature_selection: {
   }
 }
 
-sample_pipelines: {
+pipelines: {
   minimal: [
     {flatten: C},
     {sklearn_preprocessing: require_positive},
@@ -62,7 +62,7 @@ sample_pipelines: {
   ],
   top_n: [
     {flatten: C},
-    {sample_pipeline: minimal},
+    {pipeline: minimal},
     {feature_selection: top_n},
   ],
   nothing: [{flatten: C},],
@@ -124,7 +124,7 @@ predict: {
 
 pipeline:
 - {data_source: NPP_DSRF1KD_L2GD,
-  sample_pipeline: minimal,
+  pipeline: minimal,
   steps: [
     {train: kmeans},
     {predict: kmeans},

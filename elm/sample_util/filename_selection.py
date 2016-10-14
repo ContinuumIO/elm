@@ -18,7 +18,7 @@ def include_file(filename, band_specs, **selection_kwargs):
     selection_kwargs['dry_run'] = True
     return _select_from_file_base(filename, band_specs, **selection_kwargs)
 
-def get_generated_args(filenames_gen, band_specs, sampler_func, **selection_kwargs):
+def get_args_list(filenames_gen, band_specs, sampler_func, **selection_kwargs):
     from elm.sample_util.band_selection import select_from_file
     if sampler_func == select_from_file:
         return tuple(f for f in filenames_gen(**selection_kwargs)

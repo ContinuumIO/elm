@@ -49,11 +49,11 @@ def new_training_config(**train_kwargs):
         config['train'][DEFAULT_TRAIN_KEY] = DEFAULT_TRAIN
 
 def adjust_config_sample_size(config, n_rows):
-    '''Add a step to "sample_pipeline" for limiting
+    '''Add a step to "pipeline" for limiting
     the number of rows to a random subset of n_rows'''
     for step1 in config['pipeline']:
         random_rows = [{'random_sample': n_rows}]
-        step1['sample_pipeline'] += [{'flatten': 'C'}] + random_rows
+        step1['pipeline'] += [{'flatten': 'C'}] + random_rows
 
 # The following slow_models take longer than about 11 seconds
 # to fit / predict a sample of size (500, 11) with default init kwargs
@@ -86,7 +86,7 @@ def tst_sklearn_method(model_init_class,
         c:  the class as imported
         n_rows:  controls the # of rows in sample size (None= all rows)
                  int means take random sample
-        use_transform: True - leave transforms in pipeline / sample_pipeline
+        use_transform: True - leave transforms in pipeline / pipeline
                        False - no transforms before ML models
     Tests the following:
         * Each model in sklearn can be passed through the config train/predict cycle
@@ -189,10 +189,10 @@ def tst_sklearn_method(model_init_class,
         with new_training_config(**kwargs) as config:
             for step in config['pipeline']:
                 steps = []
-                sp = step.get('sample_pipeline')
+                sp = step.get('pipeline')
                 if not isinstance(sp, (tuple, list)):
-                    sp = config['sample_pipelines'][sp]
-                step['sample_pipeline'] = sp
+                    sp = config['pipelines'][sp]
+                step['pipeline'] = sp
                 if data_source_name is not None:
                     step['data_source'] = data_source_name
                 for item in step['steps']:
@@ -202,10 +202,10 @@ def tst_sklearn_method(model_init_class,
                         item.pop('batch_size', 0)
                     steps.append(item)
                 if not use_transform:
-                    step['sample_pipeline'] = [item2 for item2 in step.get('sample_pipeline', [])
+                    step['pipeline'] = [item2 for item2 in step.get('pipeline', [])
                                                if not 'transform' in item2]
                 if data_source.get('get_y_func'):
-                    step['sample_pipeline'] += [{'get_y': True}]
+                    step['pipeline'] += [{'get_y': True}]
                 step['steps'] = steps
             if n_rows or data_source_name == 'S3_LANDSAT_L2_TIFS':
                 # TIF test is already quite slow

@@ -106,6 +106,11 @@ def load_meta(filename, **kwargs):
     '''
 
     reader = kwargs.get('reader')
-    kw = {k: v for k, v in reader.items() if k != 'reader'}
+    if isinstance(reader, dict):
+        kw = {k: v for k, v in reader.items() if k != 'reader'}
+        ftype = _find_file_type(filename)
+    else:
+        kw = {}
+        ftype = reader
     return _load_meta(filename, ftype, **kw)
 

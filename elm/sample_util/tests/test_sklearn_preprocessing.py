@@ -12,17 +12,17 @@ from elm.pipeline.tests.util import (random_elm_store,
                                      test_one_config as tst_one_config,
                                      BANDS)
 from elm.readers import *
-from elm.sample_util.sample_pipeline import create_sample_from_data_source, run_sample_pipeline
+from elm.sample_util.sample_pipeline import create_sample_from_data_source, run_pipeline
 from elm.readers.tests.util import (ELM_HAS_EXAMPLES,
                                     ELM_EXAMPLE_DATA_PATH)
 transform_model = [('tag_0', PCA(n_components=3))]
 
 @pytest.mark.skipif(not ELM_HAS_EXAMPLES,
                reason='elm-data repo has not been cloned')
-def tst_one_sample_pipeline(sample_pipeline,
+def tst_one_pipeline(pipeline,
                             es,
                             run_it=False,
-                            tag='tests_of_sample_pipeline'):
+                            tag='tests_of_pipeline'):
     def write(content):
         with open(tag + '.yaml', 'w') as f:
             f.write(content)
@@ -38,17 +38,17 @@ def tst_one_sample_pipeline(sample_pipeline,
         config = ConfigParser(config=config)
         step = config.pipeline[0]['steps'][0]
         for step1 in config.pipeline:
-            step1['sample_pipeline'] = sample_pipeline
-            pipe = create_sample_from_data_source(sample_pipeline, config, step,
+            step1['pipeline'] = pipeline
+            pipe = create_sample_from_data_source(pipeline, config, step,
                                     data_source)
-            sample, sample_y, sample_weight = run_sample_pipeline(pipe, sample=es,
+            sample, sample_y, sample_weight = run_pipeline(pipe, sample=es,
                                          transform_model=transform_model)
 
             return sample
     else:
         transform_name = config['pipeline'][0]['steps'][0]['transform']
         for item in config['pipeline']:
-            item['sample_pipeline'] = sample_pipeline
+            item['pipeline'] = pipeline
         with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
             out = tst_one_config(config=config, cwd=cwd)
             assert len(os.listdir(train_path))
@@ -61,13 +61,13 @@ def test_func_scaler():
     values = es.flat.values.copy()
     values[values <= 0] = 0.0001
     sp = [{'sklearn_preprocessing': 'log10'},{'flatten': 'C'}]
-    log10_changed = tst_one_sample_pipeline(sp, es, tag='test_func_scaler')
+    log10_changed = tst_one_pipeline(sp, es, tag='test_func_scaler')
     assert np.all(log10_changed.flat.values == np.log10(values))
     sp2 = [{'flatten': 'C'},
            {'sklearn_preprocessing': 'require_positive'},
            {'sklearn_preprocessing': 'log10'},
            ]
-    log10_changed2 = tst_one_sample_pipeline(sp2, es2, tag='test_func_scaler2')
+    log10_changed2 = tst_one_pipeline(sp2, es2, tag='test_func_scaler2')
     assert np.all(log10_changed2.flat.values == log10_changed.flat.values)
 
 
@@ -79,7 +79,7 @@ def test_standard_scaler():
         {'sklearn_preprocessing': 'log10'},
         {'sklearn_preprocessing': 'standard'},
     ]
-    scaled = tst_one_sample_pipeline(sp, es, tag='test_standard_scaler')
+    scaled = tst_one_pipeline(sp, es, tag='test_standard_scaler')
     mean = np.mean(scaled.flat.values)
     assert mean < 0.1 and mean > -0.1
     std = np.std(scaled.flat.values)
@@ -93,8 +93,8 @@ def test_scaling_full_config():
           {'flatten': 'C'},
           {'get_y': True},
     ]
-    sp += DEFAULTS['sample_pipelines']['standardize_log10_var_top_80_inter']
-    tst_one_sample_pipeline(sp, es,
+    sp += DEFAULTS['pipelines']['standardize_log10_var_top_80_inter']
+    tst_one_pipeline(sp, es,
                             run_it=True,
                             tag='standardize_log10_var_top_80_inter')
 

@@ -56,7 +56,8 @@ def _filter_kwargs(**scaler_kwargs):
 def _scale_with_sklearn_pre_class(X, scaler, requires_classes=False, **scaler_kwargs):
     '''Use a class from sklearn.preprocessing'''
     s = scaler(**_filter_kwargs(**scaler_kwargs))
-    scaled = s.fit_transform(X.flat.values)
+    method = scaler_kwargs.get('method', 'fit_transform')
+    scaled = getattr(s, method)(X.flat.values)
     return _update_elm_store_for_changes(X,
                                          scaler,
                                          scaled)

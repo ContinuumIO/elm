@@ -13,12 +13,8 @@ from elm.model_selection.evolve import (ea_general,
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.config.dask_settings import wait_for_futures
 from elm.pipeline.transform import get_new_or_saved_transform_model
-from elm.pipeline.util import (_ensemble_ea_prep,
-                               _validate_ensemble_members,
-                               _prepare_fit_kwargs,
-                               _get_model_selection,
-                               _run_model_selection,
-                               make_model_args_from_config,)
+from elm.pipeline.util import (_validate_ensemble_members,
+                               _run_model_selection)
 from elm.pipeline.ensemble import _run_fit_and_score_dask
 from elm.pipeline.serialize import serialize_models
 
@@ -28,14 +24,14 @@ logger = logging.getLogger(__name__)
 
 def on_each_generation(individual_to_new_config,
                        config,
-                       sample_pipeline,
+                       pipeline,
                        data_source,
                        transform_model,
                        samples_per_batch,
                        step,
                        train_or_transform,
                        ensemble_kwargs,
-                       sample_pipeline_kwargs,
+                       pipeline_kwargs,
                        sample,
                        gen,
                        invalid_ind):
@@ -53,7 +49,7 @@ def on_each_generation(individual_to_new_config,
                                    "partial_fit_batches": int key/value
         transform_model:          None or list of 1 model name, model, e.g.:
                                   [('tag_0', IncrementalPCA(....))]
-                                  (None if sample_pipeline doesn't use
+                                  (None if pipeline doesn't use
                                    a transform)
         ind:                      Individual to evaluate
     Returns:
@@ -65,20 +61,20 @@ def on_each_generation(individual_to_new_config,
     for idx, ind in enumerate(invalid_ind):
         new_config = individual_to_new_config(ind)
         model_args, _ = make_model_args_from_config(train_or_transform,
-                                                    sample_pipeline,
+                                                    pipeline,
                                                     data_source,
                                                     config=new_config,
                                                     step=step,
                                                     ensemble_kwargs=ensemble_kwargs,
-                                                    **sample_pipeline_kwargs)
+                                                    **pipeline_kwargs)
         fit_kwargs.append(_prepare_fit_kwargs(model_args,
                                          ensemble_kwargs))
         model_init_kwargs = model_args.model_init_kwargs or {}
         model = import_callable(model_args.model_init_class)(**model_init_kwargs)
         new_models.append((ind.name, model))
-    models = _run_fit_and_score_dask(config, sample_pipeline, data_source,
+    models = _run_fit_and_score_dask(config, pipeline, data_source,
                    transform_model, samples_per_batch, new_models,
-                   gen, fit_kwargs, sample_pipeline_kwargs=sample_pipeline_kwargs,
+                   gen, fit_kwargs, pipeline_kwargs=pipeline_kwargs,
                    get_func=get_func)
     fitnesses = [model._score for name, model in models]
     fitnesses = [(item if isinstance(item, Sequence) else [item])
@@ -86,16 +82,16 @@ def on_each_generation(individual_to_new_config,
     return models, fitnesses
 
 def _make_config(train_or_transform,
-                 sample_pipeline, data_source,
+                 pipeline, data_source,
                  samples_per_batch, train_dict,
                  transform_dict, ensemble_kwargs,
-                 evo_dict, **sample_pipeline_kwargs):
+                 evo_dict, **pipeline_kwargs):
     config = {}
     if transform_dict:
         config['transform'] =  transform_dict
     if train_dict:
         config['train'] = train_dict
-    for k, v in sample_pipeline_kwargs.items():
+    for k, v in pipeline_kwargs.items():
         if k in ('sklearn_preprocessing', 'feature_selection'):
             config[k] = v
             continue
@@ -122,7 +118,7 @@ def _make_config(train_or_transform,
         minor_step = {'train': key, 'param_grid': 'pg'}
     config['data_sources'] = {'ds': data_source}
     major_step = {'data_source': 'ds',
-                  'sample_pipeline': sample_pipeline,
+                  'pipeline': pipeline,
                   'steps': [minor_step],}
     config['pipeline'] = [major_step]
     config['param_grids'] = {'pg': evo_dict}
@@ -141,27 +137,27 @@ def evolve_train(*args, **kwargs):
        evo_params,
        evo_dict,
        config,
-       sample_pipeline,
+       pipeline,
        data_source,
        transform_model,
        samples_per_batch,
        train_dict,
        transform_dict,
-       sample_pipeline_kwargs,
+       pipeline_kwargs,
        sample,) = args
     get_results = partial(wait_for_futures, client=client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
     evo_args = [evo_params,]
-    sample_pipeline_kwargs = sample_pipeline_kwargs or {}
+    pipeline_kwargs = pipeline_kwargs or {}
     fit_one_generation = partial(on_each_generation,
                                  evo_params.individual_to_new_config,
-                                 config, sample_pipeline, data_source,
+                                 config, pipeline, data_source,
                                  transform_model, samples_per_batch,
                                  step,
                                  train_or_transform,
                                  ensemble_kwargs,
-                                 sample_pipeline_kwargs,
+                                 pipeline_kwargs,
                                  sample)
 
     try:

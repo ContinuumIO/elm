@@ -21,8 +21,6 @@ from elm.config.defaults import DEFAULTS, CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
 
-def args_list_from_list(some_list, *args, **kwargs):
-    yield from iter(some_list)
 
 
 PIPELINE_ACTIONS = ('train',
@@ -36,7 +34,7 @@ SAMPLE_PIPELINE_ACTIONS = ('transform',
                            'feature_selection',
                            'sklearn_preprocessing',
                            'random_sample',
-                           'sample_pipeline',
+                           'pipeline',
                            'get_y',
                            'get_weight',) # others too from change_coords
 REQUIRES_METHOD = ('train', 'predict', 'transform')
@@ -183,38 +181,21 @@ class ConfigParser(object):
                                 'train:{} sampler'.format(name))
         if 'band_specs' in ds:
             ds['band_specs'] = self._validate_band_specs(ds.get('band_specs'), name)
-        if not sampler:
-            reader = ds.get('reader')
-            if not reader in self.readers:
-                raise ElmConfigError('Data source config dict {} '
-                                       'refers to a "reader" {} that is not defined in '
-                                       '"readers"'.format(reader, self.readers))
-            download = ds.get('download', '') or ''
-            if download and not download in self.downloads:
-                raise ElmConfigError('data_source {} refers to a '
-                                       '"download" {} not defined in "downloads"'
-                                       ' section'.format(ds, download))
-            s = ds.get('args_list')
-            if not s in self.args_list:
-                try:
-                    args_list = import_callable(s)
-                except Exception as e:
-                    raise ElmConfigError('data_source:{} uses a args_list {} that '
-                                         'is neither importable nor in '
-                                         '"args_list" dict'.format(name, s))
-                raise ElmConfigError('Expected data_source: '
-                                     'args_list {} to be in '
-                                     'args_list.keys()')
-            else:
-                args_list = self.args_list[s]
-                self._validate_custom_callable(args_list,
-                                        True,
-                                        'data_source:{} args_list'.format(name))
-            self._validate_selection_kwargs(ds, name)
-            keep_columns = ds.get('keep_columns') or []
-            self._validate_type(keep_columns, 'keep_columns', (tuple, list))
-            ds['keep_columns'] = keep_columns
-
+        reader = ds.get('reader')
+        reader_words = ('hdf4', 'hdf5', 'tif', 'netcdf')
+        if not reader in self.readers and reader not in reader_words:
+            raise ElmConfigError('Data source config dict {} '
+                                 'refers to a "reader" {} that is not defined in '
+                                 '"readers" or in the tuple {}'.format(reader, self.readers, reader_words))
+        s = ds.get('args_list')
+        try:
+            ds['args_list'] = import_callable(s)
+        except Exception as e:
+            raise ElmConfigError('data_source:{} uses a args_list {} that '
+                                 'is neither importable nor in '
+                                 '"args_list" dict'.format(name, s))
+        self._validate_selection_kwargs(ds, name)
+        self.data_sources[name] = ds
 
     def _validate_data_sources(self):
         '''Validate all "data_sources" of config'''
@@ -467,18 +448,9 @@ class ConfigParser(object):
         '''Validate the "train" or "transform" section of config'''
         setattr(self, train_or_transform, self.config.get(train_or_transform, {}) or {})
         for name, t in getattr(self, train_or_transform).items():
-            self._validate_type(self.config['pipeline'], 'pipeline', (list, tuple))
-            for step1 in self.config['pipeline']:
+            self._validate_type(self.config['run'], 'run', (list, tuple))
+            for step1 in self.config['run']:
                 self._validate_type(step1, 'pipeline: {}'.format(step1), dict)
-                self._validate_type(step1['steps'], 'pipeline: "steps" {}'.format(step1['steps']), (list, tuple))
-                step = [s for s in step1['steps']
-                        if hasattr(s, 'get') and s.get('train', s.get('transform')) == name]
-                if step:
-                    step = step[0]
-                    if not 'data_source' in step1:
-                        raise ElmConfigError('Expected "data_source": "name_of_data_source" in pipeline step: {}'.format(step))
-                    data_source = self.data_sources[step1['data_source']]
-                    self._validate_one_train_or_transform_entry(train_or_transform, name, t, data_source)
 
     def _validate_train(self):
         '''Validate the "train" section of config'''
@@ -531,13 +503,13 @@ class ConfigParser(object):
         self.predict = self.config.get('predict', {}) or {}
         return True # TODO validate predict config
 
-    def _validate_sample_pipelines(self):
-        '''Validate the "sample_pipelines" section of config'''
+    def _validate_pipelines(self):
+        '''Validate the "pipelines" section of config'''
         from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
-        self.sample_pipelines = self.config.get('sample_pipelines') or {}
-        self._validate_type(self.sample_pipelines, 'sample_pipelines', dict)
-        for k, v in self.sample_pipelines.items():
-            msg = 'sample_pipelines:{}'.format(k)
+        self.pipelines = self.config.get('pipelines') or {}
+        self._validate_type(self.pipelines, 'pipelines', dict)
+        for k, v in self.pipelines.items():
+            msg = 'pipelines:{}'.format(k)
             self._validate_type(v, msg, (list, tuple))
             for item in v:
                 self._validate_type(item, msg + ' - {}'.format(item), dict)
@@ -552,17 +524,17 @@ class ConfigParser(object):
                             val = item[match]
                             if match == 'change_coords':
                                 self._validate_custom_callable(item[match], True,
-                                        'sample_pipelines:{} - {} ({})'.format(k, match, item[match]))
+                                        'pipelines:{} - {} ({})'.format(k, match, item[match]))
                             if match == 'flatten':
                                 self._validate_type(val, 'flatten:{}'.format(val), str)
                                 if not val == 'C':
                                     raise ElmConfigError('Expected flatten:{} to be "C" for flatten order (more options may be there over time)'.format(val))
-                        elif not item[k] in (self.config.get(match) or {}) and k != 'sample_pipeline':
-                            raise ElmConfigError('sample_pipeline item {0} is of type '
+                        elif not item[k] in (self.config.get(match) or {}) and k != 'pipeline':
+                            raise ElmConfigError('pipeline item {0} is of type '
                                                  '{1} and refers to a key ({2}) that is not in '
                                                  '"{1}" dict of config'.format(item, match, item[k]))
                 if not ok:
-                    raise ElmConfigError('sample_pipeline item {} does not '
+                    raise ElmConfigError('pipeline item {} does not '
                                          'have a key that is in the set {}'
                                          ''.format(item , SAMPLE_PIPELINE_ACTIONS))
         p = (self.config.get('pipeline') or [])
@@ -607,42 +579,27 @@ class ConfigParser(object):
         '''Validate a "predict" step within config's "pipeline"'''
         return step
 
-    def _validate_pipeline(self):
+    def _validate_run(self):
         '''Validate config's "pipeline"'''
 
-        self.pipeline = pipeline = self.config.get('pipeline', []) or []
-        if not pipeline or not isinstance(pipeline, (tuple, list)):
+        self.run = run = self.config.get('run', []) or []
+        if not run or not isinstance(run, (tuple, list)):
             raise ElmConfigError('Expected a "pipeline" list of action '
                                    'dicts in config but found '
-                                   '"pipeline": {}'.format(repr(pipeline)))
-        for idx, action in enumerate(pipeline):
+                                   '"pipeline": {}'.format(repr(run)))
+        for idx, action in enumerate(run):
             if not action or not isinstance(action, dict):
                 raise ElmConfigError('Expected each item in "pipeline" to '
                                        'be a dict but found {}'.format(action))
-            if not 'sample_pipeline' in action:
-                raise ElmConfigError('Expected a sample_pipeline key in pipeline action {}'.format(action))
-            sample_pipeline = action['sample_pipeline']
-            if not isinstance(sample_pipeline, (list, tuple)):
-                sample_pipeline = self.sample_pipelines[sample_pipeline]
-                action['sample_pipeline'] = sample_pipeline
+            if not 'pipeline' in action:
+                raise ElmConfigError('Expected a pipeline key in pipeline action {}'.format(action))
+            pipeline = action['pipeline']
+            if not isinstance(pipeline, (list, tuple)):
+                pipeline = self.pipelines[pipeline]
+                action['pipeline'] = pipeline
             data_source = action.get('data_source') or ''
             if not data_source in self.data_sources:
                 raise ElmConfigError('Expected a data_source key in pipeline action {}'.format(action))
-
-            steps = action.get('steps')
-            self._validate_type(steps, 'pipeline - "steps"', (list, tuple))
-            for idx2, action2 in enumerate(steps):
-                cnt = 0
-                for key in PIPELINE_ACTIONS:
-                    if key in action2:
-                        cnt += 1
-                        func = getattr(self, '_validate_pipeline_{}'.format(key))
-                        steps[idx2] = func(action2)
-                if cnt != 1:
-                    raise ElmConfigError('In each action dictionary of the '
-                                           '"pipeline" list, expected exactly one '
-                                           'of the following keys: {}'.format(PIPELINE_ACTIONS))
-            action['steps'] = steps
 
     def validate(self):
         '''Validate all sections of config, calling a function
@@ -651,6 +608,32 @@ class ConfigParser(object):
         for key, typ in self.config_keys:
             validator = getattr(self, '_validate_{}'.format(key))
             validator()
+
+    def to_pipeline_func(self, client=None):
+        from elm.pipeline import Pipeline
+        from elm.sample_util.sample_pipeline import make_pipeline_func
+
+        for step in self.run:
+            pipeline = step['pipeline']
+            train = self.train[step['train']]
+            pipe_steps = make_pipeline_func(self, pipeline)
+            cls = import_callable(train['model_init_class'])
+            estimator = cls(**(train.get('model_init_kwargs') or {}))
+            pipe_steps.append(estimator)
+            ensemble_kwargs = train.get('ensemble')
+            if isinstance(ensemble_kwargs, str):
+                ensemble_kwargs = self.ensembles[ensemble_kwargs]
+            ensemble_kwargs['client'] = client
+            data_source = step['data_source']
+            if not isinstance(data_source, dict):
+                data_source = self.data_sources[data_source]
+            if callable(data_source['args_list']):
+                kw = {k: v for k, v in data_source.items() if k != 'args_list'}
+                data_source['args_list'] = tuple(data_source['args_list'](**kw))
+
+            pipe = Pipeline(pipe_steps, scoring=train.get('scoring'), scoring_kwargs=train.get('scoring_kwargs'))
+            models = pipe.fit(**data_source, **ensemble_kwargs)
+            pipe.predict_many(**data_source)
 
     def __str__(self):
         return yaml.dump(self.raw_config)

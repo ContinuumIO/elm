@@ -54,14 +54,14 @@ def test_individual_to_new_config():
     ensures that the indices can be used to make replacements
     in a config, so they actually have a model effect'''
     config, param_grid = _setup()
-    minimal = config.sample_pipelines['minimal']
-    top_n = config.sample_pipelines['top_n']
+    minimal = config.pipelines['minimal']
+    top_n = config.pipelines['top_n']
     param_grid_item = param_grid['example_param_grid']
     ind = [0,] * len(param_grid_item['choices'])
     new_config = individual_to_new_config(config, param_grid_item, ind)
     assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 3
     assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 2
-    assert new_config.pipeline[0]['sample_pipeline'] == minimal
+    assert new_config.pipeline[0]['pipeline'] == minimal
     assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 30
     ind = [1,] * len(param_grid_item['choices'])
     new_config = individual_to_new_config(config, param_grid_item, ind)

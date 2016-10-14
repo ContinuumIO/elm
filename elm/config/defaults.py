@@ -27,13 +27,12 @@ CONFIG_KEYS = [('readers',  dict),
                 ('transform', dict),
                 ('train', dict),
                 ('predict', dict),
-                ('sample_pipelines', dict),
-                ('pipeline', list),
+                ('pipelines', dict),
+                ('run', list),
                 ('param_grids', dict),
     ]
 DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]
 DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
-DEFAULT_READER = tuple(DEFAULTS['readers'].values())[0]
 DEFAULT_FEATURE_SELECTOR = tuple(DEFAULTS['feature_selection'].values())[0]
 
 ks = set(globals())

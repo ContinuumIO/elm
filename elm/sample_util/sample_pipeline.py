@@ -1,10 +1,13 @@
 import copy
+from functools import partial
 import logging
 from pprint import pformat
 
 import numpy as np
 import xarray as xr
 from sklearn.utils import check_array as _check_array
+import sklearn.preprocessing as skpre
+import sklearn.feature_selection as skfeat
 
 from elm.config import import_callable, ConfigParser
 from elm.model_selection.util import get_args_kwargs_defaults
@@ -12,7 +15,7 @@ from elm.model_selection.util import filter_kwargs_to_func
 from elm.readers import (ElmStore, flatten as _flatten)
 from elm.sample_util.change_coords import (change_coords_dict_action,
                                            CHANGE_COORDS_ACTIONS)
-from elm.sample_util.filename_selection import get_generated_args
+from elm.sample_util.filename_selection import get_args_list
 from elm.readers.util import row_col_to_xy
 from elm.readers import load_meta, load_array, ElmStore
 
@@ -24,7 +27,7 @@ _SAMPLE_PIPELINE_SPECS = {}
 
 def _split_pipeline_output(output, X, y,
                            sample_weight, context):
-    logger.debug(type(output))
+
     if not isinstance(output, (tuple, list)):
         return output, y, sample_weight
     if output is None:
@@ -41,7 +44,7 @@ def _split_pipeline_output(output, X, y,
         sw = output[2] if output[2] is not None else sample_weight
         return (xx, yy, sw)
     else:
-        raise ValueError('{} sample_pipeline func returned '
+        raise ValueError('{} pipeline func returned '
                          'more than 3 outputs in a '
                          'tuple/list'.format(context))
 
@@ -60,12 +63,9 @@ def create_sample_from_data_source(config=None, **data_source):
     sampler_func = data_source['sampler'] # TODO: this needs to be
                                                         # added to ConfigParser
                                                         # validation (sampler requirement)
+    sampler_func = import_callable(sampler_func)
     band_specs = data_source.get('band_specs') or None
     sampler_args = data_source.get('sampler_args') or ()
-    # TODO the usage of sampler_args in config needs
-    # to be validated
-    if band_specs:
-        sampler_args = (band_specs,) + tuple(sampler_args)
 
     reader_name = data_source.get('reader') or None
     if isinstance(reader_name, str) and reader_name:
@@ -89,80 +89,57 @@ def create_sample_from_data_source(config=None, **data_source):
 
 # MOve this logic somwehre
 # pipe = [('create_sample', sampler_func, sampler_args, data_source)]
-# actions = make_sample_pipeline_func(config=config, step=step,
-#                                    sample_pipeline=sample_pipeline,
+# actions = make_pipeline_func(config=config, step=step,
+#                                    pipeline=pipeline,
 #                                    data_source=data_source,
-#                                    **sample_pipeline_kwargs)
+#                                    **pipeline_kwargs)
 # pipe.extend(actions)
 # return tuple(pipe)
 
 
-def make_sample_pipeline_func(config=None,
-                              step=None,
-                              sample_pipeline=None,
-                              data_source=None,
-                              feature_selection=None,
-                              transform_dict=None,
-                              sklearn_preprocessing=None,
-                              **kwargs):
-    '''Make list of (func, args, kwargs) tuples to run sample_pipeline
+def make_pipeline_func(config, pipeline):
+    '''Make list of (func, args, kwargs) tuples to run pipeline
     Params:
         config: validated config from elm.config.ConfigParser
         step:   a dictionary that is one step of a "pipeline" list
     '''
-
+    from elm.pipeline import steps
     actions = []
-    for action_idx, action in enumerate(sample_pipeline):
+    for action_idx, action in enumerate(pipeline):
         is_dic = isinstance(action, dict)
         if not is_dic:
             step_cls = action
         elif 'feature_selection' in action:
-            if feature_selection is None and config:
-                _feature_selection = copy.deepcopy(config.feature_selection[action['feature_selection']])
-            elif feature_selection is None:
-                raise ValueError('Expected "feature_selection" or "config"')
-            elif action['feature_selection'] in feature_selection:
-                _feature_selection = feature_selection[action['feature_selection']]
-            else:
-                _feature_selection = feature_selection
+            _feature_selection = copy.deepcopy(config.feature_selection[action['feature_selection']])
             kw = _feature_selection.copy()
             kw.update(action)
-            step_cls = FeatureSelection(**action)
+            scaler = feature_selection['method']
+            scaler = import_callable(getattr(skfeat, scaler, scaler))
+            if 'func_kwargs' in _feature_selection:
+                func = import_callable(_feature_selection['func'])
+                scaler = partial(func, feature_selection['func_kwargs'])
+                _feature_selection['func'] = func
+            kw = {k: v for k, v in _feature_selection.items()
+                  if k not in ('func_kwargs', 'method')}
+            step_cls = steps.SklearnBase(_method=scaler, _mod=skpre, **kw)
         elif 'random_sample' in action:
             step_cls = RandomSample(action['random_sample'], **action)
         elif 'transform' in action:
-
-            if transform_dict:
-                if action['transform'] in transform_dict:
-                    trans = transform_dict[action['transform']]
-                else:
-                    trans = transform_dict
-            elif config:
-                trans = config.transform[action['transform']]
-            else:
-                trans = {}
-            step_cls = STEPS['transform'](action, config, **trans)
+            trans = config.transform[action['transform']]
+            cls = import_callable(trans['model_init_class'])
+            t = cls(**(trans.get('model_init_kwargs') or {}))
+            step_cls = steps.Transform(t)
         elif 'sklearn_preprocessing' in action:
-            if sklearn_preprocessing is None and config:
-                _sklearn_preprocessing = config.sklearn_preprocessing[action['sklearn_preprocessing']]
-            elif sklearn_preprocessing is None:
-                raise ValueError('Expected "config" if not giving "sklearn_preprocessing"')
-            elif action['sklearn_preprocessing'] in sklearn_preprocessing:
-                _sklearn_preprocessing = sklearn_preprocessing[action['sklearn_preprocessing']]
-            else:
-                _sklearn_preprocessing = sklearn_preprocessing
+            _sklearn_preprocessing = config.sklearn_preprocessing[action['sklearn_preprocessing']]
             scaler = _sklearn_preprocessing['method']
-            step_cls = STEPS[scaler](**_sklearn_preprocessing)
-        elif ('get_y' in action or 'get_weight' in action):
-            if 'get_weight' in action:
-                func = data_source.get('get_weight_func', action['get_weight'])
-            else:
-                func = data_source.get('get_y', action['get_y'])
-            kw = action.copy()
-            kw.update(data_source)
-            step_cls = STEPS['modify_coords'](func=func, **kw)
+            scaler = getattr(skpre, scaler, scaler)
+            kw = {k: v for k, v in _sklearn_preprocessing.items()
+                  if not k in ('method','func_kwargs')}
+            step_cls = steps.SklearnBase(_method=scaler, _mod=skpre, **kw)
         elif any(k in CHANGE_COORDS_ACTIONS for k in action):
-            step_cls = STEPS[k](action)
+            _sp_step = [k for k in action if k in CHANGE_COORDS_ACTIONS][0]
+            _context = _sp_step
+            step_cls = steps.ChangeCoordsMixin(arg=_sp_step, _sp_step=_sp_step, _context=_context, **action)
         else:
             # add items to actions of the form:
             # (
@@ -173,7 +150,7 @@ def make_sample_pipeline_func(config=None,
             # NOTE also add the key name, like 'transform' to the top of
             # elm.config.load_config global variable:
             # "SAMPLE_PIPELINE_ACTIONS"
-            raise NotImplementedError('sample_pipeline action {} not recognized.'.format(action))
+            raise NotImplementedError('pipeline action {} not recognized.'.format(action))
         actions.append((action, step_cls) )
     return actions
 
@@ -198,29 +175,12 @@ def _has_arg(a):
 
 def final_on_sample_step(fitter,
                          model, X,
-                         iter_offset,
                          fit_kwargs,
                          y=None,
                          sample_weight=None,
                          classes=None,
                          require_flat=True,
-                      ):
-    '''This is the final function called on a sample_pipeline
-    or a simple sample that is input to training.  It ensures
-    that:
-       * Corresponding y data are looked up for the X sample
-       * The correct fit kwargs are passed to fit or partial_fit,
-         depending on the method
-    Params:
-       fitter:  a model attribute like "fit" or "partial_fit"
-       model:   a sklearn model like MiniBatchKmeans()
-       X:       an ElmStore or xarray.Dataset with 'flat' DataArray
-       fit_kwargs: kwargs to fit_func from config
-       y: numpy array (same row count as s) or None
-       sample_weight: numpy array (same row count as s) or None
-       classes:  if using classification, all possible classes as iterable
-                 or array of integers
-       '''
+                         prepare_for='train'):
     if isinstance(X, np.ndarray):
         X_values = X             # numpy array 2-d
     elif isinstance(X, (ElmStore, xr.Dataset)):
@@ -240,16 +200,20 @@ def final_on_sample_step(fitter,
     has_sw = _has_arg(sample_weight)
     if has_sw:
         fit_kwargs['sample_weight'] = sample_weight
-    if 'iter_offset' in kwargs:
-        fit_kwargs['iter_offset'] = iter_offset
     if 'check_input' in kwargs:
         fit_kwargs['check_input'] = True
     if has_y:
-        fit_args = (X_values, y)
-        logger.debug('fit to X (shape {}) and y (shape {})'.format(fit_args[0].shape, fit_args[1].shape))
+        if prepare_for == 'train':
+            fit_args = (X_values, y)
+        else:
+            fit_args = (X,)
+        logger.debug('X (shape {}) and y (shape {})'.format(X_values.shape, y.shape))
     else:
-        fit_args = (X_values,)
-        logger.debug('fit to X (shape {})'.format(fit_args[0].shape))
+        if prepare_for == 'train':
+            fit_args = (X_values,)
+        else:
+            fit_args = (X,)
+        logger.debug('X (shape {})'.format(X_values.shape))
     check_array(X_values, "final_on_sample_step - X")
     if has_y:
         check_array(y, "final_on_sample_step - y")

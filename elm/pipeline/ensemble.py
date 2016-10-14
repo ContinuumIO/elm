@@ -8,18 +8,14 @@ import random
 import dask
 
 from elm.config import import_callable
-from elm.config.dask_settings import wait_for_futures
+from elm.config.dask_settings import _find_get_func_for_client
 from elm.pipeline.fit_and_score import fit_and_score
 from elm.pipeline.serialize import (load_models_from_tag,
                                     serialize_models as _serialize_models)
-from elm.pipeline.util import (make_model_args_from_config,
-                               _prepare_fit_kwargs,
-                               _validate_ensemble_members,
-                               _get_model_selection,
+from elm.pipeline.util import (_validate_ensemble_members,
                                _run_model_selection,
-                               _ensemble_ea_prep,
                                _next_name)
-from elm.sample_util.samplers import make_one_sample
+from elm.sample_util.samplers import make_samples_dask
 from elm.pipeline.fit_and_score import fit_and_score
 
 logger = logging.getLogger(__name__)
@@ -28,11 +24,18 @@ __all__ = ['ensemble']
 
 
 def _fit_once(method, model, fit_score_kwargs, args):
+    from elm.pipeline import Pipeline
+    assert isinstance(model, Pipeline), repr(model)
     X, y, sample_weight = args
     fitting_func = getattr(model, method, None)
     if fitting_func is None:
         raise ValueError("Estimator {} has no method {}".format(model, fitting_func))
-    return fitting_func(X, y, sample_weight, **fit_score_kwargs)
+    kw = dict(**fit_score_kwargs)
+    if y is not None:
+        kw['y'] = y
+    if sample_weight is not None:
+        kw['sample_weight'] = sample_weight
+    return fitting_func(X, **kw)
 
 
 def _run_fit_and_score_dask(dsk,
@@ -70,20 +73,6 @@ def _run_fit_and_score_dask(dsk,
     return models
 
 
-def _make_sample(pipe, args, sampler):
-    out = pipe.create_sample(X=None, y=None, sample_weight=None,
-                              sampler=sampler, sampler_args=args)
-    assert isinstance(out, tuple) and len(out) == 3, repr(out) # TODO remove
-    return out
-
-def make_samples(pipe, args_list, sampler):
-    dsk = {}
-    for arg in args_list:
-        sample_name = _next_name()
-        dsk[sample_name] = (_make_sample, pipe, arg, sampler)
-    return dsk
-
-
 def ensemble(pipe,
              ngen,
              X=None,
@@ -108,13 +97,7 @@ def ensemble(pipe,
     '''Train model(s) in ensemble
 
     '''
-    from elm.config.dask_settings import get_func
-    if hasattr(client, 'map'):
-        map_function = client.map
-    else:
-        map_function = map
-
-    get_results = partial(wait_for_futures, client=client)
+    get_func = _find_get_func_for_client(client)
     model_selection_kwargs = model_selection_kwargs or {}
     ensemble_size = init_ensemble_size or 1
     if not ensemble_init_func:
@@ -128,14 +111,13 @@ def ensemble(pipe,
     if 'partial_fit' in method:
         method = 'partial_fit_n_batches'
         fit_score_kwargs['partial_fit_batches'] = partial_fit_batches or 1
-    fit_score_kwargs['classes'] = classes
+    if classes is not None:
+        fit_score_kwargs['classes'] = classes
     final_names = []
-    if X is None:
-        dsk = make_samples(pipe, args_list, sampler)
-    else:
-        dsk = {_next_name(): (lambda: X, y, sample_weight,)}
+    dsk = make_samples_dask(X, y, sample_weight, pipe, args_list, sampler)
     models = tuple(zip(('tag_{}'.format(idx) for idx in range(len(models))), models))
     sample_keys = tuple(dsk)
+
     for gen in range(ngen):
         logger.info('Ensemble generation {} of {} - len(models): {} '.format(gen + 1, ngen, len(models)))
         models = _run_fit_and_score_dask(dsk,
@@ -147,12 +129,13 @@ def ensemble(pipe,
                                          method=method,
                                          sample_key=None)
         if model_selection:
-            models = _run_model_selection(model_selection,
-                                               model_args,
-                                               ngen,
-                                               gen,
-                                               fit_kwargs,
-                                               models)
+            models = _run_model_selection(models,
+                                          model_selection,
+                                          model_selection_kwargs or {},
+                                          ngen,
+                                          gen,
+                                          scoring_kwargs)
+
         else:
             pass # just training all ensemble members
                  # without replacing / re-ininializing / editing

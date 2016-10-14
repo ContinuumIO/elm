@@ -1,25 +1,6 @@
-readers: {
-  hdf4_example: {
-    load_array: "elm.readers.hdf4:load_hdf4_array",
-    load_meta: "elm.readers.hdf4:load_hdf4_meta"
-  },
-  tif_example: {
-    load_array: "elm.readers.tif:load_dir_of_tifs_array",
-    load_meta: "elm.readers.tif:load_dir_of_tifs_meta",
-  },
-  hdf5_example: {
-    load_array: "elm.readers.hdf5:load_hdf5_array",
-    load_meta: "elm.readers.hdf5:load_hdf5_meta",
-  },
-  netcdf_example: {
-    load_array: "elm.readers.netcdf:load_netcdf_array",
-    load_meta: "elm.readers.netcdf:load_netcdf_meta",
-  }
-}
-
 data_sources: {
  hdf5_precip_hourly: {
-   reader: hdf5_example,
+   reader: hdf5,
    sampler: "elm.sample_util.samplers:image_selection",
    band_specs: [{search_key: sub_dataset_name,
                  search_value: /precipitation,
@@ -30,11 +11,10 @@ data_sources: {
                  stored_coords_order: ["x", "y"]}],
    file_pattern: "3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5",
    top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-   batch_size: 1440000,
    args_list: "elm.readers.local_file_iterators:iter_files_recursively",
   },
  NPP_DSRF1KD_L2GD: {
-  reader: hdf4_example,
+  reader: hdf4,
   sampler: "elm.sample_util.samplers:image_selection",
   band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
   {search_key: long_name, search_value: "Band 2 ", name: band_2},
@@ -46,17 +26,16 @@ data_sources: {
   {search_key: long_name, search_value: "Band 9 ", name: band_9},
   {search_key: long_name, search_value: "Band 10 ", name: band_10},
   {search_key: long_name, search_value: "Band 11 ", name: band_11}],
-  args_list: iter_files_recursively,
+  args_list: "elm.readers.local_file_iterators:iter_files_recursively",
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
   file_pattern: "\\.hdf",
-  batch_size: 1440000,
  },
  S3_LANDSAT_L2_TIFS: {
-  args_list: tif_file_gen,
+  args_list: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   file_pattern: ".TIF",
-  reader: tif_example,
+  reader: tif,
   sampler: "elm.sample_util.samplers:image_selection",
   band_specs: [
   {search_key: name, search_value: "_B1.TIF", name: band_1},
@@ -64,12 +43,7 @@ data_sources: {
   {search_key: name, search_value: "_B3.TIF", name: band_3},
   {search_key: name, search_value: "_B4.TIF", name: band_4},
   ],
-  batch_size: 1440000,
   },
-}
-args_list: {
-  tif_file_gen: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
-  iter_files_recursively: "elm.readers.local_file_iterators:iter_files_recursively",
 }
 
 feature_selection: {
@@ -182,7 +156,7 @@ sklearn_preprocessing: {
   },
 }
 
-sample_pipelines: {
+pipelines: {
   log10: [
     {sklearn_preprocessing: require_positive},
     {sklearn_preprocessing: log10},
@@ -249,17 +223,11 @@ train: {
 }
 
 
-pipeline:
-  - {sample_pipeline: flatten_pca,
+run:
+  - {pipeline: flatten_pca,
      data_source: NPP_DSRF1KD_L2GD,
-     steps: [
-       {transform: pca,
-        method: partial_fit},
-       {train: kmeans,
-        method: partial_fit},
-       {predict: kmeans},
-     ]
-  }
+     train: kmeans,
+     predict: kmeans}
 
 
 # Config options that can be overriden by environment variables:

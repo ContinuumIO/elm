@@ -13,11 +13,11 @@ from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
 
 
-def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
+def kmeans_aic(model, X, y_true=None, scoring=None, **kwargs):
     '''AIC (Akaike Information Criterion) for k-means for model selection
 
     Parameters:
-        model:  Typically KMeans or IncrementalKmeans instance from sklearn.cluster
+        model:  An elm.pipeline.Pipeline with a KMeans _estimator
         x:      The X data that were just given to "fit", or "partial_fit"
         y:      None (placeholder)
         scoring:None (placeholder)
@@ -27,17 +27,19 @@ def kmeans_aic(model, x, y_true=None, scoring=None, **kwargs):
 
     '''
 
-    k, m = model.cluster_centers_.shape
-    n = x.shape[0]
-    d = model.inertia_
+    k, m = model._estimator.cluster_centers_.shape
+    n = X.flat.values.shape[0]
+    d = model._estimator.inertia_
     aic =  d + 2 * m * k
-    delattr(model, 'labels_')
+    delattr(model._estimator, 'labels_')
     return aic
 
 
 def kmeans_model_averaging(models, best_idxes=None, **kwargs):
+    '''
+    models:  list of elm.pipeline.Pipeline with a KMeans _estimator
+    '''
 
-    linear_prob = np.linspace(len(models), 1, len(models))
     drop_n = kwargs['drop_n']
     evolve_n = kwargs['evolve_n']
     init_n = kwargs['init_n']
@@ -59,21 +61,27 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
 
     name_idx = 0
     new_models = []
+    best = models[0][1]
+    good_n_clusters = [model._estimator.get_params()['n_clusters']
+                       for tag, model in models]
+    new_kwargs0 = best._estimator.get_params()
+    new_pipe_kwargs = best.get_params()
     if evolve_n:
-
-        centroids = np.concatenate(tuple(m.cluster_centers_ for name, m in models))
+        centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for name, m in models))
         names = [name for name, model in models]
-        meta_model = KMeans(**filter_kwargs_to_func(KMeans, **kwargs['model_init_kwargs']))
+        meta_model = MiniBatchKMeans(**new_kwargs0)
+        new_kwargs0['batch_size'] = centroids.shape[0]
         meta_model.fit(centroids)
         for name_idx, new in enumerate(range(evolve_n)):
-            new_kwargs = copy.deepcopy(kwargs['model_init_kwargs'])
-            new_kwargs['init'] = meta_model.cluster_centers_
-            new_kwargs = filter_kwargs_to_func(KMeans, **new_kwargs)
-            new_model = (names[name_idx], MiniBatchKMeans(**new_kwargs))
+            new_estimator = copy.deepcopy(best)
+            new_kwargs = copy.deepcopy(new_kwargs0)
+            new_params = {'init': meta_model.cluster_centers_, 'n_init': 1}
+            new_estimator._estimator.set_params(**new_params)
+            new_model = (names[name_idx], new_estimator)
             new_models.append(new_model)
     for idx, new in enumerate(range(init_n)):
-        new_kwargs = filter_kwargs_to_func(MiniBatchKMeans, **kwargs['model_init_kwargs'])
-        new_models.append(('new-kmeans-{}'.format(idx),
-                           MiniBatchKMeans(**new_kwargs)))
-    return tuple(new_models) + tuple(models)
+        new = copy.deepcopy(models[0][1])
+        new.set_params(**new_pipe_kwargs)
+        new_models.append(('new-kmeans-{}'.format(idx), new))
+    return tuple(new_models)
 

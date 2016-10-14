@@ -59,7 +59,7 @@ def tst_transform(model_init_class, is_slow):
         sp = [flatten, {'transform': 'pca', 'method': 'transform'}]
     else:
         sp = [flatten, {'random_sample': batch_size}]
-    pipeline = [{'sample_pipeline': sp,
+    pipeline = [{'pipeline': sp,
                  'data_source': DEFAULT_DATA_SOURCE[0],
                  'steps': []}]
     pipeline[0]['steps'] = [{'transform': 'pca',

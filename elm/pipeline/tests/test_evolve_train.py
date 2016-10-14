@@ -65,7 +65,7 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
                 'cluster_std': 0.0000001,})
     syn['sampler_args'] = None
     for step in config['pipeline']:
-        step['sample_pipeline'] = 'nothing'
+        step['pipeline'] = 'nothing'
     tag = 'test_sklearn_finds_n_clusters_{}'
     tag = tag.format(n_clusters) + '_' + '_'.join(early_stop.keys() if early_stop else "None")
     pg = config['param_grids']['example_param_grid']
@@ -79,7 +79,7 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
         pg['control']['early_stop'] = early_stop
     pg['kmeans__n_clusters'] = [2, 3, 4, 6,]
     pg['kmeans__init'] = ['k-means++', 'random']
-    pg.pop('sample_pipeline')
+    pg.pop('pipeline')
     pg.pop('feature_selection')
     config['param_grids']['example_param_grid'] = pg
     ret_val = run_one_config(config, tag)
