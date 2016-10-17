@@ -32,8 +32,8 @@ from elm.pipeline.tests.util import random_elm_store
 from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
 
 ENSEMBLE_KWARGS = dict(ngen=2, init_ensemble_size=2,
-                             saved_ensemble_size=2,
-                             partial_fit_batches=2)
+                       saved_ensemble_size=2,
+                       partial_fit_batches=2)
 
 
 

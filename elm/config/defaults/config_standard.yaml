@@ -1,0 +1,210 @@
+data_sources: {
+ hdf5_precip_hourly: {
+   reader: hdf5,
+   sampler: "elm.sample_util.band_selection:select_from_file",
+   band_specs: [{search_key: sub_dataset_name,
+                 search_value: /precipitation,
+                 name: band_1,
+                 key_re_flags: [],
+                 value_re_flags: [],
+                 meta_to_geotransform: "elm.readers.util:grid_header_to_geo_transform",
+                 stored_coords_order: ["x", "y"]}],
+   file_pattern: "3B-MO.MS.MRG.3IMERG.20160101-S000000-E235959.01.V03D.HDF5",
+   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+   args_list: "elm.readers.local_file_iterators:iter_files_recursively",
+  },
+ NPP_DSRF1KD_L2GD: {
+  reader: hdf4,
+  sampler: "elm.sample_util.band_selection:select_from_file",
+  band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
+  {search_key: long_name, search_value: "Band 2 ", name: band_2},
+  {search_key: long_name, search_value: "Band 3 ", name: band_3},
+  {search_key: long_name, search_value: "Band 4 ", name: band_4},
+  {search_key: long_name, search_value: "Band 5 ", name: band_5},
+  {search_key: long_name, search_value: "Band 6 ", name: band_6},
+  {search_key: long_name, search_value: "Band 7 ", name: band_7},
+  {search_key: long_name, search_value: "Band 9 ", name: band_9},
+  {search_key: long_name, search_value: "Band 10 ", name: band_10},
+  {search_key: long_name, search_value: "Band 11 ", name: band_11}],
+  args_list: "elm.readers.local_file_iterators:iter_files_recursively",
+  top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+  metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
+  file_pattern: "\\.hdf",
+ },
+ S3_LANDSAT_L2_TIFS: {
+  args_list: "elm.readers.local_file_iterators:iter_dirs_of_dirs",
+  top_dir: "env:ELM_EXAMPLE_DATA_PATH",
+  file_pattern: ".TIF",
+  reader: tif,
+  sampler: "elm.sample_util.band_selection:select_from_file",
+  band_specs: [
+  {search_key: name, search_value: "_B1.TIF", name: band_1},
+  {search_key: name, search_value: "_B2.TIF", name: band_2},
+  {search_key: name, search_value: "_B3.TIF", name: band_3},
+  {search_key: name, search_value: "_B4.TIF", name: band_4},
+  ],
+  },
+}
+
+feature_selection: {
+  top_80_percent: {
+    method: SelectPercentile,
+    percentile: 80,
+    scor_func: f_classif,
+  }
+}
+model_scoring: {
+  accuracy_score_cv: {
+    scoring: "accuracy_score",
+    scoring_agg: "numpy:median",
+    greater_is_better: True,
+    needs_proba: False,
+    needs_threshold: False,
+  },
+  kmeans_aic: {
+    scoring: "elm.model_selection.kmeans:kmeans_aic",
+    score_weights: [-1],
+  }
+}
+ensembles: {
+  no_ensemble: {
+    init_ensemble_size: 1,  # how many models to initialize at start
+    saved_ensemble_size: 1, # how many models to serialize as "best"
+    ngen: 1,       # how many model train/select generations
+    partial_fit_batches: 1,     # how many partial_fit calls per train/select generation
+  },
+  small_ensemble: {
+    init_ensemble_size: 16,  # how many models to initialize at start
+    saved_ensemble_size: 4, # how many models to serialize as "best"
+    ngen: 4,       # how many model train/select generations
+    partial_fit_batches: 4,     # how many partial_fit calls per train/select generation
+  }
+}
+
+transform: {
+  pca: {
+    model_init_class: "sklearn.decomposition:IncrementalPCA",
+    model_init_kwargs: {"n_components": 2},
+    ensemble: no_ensemble,
+    model_scoring: Null,
+  }
+}
+
+sklearn_preprocessing: {
+  min_max: {
+    method: minmax_scale,
+    feature_range: [0, 1],
+    axis: 0,
+    copy: False,
+  },
+  standard: {
+    method: StandardScaler,
+    copy: False,
+    with_mean: True,
+    with_std: True,
+  },
+  poly_2nd_interactions_only: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: True,
+    include_bias: True,
+  },
+  poly_2nd: {
+    method: PolynomialFeatures,
+    degree: 2,
+    interaction_only: False,
+    include_bias: True,
+  },
+  log: {
+    method: FunctionTransformer,
+    func: "numpy:log",
+    validate: True,
+  },
+  log10: {
+    method: FunctionTransformer,
+    func: "numpy:log10",
+    validate: True,
+  },
+  require_positive: {
+    method: FunctionTransformer,
+    func: "elm.pipeline.preproc_scale:require_positive",
+    func_kwargs: {small_num: 0.0001},
+  },
+}
+
+pipelines: {
+  log10: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+  ],
+  standardize_log10: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+    {sklearn_preprocessing: standard},
+  ],
+  standardize_log10_var_top_80: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+    {sklearn_preprocessing: standard},
+    {feature_selection: top_80_percent},
+  ],
+  standardize_log10_var_top_80_inter: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+    {sklearn_preprocessing: standard},
+    {feature_selection: top_80_percent},
+    {sklearn_preprocessing: poly_2nd_interactions_only},
+  ],
+  standardize_log10_var_top_80_trans: [
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+    {sklearn_preprocessing: standard},
+    {feature_selection: top_80_percent},
+    {transform: pca},
+  ],
+  standardize_log10_var_top_80_inter_trans: [
+
+    {sklearn_preprocessing: require_positive},
+    {sklearn_preprocessing: log10},
+    {sklearn_preprocessing: standard},
+    {feature_selection: top_80_percent},
+    {sklearn_preprocessing: poly_2nd_interactions_only},
+    {transform: pca},
+  ],
+  flatten_example: [
+    {select_canvas: band_1},
+    {flatten: 'C'},
+    {sklearn_preprocessing: require_positive},
+    {drop_na_rows: True},
+  ],
+  flatten_pca: [
+    {select_canvas: band_1},
+    {flatten: 'C'},
+    {sklearn_preprocessing: require_positive},
+    {drop_na_rows: True},
+    {transform: pca}
+  ]
+}
+train: {
+  kmeans: {
+    model_init_class: "sklearn.cluster:MiniBatchKMeans",
+    model_init_kwargs: {
+      compute_labels: True
+    },
+    ensemble: no_ensemble,
+    output_tag: kmeans,
+    model_scoring: kmeans_aic,
+    model_selection: "elm.model_selection.kmeans:kmeans_model_averaging",
+    model_selection_kwargs: {
+      drop_n: 0,
+      init_n: 0,
+      evolve_n: 1,
+    }
+  }
+}
+
+run:
+  - {pipeline: flatten_pca,
+     data_source: NPP_DSRF1KD_L2GD,
+     predict: kmeans}
+
