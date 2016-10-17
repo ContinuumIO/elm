@@ -45,7 +45,7 @@ class SklearnBase(StepMixin):
         return self._estimator.get_params(**kwargs)
 
     def set_params(self, **params):
-        kwargs = self._import_score_func(**kwargs)
+        kwargs = self._import_score_func(**params)
         kwargs = {k: v for k, v in params.items()
                   if k in self._estimator.get_params()}
         self._estimator.set_params(**kwargs)

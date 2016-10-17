@@ -83,6 +83,10 @@ class Pipeline(object):
         if new_params:
             self = self.unfitted_copy(**new_params)
         fit_func = None
+        if X is None and y is None and sample_weight is None:
+            X, y, sample_weight = self.create_sample(X=X, y=y, sampler=sampler,
+                                                     args_list=args_list,
+                                                     **data_source)
         for idx, (_, step_cls) in enumerate(self.steps[:-1]):
 
             if prepare_for == 'train':
