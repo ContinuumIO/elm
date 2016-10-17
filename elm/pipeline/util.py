@@ -1,22 +1,10 @@
-from collections import namedtuple, Sequence
-import copy
-from functools import partial
-import inspect
-import logging
+from collections import Sequence
 
-import dask
-import numbers
-
-from elm.model_selection.util import get_args_kwargs_defaults
 from elm.model_selection.evolve import ea_setup
-from elm.config import import_callable, parse_env_vars
+from elm.config import import_callable
 from elm.model_selection.base import base_selection
-from elm.model_selection.scoring import score_one_model
 from elm.model_selection.sorting import pareto_front
-from elm.sample_util.sample_pipeline import create_sample_from_data_source
 
-
-logger = logging.getLogger(__name__)
 
 NO_ENSEMBLE = {'init_ensemble_size': 1,
                'ngen': 1,
@@ -25,9 +13,9 @@ NO_ENSEMBLE = {'init_ensemble_size': 1,
 
 _next_idx = 0
 
-def _next_name():
+def _next_name(token):
     global _next_idx
-    n = 'ensemble-{}'.format(_next_idx)
+    n = '{}-{}'.format(token, _next_idx)
     _next_idx += 1
     return n
 
@@ -41,7 +29,7 @@ def _validate_ensemble_members(models):
     err_msg += example
     if not any(isinstance(m, Sequence) for m in models):
         # list of models with no tags - make some up
-        return [(_next_name(), m) for m in models]
+        return [(_next_name('ensemble_member'), m) for m in models]
     if not all(len(m) == 2 and isinstance(m, tuple) for m in models):
         raise ValueError(err_msg)
     return models
@@ -59,7 +47,6 @@ def _run_model_selection(models, model_selection, model_selection_kwargs,
         sort_fitness = pareto_front
     else:
         sort_fitness = import_callable(sort_fitness)
-    logger.debug('base_selection {}'.format(repr((models, model_selection, sort_fitness, score_weights, model_selection_kwargs))))
     models = base_selection(models,
                             model_selection=model_selection,
                             sort_fitness=sort_fitness,

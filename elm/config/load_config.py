@@ -16,8 +16,7 @@ from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.config.defaults import DEFAULTS, CONFIG_KEYS
-
+from elm.config.config_info import CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
 
@@ -33,19 +32,18 @@ PIPELINE_ACTIONS = ('train',
 SAMPLE_PIPELINE_ACTIONS = ('transform',
                            'feature_selection',
                            'sklearn_preprocessing',
-                           'random_sample',
-                           'pipeline',
-                           'get_y',
-                           'get_weight',) # others too from change_coords
-REQUIRES_METHOD = ('train', 'predict', 'transform')
+                           'random_sample',) # others too from change_coords
+REQUIRES_METHOD = ('train', 'predict', )
 class ConfigParser(object):
     # The list below reflects the order
     # in which the keys of the config
     # are validated. (the _validate_* private
     # methods are order sensitive.)
-
+    expected_ensemble_kwargs = ('init_ensemble_size',
+                                'ngen',
+                                'partial_fit_batches',
+                                'saved_ensemble_size',)
     config_keys = CONFIG_KEYS
-    defaults = DEFAULTS
     all_words = ('all', ['all'],)
     def __init__(self, config_file_name=None, config=None, cmd_args=None):
         '''Parses a config structure
@@ -75,12 +73,26 @@ class ConfigParser(object):
     def _update_for_cmd_args(self, cmd_args=None):
         self.cmd_args = {} if not cmd_args else dict(vars(cmd_args))
         for k, v in self.cmd_args.items():
-            if k not in ('config', 'raw_config', 'defaults'):
+            if k not in ('config',):
                 if v:
-                    setattr(self, k.upper().replace('-', '_'), v)
+                    if k in self.expected_ensemble_kwargs:
+                        replace = self.config.get('ensembles', {})
+                        self._validate_type(replace, 'ensembles', dict)
+                        for k2, v2 in replace.items():
+                            replace[k2][k] = v
+                        self.config['ensembles'] = replace
+                    else:
+                        setattr(self, k.upper().replace('-', '_'), v)
 
     def _interpolate_env_vars(self, env):
-        '''Replace config items like env:ELM_TRANSFORM_PATH with relevant env var'''
+        '''Replace config items like env:ELM_TRAIN_PATH with relevant env var'''
+        updates = {}
+        for k, v in self.config.get('data_sources', {}).items():
+            if k not in updates:
+                updates[k] = {}
+            for key in ('X', 'y', 'sample_weight'):
+                if key in v:
+                    updates[k] = self.config['data_sources'][k].pop(key)
         config_str = yaml.dump(self.config)
         for env_var in (ENVIRONMENT_VARS_SPEC['str_fields_specs'] +
                         ENVIRONMENT_VARS_SPEC['int_fields_specs']):
@@ -89,6 +101,8 @@ class ConfigParser(object):
                 config_str = config_str.replace(env_str,
                                                 env[env_var['name']])
         self.config = yaml.load(config_str)
+        for key in updates:
+            self.config['data_sources'][key].update(updates[key])
 
     def _update_for_env(self):
         '''Update the config based on environment vars'''
@@ -105,14 +119,12 @@ class ConfigParser(object):
 
             if val:
                 updates[str_var['name']] = val
-            elif str_var['name'] in DEFAULTS:
-                updates[str_var['name']] = DEFAULTS[str_var['name']]
+
         for int_var in ENVIRONMENT_VARS_SPEC['int_fields_specs']:
             val = getattr(self, int_var['name'], None)
             if val:
                 updates[int_var['name']] =  int(val)
-            elif int_var['name'] in DEFAULTS:
-                updates[int_var['name']] = DEFAULTS[int_var['name']]
+
         for k, v in updates.items():
             self.config[k] = v
             setattr(self, k, v)
@@ -176,24 +188,32 @@ class ConfigParser(object):
         if not name or not isinstance(name, str):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
         sampler = ds.get('sampler')
-        self._validate_custom_callable(sampler,
-                                True,
-                                'train:{} sampler'.format(name))
+        if sampler:
+            self._validate_custom_callable(sampler,
+                                    True,
+                                    'train:{} sampler'.format(name))
         if 'band_specs' in ds:
             ds['band_specs'] = self._validate_band_specs(ds.get('band_specs'), name)
         reader = ds.get('reader')
         reader_words = ('hdf4', 'hdf5', 'tif', 'netcdf')
-        if not reader in self.readers and reader not in reader_words:
+        if not reader:
+            ds['reader'] = None
+        if reader and not reader in self.readers and reader not in reader_words:
             raise ElmConfigError('Data source config dict {} '
                                  'refers to a "reader" {} that is not defined in '
                                  '"readers" or in the tuple {}'.format(reader, self.readers, reader_words))
         s = ds.get('args_list')
-        try:
-            ds['args_list'] = import_callable(s)
-        except Exception as e:
-            raise ElmConfigError('data_source:{} uses a args_list {} that '
-                                 'is neither importable nor in '
-                                 '"args_list" dict'.format(name, s))
+        if s and isinstance(s, (list, tuple)):
+            def anon(*args, **kwargs):
+                return s
+            ds['args_list'] = anon
+        elif s:
+            try:
+                ds['args_list'] = import_callable(s)
+            except Exception as e:
+                raise ElmConfigError('data_source:{} uses a args_list {} that '
+                                     'is neither importable nor in '
+                                     '"args_list" dict'.format(name, s))
         self._validate_selection_kwargs(ds, name)
         self.data_sources[name] = ds
 
@@ -205,18 +225,6 @@ class ConfigParser(object):
                                    'dict. Got: {}'.format(self.data_sources))
         for name, ds in self.data_sources.items():
             self._validate_one_data_source(name, ds)
-
-    def _validate_args_list(self):
-        '''Validate the "args_list" section of config'''
-        self.args_list = self.config.get('args_list', {}) or {}
-        if not isinstance(self.args_list, dict):
-            raise ElmConfigError('Expected args_list to be a dict, but '
-                                   'got {}'.format(self.args_list))
-        for name, file_gen in self.args_list.items():
-            if not name or not isinstance(name, str):
-                raise ElmConfigError('Expected "name" key in args_list {} ')
-            self._validate_custom_callable(file_gen, True,
-                                           'args_list:{}'.format(name))
 
     def _validate_positive_int(self, val, context):
         '''Validate that a positive int was given'''
@@ -296,33 +304,9 @@ class ConfigParser(object):
         for k, s in feature_selection.items():
             self._validate_type(k, 'feature_selection:{}'.format(k), str)
             self._validate_type(s, 'feature_selection:{}'.format(s), dict)
-            selection = s.get('selection')
-            if selection != 'all':
-                self._validate_custom_callable(selection, True,
-                                               'feature_selection:{}'.format(k))
-                scoring = s.get('scoring')
-                no_scoring = ('all', 'sklearn.feature_selection:VarianceThreshold')
-                if scoring and scoring not in dir(skfeat) and not selection in no_scoring:
-                    self._validate_custom_callable(scoring, True,
-                            'feature_selection:{} scoring'.format(k))
-                make_scorer_kwargs = s.get('make_scorer_kwargs') or {}
-                self._validate_type(make_scorer_kwargs, 'make_scorer_kwargs', dict)
-
-                # TODO is there further validation of make_scorer_kwargs
-                # that can be done -
-                #    they are passed to sklearn.metrics.make_scorer
-
-                s['make_scorer_kwargs'] = make_scorer_kwargs
-            else:
-                scoring = None
-            s['scoring'] = scoring
-
-
-            feature_choices = s.get('choices') or 'all'
-            self._validate_all_or_type(feature_choices,
-                                       'feature_selection:{} choices'.format(k),
-                                       (list, tuple))
-            s['choices'] = feature_choices
+            selection = s.get('method')
+            if selection and selection not in dir(skfeat):
+                raise ValueError('{} is not in dir(sklearn.feature_selection)'.format(selection))
             feature_selection[k] = s
         self.feature_selection = feature_selection
 
@@ -403,62 +387,47 @@ class ConfigParser(object):
                     return True
         return False
 
-    def _validate_one_train_or_transform_entry(self, train_or_transform, name, t, data_source):
+    def _validate_one_train_entry(self, name, t):
         '''Validate one dict within "train" or "transform" section of config'''
         has_fit_func, requires_y, no_selection = self._validate_train_or_transform_funcs(name, t)
         kwargs_fields = tuple(k for k in t if k.endswith('_kwargs'))
         for k in kwargs_fields:
-            self._validate_type(t[k], '{}:{}'.format(train_or_transform, k), dict)
-        if not no_selection:
-            mod = t.get('model_selection')
+            self._validate_type(t[k], 'train:{}'.format(k), dict)
+        mod = t.get('model_selection')
 
-            if mod is not None and not isinstance(mod, dict) and not mod in self.model_selection:
-                raise ElmConfigError('{}:model_selection {} is not a '
-                                     'key in config\'s model_selection'.format(train_or_transform, mod))
-            if t.get('sort_fitness') is not None:
-                self._validate_custom_callable(t.get('sort_fitness'),
-                                               True,
-                                               '{}:{} (sort_fitness)'.format(train_or_transform,repr(t.get('sort_fitness'))))
-            ms = t.get('model_scoring')
-            if ms is not None:
-                self._validate_type(ms, '{}:{} (model_scoring)'.format(train_or_transform,name),
-                                    (str, numbers.Number, tuple))
-                if not ms in self.model_scoring:
-                    raise ElmConfigError('{}:{}\'s model_scoring: {} is not a '
-                                         'key in config\'s model_scoring '
-                                         'dict'.format(train_or_transform, name, ms))
-            else:
-                raise ElmConfigError('In {}:{} model_scoring must be defined if model_selection is used'.format(train_or_transform, name))
-        if train_or_transform == 'transform':
-            is_major_step = self._is_transform_major_pipeline_step(name)
-        else:
-            is_major_step = True
-        if is_major_step:
-            if requires_y:
-                self._validate_custom_callable(data_source.get('get_y_func'),
-                                               True,
-                                               '{}:get_y_func (required with '
-                                               '{})'.format(train_or_transform,
-                                                            repr(t.get('model_init_class'))))
-            output_tag = t.get('output_tag')
-            self._validate_type(output_tag, 'train:output_tag', str)
-        self.config[train_or_transform][name] = getattr(self, train_or_transform)[name] = t
+        if mod:
+            t['model_selection'] = import_callable(mod)
+        if t.get('sort_fitness') is not None:
+            self._validate_custom_callable(t.get('sort_fitness'),
+                                           True,
+                                           'train:{} (sort_fitness)'.format(repr(t.get('sort_fitness'))))
+        ms = t.get('model_scoring')
+        if ms is not None:
+            self._validate_type(ms, 'train:{} (model_scoring)'.format(name),
+                                (str, numbers.Number, tuple))
+            if not ms in self.model_scoring:
+                raise ElmConfigError('train:{}\'s model_scoring: {} is not a '
+                                     'key in config\'s model_scoring '
+                                     'dict'.format(name, ms))
+        self.config['train'][name] = t
 
-    def _validate_train_or_transform(self, train_or_transform):
+    def _validate_train(self):
         '''Validate the "train" or "transform" section of config'''
-        setattr(self, train_or_transform, self.config.get(train_or_transform, {}) or {})
-        for name, t in getattr(self, train_or_transform).items():
+
+        self.train = self.config.get('train') or {}
+        for name, t in self.train.items():
             self._validate_type(self.config['run'], 'run', (list, tuple))
+            self._validate_one_train_entry(name, t)
             for step1 in self.config['run']:
                 self._validate_type(step1, 'pipeline: {}'.format(step1), dict)
 
-    def _validate_train(self):
-        '''Validate the "train" section of config'''
-        return self._validate_train_or_transform('train')
-
     def _validate_transform(self):
         '''Validate the "transform" section of config'''
-        return self._validate_train_or_transform('transform')
+        self.transform = self.config.get('transform') or {}
+        for name, t in self.transform.items():
+            self._validate_type(t, 'transform:{}'.format(name), dict)
+            if not 'model_init_class' in t:
+                raise ElmConfigError('Expected {} to have at least "model_init_class" and possibly "model_init_kwargs" in each transform dict')
 
     def _validate_sklearn_preprocessing(self):
         '''Validate "sklearn_preprocessing" dict in config'''
@@ -548,14 +517,12 @@ class ConfigParser(object):
         self.param_grids = self.config.get('param_grids') or {}
         self._validate_type(self.param_grids, 'param_grids', dict)
         for k, v in self.param_grids.items():
-            for step1 in self.pipeline:
-                for step in (s for s in step1['steps'] if 'param_grid' in s):
-
-                    if not step['param_grid'] in self.param_grids:
-                        raise ElmConfigError('Pipeline step {} refers to '
-                                             'a param_grid which is not defined '
-                                             'in param_grids ({})'.format(step, step['param_grid']))
-                    get_param_grid(self, step1, step)
+            for step in self.run:
+                if not step['param_grid'] in self.param_grids:
+                    raise ElmConfigError('Pipeline step {} refers to '
+                                         'a param_grid which is not defined '
+                                         'in param_grids ({})'.format(step, step['param_grid']))
+                get_param_grid(self, step)
 
     def _validate_pipeline_train(self, step):
         '''Validate a "train" step within config's "pipeline"'''
@@ -611,5 +578,6 @@ class ConfigParser(object):
 
 
     def __str__(self):
-        return yaml.dump(self.raw_config)
+        return yaml.dump({k: getattr(self, k, self.config.get(k))
+                          for k, _ in self.config_keys})
 

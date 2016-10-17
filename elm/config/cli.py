@@ -1,50 +1,45 @@
 from argparse import ArgumentParser
 
-from elm.config.defaults import DEFAULTS
 from elm.config.env import ENVIRONMENT_VARS_SPEC
 
-def add_cmd_line_options(parser):
+def add_env_vars_override_options(parser):
+    group = parser.add_argument_group('Environment','Compute settings (see also help on environment variables)')
     lower_name = lambda n: '--' + n.lower().replace('_', '-')
     for v in ENVIRONMENT_VARS_SPEC['int_fields_specs']:
-        parser.add_argument(lower_name(v['name']), help='See also env var {}'.format(v['name']))
+        group.add_argument(lower_name(v['name']), help='See also env var {}'.format(v['name']))
     for v in ENVIRONMENT_VARS_SPEC['str_fields_specs']:
         name = lower_name(v['name'])
         hlp = 'See also {}'.format(v['name'])
         if 'choices' in v:
-            parser.add_argument(name, help=hlp, choices=v['choices'])
+            group.add_argument(name, help=hlp, choices=v['choices'])
         else:
-            parser.add_argument(name, help=hlp)
+            group.add_argument(name, help=hlp)
 
 
-def add_years_data_days(parser):
-    parser.add_argument('--years',
-                        type=int,
-                        nargs='+',
-                        help='Integer years to include')
-    parser.add_argument('--data_days',
-                        type=int,
-                        nargs='+',
-                        help='Integer data day(s) to include')
+def add_config_file_argument(parser):
+    group = parser.add_argument_group('Inputs', 'Input config file or directory')
+    group = group.add_mutually_exclusive_group()
+    group.add_argument('--config', type=str, help="Path to yaml config")
+    group.add_argument('--config-dir', type=str, help='Path to a directory of yaml configs')
 
 
-def add_local_dataset_options(parser):
-    parser.add_argument('--product_number',
-                        type=int,
-                        default=3001,
-                        help="ladsweb integer directory number in allData/ (default: %(default)s)")
-    parser.add_argument('--product_name',
-                        type=str,
-                        default='NPP_DSRF1KD_L2GD',
-                        help='ladsweb dataset name within allData/--product_number (default: %(default)s)')
-    add_years_data_days(parser)
+def add_ensemble_kwargs(parser):
+    group = parser.add_argument_group('Control', 'Keyword arguments to elm.pipeline.ensemble')
+    group.add_argument('--partial-fit-batches', type=int,
+                        help='Partial fit batches (for estimator specified in config\'s "train"')
+    group.add_argument('--init-ensemble-size', type=int,
+                        help='Initial ensemble size (ignored if using "ensemble_init_func"')
+    group.add_argument('--saved-ensemble-size', type=int,
+                        help='How many of the "best" models to serialize')
+    group.add_argument('--ngen', type=int,
+                        help='Number of ensemble generations, defaulting to ngen from ensemble_kwargs in config')
 
+def add_run_options(parser):
+    parser.add_argument_group('Run', 'Run options')
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('--train-only', action='store_true',
+                      help='Run only the training, not prediction, actions specified by config')
 
-def add_config_file_argument(parser=None):
-    parser.add_argument('--config', type=str, help="Path to yaml config")
-    parser.add_argument('--config-dir', type=str, help='Path to a directory of yaml configs')
+    group.add_argument('--predict-only', action='store_true',
+                       help='Run only the prediction, not training, actions specified by config')
 
-
-def add_sample_ladsweb_options(parser):
-    parser.add_argument('--product_numbers', type=str, nargs='+', help='Limit to these product_numbers or None for all product numbers')
-    parser.add_argument('--product_names', type=str, nargs='+', help='Limit to these product names or None for all product names for each product number')
-    parser.add_argument('-n', '--n-file-samples', default=1, type=int,help="How many files of each product")

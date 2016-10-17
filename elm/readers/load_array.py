@@ -77,11 +77,11 @@ def load_array(filename, meta=None, band_specs=None, reader=None):
 def _load_meta(filename, ftype, **kwargs):
 
     if ftype == 'netcdf':
-        return load_netcdf_meta(filename, **kwargs)
+        return load_netcdf_meta(filename)
     elif ftype == 'hdf5':
-        return load_hdf5_meta(filename, **kwargs)
+        return load_hdf5_meta(filename)
     elif ftype == 'hdf4':
-        return load_hdf4_meta(filename, **kwargs)
+        return load_hdf4_meta(filename)
     elif ftype == 'tif':
         return load_dir_of_tifs_meta(filename, **kwargs)
     elif ftype == 'hdf':
@@ -110,7 +110,7 @@ def load_meta(filename, **kwargs):
         kw = {k: v for k, v in reader.items() if k != 'reader'}
         ftype = _find_file_type(filename)
     else:
-        kw = {}
+        kw = kwargs
         ftype = reader
     return _load_meta(filename, ftype, **kw)
 

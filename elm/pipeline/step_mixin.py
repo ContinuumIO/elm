@@ -16,10 +16,10 @@ class StepMixin(object):
         if callable(getattr(self, '_validate_init', None)):
             self._validate_init(*self._args, **self._kwargs)
 
-    def get_params(self, deep=True):
+    def get_params(self, **kwargs):
         func = getattr(self.func, 'get_params', None)
         if func:
-            return func(deep=deep)
+            return func(**kwargs)
         return self._kwargs
 
     def _validate_init_base(self):

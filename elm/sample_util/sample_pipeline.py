@@ -14,6 +14,8 @@ from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.readers import (ElmStore, flatten as _flatten, load_meta, load_array)
 from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
+from elm.pipeline import steps
+from elm.pipeline.preproc_scale import SKLEARN_PREPROCESSING
 
 
 logger = logging.getLogger(__name__)
@@ -84,13 +86,12 @@ def create_sample_from_data_source(config=None, **data_source):
     return sampler_func(*sampler_args, **data_source)
 
 
-def make_pipeline_func(config, pipeline):
+def make_pipeline_steps(config, pipeline):
     '''Make list of (func, args, kwargs) tuples to run pipeline
     Params:
         config: validated config from elm.config.ConfigParser
         step:   a dictionary that is one step of a "pipeline" list
     '''
-    from elm.pipeline import steps
     actions = []
     for action_idx, action in enumerate(pipeline):
         is_dic = isinstance(action, dict)
@@ -100,7 +101,7 @@ def make_pipeline_func(config, pipeline):
             _feature_selection = copy.deepcopy(config.feature_selection[action['feature_selection']])
             kw = _feature_selection.copy()
             kw.update(action)
-            scaler = feature_selection['method']
+            scaler = _feature_selection['method']
             scaler = import_callable(getattr(skfeat, scaler, scaler))
             if 'func_kwargs' in _feature_selection:
                 func = import_callable(_feature_selection['func'])
@@ -108,14 +109,18 @@ def make_pipeline_func(config, pipeline):
                 _feature_selection['func'] = func
             kw = {k: v for k, v in _feature_selection.items()
                   if k not in ('func_kwargs', 'method')}
-            step_cls = steps.SklearnBase(_method=scaler, _mod=skpre, **kw)
-        elif 'random_sample' in action:
-            step_cls = RandomSample(action['random_sample'], **action)
+            cls = SKLEARN_PREPROCESSING[_feature_selection['method']]
+            step_name = action['feature_selection']
+            step_cls = cls(**kw)
         elif 'transform' in action:
             trans = config.transform[action['transform']]
             cls = import_callable(trans['model_init_class'])
-            t = cls(**(trans.get('model_init_kwargs') or {}))
-            step_cls = steps.Transform(t)
+            kw = trans.get('model_init_kwargs') or {}
+            kw_filter = {k: v for k, v in kw.items() if k != 'partial_fit_batches'}
+            t = cls(**kw_filter)
+            pfb = trans.get('partial_fit_batches', kw.get('partial_fit_batches'))
+            step_name = action['transform']
+            step_cls = steps.Transform(t, partial_fit_batches=pfb)
         elif 'sklearn_preprocessing' in action:
             _sklearn_preprocessing = config.sklearn_preprocessing[action['sklearn_preprocessing']]
             scaler = _sklearn_preprocessing['method']
@@ -124,11 +129,18 @@ def make_pipeline_func(config, pipeline):
                   if not k in ('method','func_kwargs')}
             if 'func' in _sklearn_preprocessing:
                 kw['func'] = import_callable(_sklearn_preprocessing['func'])
-            step_cls = steps.SklearnBase(_method=scaler, _mod=skpre, **kw)
+            cls = SKLEARN_PREPROCESSING[_sklearn_preprocessing['method']]
+            step_name = action['sklearn_preprocessing']
+            step_cls = cls(**kw)
         elif any(k in CHANGE_COORDS_ACTIONS for k in action):
             _sp_step = [k for k in action if k in CHANGE_COORDS_ACTIONS][0]
-            _context = _sp_step
-            step_cls = steps.ChangeCoordsMixin(arg=_sp_step, _sp_step=_sp_step, _context=_context, **action)
+            step_name = _sp_step
+            for att in dir(steps):
+                if isinstance(getattr(steps, att), type):
+                    if getattr(getattr(steps, att), '_sp_step', None) == _sp_step:
+                        step_cls = getattr(steps, att)(**action)
+                        break
+
         else:
             # add items to actions of the form:
             # (
@@ -140,7 +152,7 @@ def make_pipeline_func(config, pipeline):
             # elm.config.load_config global variable:
             # "SAMPLE_PIPELINE_ACTIONS"
             raise NotImplementedError('pipeline action {} not recognized.'.format(action))
-        actions.append(step_cls)
+        actions.append((step_name, step_cls))
     return actions
 
 
@@ -167,9 +179,17 @@ def final_on_sample_step(fitter,
                          fit_kwargs,
                          y=None,
                          sample_weight=None,
-                         classes=None,
                          require_flat=True,
                          prepare_for='train'):
+    fit_kwargs = copy.deepcopy(fit_kwargs or {})
+    if y is None:
+        y = fit_kwargs.pop('y', None)
+    else:
+        fit_kwargs.pop('y', None)
+    if sample_weight is None:
+        sample_weight = fit_kwargs.pop('sample_weight', None)
+    else:
+        fit_kwargs.pop('sample_weight', None)
     if isinstance(X, np.ndarray):
         X_values = X             # numpy array 2-d
     elif isinstance(X, (ElmStore, xr.Dataset)):
@@ -183,8 +203,7 @@ def final_on_sample_step(fitter,
     else:
         X_values = X # may not be okay for sklearn models,e.g KMEans but can be passed thru Pipeline
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
-    fit_kwargs = fit_kwargs or {}
-    fit_kwargs = copy.deepcopy(fit_kwargs)
+
     has_y = _has_arg(y)
     has_sw = _has_arg(sample_weight)
     if has_sw:
@@ -208,15 +227,9 @@ def final_on_sample_step(fitter,
         check_array(y, "final_on_sample_step - y")
     if has_sw:
         check_array(sample_weight, 'final_on_sample_step - sample_weight')
-    if 'classes' in kwargs:
-        if classes is None:
-            raise ValueError('With model {} expected "classes" (unique classes int\'s) to be passed in config\'s "train" or "transform" dictionary')
-        fit_kwargs['classes'] = classes
-    params = model.get_params()
-    if 'batch_size' in params:
+    if 'batch_size' in model.get_params():
         logger.debug('set batch_size {}'.format(X_values.shape[0]))
-        params['batch_size']  = X_values.shape[0]
-        model.set_params(**params)
+        model.set_params(batch_size=X_values.shape[0])
     return fit_args, fit_kwargs
 
 

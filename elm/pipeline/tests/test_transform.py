@@ -5,79 +5,45 @@ import os
 import pytest
 import yaml
 
-from elm.config.defaults import DEFAULTS, DEFAULT_TRAIN
-from elm.config.util import import_callable
-from elm.model_selection.sklearn_support import DECOMP_MODEL_STR
-from elm.pipeline.tests.util import (tmp_dirs_context,
-                                     test_one_config as tst_one_config)
-from elm.model_selection import DECOMP_MODEL_STR
+from sklearn.decomposition import IncrementalPCA
 
-for k,v in DEFAULTS['data_sources'].items():
-    DEFAULT_DATA_SOURCE = (k, v)
-    if k == 'NPP_DSRF1KD_L2GD':
-        break
+from elm.readers import *
+from elm.pipeline import steps
+from elm.pipeline.tests.util import random_elm_store
 
-for k,v in DEFAULTS['transform'].items():
-    DEFAULT_TRANSFORM = (k, v)
+X = flatten(random_elm_store())
 
-
-flatten = {'flatten': 'C'}
-def tst_once(tag, config):
-    with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
-        out = tst_one_config(config=config, cwd=cwd)
-        assert glob.glob(os.path.join(transform_path, '*','*.pkl'))
-        assert not glob.glob(os.path.join(predict_path, '*'))
+def _run_assertions(trans, y, sample_weight):
+    assert y is None
+    assert sample_weight is None
+    assert isinstance(trans, ElmStore)
+    assert hasattr(trans, 'flat')
+    assert tuple(trans.flat.dims) == ('space', 'band')
+    assert trans.flat.values.shape[1] == 3
+    assert trans.flat.values.shape[0] == X.flat.values.shape[0]
 
 
-def tst_transform(model_init_class, is_slow):
-    config = copy.deepcopy(DEFAULTS)
-    c = import_callable(model_init_class)()
-    batch_size = 1000
-    params = c.get_params()
-    # Make it run faster:
-    if 'tol' in params:
-        params['tol'] *= 10
-    if 'n_components' in params:
-        params['n_components'] = 1
-    if 'eigen_solver' in params:
-        params['eigen_solver'] = 'dense'
-    if 'n_topics' in params:
-        params['n_topics'] = 2
-    if 'batch_size' in params:
-        params['batch_size'] = batch_size
-    if 'n_jobs' in params:
-        params['n_jobs'] = 4
-    if 'whiten' in params:
-        params['whiten'] = True
-    transform = {'pca': {'model_init_kwargs': params,
-                            'model_init_class': model_init_class,
-                            'data_source': DEFAULT_DATA_SOURCE[0],
-                            'ensemble': DEFAULT_TRAIN['ensemble'],
-                            }
-                }
-    if is_slow:
-        sp = [flatten, {'transform': 'pca', 'method': 'transform'}]
-    else:
-        sp = [flatten, {'random_sample': batch_size}]
-    pipeline = [{'pipeline': sp,
-                 'data_source': DEFAULT_DATA_SOURCE[0],
-                 'steps': []}]
-    pipeline[0]['steps'] = [{'transform': 'pca',
-                             'method':    'fit',}]
-    if is_slow:
-        pipeline[0]['steps'] += [{'train': 'kmeans'}]
-
-    config['train'] = {'kmeans': copy.deepcopy(DEFAULT_TRAIN)}
-    config['pipeline'] = pipeline
-    config['data_sources'] = dict([DEFAULT_DATA_SOURCE])
-    config['transform'] = transform
-    with open('tested_config_{}.yaml'.format(model_init_class.split(':')[-1]), 'w') as f:
-        f.write(yaml.dump(config))
-    tst_once('test_transform:' + model_init_class, config)
+def test_fit_transform():
+    t = steps.Transform(IncrementalPCA(n_components=3))
+    trans, y, sample_weight = t.fit_transform(X)
+    _run_assertions(trans, y, sample_weight)
 
 
-@pytest.mark.slow
-@pytest.mark.parametrize('model_init_class', sorted(DECOMP_MODEL_STR))
-def test_transform_pipeline_step(model_init_class):
-    tst_transform(model_init_class, False)
+def test_partial_fit_transform():
+    t = steps.Transform(IncrementalPCA(n_components=3), partial_fit_batches=3)
+    trans, y, sample_weight = t.fit_transform(X)
+    _run_assertions(trans, y, sample_weight)
+    t2 = steps.Transform(IncrementalPCA(n_components=3), partial_fit_batches=3)
+    with pytest.raises(TypeError):
+        t2.partial_fit = None # will try to call this and get TypeError
+        t2.fit_transform(X)
+
+
+def test_fit():
+    t = steps.Transform(IncrementalPCA(n_components=3), partial_fit_batches=2)
+    fitted = t.fit(X)
+    assert isinstance(fitted, steps.Transform)
+    assert isinstance(fitted._estimator, IncrementalPCA)
+    trans, y, sample_weight = fitted.transform(X)
+    _run_assertions(trans, y, sample_weight)
 

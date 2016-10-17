@@ -6,22 +6,32 @@ import sklearn.preprocessing as skpre
 import numpy as np
 import xarray as xr
 
+from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.readers import *
 from elm.pipeline.step_mixin import StepMixin
 
 class SklearnBase(StepMixin):
-    _sp_step = None
-    _method = None
-    _mod = None
-    def __init__(self, _method=None, _mod=None, **kwargs):
-        cls = _method or self._method # get the sklearn class
-        if _mod:
-            self._mod = _mod
-        self._estimator = cls(**kwargs) # init on that class
+    def __init__(self,  **kwargs):
+        cls = getattr(skfeat, self.__class__.__name__, None)
+        if cls is None:
+            cls = getattr(skpre, self.__class__.__name__)
+        kwargs = self._import_score_func(**kwargs)
+        args, defaults, var_kwargs = get_args_kwargs_defaults(cls.__init__)
+        kw = {k: v for k, v in kwargs.items() if k in defaults or k in args}
+        self._estimator = cls(**kw) # init on that class
+
+    def _import_score_func(self, **params):
+        if 'score_func' in params:
+            if isinstance(params['score_func'], str):
+                sf = getattr(skfeat, params['score_func'], None)
+                if not sf:
+                    sf = import_callable(params['score_func'])
+                params['score_func'] = sf
+        return params
 
     def require_flat(self, X):
-        if not isinstance(X, (ElmStore, xr.Dataset)) and hasattr(X, 'flat'):
+        if not (isinstance(X, (ElmStore, xr.Dataset)) and hasattr(X, 'flat')):
             raise ValueError("Expected an elm.readers.ElmStore or xarray.Dataset with DataArray 'flat' (2-d array with dims [space, band])")
 
     def _filter_kw(self, func, X, y=None, sample_weight=None, **kwargs):
@@ -30,11 +40,19 @@ class SklearnBase(StepMixin):
         kw = {k: v for k, v in kw.items() if k in defaults or k in args}
         return ((X.flat.values,), kw, y, sample_weight)
 
-    def get_params(self):
-        return self._estimator.get_params()
+    def get_params(self, **kwargs):
+        params = self._estimator.get_params()
+        return self._estimator.get_params(**kwargs)
 
     def set_params(self, **params):
-        return self._estimator.set_params(**params)
+        kwargs = self._import_score_func(**kwargs)
+        kwargs = {k: v for k, v in params.items()
+                  if k in self._estimator.get_params()}
+        self._estimator.set_params(**kwargs)
+        self_kwargs = {k: v for k, v in params.items()
+                       if k not in kwargs}
+        for k, v in self_kwargs.items():
+            setattr(self, k, v)
 
     def transform(self, *args, **kwargs):
         X = args[0]
@@ -53,7 +71,7 @@ class SklearnBase(StepMixin):
             X = self._to_elm_store(new_X, X)
             return (X, y, sample_weight)
         self._estimator = self.fit(*args, **kwargs)
-        return self._estimator.transform(*args, **kwargs)
+        return self.transform(*args, **kwargs)
 
     def fit(self, *args, **kwargs):
         X = args[0]
@@ -72,155 +90,81 @@ class SklearnBase(StepMixin):
         return ElmStore({'flat': flat}, attrs=attrs)
 
 
-class SklearnPreproc(SklearnBase):
-    _sp_step = 'sklearn_preprocessing'
-    _mod = skpre
+class Binarizer(SklearnBase):
+    pass
 
+class FunctionTransformer(SklearnBase):
+    pass
 
+class Imputer(SklearnBase):
+    pass
 
-class SklearnFeatSelect(SklearnBase):
-    _sp_step = 'feature_selection'
-    _mod = skfeat
+class KernelCenterer(SklearnBase):
+    pass
 
+class LabelBinarizer(SklearnBase):
+    pass
 
-class Binarizer(SklearnPreproc):
-    _context = "Binarizer"
-    _method = skpre.Binarizer
+class LabelEncoder(SklearnBase):
+    pass
 
+class MaxAbsScaler(SklearnBase):
+    pass
 
-class FunctionTransformer(SklearnPreproc):
-    _context = "FunctionTransformer"
-    _method = skpre.FunctionTransformer
+class MinMaxScaler(SklearnBase):
+    pass
 
+class MultiLabelBinarizer(SklearnBase):
+    pass
 
-class Imputer(SklearnPreproc):
-    _context = "Imputer"
-    _method = skpre.Imputer
+class Normalizer(SklearnBase):
+    pass
 
+class OneHotEncoder(SklearnBase):
+    pass
 
-class KernelCenterer(SklearnPreproc):
-    _context = "KernelCenterer"
-    _method = skpre.KernelCenterer
+class PolynomialFeatures(SklearnBase):
+    pass
 
+class RobustScaler(SklearnBase):
+    pass
 
-class LabelBinarizer(SklearnPreproc):
-    _context = "LabelBinarizer"
-    _method = skpre.LabelBinarizer
+class StandardScaler(SklearnBase):
+    pass
 
+class RFE(SklearnBase):
+    pass
 
-class LabelEncoder(SklearnPreproc):
-    _context = "LabelEncoder"
-    _method = skpre.LabelEncoder
+class RFECV(SklearnBase):
+    pass
 
+class SelectFdr(SklearnBase):
+    pass
 
-class MaxAbsScaler(SklearnPreproc):
-    _context = "MaxAbsScaler"
-    _method = skpre.MaxAbsScaler
+class SelectFpr(SklearnBase):
+    pass
 
+class SelectFromModel(SklearnBase):
+    pass
 
-class MinMaxScaler(SklearnPreproc):
-    _context = "MinMaxScaler"
-    _method = skpre.MinMaxScaler
+class SelectFwe(SklearnBase):
+    pass
 
+class SelectKBest(SklearnBase):
+    pass
 
-class MultiLabelBinarizer(SklearnPreproc):
-    _context = "MultiLabelBinarizer"
-    _method = skpre.MultiLabelBinarizer
+class SelectPercentile(SklearnBase):
+    pass
 
+class VarianceThreshold(SklearnBase):
+    pass
 
-class Normalizer(SklearnPreproc):
-    _context = "Normalizer"
-    _method = skpre.Normalizer
-
-
-class OneHotEncoder(SklearnPreproc):
-    _context = "OneHotEncoder"
-    _method = skpre.OneHotEncoder
-
-
-class PolynomialFeatures(SklearnPreproc):
-    _context = "PolynomialFeatures"
-    _method = skpre.PolynomialFeatures
-
-
-class RobustScaler(SklearnPreproc):
-    _context = "RobustScaler"
-    _method = skpre.RobustScaler
-
-
-class StandardScaler(SklearnPreproc):
-    _context = "StandardScaler"
-    _method = skpre.StandardScaler
-
-class GenericUnivariateSelect(SklearnFeatSelect):
-    _context = "GenericUnivariateSelect"
-    _method = skfeat.GenericUnivariateSelect
-
-
-class RFE(SklearnFeatSelect):
-    _context = "RFE"
-    _method = skfeat.RFE
-
-
-class RFECV(SklearnFeatSelect):
-    _context = "RFECV"
-    _method = skfeat.RFECV
-
-
-class SelectFdr(SklearnFeatSelect):
-    _context = "SelectFdr"
-    _method = skfeat.SelectFdr
-
-
-class SelectFpr(SklearnFeatSelect):
-    _context = "SelectFpr"
-    _method = skfeat.SelectFpr
-
-
-class SelectFromModel(SklearnFeatSelect):
-    _context = "SelectFromModel"
-    _method = skfeat.SelectFromModel
-
-
-class SelectFwe(SklearnFeatSelect):
-    _context = "SelectFwe"
-    _method = skfeat.SelectFwe
-
-
-class SelectKBest(SklearnFeatSelect):
-    _context = "SelectKBest"
-    _method = skfeat.SelectKBest
-
-
-class SelectPercentile(SklearnFeatSelect):
-    _context = "SelectPercentile"
-    _method = skfeat.SelectPercentile
-
-
-class VarianceThreshold(SklearnFeatSelect):
-    _context = "VarianceThreshold"
-    _method = skfeat.VarianceThreshold
-
-def _set_wrapper_info(cls):
-    orig = cls._method
-    for method in ('fit_transform', '__init__', 'transform', None):
-        if method:
-            m = getattr(orig, method, None)
-        else:
-            m = orig
-        if not m:
-            continue
-        for at in tuple(WRAPPER_ASSIGNMENTS) + ('__repr__', '__str__'):
-            content = getattr(m, at, None)
-            if content:
-                func = getattr(cls, method, None) if method else cls
-                if func:
-                    setattr(func, at, content)
 
 gs = tuple(globals().items())
-clses = [v for k, v in gs if isinstance(v, type) and issubclass(v, SklearnBase)]
-for cls in clses:
-    _set_wrapper_info(cls)
+clses = [(k, v) for k, v in gs if isinstance(v, type) and issubclass(v, SklearnBase)]
+SKLEARN_PREPROCESSING = {}
+for k, cls in clses:
+    SKLEARN_PREPROCESSING[k] = cls
 
 def require_positive(X, small_num=0.0001):
     '''Helper function to ensure positivity before functions like "log"

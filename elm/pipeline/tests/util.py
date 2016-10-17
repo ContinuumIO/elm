@@ -50,24 +50,21 @@ def patch_ensemble_predict():
 @contextlib.contextmanager
 def tmp_dirs_context(tag):
     start = datetime.datetime.now()
-    tmp1, tmp2, tmp3, tmp4 = (tempfile.mkdtemp() for _ in range(4))
+    tmp1, tmp2, tmp3 = (tempfile.mkdtemp() for _ in range(3))
     try:
         old1 = os.environ.get('ELM_TRAIN_PATH') or ''
         old2 =  os.environ.get('ELM_PREDICT_PATH') or ''
-        old3 = os.environ.get('ELM_TRANSFORM_PATH') or ''
         os.environ['ELM_TRAIN_PATH'] = tmp1
         os.environ['ELM_PREDICT_PATH'] = tmp2
-        os.environ['ELM_TRANSFORM_PATH'] = tmp3
         status = 'ok'
-        yield (tmp1, tmp2, tmp3, tmp4)
+        yield (tmp1, tmp2, tmp3)
     except Exception as e:
         status = repr(e)
         raise
     finally:
         os.environ['ELM_TRAIN_PATH'] = old1
         os.environ['ELM_PREDICT_PATH'] = old2
-        os.environ['ELM_TRANSFORM_PATH'] = old3
-        for tmp in (tmp1, tmp2, tmp3, tmp4):
+        for tmp in (tmp1, tmp2, tmp3):
             if os.path.exists(tmp):
                 shutil.rmtree(tmp)
         etime = (datetime.datetime.now() - start).total_seconds()
@@ -99,28 +96,12 @@ def example_get_y_func_continuous(flat_sample, **kwargs):
     return col_means
 
 
-def example_custom_continuous_scorer(y_true, y_pred):
-    '''This is mean_4th_power_error'''
-    return np.mean((y_pred - y_true)**4)
-
-
-class ExpectedFuncCalledError(ValueError):
-    pass
-
-
-def get_y_func_that_raises(flat_sample):
-
-    raise ExpectedFuncCalledError('From get_y_func')
-
-
-def get_weight_func_that_raises(flat_sample):
-
-    raise ExpectedFuncCalledError('from get_weight_func')
-
-
 def test_one_config(config=None, cwd=None):
 
-    config_str = yaml.dump(config or DEFAULTS)
+    if not isinstance(config, str):
+        config_str = yaml.dump(config or DEFAULTS)
+    else:
+        config_str = config
     config_filename = os.path.join(cwd, 'config.yaml')
     with open(config_filename, 'w') as f:
         f.write(config_str)
@@ -177,15 +158,4 @@ def make_blobs_elm_store(**make_blobs_kwargs):
                   dims=['space', 'band'],
                   attrs={'make_blobs': make_blobs_kwargs})})
     return es
-
-
-def remove_pipeline_transforms(config):
-    for idx in range(len(config['pipeline'])):
-        config['pipeline'][idx]['steps'] = [_ for _ in config['pipeline'][idx]['steps']
-                                            if not 'transform' in _]
-
-    for item in config['pipeline']:
-        sp = item.get('pipeline')
-        item['pipeline'] = [_ for _ in item['pipeline']
-                                       if not 'transform' in _]
 

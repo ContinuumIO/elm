@@ -1,5 +1,10 @@
 import re
 
+def include_file(*args, **kwargs):
+    from elm.sample_util.band_selection import select_from_file
+    kwargs['dry_run'] = True
+    return select_from_file(*args, **kwargs)
+
 def _filename_filter(filename, search=None, func=None):
     if search is None and func is None:
         return True
@@ -13,16 +18,10 @@ def _filename_filter(filename, search=None, func=None):
         return func(filename) and keep
 
 
-def include_file(filename, band_specs, **selection_kwargs):
-    from elm.sample_util.band_selection import _select_from_file_base
-    selection_kwargs['dry_run'] = True
-    return _select_from_file_base(filename, band_specs, **selection_kwargs)
-
-def get_args_list(filenames_gen, band_specs, sampler_func, **selection_kwargs):
+def get_args_list(filenames_list, use_file_filter=False, **data_source):
     from elm.sample_util.band_selection import select_from_file
-    if sampler_func == select_from_file:
-        return tuple(f for f in filenames_gen(**selection_kwargs)
-                 if include_file(f, band_specs, **selection_kwargs))
+    if use_file_filter:
+        return tuple(f for f in filenames_list if include_file(f, **data_source))
     else:
-        return tuple(filenames_gen(**selection_kwargs))
+        return tuple(filenames_list)
 

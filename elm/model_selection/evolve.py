@@ -1,6 +1,5 @@
 import array
-from collections import (defaultdict, OrderedDict,
-                         namedtuple, Sequence)
+from collections import (defaultdict, OrderedDict, Sequence)
 import copy
 from functools import partial
 import numbers
@@ -8,6 +7,7 @@ import random
 import logging
 import warnings
 
+import attr
 from deap import base
 from deap import creator
 from deap import tools
@@ -23,21 +23,20 @@ logger = logging.getLogger(__name__)
 DEFAULT_PERCENTILES = (0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
 
 EVO_FIELDS = ['toolbox',
-              'individual_to_new_config',
               'deap_params',
               'param_grid_name',
               'history_file',
               'score_weights',
               'early_stop']
-EvoParams = namedtuple('EvoParams', EVO_FIELDS)
 
-OK_PARAM_FIRST_KEYS = ['transform',
-                       'train',
-                       'feature_selection',
-                       'model_scoring',
-                       'data_sources',
-                       'sklearn_preprocessing',
-                       'pipeline',]
+@attr.s
+class EvoParams(object):
+    toolbox = attr.ib()
+    deap_params = attr.ib()
+    param_grid_name = attr.ib()
+    history_file = attr.ib()
+    score_weights = attr.ib()
+    early_stop = attr.ib()
 
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
@@ -61,7 +60,7 @@ EARLY_STOP_KEYS = ['abs_change', 'percent_change', 'threshold']
 def next_model_tag():
     '''Gives names like tag_0, tag_1, tag_2 sequentially'''
     global LAST_TAG_IDX
-    model_name =  'tag_{}'.format(LAST_TAG_IDX)
+    model_name =  'evolve_{}'.format(LAST_TAG_IDX)
     LAST_TAG_IDX += 1
     return model_name
 
@@ -72,162 +71,24 @@ def assign_names(pop, names=None):
         ind.name = name
 
 
-def _make_cfg_replace_keys(train_config, transform_config,
-              train_step_name, transform_step_name,
-              config):
-    '''Return a callable which can parse param_grid params to tuple of keys
-    into config
-
-    For example the returned func can take a parameter named:
-    "pca__n_components" and return:
-    ("transform", "pca", "model_init_kwargs", "n_components")
-
-    Parameters:
-        train_config:         "train" section of config
-        transform_config:     "transform" section of config
-        train_step_name:      corresponding key in train
-        transform_step_name:  corresponding key in transform
-        config:               elm.config.ConfigParser instance
-
-    Returns:
-        make_cfg_replace_keys - callable returning tuple of keys to config
-    '''
-    if train_config:
-        klass = import_callable(train_config['model_init_class'])
-        _, default_kwargs, _ = get_args_kwargs_defaults(klass)
-        train_or_transform = 'train'
-    else:
-        train_or_transform = 'transform'
-        train_config = {}
-        default_kwargs = {}
-    if transform_config:
-        klass = import_callable(transform_config['model_init_class'])
-        _, default_transform_kwargs, _ = get_args_kwargs_defaults(klass)
-    else:
-        default_transform_kwargs = {}
-        transform_config = {}
-
-    def get_train_transform(k):
-        if k[-1] in default_kwargs:
-            if len(k) == 2:
-                if k[0] != train_step_name:
-                    raise ElmConfigError('Did not expect token {} in param_grid ({})'.format(k[0], k))
-            return ('train', train_step_name, 'model_init_kwargs', k[-1])
-        elif k[-1] in default_transform_kwargs:
-            if len(k) == 2:
-                if k[0] != transform_step_name:
-                    raise ElmConfigError('Did not expect token {} in param_grid ({})'.format(k[0], k))
-            return ('transform', transform_step_name, 'model_init_kwargs', k[-1])
-
-    def make_cfg_replace_keys(k, v):
-        if len(k) == 1:
-            tt = get_train_transform(k)
-            if tt:
-                return (tt, v)
-            has_under = '__' in k[0]
-            if has_under:
-                parts = k[0].split('__')
-                if len(parts) != 2:
-                    raise ElmConfigError('param_grid key: {} uses __ more than once'.format(k))
-                tt = get_train_transform(tuple(parts))
-                if tt:
-                    return (tt, v)
-                raise ElmConfigError('param_grid key: {} uses __ but left '
-                              'side of __ is not in "train" or '
-                              '"transform" keys of config (or '
-                              'the left side of __ is not part of '
-                              '{} step {} in config\'s '
-                              'pipeline'.format(k,
-                                                train_or_transform,
-                                                train_step_name or transform_step_name))
-            elif k[0] == 'pipeline':
-                return (('pipeline_variable',), v)
-            else:
-                raise ElmConfigError('Expected param_grid key to be in "train" '
-                                     'or "transform" model_init_kwargs, '
-                                     'using "__" to split (train/transform name '
-                                     'from a model_init_kwargs,'
-                                     'or using nested dictionary. TODO further help.')
-        else:
-            d = config.config
-            for key in k:
-                if not key in d:
-                    raise ElmConfigError('Given param_grid spec {}, expected {} in config'.format(k, key))
-                d = d[key]
-            return (k, v)
-    return make_cfg_replace_keys
-
-
-def parse_param_grid_items(param_grid_name, train_config, transform_config,
-                          make_cfg_replace_keys, param_grid):
-    '''Parse each param in param_grid to tuple of keys into nested config
-
-    Parameters:
-        param_grid_name:      string name of a param_grid from config's param_grids
-        train_config:         "train" section of config
-        transform_config:     "transform" section of config
-        make_cfg_replace_keys: callable returned by _make_cfg_replace_keys
-        param_grid:           a param_grid dict from config's param_grids section
-    Returns:
-        param_grid_parsed: dict of tuple keys to param choices list
-                           also has key "param_order"
-    '''
-    transform_config = transform_config or {}
-    def switch_types(current_key, obj):
-        if isinstance(obj, (list, tuple)):
-            yield (current_key, obj)
-        elif isinstance(obj, dict):
-            for idx, (key, value) in enumerate(obj.items()):
-                yield from switch_types(current_key + (key,), value)
-                if idx > 0:
-                    raise ElmConfigError('Expected nested dictionary with '
-                                         'at most 1 key per dictionary at '
-                                         'each nesting level.  Found: {}'.format(obj))
-        else:
-            raise ValueError('Did not expect {} (not dict, list or tuple) in {}'.format(obj, param_grid_name))
-    param_grid_parsed = {}
-    param_order = []
-    for k, v in param_grid.items():
-        if k == 'control':
-            param_grid_parsed[k] = v
-            continue
-        unwound = tuple(switch_types((k,), v))[0]
-        k2, v2 = make_cfg_replace_keys(*unwound)
-        param_grid_parsed[k2] = v2
-        param_order.append(k2)
-    param_grid_parsed['param_order'] = param_order
-    return param_grid_parsed
-
-
-def get_param_grid(config, step1, step):
+def get_param_grid(config, step):
     '''Get the metadata for one config step that has a param_grid or return None'''
     param_grid_name = step.get('param_grid') or None
     if not param_grid_name:
         return None
     train_step_name = step.get('train')
-    transform_step_name = step.get('transform')
     if train_step_name:
         train_config = config.train[train_step_name]
         transform_config = None
-    elif transform_step_name:
-        transform_config = config.transform[transform_step_name]
-        train_config = None
     else:
         raise ElmConfigError('Expected param_grid to be used with a "train" '
-                         'or "transform" step of a pipeline, but found param_grid '
+                         'step of a pipeline, but found param_grid '
                          'was used in step {}'.format(step))
-    if 'pipeline' in step1 and transform_step_name is None:
-        pipeline = step1['pipeline']
-        transform_steps = [_ for _ in pipeline if 'transform' in _]
-        transform_names = set(_.get('transform') for _ in transform_steps)
-        if len(transform_names) > 1:
-            raise ElmConfigError('Expected a single transform model but got {}'.format(transform_names))
-        if transform_names:
-            transform_step_name = tuple(transform_names)[0]
-            transform_config = config.transform[transform_step_name]
-
     param_grid = config.param_grids[param_grid_name]
+    return check_format_param_grid(param_grid, param_grid_name)
 
+
+def check_format_param_grid(param_grid, param_grid_name):
     if not isinstance(param_grid, dict):
         raise ElmConfigError('Expected param_grids: {} to be a dict '
                              'but found {}'.format(param_grid_name, param_grid))
@@ -246,20 +107,7 @@ def get_param_grid(config, step1, step):
             raise ElmConfigError('Expected params_grids:{} '
                                  '"control" to have key {} with '
                                  'type {}'.format(param_grid_name, required_key, typ))
-    make_cfg_replace_keys = _make_cfg_replace_keys(train_config,
-                                       transform_config,
-                                       train_step_name,
-                                       transform_step_name,
-                                       config)
-    param_grid = parse_param_grid_items(param_grid_name,
-                                        train_config,
-                                        transform_config,
-                                        make_cfg_replace_keys,
-                                        param_grid)
-    param_grid['control']['step'] = step
-    if not 'control' in param_grid:
-        raise ValueError('Expected a control dict in param_grid:{}'.format(param_grid_name))
-    return {param_grid_name: _to_param_meta(param_grid)}
+    return _to_param_meta(param_grid)
 
 
 def _to_param_meta(param_grid):
@@ -268,13 +116,12 @@ def _to_param_meta(param_grid):
     up = []
     is_int = []
     choices = []
-    for key in param_grid['param_order']:
+    param_grid['control']['param_order'] = tuple(sorted(set(param_grid) - set(('control',))))
+    for key in param_grid['control']['param_order']:
         values = param_grid[key]
-        if key == 'control':
-            continue
-        if not isinstance(values, list) or not values:
+        if not isinstance(values, Sequence) or not values:
             raise ValueError('param_grid: {} has a value that is not a '
-                             '(list, tuple) with non-zero length: {}'.format(key, values))
+                             'Sequence with non-zero length: {}'.format(key, values))
         is_int.append(all(isinstance(v, numbers.Integral) for v in values))
         low.append(min(values))
         up.append(max(values))
@@ -285,7 +132,7 @@ def _to_param_meta(param_grid):
                   'up':          up,
                   'choices':     choices,
                   'control':     param_grid['control'],
-                  'param_order': param_grid['param_order'],
+                  'param_order': param_grid['control']['param_order'],
                   }
     return param_meta
 
@@ -414,7 +261,7 @@ def _set_from_keys(config_dict, keys, value):
     d[keys[-1]] = value
 
 
-def individual_to_new_config(config, deap_params, ind):
+def ind_to_new_pipe(pipe, deap_params, ind):
     '''Take an Individual (ind), return new elm.config.ConfigParser instance
 
     Parameters:
@@ -425,21 +272,14 @@ def individual_to_new_config(config, deap_params, ind):
     Returns:
         new_config: elm.config.ConfigParser instance
     '''
-    logger.debug('individual_to_new_config ind: {}'.format(ind))
+    logger.debug('ind_to_new_pipe ind: {}'.format(ind))
     zipped = zip(deap_params['param_order'],
                  deap_params['choices'],
                  ind)
-    new_config = copy.deepcopy(config.config)
-    pipeline = None
-    for keys, choices, idx in zipped:
-        if keys[0] == 'pipeline_variable':
-            pipeline = choices[idx]
-            continue
-        _set_from_keys(new_config,
-                       keys,
-                       choices[idx])
-    new_config = ConfigParser(config=new_config)
-    return new_config
+    new_params = {}
+    for key, choices, idx in zipped:
+        new_params[key] = choices[idx]
+    return pipe.new_with_params(**new_params)
 
 
 class ParamsSamplingError(ValueError):
@@ -513,19 +353,12 @@ def _random_choice(choices):
 
 def _get_evolve_meta(config):
     '''Returns parsed param_grids info or None if not used'''
-    param_grid_name_to_deap = {}
-    step_name_to_param_grid_name = {}
-    for idx1, step1 in enumerate(config.pipeline):
-        for idx2, step in enumerate(step1['steps']):
-            pg = get_param_grid(config, step1, step)
-            if pg:
-                param_grid_name_to_deap.update(pg)
-                idx_name = ((idx1, idx2), step.get('train', step.get('transform')))
-                step_name_to_param_grid_name[idx_name] = tuple(pg.keys())[0]
-    if not param_grid_name_to_deap:
-        return None
-    return (step_name_to_param_grid_name, param_grid_name_to_deap)
-
+    idx_to_param_grid = {}
+    for idx, step in enumerate(config.run):
+        pg = get_param_grid(config, step)
+        if pg:
+            idx_to_param_grid[idx] = pg
+    return idx_to_param_grid
 
 def ea_setup(config):
     '''Return a dict of parsed EvoParams for each param_grid
@@ -538,19 +371,18 @@ def ea_setup(config):
                           in config\'s param_grids section (if any)
 
     '''
-    out = _get_evolve_meta(config)
-    if not out:
+    idx_to_param_grid = _get_evolve_meta(config)
+    if not idx_to_param_grid:
         return {}
-    step_name_to_param_grid_name, param_grid_name_to_deap = out
     evo_params_dict = {}
-    for ((idx, step_name), param_grid_name) in step_name_to_param_grid_name.items():
-        deap_params = param_grid_name_to_deap[param_grid_name]
+    for (idx, deap_params) in idx_to_param_grid.items():
+        param_grid_name = config.run[idx]['train']
         kwargs = copy.deepcopy(deap_params['control'])
         toolbox = base.Toolbox()
-        tt = config.train.get(step_name, config.transform.get(step_name))
+        train = config.train[param_grid_name]
         score_weights = None
-        if 'model_scoring' in tt:
-            ms = config.model_scoring[tt['model_scoring']]
+        if 'model_scoring' in train:
+            ms = config.model_scoring[train['model_scoring']]
             if 'score_weights' in ms:
                 score_weights = ms['score_weights']
         if score_weights is None:
@@ -566,9 +398,6 @@ def ea_setup(config):
         early_stop = deap_params['control'].get('early_stop') or None
         evo_params =  EvoParams(
                toolbox=_configure_toolbox(toolbox, deap_params, config, **kwargs),
-               individual_to_new_config=partial(individual_to_new_config,
-                                                config,
-                                                deap_params),
                deap_params=deap_params,
                param_grid_name=param_grid_name,
                history_file='{}.csv'.format(param_grid_name),
@@ -593,7 +422,7 @@ def check_fitnesses(fitnesses, score_weights):
     is_seq = isinstance(fitnesses, Sequence)
     if not is_seq or not all(len(fitness) == len(score_weights) and all(isinstance(f, numbers.Number) for f in fitness)
                          for fitness in fitnesses):
-        raise ValueError('Invalid fitnesses sent to evo_general (not Sequence of numbers or not equal len to score_weights {}): {}'.format(fitnesses, score_weights))
+        raise ValueError('Invalid fitnesses sent to evo_general (not Sequence of numbers or not equal len with score_weights {}): {}'.format(fitnesses, score_weights))
 
 def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_weights):
     '''Assign fitness to each individual in invalid_ind, record parameter history

@@ -1,14 +1,11 @@
 import copy
 import logging
-from functools import partial
 
 import numpy as np
 import xarray as xr
 
 from elm.pipeline.step_mixin import StepMixin
-from elm.config import import_callable
-from elm.pipeline.serialize import load_models_from_tag
-from elm.readers import ElmStore, check_is_flat
+from elm.readers import ElmStore
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +20,7 @@ class Transform(StepMixin):
         self._params = estimator.get_params()
 
     def set_params(self, **params):
-        filtered = {k: v for k, v in self._params
+        filtered = {k: v for k, v in params.items()
                     if k != 'partial_fit_batches'}
         self._estimator.set_params(**filtered)
         self._params.update(params)
@@ -31,8 +28,8 @@ class Transform(StepMixin):
         if p:
             self._partial_fit_batches = p
 
-    def get_params(self):
-        params = self._estimator.get_params()
+    def get_params(self, **kwargs):
+        params = self._estimator.get_params(**kwargs)
         params['partial_fit_batches'] = self._partial_fit_batches
         return params
 
@@ -57,25 +54,26 @@ class Transform(StepMixin):
             coords = [('space', space),
                       ('band', band)]
             attrs = copy.deepcopy(X.attrs)
+            attrs.update(X.flat.attrs)
             attrs['band_order'] = band
             Xnew = ElmStore({'flat': xr.DataArray(out,
                             coords=coords,
-                            dims=X.dims,
+                            dims=X.flat.dims,
                             attrs=attrs)},
                         attrs=attrs)
             return (Xnew, y, sample_weight)
         return out # a fitted "self"
 
     def partial_fit_batches(self, X, y=None, sample_weight=None, **kwargs):
-        fitted = self
         for _ in range(self._partial_fit_batches):
-            fitted = self.partial_fit(X, y=y, sample_weight=sample_weight, **kwargs)
+            logger.debug('Transform partial fit batch {} of {}'.format(_ + 1, self._partial_fit_batches))
+            self.partial_fit(X, y=y, sample_weight=sample_weight, **kwargs)
         return self
 
     def partial_fit(self, X, y=None, sample_weight=None, **kwargs):
         if not hasattr(self._estimator, 'partial_fit'):
             raise ValueError('Cannot give partial_fit_batches to {} (does not have "partial_fit" method)'.format(self._estimator))
-        return self._fit_trans('transform', X, y=y, sample_weight=sample_weight, **kwargs)
+        return self._fit_trans('partial_fit', X, y=y, sample_weight=sample_weight, **kwargs)
 
     def fit(self, X, y=None, sample_weight=None, **kwargs):
         if self._partial_fit_batches:
@@ -86,34 +84,7 @@ class Transform(StepMixin):
         return self._fit_trans('transform', X, y=y, sample_weight=sample_weight, **kwargs)
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
-        if hasattr(self._estimator, 'fit_transform'):
-            return self._fit_trans('fit_transform', X, y=y,
-                                   sample_weight=sample_weight, **kwargs)
-        fitted = self._fit_trans('fit', X, y=y,
-                        sample_weight=sample_weight, **kwargs)
-        return fitted.transform(X)
-
-
-
-def _get_saved_transform_models(action, config, **kwargs):
-    method = action.get('method', 'fit_transform')
-    tag = action['transform']
-    logger.debug('Transform method does not include "fit"')
-    logger.info('Load pickled transform_models from {} {}'.format(config.ELM_TRANSFORM_PATH, tag))
-    transform_models, meta = load_models_from_tag(config.ELM_TRANSFORM_PATH, tag)
-    return transform_models
-
-
-def init_saved_transform_models(config, run):
-
-    transform_model = None
-    for action in run:
-        if 'transform' in action:
-            transform = copy.deepcopy(config.transform[action['transform']])
-            transform_model = _get_saved_transform_models(action,
-                                                          config,
-                                                          **transform)
-    logger.debug('Initialized transform model {}'.format(transform_model))
-    return transform_model
+        fitted = self.fit(X, y=y, sample_weight=sample_weight, **kwargs)
+        return self.transform(X, y=y, sample_weight=sample_weight, **kwargs)
 
 

@@ -10,8 +10,10 @@ This tests Pipeline:
 
 import numpy as np
 
-import pytest
 from sklearn.cluster import KMeans
+from sklearn.decomposition import IncrementalPCA
+from sklearn.exceptions import NotFittedError
+import pytest
 
 from elm.readers import *
 # Below "steps" is a module of all the
@@ -182,3 +184,19 @@ TODO_ALSO_TEST = ('Agg',
  'DropNaRows',
  'InverseFlatten',
  'ModifySample',)
+
+def test_pipeline_new_with_params():
+    p = Pipeline([steps.SelectCanvas('band_1'),
+                  steps.Flatten('C'),
+                  ('pca', steps.Transform(IncrementalPCA(n_components=3))),
+                  ('kmeans', KMeans(n_clusters=4))])
+    p.fit(random_elm_store())
+    p.predict(random_elm_store())
+    assert p.steps[-1][-1].cluster_centers_.shape[0] == 4
+    p2 = p.new_with_params(kmeans__n_clusters=7, pca__n_components=2)
+    with pytest.raises(NotFittedError):
+        p2.predict(random_elm_store())
+    p2.fit(random_elm_store())
+    assert p2.steps[-1][-1].cluster_centers_.shape[0] == 7
+
+

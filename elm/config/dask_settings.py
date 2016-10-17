@@ -17,15 +17,19 @@ except ImportError:
 
 from elm.config.env import parse_env_vars
 
-SERIAL_EVAL = None # reset by elm.config.load_config.ConfigParser
-
-get_func = None
 
 def _find_get_func_for_client(client):
     if client is None:
         return get_sync
     elif Executor and isinstance(client, Executor):
-        return client.get
+        def get(*args, **kwargs):
+            from distributed import ProgressBar
+            pbar = ProgressBar()
+            pbar.register()
+            out = client.get(*args, **kwargs)
+            pbar.unregister()
+            return out
+        return get
     elif isinstance(client, ThreadPool):
         return dask_threaded_get
     else:
@@ -42,7 +46,7 @@ def client_context(dask_client=None, dask_scheduler=None):
             raise ValueError('distributed is not installed - "conda install distributed"')
         client = Executor(dask_scheduler)
     elif dask_client == 'THREAD_POOL':
-        client = ThreadPool(DASK_THREADS)
+        client = ThreadPool(env.get('DASK_THREADS'))
     elif dask_client == 'SERIAL':
         client = None
     else:
@@ -51,20 +55,4 @@ def client_context(dask_client=None, dask_scheduler=None):
     with da.set_options(pool=dask_client):
        yield client
 
-
-def wait_for_futures(futures, client=None):
-    '''Abstraction of waiting for mapped results
-    that works for any type of client or no client'''
-    if hasattr(client, 'gather'): # distributed
-        from distributed import progress
-        progress(futures)
-        results = client.gather(futures)
-    else:
-        results = list(futures)
-    return results
-
-
-def no_client_submit(func, *args, **kwargs):
-    return func(*args, **kwargs)
-
-__all__ = ['no_client_submit', 'client_context', 'wait_for_futures']
+__all__ = ['client_context']

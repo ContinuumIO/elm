@@ -3,11 +3,12 @@ from io import StringIO
 from itertools import product
 
 import pytest
+from sklearn.cluster import MiniBatchKMeans
 import yaml
 
 from elm.config import ConfigParser, ElmConfigError
 from elm.model_selection.evolve import (get_param_grid,
-                                        individual_to_new_config,
+                                        ind_to_new_pipe,
                                         _get_evolve_meta,
                                         EvoParams,
                                         ea_setup,
@@ -16,83 +17,62 @@ from elm.model_selection.evolve import (get_param_grid,
                                         assign_check_fitness)
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 
-def _setup():
+
+def _setup(config=None):
     '''Return the config above and the param_grid'''
-    config = ConfigParser(config=yaml.load(CONFIG_STR))
-    param_grid = get_param_grid(config, config.pipeline[0],config.pipeline[0]['steps'][0])
-    return config, param_grid
-
-
-def _setup_pg(config=None):
-    '''Create the mapping of step name (e.g kmeans) to
-    param_grid'''
-    if config is None:
-        config, param_grid = _setup()
-    out = _get_evolve_meta(config)
-    assert len(out) == 2
-    step_name_to_param_grid_name, param_grid_name_to_deap = out
-    return (config,
-            step_name_to_param_grid_name,
-            param_grid_name_to_deap)
+    from elm.sample_util.sample_pipeline import make_pipeline_steps
+    from elm.pipeline import Pipeline
+    if not config:
+        config = ConfigParser(config=yaml.load(CONFIG_STR))
+    sample_steps = make_pipeline_steps(config, config.run[0]['pipeline'])
+    estimator = [('kmeans', MiniBatchKMeans(**config.train['kmeans']['model_init_kwargs']))]
+    pipe = Pipeline(sample_steps + estimator)
+    idx_to_param_grid = ea_setup(config)
+    return config, pipe, idx_to_param_grid
 
 
 def test_parse_param_grid():
     '''Tests that param_grid is parsed from config and
     metadata about parameters is extracted'''
-    config, param_grid = _setup()
+    config, pipe, param_grid = _setup()
+
     k, v = tuple(param_grid.items())[0]
-    assert k == 'example_param_grid'
+    assert k == 0
     for k2 in ('is_int', 'low', 'up', 'choices',):
-        assert isinstance(v[k2], list)
-    assert all(isinstance(vi, list) for vi in v['choices'])
+        assert isinstance(v.deap_params.get(k2), list)
+    assert all(isinstance(vi, list) for vi in v.deap_params['choices'])
 
 
-def test_individual_to_new_config():
+def test_ind_to_new_pipe():
     '''In the evolutionary algo, an individual consists
     of indices which can be used in the param_grid choices
     lists to find the corresponding parameter.  This test
     ensures that the indices can be used to make replacements
     in a config, so they actually have a model effect'''
-    config, param_grid = _setup()
-    minimal = config.pipelines['minimal']
-    top_n = config.pipelines['top_n']
-    param_grid_item = param_grid['example_param_grid']
-    ind = [0,] * len(param_grid_item['choices'])
-    new_config = individual_to_new_config(config, param_grid_item, ind)
-    assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 3
-    assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 2
-    assert new_config.pipeline[0]['pipeline'] == minimal
-    assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 30
-    ind = [1,] * len(param_grid_item['choices'])
-    new_config = individual_to_new_config(config, param_grid_item, ind)
-    assert new_config.train['kmeans']['model_init_kwargs']['n_clusters'] == 4
-    assert new_config.transform['pca']['model_init_kwargs']['n_components'] == 3
-    assert new_config.feature_selection['top_n']['kwargs']['percentile'] == 40
+    config, pipe, idx_to_param_grid = _setup()
 
+    param_grid_item = idx_to_param_grid[0]
+    ind = [0,] * len(param_grid_item.deap_params['choices'])
+    pipe = ind_to_new_pipe(pipe, param_grid_item.deap_params, ind)
+    p = pipe.get_params()
+    assert p['kmeans__n_clusters'] == 3
+    assert p['pca__n_components'] == 2
 
-def test_get_evolve_meta():
-    '''Tests param_grid metadata'''
-    (config,
-     step_name_to_param_grid_name,
-     param_grid_name_to_deap) = _setup_pg()
-    expected_key = ((0, 0), 'kmeans')
-    assert expected_key in step_name_to_param_grid_name
-    assert step_name_to_param_grid_name[expected_key] in param_grid_name_to_deap
-    pg = param_grid_name_to_deap[step_name_to_param_grid_name[expected_key]]
-    assert isinstance(pg, dict)
-    assert 'control' in pg
+    ind = [1,] * len(param_grid_item.deap_params['choices'])
+    pipe = ind_to_new_pipe(pipe, param_grid_item.deap_params, ind)
+    p = pipe.get_params()
+    assert p['kmeans__n_clusters'] == 4
+    assert p['pca__n_components'] == 3
+
 
 
 def tst_evo_setup_evo_init_func(config=None):
     '''Tests that param_grid is parsed and the deap toolbox
     is created ok so that toolbox.population_guess can
     be called without error.'''
-    (config,
-     step_name_to_param_grid_name,
-     param_grid_name_to_deap) = _setup_pg(config=config)
-    eps = ea_setup(config)
-    assert isinstance(eps, dict) and len(eps) == 1
-    evo_params = eps[(0, 0)]
+    (config, pipe, idx_to_param_grid) = _setup(config=config)
+    assert isinstance(idx_to_param_grid, dict) and len(idx_to_param_grid) == 1
+    evo_params = idx_to_param_grid[0]
     assert isinstance(evo_params, EvoParams)
     return config, evo_params
 
@@ -169,10 +149,8 @@ dict_keys = (
 bad_param = [
         ('pca_n_components'), # not double underline after pca
         'kmeans__not_in_init_kwargs', # not a valid init arg to kmeans
+        ('model_init_kwargs', 'n_clusters'),
         9,
-        [],
-        ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
-        ('not_a_key', 'kmeans', 'model_init_kwargs', 'n_clusters'),
         ]
 not_dicts = (9, 9.1, [2,3])
 not_int = ({},[], 9.1, [1,3])

@@ -12,53 +12,51 @@ from elm.readers import *
 from elm.pipeline.tests.util import (tmp_dirs_context,
                                      random_elm_store,
                                      BANDS,
-                                     GEO,
-                                     remove_pipeline_transforms)
-
+                                     GEO)
+from elm.pipeline import Pipeline
 BASE = copy.deepcopy(DEFAULTS)
 
 
 
-def gen(*args, **kwargs):
-    yield from range(5)
-
-def sampler():
+def sampler(**kwargs):
     es = random_elm_store(BANDS)
-    es.flat.values[:, len(BANDS) // 2:] *= 1e-7
+    for band in BANDS[:len(BANDS) // 2]:
+        band_arr = getattr(es, band)
+        band_arr.values *= 1e-7
     return es
 
 
-BASE['data_source'] = {'args_list': gen,
-                       'sampler': sampler}
+BASE['data_sources'] ={k:  {'args_list': [()]*10,'sampler': sampler}
+                       for k in DEFAULTS['data_sources']}
 
 
 def test_pipeline_feature_selection():
     tag = selection_name = 'variance_selection'
     config = copy.deepcopy(BASE)
-    with tmp_dirs_context(tag) as (train_path, predict_path, transform_path, cwd):
-        remove_pipeline_transforms(config)
-        for idx, action in enumerate(config['pipeline']):
+    with tmp_dirs_context(tag) as (train_path, predict_path, cwd):
+        for idx, action in enumerate(config['run']):
             if 'train' in action or 'predict' in action:
                 train_name = action.get('train', action.get('predict'))
                 if 'pipeline' in action:
+                    if not isinstance(action['pipeline'], (list, tuple)):
+                        action['pipeline'] = config['pipelines'][action['pipeline']]
                     action['pipeline'] += [{'feature_selection': selection_name}]
                 else:
                     action['pipeline'] = [{'feature_selection': selection_name}]
 
                 config2 = ConfigParser(config=BASE)
                 config2.feature_selection[selection_name] = {
-                    'selection': 'sklearn.feature_selection:VarianceThreshold',
-                    'scoring': None,
-                    'choices': BANDS,
-                    'kwargs': {'threshold': 0.08,},
+                    'method': 'VarianceThreshold',
+                    'score_func': None,
+                    'threshold': 0.08,
                 }
-                pipe = pipeline.create_sample_from_data_source(pipeline, config, step,
-                                    data_source)
+                X = sampler()
+                steps = pipeline.make_pipeline_steps(config2, action['pipeline'])
+                pipe = Pipeline(steps)
                 transform_models = None
                 for repeats in range(5):
-                    s, _, _ = pipeline.run_pipeline(pipe, transform_model=None)
-                    assert s.flat.shape[1] < 40
-                    assert set(s.flat.band.values) < set(BANDS)
+                    XX, _, _ = pipe.fit_transform(X)
+                    assert XX.flat.shape[1] < 40
 
 
 @pytest.mark.slow

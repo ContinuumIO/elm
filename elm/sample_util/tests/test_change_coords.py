@@ -2,33 +2,44 @@ import numpy as np
 import xarray as xr
 
 from sklearn.decomposition import PCA
+
 from elm.config import ConfigParser
-from elm.pipeline.util import make_model_args_from_config
 from elm.pipeline.tests.util import (random_elm_store,
                                      test_one_config as tst_one_config,
                                      tmp_dirs_context)
 from elm.readers import *
-from elm.sample_util.sample_pipeline import run_pipeline
-n_components = 3
-data_source = {'sampler': random_elm_store,
-               'attrs': {}}
+from elm.pipeline import Pipeline
+
+X = random_elm_store()
+
+data_source = {'X': X}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
-         'output_tag': 'kmeans'}
-
-transform = {'model_init_class': 'sklearn.decomposition:PCA',
-             'data_source': 'synthetic',
-             'model_init_kwargs': {'n_components': n_components,}}
+         'ensemble': 'ens1'}
 
 
-def make_pipeline(pipeline, data_source):
-    pipeline = [{'data_source': 'synthetic',
-                 'pipeline': pipeline,
-                 'steps': [{'train': 'ex1'}]}]
-    return pipeline
+def make_run(pipeline, data_source):
+    run = [{'data_source': 'synthetic',
+            'pipeline': pipeline,
+            'train': 'ex1'}]
+    return run
+
+
+def make_config(pipeline, data_source):
+    return   {'train': {'ex1': train},
+              'data_sources': {'synthetic': data_source},
+              'run': make_run(pipeline, data_source),
+              'ensembles': {
+                'ens1': {
+                    'saved_ensemble_size': 1,
+                    'init_ensemble_size': 1
+                }
+              }
+            }
 
 
 def tst_one_pipeline(pipeline, add_na_per_band=0):
+    from elm.sample_util.sample_pipeline import make_pipeline_steps
     sample = random_elm_store()
     if add_na_per_band:
         for idx, band in enumerate(sample.data_vars):
@@ -47,22 +58,14 @@ def tst_one_pipeline(pipeline, add_na_per_band=0):
             band_arr.attrs['valid-range'] = [-1e12, 1e12]
 
             assert val[np.isnan(val)].size == 0
-    ensemble_kwargs ={'saved_ensemble_size': 1, 'init_ensemble_size': 1}
-    ma, _ = make_model_args_from_config('train',
-                                pipeline,
-                                data_source,
-                                train_dict=train,
-                                ensemble_kwargs=ensemble_kwargs,
-                                transform_dict=transform)
-    pipe = ma.fit_args[0]
-    transform_model = [('tag_0', PCA(n_components=n_components))]
-    new_es, _, _ = run_pipeline(pipe,
-                                       sample=sample,
-                                       transform_model=transform_model)
-    return sample, new_es
+    config = ConfigParser(config=make_config(pipeline, data_source))
+    pipe = Pipeline(make_pipeline_steps(config, pipeline))
+    new_es = pipe.fit_transform(sample)
+    return sample, new_es[0]
 
 
 def test_flat_and_inverse():
+
     flat = [{'flatten': 'C'}, {'inverse_flatten': True}, {'transpose': ['y', 'x']}]
     es, new_es = tst_one_pipeline(flat)
     assert np.all(new_es.band_1.values == es.band_1.values)
