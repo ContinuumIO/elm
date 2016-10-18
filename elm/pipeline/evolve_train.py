@@ -15,7 +15,7 @@ from elm.model_selection.evolve import (ea_general,
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.pipeline.util import (_validate_ensemble_members,
                                _run_model_selection)
-from elm.pipeline.ensemble import _one_generation_dask_graph
+from elm.pipeline.ensemble import _one_generation_dask_graph, ensemble
 from elm.pipeline.serialize import serialize_pipe
 from elm.sample_util.samplers import make_samples_dask
 
@@ -23,7 +23,7 @@ __all__ = ['evolve_train']
 
 logger = logging.getLogger(__name__)
 
-def on_each_generation(base_model,
+def _on_each_generation(base_model,
                        data_source,
                        deap_params,
                        get_func,
@@ -43,7 +43,6 @@ def on_each_generation(base_model,
     dsk, model_keys, new_models_name = _one_generation_dask_graph(dsk,
                                         new_models,
                                         method_kwargs,
-                                        get_func,
                                         sample_keys,
                                         partial_fit_batches,
                                         gen,
@@ -76,14 +75,28 @@ def evolve_train(pipe,
                  models_share_sample=True,
                  model_selection=None,
                  model_selection_kwargs=None,
-                 scoring=None,
                  scoring_kwargs=None,
                  method='fit',
                  partial_fit_batches=1,
                  classes=None,
                  method_kwargs=None,
                  **data_source):
+    '''evolve_train runs an evolutionary algorithm to
+    find the most fit elm.pipeline.Pipeline instances
 
+    Parameters:
+        pipe: elm.pipeline.Pipeline instance
+        ngen: number of generations
+        evo_params: the EvoParams instance, typically from
+            from elm.model_selection import ea_setup
+            evo_params = ea_setup(param_grid=param_grid,
+                          param_grid_name='param_grid_example',
+                          score_weights=[-1]) # minimization
+
+        See also the help below from (elm.pipeline.ensemble) where
+        most arguments are interpretted similary.
+
+    ''' + ensemble.__doc__
     method_kwargs = method_kwargs or {}
     scoring_kwargs = scoring_kwargs or {}
     model_selection_kwargs = model_selection_kwargs or {}
@@ -93,7 +106,7 @@ def evolve_train(pipe,
     evo_args = [evo_params,]
     data_source = dict(X=X,y=y, sample_weight=sample_weight, sampler=sampler,
                        args_list=args_list, **data_source)
-    fit_one_generation = partial(on_each_generation,
+    fit_one_generation = partial(_on_each_generation,
                                  pipe,
                                  data_source,
                                  evo_params.deap_params,

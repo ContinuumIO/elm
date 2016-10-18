@@ -77,6 +77,13 @@ def _one_generation_dask_graph(dsk,
         partial_fit_batches: how many partial_fit's
         gen: which generation is it - passed to model_selection func
         method: One of: "fit", "fit_transform", "transform", "partial_fit"
+
+    Returns:
+        tuple of (dsk, model_keys, new_models_name)
+        where:
+            dsk: dsk dask spec dict modified in place with new model keys
+            model_keys: the tag of each model
+            new_models_name: a collector key of all fitted models
     '''
     model_keys = [_[0] for _ in models]
     collect_keys = []
@@ -115,7 +122,6 @@ def ensemble(pipe,
              models_share_sample=True,
              model_selection=None,
              model_selection_kwargs=None,
-             scoring=None,
              scoring_kwargs=None,
              method='fit',
              partial_fit_batches=1,
@@ -123,8 +129,51 @@ def ensemble(pipe,
              method_kwargs=None,
              **data_source):
 
-    '''Train model(s) in ensemble
+    '''Fit or partial_fit an ensemble of models to a series of samples
 
+    Call this function from an elm.pipeline.Pipeline instance's methods:
+        "fit_ensemble"
+        "fit_transform_ensemble"
+        "transform_ensemble"
+
+    Parameters:
+        pipe: instance of elm.pipeline.Pipeline
+        ngen: number of ensemble generations
+        X:    elm.readers.ElmStore, if not using "sampler" and "args_list"
+        y:    numpy array if not using "sampler" and "args_list", or None
+              if not needed by Pipeline
+        sample_weight: numpy array if not using "sampler" and "args_list", or None
+              if not needed by Pipeline
+        sampler: Callable - required if not giving X.  Called at least once
+                on each element of args_list where each element is unpacked
+                with *one_element_of_args_list
+        args_list: List of args - required if not giving X.  See sampler above
+        client: dask-distributed or ThreadPool client
+        init_ensemble_size: number of ensemble members, ignored if giving
+              ensemble_init_func
+        saved_ensemble_size: how many members to keep at final generation
+        ensemble_init_func: Callable to return list of elm.pipeline.Pipeline
+             instances that initialize ensemble
+        models_share_sample: If True, ensure that in each generation, every
+             member is fit to the same sample.  If False, fit every model
+             to every sample
+        model_selection: Callable after each generation to take a list of
+            (tag, Pipeline) tuples and return a list of new such tuples, or
+            None or repeatedly train each model on each generation without
+            replacement of model parameters
+        model_selection_kwargs: kwargs passed to model_selection
+        scoring_kwargs: kwargs that are passed to score_one_model.
+                See also elm.model_selection.scoring
+        method: This is the method of Pipeline that called this ensemble
+            function, typically "fit"
+        classes: Unique sequence of class integers passed to supervised
+            classifiers that need the known y classes.
+        method_kwargs: any other arguments to pass to method
+        **data_source: keywords passed to "sampler" if given
+    Returns:
+
+        new_models: list of (tag, Pipeline instance) tuples on which
+            "predict_many" can be called
     '''
     get_func = _find_get_func_for_client(client)
     fit_score_kwargs = method_kwargs or {}

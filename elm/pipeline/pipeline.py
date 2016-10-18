@@ -1,4 +1,28 @@
+'''elm.pipeline.Pipeline
+Run a series of transformations on a series of samples, using
+ensemble approach or evolutionary algorithms (EA) that have model
+scoring selection logic.
 
+Ensemble or EA methods may be combined with partial_fit methods,
+including partial_fit of transformations before partial_fit of a final
+estimator.  See the example below with IncrementalPCA before
+MiniBatchKMeans.
+
+Dask graphs are used for parallelism - pass the "client" argument
+to methods such
+
+Each sample in the series of samples is expressed as a tuple
+
+(X, y, sample_weight)
+
+with X as an elm.readers.ElmStore
+and y and sample_weight as a numpy arrays or None if not needed.
+
+elm.pipeline.Pipeline is similar to scikit-learn's Pipeline concept
+(sklearn.pipeline.Pipeline) in usage
+
+
+'''
 from collections import Sequence
 from functools import partial, wraps
 import copy
@@ -22,6 +46,16 @@ logger = logging.getLogger(__name__)
 class Pipeline(object):
 
     def __init__(self, steps, scoring=None, scoring_kwargs=None):
+        '''
+        Pipeline of transformation, fit steps for
+        ensemble, evolutionary and/or partial_fit with dask
+
+        Parameters:
+            steps:  Steps or transformers and final estimators. Sequence of transformers and final estimator
+
+
+        "
+        '''
         self._re_init_args_kwargs = copy.deepcopy(((steps,), dict(scoring=scoring, scoring_kwargs=scoring_kwargs)))
         self.steps = steps
         self._validate_steps()

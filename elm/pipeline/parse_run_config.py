@@ -26,7 +26,10 @@ def _makedirs(config):
 def config_to_pipeline(config, client=None):
     '''
     Run the elm config's train and predict "run"
-    actions with dask client
+    actions with dask client and config's updates
+    based on args passed to elm-main, such as --train-only
+    or --predict-only, or edits to ensemble settings, such as
+    --ngen 4
 
     Parameters:
         config: elm.config.ConfigParser instance
@@ -95,7 +98,7 @@ def config_to_pipeline(config, client=None):
 
 
 def parse_run_config(config, client):
-    '''Run all steps of a config's "pipeline"
+    '''Run all steps of a config's "run" section
     Parameters:
         config: elm.config.ConfigParser instance
         client: Executor/client from Distributed, thread pool
