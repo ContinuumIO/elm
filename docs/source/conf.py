@@ -33,9 +33,12 @@ from recommonmark.parser import CommonMarkParser
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
     'sphinx.ext.mathjax',
+    'sphinx.ext.todo',
     'numpydoc'
 ]
+
 
 numpydoc_show_class_members = False
 
