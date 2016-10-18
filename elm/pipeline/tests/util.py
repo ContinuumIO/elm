@@ -16,17 +16,14 @@ from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
-import elm.sample_util.sample_pipeline as sample_pipeline
-import elm.pipeline.train as elmtrain
-import elm.pipeline.predict as predict
-import elm.pipeline.transform as elmtransform
+import elm.sample_util.sample_pipeline as pipeline
+import elm.pipeline as elm_pipeline
+import elm.sample_util.transform as elmtransform
 from elm.readers import *
 from elm.scripts.main import main as elm_main
 
-old_ensemble = elmtrain.ensemble
-old_predict_step = predict.predict_step
-old_transform = elmtransform.transform_sample_pipeline_step
-old_init_transform = elmtransform.get_new_or_saved_transform_model
+old_ensemble = elm_pipeline.ensemble
+old_predict = elm_pipeline.predict_many
 ELAPSED_TIME_FILE = 'elapsed_time_test.txt'
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
@@ -42,40 +39,32 @@ def patch_ensemble_predict():
         '''An empty function to return what is given to it'''
         return args, kwargs
     try:
-        elmtrain.ensemble = return_all
-        elmtransform.transform_sample_pipeline_step = return_all
-        elmtransform.get_new_or_saved_transform_model = return_all
-        predict.predict_step = return_all
-
-        yield (elmtrain, predict)
+        elm_pipeline.ensemble = return_all
+        elm_pipeline.predict = return_all
+        yield (ens, predict)
     finally:
-        elmtrain.ensemble = old_ensemble
-        predict.predict_step = old_predict_step
-        elmtransform.transform_sample_pipeline_step = old_transform
-        elmtransform.get_new_or_saved_transform_model = old_init_transform
+        elm_pipeline.ensemble = old_ensemble
+        elm_pipeline.predict_many = old_predict
 
 
 @contextlib.contextmanager
 def tmp_dirs_context(tag):
     start = datetime.datetime.now()
-    tmp1, tmp2, tmp3, tmp4 = (tempfile.mkdtemp() for _ in range(4))
+    tmp1, tmp2, tmp3 = (tempfile.mkdtemp() for _ in range(3))
     try:
         old1 = os.environ.get('ELM_TRAIN_PATH') or ''
         old2 =  os.environ.get('ELM_PREDICT_PATH') or ''
-        old3 = os.environ.get('ELM_TRANSFORM_PATH') or ''
         os.environ['ELM_TRAIN_PATH'] = tmp1
         os.environ['ELM_PREDICT_PATH'] = tmp2
-        os.environ['ELM_TRANSFORM_PATH'] = tmp3
         status = 'ok'
-        yield (tmp1, tmp2, tmp3, tmp4)
+        yield (tmp1, tmp2, tmp3)
     except Exception as e:
         status = repr(e)
         raise
     finally:
         os.environ['ELM_TRAIN_PATH'] = old1
         os.environ['ELM_PREDICT_PATH'] = old2
-        os.environ['ELM_TRANSFORM_PATH'] = old3
-        for tmp in (tmp1, tmp2, tmp3, tmp4):
+        for tmp in (tmp1, tmp2, tmp3):
             if os.path.exists(tmp):
                 shutil.rmtree(tmp)
         etime = (datetime.datetime.now() - start).total_seconds()
@@ -94,7 +83,7 @@ def example_get_y_func_binary(flat_sample, **kwargs):
     np.random.shuffle(inds)
     ret[inds[:3]] = 1
     ret[inds[-3:]] = 0
-    return ret
+    return (flat_sample, ret, kwargs.get('sample_weight'))
 
 
 def example_get_y_func_continuous(flat_sample, **kwargs):
@@ -107,28 +96,12 @@ def example_get_y_func_continuous(flat_sample, **kwargs):
     return col_means
 
 
-def example_custom_continuous_scorer(y_true, y_pred):
-    '''This is mean_4th_power_error'''
-    return np.mean((y_pred - y_true)**4)
-
-
-class ExpectedFuncCalledError(ValueError):
-    pass
-
-
-def get_y_func_that_raises(flat_sample):
-
-    raise ExpectedFuncCalledError('From get_y_func')
-
-
-def get_weight_func_that_raises(flat_sample):
-
-    raise ExpectedFuncCalledError('from get_weight_func')
-
-
 def test_one_config(config=None, cwd=None):
 
-    config_str = yaml.dump(config or DEFAULTS)
+    if not isinstance(config, str):
+        config_str = yaml.dump(config or DEFAULTS)
+    else:
+        config_str = config
     config_filename = os.path.join(cwd, 'config.yaml')
     with open(config_filename, 'w') as f:
         f.write(config_str)
@@ -185,15 +158,4 @@ def make_blobs_elm_store(**make_blobs_kwargs):
                   dims=['space', 'band'],
                   attrs={'make_blobs': make_blobs_kwargs})})
     return es
-
-
-def remove_pipeline_transforms(config):
-    for idx in range(len(config['pipeline'])):
-        config['pipeline'][idx]['steps'] = [_ for _ in config['pipeline'][idx]['steps']
-                                            if not 'transform' in _]
-
-    for item in config['pipeline']:
-        sp = item.get('sample_pipeline')
-        item['sample_pipeline'] = [_ for _ in item['sample_pipeline']
-                                       if not 'transform' in _]
 

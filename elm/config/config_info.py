@@ -1,3 +1,10 @@
+'''
+This module loads elm/config/defaults/config_standard.yaml which
+is an elm config used for testing.
+
+TODO: The naming DEFAULTS is misleading because the config is
+not used as default settings but rather a testing config.
+'''
 import os
 import yaml
 
@@ -6,13 +13,14 @@ from elm.config.util import read_from_egg
 
 YAML_DIR = 'defaults'
 
-DEFAULTS_FILE = os.path.join(YAML_DIR, 'defaults.yaml')
+DEFAULTS_FILE = os.path.join(YAML_DIR, 'config_standard.yaml')
 DEFAULTS = read_from_egg(
                 DEFAULTS_FILE
                 )
 
+# elm.config.load_config.ConfigParser
+# parses config sections in this order
 CONFIG_KEYS = [('readers',  dict),
-                ('sample_args_generators', dict),
                 ('ensembles', dict),
                 ('data_sources', dict),
                 ('polys', dict),
@@ -27,13 +35,12 @@ CONFIG_KEYS = [('readers',  dict),
                 ('transform', dict),
                 ('train', dict),
                 ('predict', dict),
-                ('sample_pipelines', dict),
-                ('pipeline', list),
+                ('pipelines', dict),
+                ('run', list),
                 ('param_grids', dict),
     ]
 DEFAULT_TRAIN = tuple(DEFAULTS['train'].values())[0]
 DEFAULT_DATA_SOURCE = tuple(DEFAULTS['data_sources'].values())[0]
-DEFAULT_READER = tuple(DEFAULTS['readers'].values())[0]
 DEFAULT_FEATURE_SELECTOR = tuple(DEFAULTS['feature_selection'].values())[0]
 
 ks = set(globals())

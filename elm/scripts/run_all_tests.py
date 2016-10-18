@@ -40,17 +40,6 @@ DASK_CLIENTS = ['ALL', 'SERIAL', 'DISTRIBUTED', 'THREAD_POOL', ]
 STATUS_COUNTER = {'ok': 0, 'fail': 0, 'xfail': 0}
 ETIMES = {}
 
-def add_large_test_settings(config):
-    for k, v in LARGE_TEST_SETTINGS.items():
-        if k in config:
-            for k3, v3 in v.items():
-                for k2 in config[k]:
-                    if k == 'param_grids':
-                        config[k][k2][k3].update(v3)
-                    else:
-                        config[k][k2][k3] = v3
-
-    return config
 
 @contextlib.contextmanager
 def env_patch(**new_env):
@@ -86,8 +75,6 @@ def modify_config_file(fname, env, large_test_mode):
     try:
         for k, v in env.items():
             config[k] = v
-        if large_test_mode:
-            config = add_large_test_settings(config)
         fname2 = fname + '_2.yaml'
         with open(fname2, 'w') as f:
             f.write(yaml.dump(config))
@@ -209,6 +196,8 @@ def build_cli_parser(include_positional=True):
                         help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
     parser.add_argument('--dask-scheduler', help='Dask scheduler URL')
     parser.add_argument('--skip-pytest', action='store_true', help='Do not run py.test (default is run py.test as well as configs)')
+    parser.add_argument('--skip-scripts', action='store_true', help='Do not run scripts from elm-examples')
+    parser.add_argument('--skip-configs', action='store_true', help='Do not run configs from elm-examples')
     parser.add_argument('--add-large-test-settings', action='store_true', help='Adjust configs for larger ensembles / param_grids')
     parser.add_argument('--glob-pattern', help='Glob within repo_dir')
     parser.add_argument('--remote-git-branch', help='Run on a remote git branch')
@@ -229,17 +218,22 @@ def run_all_tests(args=None):
     logger.info('Running run_all_tests with args: {}'.format(args))
     assert os.path.exists(args.repo_dir)
     for client in args.dask_clients:
+        eedp = os.path.join(args.elm_examples_path, 'example_data')
+        if not os.path.exists(eedp):
+            eedp = os.environ.get('ELM_EXAMPLE_DATA_PATH')
         new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
                    'DASK_EXECUTOR': client,
-                   'ELM_EXAMPLE_DATA_PATH': os.path.join(args.elm_examples_path, 'example_data')}
+                   'ELM_EXAMPLE_DATA_PATH': eedp}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
-        run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'example_scripts'),
-                                glob_pattern=args.glob_pattern)
-        run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'example_configs'),
-                                large_test_mode=args.add_large_test_settings,
-                                glob_pattern=args.glob_pattern)
+        if not args.skip_scripts:
+            run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'example_scripts'),
+                                    glob_pattern=args.glob_pattern)
+        if not args.skip_configs:
+            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'example_configs'),
+                                    large_test_mode=args.add_large_test_settings,
+                                    glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
     if STATUS_COUNTER.get('fail') or failed_unit_tests:
         raise ValueError('Tests failed {}'.format(STATUS_COUNTER))

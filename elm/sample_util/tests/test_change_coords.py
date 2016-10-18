@@ -2,33 +2,44 @@ import numpy as np
 import xarray as xr
 
 from sklearn.decomposition import PCA
+
 from elm.config import ConfigParser
-from elm.pipeline.util import make_model_args_from_config
 from elm.pipeline.tests.util import (random_elm_store,
                                      test_one_config as tst_one_config,
                                      tmp_dirs_context)
 from elm.readers import *
-from elm.sample_util.sample_pipeline import run_sample_pipeline
-n_components = 3
-data_source = {'sample_from_args_func': random_elm_store,
-               'attrs': {}}
+from elm.pipeline import Pipeline
+
+X = random_elm_store()
+
+data_source = {'X': X}
 
 train = {'model_init_class': 'sklearn.cluster:MiniBatchKMeans',
-         'output_tag': 'kmeans'}
-
-transform = {'model_init_class': 'sklearn.decomposition:PCA',
-             'data_source': 'synthetic',
-             'model_init_kwargs': {'n_components': n_components,}}
+         'ensemble': 'ens1'}
 
 
-def make_pipeline(sample_pipeline, data_source):
-    pipeline = [{'data_source': 'synthetic',
-                 'sample_pipeline': sample_pipeline,
-                 'steps': [{'train': 'ex1'}]}]
-    return pipeline
+def make_run(pipeline, data_source):
+    run = [{'data_source': 'synthetic',
+            'pipeline': pipeline,
+            'train': 'ex1'}]
+    return run
 
 
-def tst_one_sample_pipeline(sample_pipeline, add_na_per_band=0):
+def make_config(pipeline, data_source):
+    return   {'train': {'ex1': train},
+              'data_sources': {'synthetic': data_source},
+              'run': make_run(pipeline, data_source),
+              'ensembles': {
+                'ens1': {
+                    'saved_ensemble_size': 1,
+                    'init_ensemble_size': 1
+                }
+              }
+            }
+
+
+def tst_one_pipeline(pipeline, add_na_per_band=0):
+    from elm.sample_util.sample_pipeline import make_pipeline_steps
     sample = random_elm_store()
     if add_na_per_band:
         for idx, band in enumerate(sample.data_vars):
@@ -47,24 +58,16 @@ def tst_one_sample_pipeline(sample_pipeline, add_na_per_band=0):
             band_arr.attrs['valid-range'] = [-1e12, 1e12]
 
             assert val[np.isnan(val)].size == 0
-    ensemble_kwargs ={'saved_ensemble_size': 1, 'init_ensemble_size': 1}
-    ma, _ = make_model_args_from_config('train',
-                                sample_pipeline,
-                                data_source,
-                                train_dict=train,
-                                ensemble_kwargs=ensemble_kwargs,
-                                transform_dict=transform)
-    action_data = ma.fit_args[0]
-    transform_model = [('tag_0', PCA(n_components=n_components))]
-    new_es, _, _ = run_sample_pipeline(action_data,
-                                       sample=sample,
-                                       transform_model=transform_model)
-    return sample, new_es
+    config = ConfigParser(config=make_config(pipeline, data_source))
+    pipe = Pipeline(make_pipeline_steps(config, pipeline))
+    new_es = pipe.fit_transform(sample)
+    return sample, new_es[0]
 
 
 def test_flat_and_inverse():
+
     flat = [{'flatten': 'C'}, {'inverse_flatten': True}, {'transpose': ['y', 'x']}]
-    es, new_es = tst_one_sample_pipeline(flat)
+    es, new_es = tst_one_pipeline(flat)
     assert np.all(new_es.band_1.values == es.band_1.values)
 
 
@@ -75,7 +78,7 @@ def test_agg():
                 agg = [{'agg': {'dim': dim, 'func': 'mean'}}]
             else:
                 agg = [{'agg': {'axis': axis, 'func': 'mean'}}]
-            es, new_es = tst_one_sample_pipeline(agg)
+            es, new_es = tst_one_pipeline(agg)
             assert dim in es.band_1.dims
             assert dim not in new_es.band_1.dims
             means = np.mean(es.band_1.values, axis=axis)
@@ -95,8 +98,8 @@ def test_transpose():
         ]
     }
     transpose_examples['fl'] = transpose_examples['xy'] + [{'flatten': 'C'}, {'inverse_flatten': True}, ]
-    for name, sample_pipeline in sorted(transpose_examples.items()):
-        es, new_es = tst_one_sample_pipeline(sample_pipeline)
+    for name, pipeline in sorted(transpose_examples.items()):
+        es, new_es = tst_one_pipeline(pipeline)
         if name == 'fl':
             assert es.band_1.values.T.shape == new_es.band_1.values.shape
             assert np.all(es.band_1.values.T == new_es.band_1.values)
@@ -122,7 +125,7 @@ def modify_sample_example(es, *args, **kwargs):
 
 def test_modify_sample():
     modify = [{'modify_sample': 'elm.sample_util.tests.test_change_coords:modify_sample_example'}]
-    es, new_es = tst_one_sample_pipeline(modify)
+    es, new_es = tst_one_pipeline(modify)
     assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
     new_names = set(es.band_order) - set(new_es.band_order)
     assert all('new' in n for n in new_names)
@@ -137,14 +140,14 @@ def test_agg_inverse_flatten():
     for idx, dims in enumerate((['x', 'y'], ['y', 'x'])):
         for agg_dim in ('x', 'y'):
             agg = {'agg': {'dim': agg_dim, 'func': 'median'}}
-            sample_pipeline = [{'transpose': dims},
+            pipeline = [{'transpose': dims},
                                {'flatten': 'C'},
                                {'inverse_flatten': True},
                                {'transpose': dims}]
-            es, new_es = tst_one_sample_pipeline(sample_pipeline)
+            es, new_es = tst_one_pipeline(pipeline)
             if idx == 0:
                 assert new_es.band_1.shape == es.band_1.values.T.shape
-            es, new_es = tst_one_sample_pipeline(sample_pipeline + [agg])
+            es, new_es = tst_one_pipeline(pipeline + [agg])
             x1, x2 = (getattr(s.band_1, 'x', None) for s in (es, new_es))
             y1, y2 = (getattr(s.band_1, 'y', None) for s in (es, new_es))
             if agg_dim == 'x':
@@ -157,7 +160,7 @@ def test_agg_inverse_flatten():
 
 def test_set_na_from_meta():
     set_na = [{'modify_sample': 'elm.readers:set_na_from_meta'}]
-    es, new_es = tst_one_sample_pipeline(set_na, add_na_per_band=13)
+    es, new_es = tst_one_pipeline(set_na, add_na_per_band=13)
     assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
     for band in es.data_vars:
         has_nan = getattr(new_es, band).values

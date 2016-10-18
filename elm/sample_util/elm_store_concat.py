@@ -3,7 +3,6 @@ import numpy as np
 import xarray as xr
 
 from elm.readers.elm_store import ElmStore
-from elm.readers import check_is_flat
 
 def elm_store_concat(*elms):
     elms2 = []

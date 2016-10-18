@@ -4,18 +4,22 @@ import contextlib
 import copy
 import datetime
 from functools import partial
+import glob
 import logging
 import os
 import warnings
 
 from dask.diagnostics import ProgressBar
 
-from elm.config.cli import add_config_file_argument, add_cmd_line_options
+from elm.config.cli import (add_config_file_argument,
+                            add_run_options,
+                            add_ensemble_kwargs,
+                            add_env_vars_override_options,
+                            )
 from elm.config import (DEFAULTS, ConfigParser,
                         client_context, ElmConfigError,
                         parse_env_vars)
-from elm.pipeline import pipeline
-from elm.config.dask_settings import wait_for_futures
+from elm.pipeline import parse_run_config
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +29,9 @@ def cli(args=None, sys_argv=None):
         return args
     parser = ArgumentParser(description="Pipeline classifier / predictor using ensemble and partial_fit methods")
     add_config_file_argument(parser)
-    add_cmd_line_options(parser)
+    add_run_options(parser)
+    add_ensemble_kwargs(parser)
+    add_env_vars_override_options(parser)
     parser.add_argument('--echo-config', action='store_true',
                         help='Output running config as it is parsed')
     if sys_argv:
@@ -69,9 +75,9 @@ def run_one_config(args=None, sys_argv=None,
                 # of deprecation warnings for kmeans
                 warnings.simplefilter("ignore")
                 with client_context(dask_client, dask_scheduler) as client:
-                    return_values = pipeline(config, client)
+                    return_values = parse_run_config(config, client)
         else:
-            return_values = pipeline(config, client)
+            return_values = parse_run_config(config, client)
 
     if return_0_if_ok:
         return 0
@@ -91,8 +97,9 @@ def _run_one_config_of_many(fname, **kwargs):
 def run_many_configs(args=None, sys_argv=None, return_0_if_ok=True,
                      started=None):
     started = started or datetime.datetime.now()
-    env_cmd_line = Namespace(**{k: v for k, v in d.items()
-                                for d in (vars(args), parse_env_vars())})
+    env_cmd_line = Namespace(**{k: v  for d in (vars(args), parse_env_vars())
+                                for k, v in d.items()
+                                })
     logger.info('With --config-dir, DASK_EXECUTOR and DASK_SCHEDULER in config files are ignored')
     dask_client = getattr(env_cmd_line, 'DASK_EXECUTOR', 'SERIAL')
     dask_scheduler = getattr(env_cmd_line, 'DASK_SCHEDULER', None)
@@ -109,9 +116,7 @@ def run_many_configs(args=None, sys_argv=None, return_0_if_ok=True,
                       'client': client,}
                 pipe = partial(_run_one_config_of_many, **kw)
                 fnames = glob.glob(os.path.join(args.config_dir, '*.yaml'))
-                futures = client.map(pipe, fnames)
-                results = wait_for_futures(futures, client=None)
-            ret_val = max(results)
+                ret_val = max(map(pipe, fnames))
     return ret_val
 
 

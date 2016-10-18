@@ -35,10 +35,6 @@ str_fields_specs:
     default: ~/elm-train-path,
     required: True,
     expanduser: True}
- - {name: ELM_TRANSFORM_PATH,
-    default: ~/elm-transform-path,
-    required: True,
-    expanduser: True}
  - {name: ELM_PREDICT_PATH,
     default: ~/elm-predict-path,
     required: True,
@@ -50,4 +46,8 @@ str_fields_specs:
     default: ~/elm-configs-path,
     expanduser: True,
     required: False}
+ - {name: ELM_LARGE_TEST,
+    default: Null,
+    required: False,
+    expanduser: False}
 

@@ -53,25 +53,11 @@ class BandSpec(object):
     meta_to_geotransform = attr.ib(default=None)
     stored_coords_order = attr.ib(default=('y', 'x'))
 
-@attr.s
-class DataSource(object):
-    sample_args_generator = attr.ib()
-    sample_from_args_func = attr.ib(default="elm.sample_util.samplers:image_selection")
-    band_spec = attr.ib(default=None)
-    reader = attr.ib(default=None)
-    file_pattern = attr.ib(default=None)
-    top_dir = attr.ib(default=None)
-    batch_size = attr.ib(default=None)
-
 
 VALID_X_NAMES = ('lon','longitude', 'x') # compare with lower-casing
 VALID_Y_NAMES = ('lat','latitude', 'y') # same comment
 
 DEFAULT_GEO_TRANSFORM = (-180, .1, 0, 90, 0, -.1)
-#def serialize_canvas(canvas):
-#    vals = [item if not isinstance(item, Sequence) else list(item)
-#            for item in canvas]
-#
 
 def dummy_canvas(buf_xsize, buf_ysize, dims, **kwargs):
     dummy = {'geo_transform': DEFAULT_GEO_TRANSFORM,
