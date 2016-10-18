@@ -13,8 +13,7 @@ from elm.model_selection.evolve import (ea_general,
                                         assign_check_fitness,
                                         ind_to_new_pipe)
 from elm.model_selection.util import get_args_kwargs_defaults
-from elm.pipeline.util import (_validate_ensemble_members,
-                               _run_model_selection)
+from elm.pipeline.util import _validate_ensemble_members
 from elm.pipeline.ensemble import _one_generation_dask_graph, ensemble
 from elm.pipeline.serialize import serialize_pipe
 from elm.sample_util.samplers import make_samples_dask
@@ -61,7 +60,6 @@ def _on_each_generation(base_model,
 
 
 def evolve_train(pipe,
-                 ngen,
                  evo_params,
                  X=None,
                  y=None,
@@ -73,8 +71,6 @@ def evolve_train(pipe,
                  saved_ensemble_size=None,
                  ensemble_init_func=None,
                  models_share_sample=True,
-                 model_selection=None,
-                 model_selection_kwargs=None,
                  scoring_kwargs=None,
                  method='fit',
                  partial_fit_batches=1,
@@ -86,20 +82,18 @@ def evolve_train(pipe,
 
     Parameters:
         pipe: elm.pipeline.Pipeline instance
-        ngen: number of generations
         evo_params: the EvoParams instance, typically from
             from elm.model_selection import ea_setup
             evo_params = ea_setup(param_grid=param_grid,
                           param_grid_name='param_grid_example',
                           score_weights=[-1]) # minimization
 
-        See also the help below from (elm.pipeline.ensemble) where
+        See also the help from (elm.pipeline.ensemble) where
         most arguments are interpretted similary.
 
     ''' + ensemble.__doc__
     method_kwargs = method_kwargs or {}
     scoring_kwargs = scoring_kwargs or {}
-    model_selection_kwargs = model_selection_kwargs or {}
     get_func = _find_get_func_for_client(client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)

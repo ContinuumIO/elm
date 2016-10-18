@@ -42,44 +42,8 @@ def load_pipe_from_tag(elm_train_path, tag):
     return Pipeline.load(path)
 
 
-def _prepare_serialize_prediction(prediction):
-    # I couldn't get it it to dump to netcdf
-    # without dropping almost all the metadata
-    for band in prediction.data_vars:
-        band_arr = getattr(prediction, band)
-        c = attr.asdict(band_arr.canvas)
-        for k,v in c.items():
-            if isinstance(v, (tuple, list)):
-                c[k] = np.array(v)
-            else:
-                if v is None:
-                    v = np.NaN
-                c[k] = np.array([v])
-        band_arr.attrs = c
-        prediction.attrs = c
-
-
 def predict_to_pickle(prediction, fname_base):
     joblib.dump(prediction, fname_base + '.xr')
-
-
-def predict_to_netcdf(prediction, fname_base):
-    mkdir_p(fname_base)
-    try:
-        _prepare_serialize_prediction(prediction)
-        prediction.to_netcdf(fname_base + '.nc')
-    except:
-        logger.info('Likely failed serializing attrs {}'.format(prediction.attrs))
-        raise
-
-
-def get_file_name(base, tag, bounds):
-    return os.path.join(base,
-                        tag,
-                        BOUNDS_FORMAT.format(bounds.left,
-                                   bounds.bottom,
-                                   bounds.right,
-                                   bounds.top))
 
 
 def predict_file_name(elm_predict_path, tag, bounds):
@@ -92,17 +56,28 @@ def predict_file_name(elm_predict_path, tag, bounds):
                                    bounds.top))
 
 
+def serialize_prediction(config, y, X, tag, **kwargs):
+    '''This function is called by elm.pipeline.parse_run_config
+    to serialize the prediction outputs of models run through
+    the elm config file interface
 
-def serialize_prediction(config, prediction, sample, tag):
+    Parameters:
+        config:  elm.config.ConfigParser instance
+        y:       y prediction ElmStore
+        X:       X ElmStore that predicted y
+        tag:     unique tag based on sample, estimator, ensemble
+        kwargs:  keywords may contain:
+                 elm_predict_path: defaulting '''
     if not config:
-        root = parse_env_vars()['ELM_PREDICT_PATH']
+        root = kwargs.get('elm_predict_path')
+        if not root:
+            root = parse_env_vars()['ELM_PREDICT_PATH']
     else:
         root = config.ELM_PREDICT_PATH
-    for band in sample.data_vars:
-        band_arr = getattr(sample, band)
+    for band in X.data_vars:
+        band_arr = getattr(X, band)
         fname = predict_file_name(root,
                                   tag,
-                                  getattr(band_arr, 'canvas', getattr(sample, 'canvas')).bounds)
-        predict_to_netcdf(prediction, fname)
-        predict_to_pickle(prediction, fname)
+                                  getattr(band_arr, 'canvas', getattr(X, 'canvas')).bounds)
+        predict_to_pickle(y, fname)
     return True
