@@ -91,73 +91,73 @@ class SklearnBase(StepMixin):
 
 
 class Binarizer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.Binarizer for elm.pipeline.Pipeline'''
 
 class FunctionTransformer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.FunctionTransformer for elm.pipeline.Pipeline'''
 
 class Imputer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.Imputer for elm.pipeline.Pipeline'''
 
 class KernelCenterer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.KernelCenterer for elm.pipeline.Pipeline'''
 
 class LabelBinarizer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.LabelBinarizer for elm.pipeline.Pipeline'''
 
 class LabelEncoder(SklearnBase):
-    pass
+    '''sklearn.preprocessing.LabelEncoder for elm.pipeline.Pipeline'''
 
 class MaxAbsScaler(SklearnBase):
-    pass
+    '''sklearn.preprocessing.MaxAbsScaler for elm.pipeline.Pipeline'''
 
 class MinMaxScaler(SklearnBase):
-    pass
+    '''sklearn.preprocessing.MinMaxScaler for elm.pipeline.Pipeline'''
 
 class MultiLabelBinarizer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.MultiLabelBinarizer for elm.pipeline.Pipeline'''
 
 class Normalizer(SklearnBase):
-    pass
+    '''sklearn.preprocessing.Normalizer for elm.pipeline.Pipeline'''
 
 class OneHotEncoder(SklearnBase):
-    pass
+    '''sklearn.preprocessing.OneHotEncoder for elm.pipeline.Pipeline'''
 
 class PolynomialFeatures(SklearnBase):
-    pass
+    '''sklearn.preprocessing.PolynomialFeatures for elm.pipeline.Pipeline'''
 
 class RobustScaler(SklearnBase):
-    pass
+    '''sklearn.preprocessing.RobustScaler for elm.pipeline.Pipeline'''
 
 class StandardScaler(SklearnBase):
-    pass
+    '''sklearn.preprocessing.StandardScaler for elm.pipeline.Pipeline'''
 
 class RFE(SklearnBase):
-    pass
+    '''sklearn.feature_selection.RFE for elm.pipeline.Pipeline'''
 
 class RFECV(SklearnBase):
-    pass
+    '''sklearn.feature_selection.RFECV for elm.pipeline.Pipeline'''
 
 class SelectFdr(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectFdr for elm.pipeline.Pipeline'''
 
 class SelectFpr(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectFpr for elm.pipeline.Pipeline'''
 
 class SelectFromModel(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectFromModel for elm.pipeline.Pipeline'''
 
 class SelectFwe(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectFwe for elm.pipeline.Pipeline'''
 
 class SelectKBest(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectKBest for elm.pipeline.Pipeline'''
 
 class SelectPercentile(SklearnBase):
-    pass
+    '''sklearn.feature_selection.SelectPercentile for elm.pipeline.Pipeline'''
 
 class VarianceThreshold(SklearnBase):
-    pass
+    '''sklearn.feature_selection.VarianceThreshold for elm.pipeline.Pipeline'''
 
 
 gs = tuple(globals().items())
@@ -171,6 +171,8 @@ def require_positive(X, small_num=0.0001):
     Params:
         X:  numpy array
         small_num: small float number which should replace values <= 0'''
+
+
     if X.dtype.kind != 'f':
         X = X.astype(np.float32)
     X[np.where(X <= 0)] = small_num

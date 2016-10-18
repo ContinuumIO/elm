@@ -55,8 +55,13 @@ def match_meta(meta, band_spec):
     return False
 
 
-def example_meta_is_day(filename, d):
-
+def example_meta_is_day(d):
+    '''Helper to find day/ night flags in nested dict
+    Parmeters:
+        d: dict
+    Returns:
+        True if day, False if night, else None
+    '''
     dicts = []
     for k, v in d.items():
         if isinstance(v, dict):
@@ -72,7 +77,7 @@ def example_meta_is_day(filename, d):
             elif dayflag or nightflag:
                 return bool(v)
     if dicts:
-        return any(example_meta_is_day(filename, d2) for d2 in dicts)
+        return any(example_meta_is_day(d2) for d2 in dicts)
     return False
 
 

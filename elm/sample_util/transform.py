@@ -14,7 +14,17 @@ __all__ = ['Transform',]
 
 
 class Transform(StepMixin):
+    '''Wraps transform models like IncrementalPCA for use in elm.pipeline.Pipeline'''
     def __init__(self, estimator, partial_fit_batches=None):
+        '''Wraps transform models like IncrementalPCA for use in elm.pipeline.Pipeline
+
+           Parameters:
+                estimator: such as sklearn.decomposition.IncrementalPCA,
+                           a model with fit and transform methods
+                partial_fit_batches: how many times to call partial_fit
+                           each time Pipeline is evaluated
+        '''
+
         self._estimator = estimator
         self._partial_fit_batches = partial_fit_batches
         self._params = estimator.get_params()
