@@ -41,17 +41,19 @@ def _run_model_selection(models, model_selection, model_selection_kwargs,
     model_selection_kwargs['ngen'] = ngen
     model_selection_kwargs['generation'] = generation
     scoring_kwargs = scoring_kwargs or {}
-    score_weights = (scoring_kwargs or {}).get('score_weights') or None
+    score_weights = (scoring_kwargs or {}).get('score_weights', model_selection_kwargs.get('score_weights'))
     sort_fitness = scoring_kwargs.get('sort_fitness', model_selection_kwargs.get('sort_fitness')) or None
     if not sort_fitness:
         sort_fitness = pareto_front
     else:
         sort_fitness = import_callable(sort_fitness)
+    kw = {k: v for k,v in model_selection_kwargs.items()
+          if not k in ('score_weights',)}
     models = base_selection(models,
                             model_selection=model_selection,
                             sort_fitness=sort_fitness,
                             score_weights=score_weights,
-                            **model_selection_kwargs)
+                            **kw)
     models = _validate_ensemble_members(models)
     return models
 

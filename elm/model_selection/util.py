@@ -3,7 +3,15 @@ import inspect
 
 
 def get_args_kwargs_defaults(func):
-    '''Get the default kwargs spec of a function '''
+    '''Get the required args, defaults, and var keywords of func
+
+    Parameters:
+        func: callable
+    Returns:
+        (args, kwargs, takes_var_keywords) where args are names
+        of required args, kwargs are keyword args with defaults,
+        and takes_var_keywords indicates whether func has a **param
+     '''
     sig = inspect.signature(func)
     params = sig.parameters
     kwargs = {}
@@ -21,6 +29,7 @@ def get_args_kwargs_defaults(func):
 
 
 def filter_kwargs_to_func(func, **kwargs):
+    '''Remove keys/values from kwargs if cannot be passed to func'''
     arg_spec, kwarg_spec, takes_variable_keywords = get_args_kwargs_defaults(func)
     new = {}
     for k,v in kwargs.items():

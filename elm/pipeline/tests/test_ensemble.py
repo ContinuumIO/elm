@@ -2,10 +2,10 @@
 
 Tests usages like:
 
-EX1 = Pipeline([steps.Flatten('C'),
+EX1 = Pipeline([steps.Flatten(),
                 steps.Transform(IncrementalPCA(n_components=3), partial_fit_batches=None),
                 SGDClassifier()])
-EX2 = Pipeline([steps.Flatten('C'),
+EX2 = Pipeline([steps.Flatten(),
                 steps.Transform(estimator=IncrementalPCA(n_components=3),
                                 partial_fit_batches=None),
                 MiniBatchKMeans(n_clusters=4)])
@@ -56,7 +56,7 @@ def example_get_y(X, y=None, sample_weight=None, **kwargs):
     return (X, y, sample_weight)
 
 def test_simple():
-    p = Pipeline([steps.Flatten('C'), MiniBatchKMeans(n_clusters=5),])
+    p = Pipeline([steps.Flatten(), MiniBatchKMeans(n_clusters=5),])
     args_list = [(100, 200, 5)] * 10 # (height, width, bands)
     data_source = dict(sampler=example_sampler, args_list=args_list)
     ensemble_kw = dict(ngen=2, init_ensemble_size=2)
@@ -94,7 +94,7 @@ def _train_asserts(fitted, expected_len):
 
 @dist_test
 def test_kmeans_simple_sampler(client=None):
-    pipe = Pipeline([steps.Flatten('C'),
+    pipe = Pipeline([steps.Flatten(),
                      MiniBatchKMeans(n_clusters=6)])
     fitted = pipe.fit_ensemble(**SAMPLER_DATA_SOURCE, **ENSEMBLE_KWARGS)
     ens = fitted.ensemble
@@ -105,7 +105,7 @@ def test_kmeans_simple_sampler(client=None):
 
 @dist_test
 def test_kmeans_simple_X(client=None):
-    pipe = Pipeline([steps.Flatten('C'),
+    pipe = Pipeline([steps.Flatten(),
                      MiniBatchKMeans(n_clusters=6)])
     fitted = pipe.fit_ensemble(X=X, **ENSEMBLE_KWARGS)
     _train_asserts(fitted, ENSEMBLE_KWARGS['saved_ensemble_size'])
@@ -117,7 +117,7 @@ def test_kmeans_simple_X(client=None):
 def test_supervised_feat_select_sampler(client=None):
     '''Has a ModifySample step to get necessary y data'''
 
-    pipe = Pipeline([steps.Flatten('C'),
+    pipe = Pipeline([steps.Flatten(),
                 steps.ModifySample(example_get_y),
                 steps.SelectPercentile(score_func=f_classif, percentile=50),
                 SGDClassifier()])
@@ -132,7 +132,7 @@ def test_supervised_feat_select_sampler(client=None):
 @dist_test
 def test_supervised_feat_select_X_y(client=None):
     '''Has a ModifySample step to get necessary y data'''
-    pipe = Pipeline([steps.Flatten('C'),
+    pipe = Pipeline([steps.Flatten(),
             steps.SelectPercentile(score_func=f_classif, percentile=50),
             SGDClassifier()])
     en = dict(method_kwargs=dict(classes=[0, 1, 2]), **ENSEMBLE_KWARGS)
@@ -145,7 +145,7 @@ def test_supervised_feat_select_X_y(client=None):
 @dist_test
 def test_kmeans_model_selection(client=None):
 
-    pipe = Pipeline([steps.Flatten('C'),
+    pipe = Pipeline([steps.Flatten(),
                     ('kmeans', MiniBatchKMeans(n_clusters=5))],
                     scoring=kmeans_aic,
                     scoring_kwargs={'score_weights': [-1]})

@@ -18,7 +18,7 @@ from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.model_selection.util import filter_kwargs_to_func
 import elm.sample_util.sample_pipeline as pipeline
 import elm.pipeline as elm_pipeline
-import elm.pipeline.transform as elmtransform
+import elm.sample_util.transform as elmtransform
 from elm.readers import *
 from elm.scripts.main import main as elm_main
 

@@ -1,3 +1,10 @@
+'''This module parses environment variables used by elm.
+
+See also elm/config/defaults/environment_vars_spec.yaml
+which names all the environment variables, their types, and
+their defaults.
+
+'''
 import os
 
 from elm.config.util import ElmConfigError, read_from_egg
@@ -6,6 +13,7 @@ ENVIRONMENT_VARS_SPEC = read_from_egg(os.path.join('defaults',
                                                    'environment_vars_spec.yaml'))
 
 def process_int_env_var(env_var_name, default='0', required=False):
+    '''Process an env var which must be an integer'''
     val = os.environ.get(env_var_name, default)
     try:
         val = bool(int(val))
@@ -18,6 +26,8 @@ def process_int_env_var(env_var_name, default='0', required=False):
 
 def process_str_env_var(env_var_name, expanduser=False,
                         default='', required=False, choices=None):
+    '''Process a string environment variable that may be a path or have
+    fixed choices'''
     val =  os.environ.get(env_var_name, default)
     if choices:
         if not val in choices:

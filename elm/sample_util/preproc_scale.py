@@ -9,7 +9,7 @@ import xarray as xr
 from elm.config import import_callable
 from elm.model_selection.util import get_args_kwargs_defaults
 from elm.readers import *
-from elm.pipeline.step_mixin import StepMixin
+from elm.sample_util.step_mixin import StepMixin
 
 class SklearnBase(StepMixin):
     def __init__(self,  **kwargs):

@@ -84,6 +84,9 @@ def evolve_train(pipe,
                  method_kwargs=None,
                  **data_source):
 
+    method_kwargs = method_kwargs or {}
+    scoring_kwargs = scoring_kwargs or {}
+    model_selection_kwargs = model_selection_kwargs or {}
     get_func = _find_get_func_for_client(client)
     control = evo_params.deap_params['control']
     required_args, _, _ = get_args_kwargs_defaults(ea_general)
@@ -119,7 +122,14 @@ def evolve_train(pipe,
             evo_args.append(control[a])
         ea_gen = ea_general(*evo_args)
         pop, _, _ = next(ea_gen)
-        models, fitnesses = fit_one_generation(dsk, 0, gen_to_sample_key(0), pop)
+        sample_keys_passed = gen_to_sample_key(0)
+        def log_once(len_models, sample_keys_passed, gen):
+            total_calls = len_models * len(sample_keys_passed) * partial_fit_batches
+            msg = (len_models, len(sample_keys_passed), partial_fit_batches, method, gen, total_calls)
+            fmt = 'Evolve generation {4}: {0} models x {1} samples x {2} {3} calls = {5} calls in total'
+            logger.info(fmt.format(*msg))
+        log_once(len(pop), sample_keys_passed, 0)
+        models, fitnesses = fit_one_generation(dsk, 0, sample_keys_passed, pop)
         assign_check_fitness(pop,
                          fitnesses,
                          param_history,
@@ -142,6 +152,7 @@ def evolve_train(pipe,
                 sample_keys_passed = sample_keys
 
             if gen > 0:
+                log_once(len(invalid_ind), sample_keys_passed, gen)
                 models, fitnesses = fit_one_generation(dsk, gen, sample_keys_passed, invalid_ind)
                 fitted_models.update(dict(models))
             (pop, invalid_ind, param_history) = ea_gen.send(fitnesses)

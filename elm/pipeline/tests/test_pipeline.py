@@ -46,7 +46,7 @@ def get_y(es, y=None, sample_weight=None, **kwargs):
     return (es, y2, sample_weight)
 
 # Example 4 step pipeline
-flat_poly_var_kmeans = [('flat', steps.Flatten('C')),
+flat_poly_var_kmeans = [('flat', steps.Flatten()),
                         ('poly', steps.PolynomialFeatures(interaction_only=True),),
                         ('var', steps.VarianceThreshold(threshold=0.00000001)),
                         ('kmeans', KMeans(n_clusters=2))]
@@ -54,7 +54,7 @@ flat_poly_var_kmeans = [('flat', steps.Flatten('C')),
 
 def test_simple():
 
-    p = Pipeline([('a', steps.Flatten('C'))])
+    p = Pipeline([('a', steps.Flatten())])
     # fit_transform should always return (X, y, sample_weight)
     X, y, sample_weight = p.fit_transform(**data_source)
     assert isinstance(X, ElmStore)
@@ -117,7 +117,7 @@ def test_modify_sample():
     (X, y, sample_weight)
 
     '''
-    p = Pipeline([steps.Flatten('C'), steps.ModifySample(get_y)])
+    p = Pipeline([steps.Flatten(), steps.ModifySample(get_y)])
     X, y, sample_weight = p.fit_transform(**data_source)
     assert X is not None
     assert isinstance(y, np.ndarray)
@@ -146,7 +146,7 @@ def test_feature_selection(feat_cls):
     pytest.xfail('This test doesnt test anything yet')
     step_cls = getattr(steps, feat_cls)
     init_kwargs = {} # come up with some initialization kwargs
-    p = Pipeline([steps.Flatten('C'),
+    p = Pipeline([steps.Flatten(),
                   steps.ModifySample(get_y),
                   step_cls(**init_kwargs)]) #
     X, y, sample_weight = p.fit_transform(**data_source)
@@ -173,7 +173,7 @@ def test_sklearn_preproc(scale_encode_cls):
     pytest.xfail('This test doesnt test anything yet')
     step_cls = getattr(steps, scale_encode_cls)
     init_kwargs = {} # come up with some initialization kwargs
-    p = Pipeline([steps.Flatten('C'), step_cls(**init_kwargs)]) #
+    p = Pipeline([steps.Flatten(), step_cls(**init_kwargs)]) #
     X, y, sample_weight = p.fit_transform(**data_source)
     # TODO assertions to make sure scale_encode class's fit_transform was
     # called
@@ -187,7 +187,7 @@ TODO_ALSO_TEST = ('Agg',
 
 def test_pipeline_new_with_params():
     p = Pipeline([steps.SelectCanvas('band_1'),
-                  steps.Flatten('C'),
+                  steps.Flatten(),
                   ('pca', steps.Transform(IncrementalPCA(n_components=3))),
                   ('kmeans', KMeans(n_clusters=4))])
     p.fit(random_elm_store())

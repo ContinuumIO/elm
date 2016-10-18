@@ -66,14 +66,3 @@ def base_selection(models,
         models = model_selection(models, **model_selection_kwargs)
     return models
 
-def select_top_n_models(models, best_idxes, **kwargs):
-    '''Run in ensemble without modifying the models on each generation, then
-    on final generation take "top_n" models (top_n from kwargs)'''
-    top_n = kwargs['top_n']
-    logger.debug('Enter select_top_n with {} models and best_idxes {}'.format(len(models), best_idxes))
-    if kwargs['generation'] < kwargs['ngen'] - 1:
-        pass
-    else:
-        models = [models[b] for b in best_idxes[:top_n]]
-    logger.debug('Exit select_top_n with {} models'.format(len(models)))
-    return models

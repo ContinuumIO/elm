@@ -1,3 +1,5 @@
+'''This module scores models, creating a ._score attribute
+that can be used for sorted members of an ensemble'''
 import copy
 
 import sklearn.metrics as sk_metrics
@@ -8,8 +10,8 @@ from elm.model_selection.metrics import METRICS
 from elm.model_selection.util import get_args_kwargs_defaults
 
 
-
 def import_scorer(scoring):
+    '''Import a scoring function or find it in METRICS'''
     if not hasattr(scoring, 'fit'):
         if scoring in METRICS:
             scoring = import_callable(METRICS[scoring])
@@ -23,6 +25,13 @@ def import_scorer(scoring):
 
 def make_scorer(scoring, **scoring_kwargs):
     func_kwargs = filter_kwargs_to_func(scoring, **scoring_kwargs)
+    score_weights = scoring_kwargs.get('score_weights')
+    gb = scoring_kwargs.get('greater_is_better')
+    if gb is None and score_weights is not None and len(score_weights) == 1:
+        sw = score_weights[0]
+        scoring_kwargs['greater_is_better'] = True if sw == 1 else False
+    elif gb is None:
+        raise ValueError('Must provide greater_is_better in this case where score_weights is not given or longer than one element')
     scorer = sk_metrics.make_scorer(scoring,
                                  greater_is_better=scoring_kwargs.get('greater_is_better', True),
                                  needs_proba=scoring_kwargs.get('needs_proba', False),
@@ -75,6 +84,20 @@ def score_one_model(model,
                     y=None,
                     sample_weight=None,
                     **kwargs):
+    '''Score model with scoring function, adding ._score attribute to model
+
+    Parameters:
+        model:   elm.pipeline.Pipeline instance
+        scoring: A scorer in sklearn.metrics or callable
+                 of the form "mypackage.mymodule:myfunc"
+        X:       elm.readers.ElmStore instance
+        y:       numpy array y data, if needed
+        sample_weight: ignored
+        kwargs:  keywords to scoring function, such as:
+                 greater_is_better: True if high scores are good
+                 needs_proba:    Estimator needs proba
+                 needs_threshold: Estimator needs threshold
+    '''
     if scoring is None:
         if not hasattr(model, 'score') or not callable(model.score):
             raise ValueError('Cannot score model.  No scoring given and '

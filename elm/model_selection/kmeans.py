@@ -13,17 +13,16 @@ from elm.model_selection.util import (get_args_kwargs_defaults,
                                       filter_kwargs_to_func)
 
 
-def kmeans_aic(model, X, y_true=None, scoring=None, **kwargs):
+def kmeans_aic(model, X, **kwargs):
     '''AIC (Akaike Information Criterion) for k-means for model selection
 
     Parameters:
-        model:  An elm.pipeline.Pipeline with a KMeans _estimator
-        x:      The X data that were just given to "fit", or "partial_fit"
-        y:      None (placeholder)
-        scoring:None (placeholder)
-        kwargs: ignored
+        model:  An elm.pipeline.Pipeline with KMeans or MiniBatchKMeans as
+                final step in Pipeline
+        X:      The X data that were just given to "fit", or "partial_fit"
+        kwargs: placeholder - ignored
     Returns:
-        aic float
+        AIC float
 
     '''
 
@@ -34,10 +33,32 @@ def kmeans_aic(model, X, y_true=None, scoring=None, **kwargs):
     delattr(model._estimator, 'labels_')
     return aic
 
+name_idx = 0
+def _next_name():
+    global name_idx
+    n = 'kmeans-init-'.format(name_idx)
+    name_idx += 1
+    return n
 
 def kmeans_model_averaging(models, best_idxes=None, **kwargs):
-    '''
-    models:  list of elm.pipeline.Pipeline with a KMeans _estimator
+    '''Run a KMeans on multiple KMeans models for cases where
+    the representative sample is larger than one training batch.
+
+    Parameters:
+        models:  list of (tag, elm.pipeline.Pipeline instance) tuples
+                 where the final step in each of the Pipeline instances
+                 is either KMeans or MiniBatchKmeans from sklearn.cluster
+        best_idxes: integer indices of the best -> worst models in models
+        kwargs:   Keyword arguments passed via "model_selection_kwargs":
+                  drop_n:  how many models to drop each generation
+                  evolve_n: how many models to create from clustering
+                            on clusters from models
+                  init_n:   how many models to make new, initializing
+                            from the best model
+                  ngen, generation: kwargs added by model_selection logic
+                            to control behavior on last generation
+    Returns:
+        list of (tag, Pipeline instance) tuples
     '''
 
     drop_n = kwargs['drop_n']
@@ -54,7 +75,6 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
         raise ValueError('All models would be dropped by drop_n {} '
                          'with len(models) {}'.format(drop_n, len(models)))
 
-
     if drop_n:
         dropped = models[-drop_n:]
         models = models[:-drop_n]
@@ -62,26 +82,24 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     name_idx = 0
     new_models = []
     best = models[0][1]
-    good_n_clusters = [model._estimator.get_params()['n_clusters']
-                       for tag, model in models]
     new_kwargs0 = best._estimator.get_params()
+    new_kwargs0['init'] = best._estimator.cluster_centers_
     new_pipe_kwargs = best.get_params()
     if evolve_n:
         centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for name, m in models))
-        names = [name for name, model in models]
         meta_model = MiniBatchKMeans(**new_kwargs0)
         new_kwargs0['batch_size'] = centroids.shape[0]
         meta_model.fit(centroids)
-        for name_idx, new in enumerate(range(evolve_n)):
-            new_estimator = copy.deepcopy(best)
+        for idx in range(evolve_n):
+            new_estimator = best.unfitted_copy()
             new_kwargs = copy.deepcopy(new_kwargs0)
             new_params = {'init': meta_model.cluster_centers_, 'n_init': 1}
             new_estimator._estimator.set_params(**new_params)
-            new_model = (names[name_idx], new_estimator)
+            new_model = (_next_name(), new_estimator)
             new_models.append(new_model)
-    for idx, new in enumerate(range(init_n)):
-        new = copy.deepcopy(models[0][1])
+    for new in range(init_n):
+        new = best.unfitted_copy()
         new.set_params(**new_pipe_kwargs)
         new_models.append(('new-kmeans-{}'.format(idx), new))
-    return tuple(new_models)
+    return tuple(new_models) + tuple(models)
 

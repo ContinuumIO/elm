@@ -1,3 +1,6 @@
+'''
+dask_settings.py is a module of helpers for dask executors
+'''
 import contextlib
 import dask.array as da
 import os
@@ -19,6 +22,7 @@ from elm.config.env import parse_env_vars
 
 
 def _find_get_func_for_client(client):
+    '''Return the "get" function corresponding to client'''
     if client is None:
         return get_sync
     elif Executor and isinstance(client, Executor):
@@ -37,7 +41,14 @@ def _find_get_func_for_client(client):
 
 @contextlib.contextmanager
 def client_context(dask_client=None, dask_scheduler=None):
-    global get_func
+    '''client_context creates a dask distributed or threadpool client or None
+
+    Parameters:
+        dask_client:     str from choices ("DISTRIBUTED", 'THREAD_POOL', 'SERIAL')
+                         or None to take DASK_CLIENT from environment
+        dask_scheduler:  Distributed scheduler url or None to take
+                         DASK_SCHEDULER from environment
+    '''
     env = parse_env_vars()
     dask_client = dask_client or env.get('DASK_CLIENT', 'SERIAL')
     dask_scheduler = dask_scheduler or env.get('DASK_SCHEDULER')

@@ -1,3 +1,10 @@
+'''
+This module loads elm/config/defaults/config_standard.yaml which
+is an elm config used for testing.
+
+TODO: The naming DEFAULTS is misleading because the config is
+not used as default settings but rather a testing config.
+'''
 import os
 import yaml
 
@@ -11,6 +18,8 @@ DEFAULTS = read_from_egg(
                 DEFAULTS_FILE
                 )
 
+# elm.config.load_config.ConfigParser
+# parses config sections in this order
 CONFIG_KEYS = [('readers',  dict),
                 ('ensembles', dict),
                 ('data_sources', dict),

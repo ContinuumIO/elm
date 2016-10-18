@@ -1,3 +1,7 @@
+'''
+This module is used by the command line interface of elm
+to parse yaml ensemble or evolutionary algorithm configs.
+'''
 from collections import Iterable, Sequence
 import copy
 import logging
@@ -21,36 +25,30 @@ from elm.config.config_info import CONFIG_KEYS
 logger = logging.getLogger(__name__)
 
 
-
-PIPELINE_ACTIONS = ('train',
-                    'predict',
-                    'transform',)
-                    # TODO other steps like
-                    #'change_detection',
-                    #'spatial_summary'
-
 SAMPLE_PIPELINE_ACTIONS = ('transform',
                            'feature_selection',
                            'sklearn_preprocessing',
                            'random_sample',) # others too from change_coords
 REQUIRES_METHOD = ('train', 'predict', )
 class ConfigParser(object):
-    # The list below reflects the order
-    # in which the keys of the config
-    # are validated. (the _validate_* private
-    # methods are order sensitive.)
     expected_ensemble_kwargs = ('init_ensemble_size',
                                 'ngen',
                                 'partial_fit_batches',
                                 'saved_ensemble_size',)
+    # The list below reflects the order
+    # in which the keys of the config
+    # are validated. (the _validate_* private
+    # methods are order sensitive.)
     config_keys = CONFIG_KEYS
-    all_words = ('all', ['all'],)
     def __init__(self, config_file_name=None, config=None, cmd_args=None):
-        '''Parses a config structure
+        '''Parses an elm config dictionary or yaml file
 
         Params:
-            config_file_name: file name of a config
-            config:           dict loaded from yaml/json already
+            config_file_name: file name of a yaml elm config
+            config:           elm config dict
+
+        Returns:
+            ConfigParser instance
         '''
 
         if not config:

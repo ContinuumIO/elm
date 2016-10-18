@@ -1,8 +1,10 @@
+'''Module of helpers for building command line interfaces'''
 from argparse import ArgumentParser
 
 from elm.config.env import ENVIRONMENT_VARS_SPEC
 
 def add_env_vars_override_options(parser):
+    '''Add to parser overrides for env vars, e.g. DASK_SCHEDULER to --dask-scheduler'''
     group = parser.add_argument_group('Environment','Compute settings (see also help on environment variables)')
     lower_name = lambda n: '--' + n.lower().replace('_', '-')
     for v in ENVIRONMENT_VARS_SPEC['int_fields_specs']:
@@ -17,6 +19,7 @@ def add_env_vars_override_options(parser):
 
 
 def add_config_file_argument(parser):
+    '''Add parser arguments related to taking config file or directory'''
     group = parser.add_argument_group('Inputs', 'Input config file or directory')
     group = group.add_mutually_exclusive_group()
     group.add_argument('--config', type=str, help="Path to yaml config")
@@ -24,6 +27,7 @@ def add_config_file_argument(parser):
 
 
 def add_ensemble_kwargs(parser):
+    '''Add arguments to parser that override ensemble settings'''
     group = parser.add_argument_group('Control', 'Keyword arguments to elm.pipeline.ensemble')
     group.add_argument('--partial-fit-batches', type=int,
                         help='Partial fit batches (for estimator specified in config\'s "train"')
@@ -35,6 +39,7 @@ def add_ensemble_kwargs(parser):
                         help='Number of ensemble generations, defaulting to ngen from ensemble_kwargs in config')
 
 def add_run_options(parser):
+    '''Add the --train-only and --predict-only arguments to parser'''
     parser.add_argument_group('Run', 'Run options')
     group = parser.add_mutually_exclusive_group()
     group.add_argument('--train-only', action='store_true',

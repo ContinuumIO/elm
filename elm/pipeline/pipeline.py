@@ -265,7 +265,7 @@ class Pipeline(object):
         return self.fit_ensemble(*args, **kw)
 
     def fit_ea(self, X=None, y=None, sample_weight=None, ngen=3,
-               evo_params=None,sampler=None, args_list=None, client=None,
+               evo_params=None, sampler=None, args_list=None, client=None,
                init_ensemble_size=1, ensemble_init_func=None,
                saved_ensemble_size=None,
                models_share_sample=True,

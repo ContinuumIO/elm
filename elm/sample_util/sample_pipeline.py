@@ -15,7 +15,7 @@ from elm.model_selection.util import get_args_kwargs_defaults
 from elm.readers import (ElmStore, flatten as _flatten, load_meta, load_array)
 from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
 from elm.pipeline import steps
-from elm.pipeline.preproc_scale import SKLEARN_PREPROCESSING
+from elm.sample_util.preproc_scale import SKLEARN_PREPROCESSING
 
 
 logger = logging.getLogger(__name__)
@@ -138,7 +138,7 @@ def make_pipeline_steps(config, pipeline):
             for att in dir(steps):
                 if isinstance(getattr(steps, att), type):
                     if getattr(getattr(steps, att), '_sp_step', None) == _sp_step:
-                        step_cls = getattr(steps, att)(**action)
+                        step_cls = getattr(steps, att).from_config_dict(**action)
                         break
 
         else:
@@ -202,6 +202,8 @@ def final_on_sample_step(fitter,
             X_values = X.flat.values
     else:
         X_values = X # may not be okay for sklearn models,e.g KMEans but can be passed thru Pipeline
+    if X_values.ndim == 1:
+        X_values = X_values.reshape(-1, 1)
     args, kwargs, var_keyword = get_args_kwargs_defaults(fitter)
 
     has_y = _has_arg(y)

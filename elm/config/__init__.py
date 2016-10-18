@@ -1,5 +1,5 @@
 
-from elm.config.load_config import ConfigParser, PIPELINE_ACTIONS
+from elm.config.load_config import ConfigParser
 from elm.config.dask_settings import client_context
 from elm.config.env import parse_env_vars
 from elm.config.config_info import *

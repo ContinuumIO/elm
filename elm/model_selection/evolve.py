@@ -72,14 +72,14 @@ def assign_names(pop, names=None):
 
 
 def get_param_grid(config, step):
-    '''Get the metadata for one config step that has a param_grid or return None'''
+    '''Get the metadata for one config step that has a
+    param_grid or return None'''
     param_grid_name = step.get('param_grid') or None
     if not param_grid_name:
         return None
     train_step_name = step.get('train')
     if train_step_name:
         train_config = config.train[train_step_name]
-        transform_config = None
     else:
         raise ElmConfigError('Expected param_grid to be used with a "train" '
                          'step of a pipeline, but found param_grid '
@@ -89,6 +89,7 @@ def get_param_grid(config, step):
 
 
 def check_format_param_grid(param_grid, param_grid_name):
+    '''Run validations on a param_grid'''
     if not isinstance(param_grid, dict):
         raise ElmConfigError('Expected param_grids: {} to be a dict '
                              'but found {}'.format(param_grid_name, param_grid))
@@ -181,11 +182,14 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
 
 
 def init_Individual(icls, content):
+    '''Initialize a genetic algorithm individual with class icls
+    and content (parameters)'''
     individual = icls(content)
     return individual
 
 
 def init_Population(pcls, ind_init, initializer, mu):
+    '''Initialize a population of size mu'''
     pop = []
     while len(pop) < mu:
         pop.append(ind_init(initializer()))
@@ -265,12 +269,13 @@ def ind_to_new_pipe(pipe, deap_params, ind):
     '''Take an Individual (ind), return new elm.config.ConfigParser instance
 
     Parameters:
-        config: existing elm.config.ConfigParser instance
+        pipe:         an existing elm.pipeline.Pipeline instance
         deap_params:  deap_params field from EvoParams object
-        ind: Individual (list of indices into deap_params in same
-             order as param_order)
+        ind:          Individual (list of indices into deap_params
+                      in same order as deap_params['param_order'])
     Returns:
-        new_config: elm.config.ConfigParser instance
+        new_pipe:     Unfitted copy of original elm.pipeline.Pipeline
+                      with parameter replacements
     '''
     logger.debug('ind_to_new_pipe ind: {}'.format(ind))
     zipped = zip(deap_params['param_order'],
@@ -360,31 +365,46 @@ def _get_evolve_meta(config):
             idx_to_param_grid[idx] = pg
     return idx_to_param_grid
 
-def ea_setup(config):
-    '''Return a dict of parsed EvoParams for each param_grid
-    in config\'s param_grids section
+def ea_setup(config=None, param_grid=None, param_grid_name=None,
+             score_weights=None):
+    '''ea_setup parses a yaml config or param_grid dictionary
+    to create an EvoParams instance with fields needed for algorithm
 
     Parameters:
-        config:  elm.config.ConfigParser instance
-    Returns:
-        evo_params_dict:  Dict of EvoParams instances for each param_grid
-                          in config\'s param_grids section (if any)
+        config:         elm.config.ConfigParser instance or None
+        param_grid:     param_grid dictionary if not giving config
+        param_grid_name:name of param_grid, if not giving config
+        score_weights:  list of weights, -1 or 1, for each objective,
+                        ignored if config is not None
 
+    Returns:
+        if config was given:
+            dict of EvoParams for each step in config's "run" list
+            (integers as key, EvoParams instances as values)
+        elif config was None:
+            EvoParams instance
     '''
-    idx_to_param_grid = _get_evolve_meta(config)
-    if not idx_to_param_grid:
+    if config and not param_grid:
+        idx_to_param_grid = _get_evolve_meta(config)
+        items = tuple(idx_to_param_grid.items())
+    elif param_grid and not config:
+        items = ((0, check_format_param_grid(param_grid, param_grid_name)),)
+    else:
+        raise ValueError('Expected config or param_grid but not both')
+    if not items:
         return {}
     evo_params_dict = {}
-    for (idx, deap_params) in idx_to_param_grid.items():
-        param_grid_name = config.run[idx]['train']
+    for (idx, deap_params) in items:
+        if config:
+            param_grid_name = config.run[idx]['train']
         kwargs = copy.deepcopy(deap_params['control'])
         toolbox = base.Toolbox()
-        train = config.train[param_grid_name]
-        score_weights = None
-        if 'model_scoring' in train:
-            ms = config.model_scoring[train['model_scoring']]
-            if 'score_weights' in ms:
-                score_weights = ms['score_weights']
+        if config and score_weights is None:
+            train = config.train[param_grid_name]
+            if 'model_scoring' in train:
+                ms = config.model_scoring[train['model_scoring']]
+                if 'score_weights' in ms:
+                    score_weights = ms['score_weights']
         if score_weights is None:
             raise ElmConfigError('Cannot continue EA '
                                  'when score_weights is None (train section of config: '
@@ -404,6 +424,8 @@ def ea_setup(config):
                score_weights=score_weights,
                early_stop=early_stop,
         )
+        if not config:
+            return evo_params
         evo_params_dict[idx] = evo_params
     return evo_params_dict
 

@@ -4,7 +4,7 @@ import logging
 import numpy as np
 import xarray as xr
 
-from elm.pipeline.step_mixin import StepMixin
+from elm.sample_util.step_mixin import StepMixin
 from elm.readers import ElmStore
 
 logger = logging.getLogger(__name__)
@@ -42,7 +42,7 @@ class Transform(StepMixin):
                 XX = X.flat.values
                 space = X.flat.space
             else:
-                raise ValueError("Call elm.pipeline.steps.Flatten('C') before Transform in pipeline or otherwise use X as an (elm.readers.ElmStore or xarray.Dataset)")
+                raise ValueError("Call elm.pipeline.steps.Flatten() before Transform in pipeline or otherwise use X as an (elm.readers.ElmStore or xarray.Dataset)")
         else:
             raise ValueError('Expected X to be an xarray.Dataset or elm.readers.ElmStore')
         out = fitter_func(X.flat.values, **kw)

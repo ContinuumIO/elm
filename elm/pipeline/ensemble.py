@@ -19,7 +19,25 @@ __all__ = ['ensemble']
 
 
 def _fit_once(method, model, fit_score_kwargs, args):
-    from elm.pipeline import Pipeline
+    '''Dask helper internal func to call a model's method
+
+    Parameters:
+        method: str such as "fit", "fit_transform", "transform",
+                "partial_fit"
+        model: elm.pipeline.Pipeline instance
+        fit_score_kwargs: kwargs to method
+        args:   Tuple of 1, 2 or 3 elements:
+
+                (X,)
+                (X, y,)
+                (X, y, sample_weight)
+
+                where X is an ElmStore with Dataset "flat"
+                y and sample_weight if given are numpy arrays
+    Returns:
+        the output of Pipeline instance's "method" call, see also
+        elm.pipeline.Pipeline
+    '''
     X = args[0]
     if len(args) > 1:
         y = args[1]
@@ -43,13 +61,23 @@ def _fit_once(method, model, fit_score_kwargs, args):
 def _one_generation_dask_graph(dsk,
                                models,
                                fit_score_kwargs,
-                               get_func,
                                sample_keys,
                                partial_fit_batches,
                                gen,
                                method):
 
-    # Samples before Pipeline actions applied
+    '''Run a group of models' fit method on a group of samples
+    Parameters:
+        dsk: dask spec dict with keys / values for samples
+        models: list of (tag, elm.pipeline.Pipeline instances)
+        fit_score_kwargs: kwargs to "fit" or other method, such as
+                          "classes" for a supervised classifier
+        sample_keys: keys in dsk which form the "arg" argument
+                     to _fit_once helper above
+        partial_fit_batches: how many partial_fit's
+        gen: which generation is it - passed to model_selection func
+        method: One of: "fit", "fit_transform", "transform", "partial_fit"
+    '''
     model_keys = [_[0] for _ in models]
     collect_keys = []
     token = '{}-gen-{}'.format(method, gen)
@@ -138,7 +166,6 @@ def ensemble(pipe,
         dsk, model_keys, new_models_name = _one_generation_dask_graph(dsk,
                                                       models,
                                                       fit_score_kwargs,
-                                                      get_func,
                                                       sample_keys,
                                                       partial_fit_batches,
                                                       gen,
