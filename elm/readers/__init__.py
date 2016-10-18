@@ -1,3 +1,4 @@
+'''Package of readers from common satellite and weather data formats'''
 # The modules below use __all__
 from elm.readers.elm_store import *
 from elm.readers.hdf4 import *

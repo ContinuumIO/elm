@@ -19,6 +19,26 @@ def select_from_file(*sampler_args,
                      load_meta=None,
                      load_array=None,
                      **kwargs):
+
+    '''select_from_file is the typical sampler used in the elm config
+    file interface system via elm.pipeline.parse_run_config
+
+    It is called twice: once to determine a list of files to get (dry_run
+    =True is to check for files to sample), then again to read a given file.
+
+    Parameters:
+        sampler_args: tuple of one element - a filename
+        band_specs: list of band_specs included in a data_source
+        metadata_filter: ignored
+        filename_search: a search token for a filenames
+        filename_filter: a function that returns True/False to keep filename
+        dry_run:  if True, don't actually read file, just return True if accepted
+        load_meta: Function, typically from elm.readers, to load metadata
+        load_array: Function, typically from elm.readers, to load ElmStore
+        kwargs:
+            may contain "reader" such as "hdf4", "tif", "hdf5", "netcdf"
+
+    '''
     from elm.sample_util.filename_selection import _filename_filter
     filename = sampler_args[0]
     keep_file = _filename_filter(filename,
@@ -26,18 +46,7 @@ def select_from_file(*sampler_args,
                                  func=filename_filter)
     logger.debug('Filename {} keep_file {}'.format(filename, keep_file))
     args_required, default_kwargs, var_keywords = get_args_kwargs_defaults(load_meta)
-    if len(args_required) == 1 and not 'band_specs' in default_kwargs:
-        meta = load_meta(filename)
-    else:
-        meta = load_meta(filename, band_specs=band_specs)
-    if metadata_filter is not None:
-        keep_file = import_callable(metadata_filter)(filename, meta)
-        if dry_run:
-           return keep_file
-
-    # TODO rasterio filter / resample / aggregate
     if dry_run:
         return True
     sample = load_array(filename, meta=meta, band_specs=band_specs, reader=kwargs.get('reader', None))
-    # TODO points in poly
     return sample

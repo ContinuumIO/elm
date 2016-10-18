@@ -497,6 +497,11 @@ class Pipeline(object):
                         output, defaulting to ELM_PREDICT_PATH from environment
                         variables
             **data_source: keyword args passed to the sampler on each call
+
+        Returns:
+            preds: Sequence of predictions if serialize is None else Sequence
+                   of the outputs from serialize
+
         '''
         ensemble = ensemble or self.ensemble
         if not ensemble:

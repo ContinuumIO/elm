@@ -1,3 +1,10 @@
+'''
+Tools for reading NetCDF files.  Typically use the interface through
+
+elm.readers.load_array
+elm.readers.load_meta
+
+'''
 from __future__ import print_function
 
 from collections import OrderedDict

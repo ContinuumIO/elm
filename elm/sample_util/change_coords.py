@@ -26,6 +26,14 @@ CHANGE_COORDS_ACTIONS = (
 class SelectCanvas(StepMixin):
     _sp_step = 'select_canvas'
     def __init__(self, band=None):
+        '''Reindex all bands (DataArrays) to the coordinates of band given
+        Parameters:
+            band:  a string name of a DataArray in the ElmStore's
+                   data_vars
+        See also:
+            elm.readers.select_canvas
+            elm.readers.reshape
+        '''
         self.band = band
 
     def get_params(self):
@@ -54,7 +62,13 @@ class Flatten(StepMixin):
     _sp_step = 'flatten'
 
     def __init__(self):
-        pass
+        '''
+        flatten an ElmStore from rasters in separate DataArrays to
+        single flat DataArray
+        See also:
+            elm.readers.flatten
+            elm.readers.reshape
+        '''
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         return (_flatten(X), y, sample_weight)
@@ -74,7 +88,11 @@ class Flatten(StepMixin):
 class DropNaRows(StepMixin):
     _sp_step = 'drop_na_rows'
     def __init__(self):
-        pass
+        '''In an ElmStore that has a DataArray flat, drop NA rows
+        See also:
+            elm.readers.drop_na_rows
+            elm.readers.reshape
+        '''
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         return (_drop_na_rows(X), y, sample_weight)
@@ -95,7 +113,12 @@ class DropNaRows(StepMixin):
 class InverseFlatten(StepMixin):
     _sp_step = 'inverse_flatten'
     def __init__(self):
-        pass
+        '''Convert a flattened ElmStore back to separate bands
+        See also:
+            elm.readers.inverse_flatten
+            elm.readers.reshape
+        '''
+
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         return (_inverse_flatten(X), y, sample_weight)
@@ -116,6 +139,15 @@ class InverseFlatten(StepMixin):
 class Transpose(StepMixin):
     _sp_step = 'transpose'
     def __init__(self, trans_arg):
+        '''Calls the xarray.DataArray.transpose method
+
+        Parameters:
+            trans_arg: Passed to xarray.DataArray.transpose
+        See also:
+            elm.readers.transpose
+            elm.readers.reshape
+
+        '''
         self.trans_arg = trans_arg
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
@@ -137,6 +169,17 @@ class Transpose(StepMixin):
 class Agg(StepMixin):
     _sp_step = 'agg'
     def __init__(self, func=None, axis=None, dim=None):
+        '''Aggregate along a dim or axis using func
+
+        Parameters:
+            func: aggregation function word like "mean", "std"
+            axis: integer axis argument
+            dim:  dimension name for aggregation
+        See also:
+            elm.readers.aggregate_simple
+            elm.readers.reshape
+
+        '''
         self.axis = axis
         self.dim = dim
         if dim is None and axis is None:
@@ -167,6 +210,17 @@ class Agg(StepMixin):
 class ModifySample(StepMixin):
     _sp_step = 'modify_sample'
     def __init__(self, func, **kwargs):
+        '''Call func with kwargs on a step of a Pipeline
+
+        Parameters:
+            func: function with the signature:
+                func(X, y=None, sample_weight=None, **kwargs)
+            kwargs: keyword arguments passed to func
+        See also:
+            elm.readers.modify_sample
+            elm.readers.reshape
+
+        '''
         self.func = func
         self.kwargs = kwargs
 

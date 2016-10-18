@@ -1,3 +1,29 @@
+'''
+elm.readers.ElmStore inherits from xarray.Dataset to provide named
+"bands" or Datasets for satellite data.
+
+When an ElmStore is created with a "geo_transform" key/value
+in its attrs initialization argument, then an elm.readers.Canvas
+object is constructed from the geo transform.  The Canvas attribute
+is on each band, or xarray.DataArray, in the ElmStore because bands
+may have different coordinates.
+
+The Canvas object is used in elm for forcing different bands, DataArrays,
+onto the same coordinate system, for example:
+
+
+from sklearn.cluster import KMeans
+from elm.readers import *
+from elm.pipeline import steps, Pipeline
+from elm.pipeline.tests.util import random_elm_store
+
+X = random_elm_store()
+selector = steps.SelectCanvas('band_1')
+flattener = steps.Flatten()
+pipe = Pipeline([selector, flattener, KMeans(n_clusters=2)])
+pipe.fit_ensemble(X, init_ensemble_size=3, ngen=1).predict_many(X)
+'''
+
 from collections import OrderedDict
 import logging
 
@@ -20,6 +46,51 @@ class ElmStore(xr.Dataset):
                     'lost_axis': None,
                 }
     def __init__(self, *args, **kwargs):
+        '''ElmStore, an xarray.Dataset with a canvas attribute
+        for rasters as bands and transformations of data for machine
+        learning
+
+        Parameters inhertited from xarray.Dataset
+        ----------
+        data_vars : dict-like, optional
+            A mapping from variable names to :py:class:`~xarray.DataArray`
+            objects, :py:class:`~xarray.Variable` objects or tuples of the
+            form ``(dims, data[, attrs])`` which can be used as arguments to
+            create a new ``Variable``. Each dimension must have the same length
+            in all variables in which it appears.
+        coords : dict-like, optional
+            Another mapping in the same form as the `variables` argument,
+            except the each item is saved on the dataset as a "coordinate".
+            These variables have an associated meaning: they describe
+            constant/fixed/independent quantities, unlike the
+            varying/measured/dependent quantities that belong in `variables`.
+            Coordinates values may be given by 1-dimensional arrays or scalars,
+            in which case `dims` do not need to be supplied: 1D arrays will be
+            assumed to give index values along the dimension with the same
+            name.
+        attrs : dict-like, optional
+            Global attributes to save on this dataset.
+        compat : {'broadcast_equals', 'equals', 'identical'}, optional
+            String indicating how to compare variables of the same name for
+            potential conflicts:
+
+            - 'broadcast_equals': all values must be equal when variables are
+              broadcast against each other to ensure common dimensions.
+            - 'equals': all values and dimensions must be the same.
+            - 'identical': all values, dimensions and attributes must be the
+              same.
+
+        Parameters unique to ElmStore are used internally in elm in
+        elm.readers.reshape, including lost_axis and add_canvas.  See also
+
+            elm.readers.reshape.inverse_flatten
+
+        ElmStore attrs:
+            canvas: elm.readers.Canvas object for elm.pipeline.steps.SelectCanvas
+            band_order: list of the band names in the order they will appear as columns
+                        when steps.Flatten() is called to flatten raster DataArrays
+                        to a single "flat" DataArray
+        '''
         es_kwargs = {k: kwargs.pop(k, v)
                      for k, v in self._es_kwargs.items()}
         super(ElmStore, self).__init__(*args, **kwargs)
@@ -33,6 +104,7 @@ class ElmStore(xr.Dataset):
                 self._add_dummy_canvas(**es_kwargs)
 
     def _add_dummy_canvas(self, **es_kwargs):
+        '''Add a placeholder canvas if no geo_transform attr'''
         lost_axis = es_kwargs['lost_axis']
         for band in self.band_order:
             band_arr = getattr(self, band)
@@ -46,6 +118,7 @@ class ElmStore(xr.Dataset):
                                                     band_arr.dims)
 
     def get_shared_canvas(self):
+        '''Return a Canvas if all bands (DataArrays) share it, else False'''
         canvas = getattr(self, 'canvas', None)
         if canvas is not None:
             return canvas
