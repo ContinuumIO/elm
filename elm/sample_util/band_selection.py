@@ -9,6 +9,20 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
 
+def _filename_filter(filename, search=None, func=None):
+    '''Filter filenames based on search pattern or function'''
+    if search is None and func is None:
+        return True
+    if search is not None:
+        keep = re.search(search, filename)
+    else:
+        keep = True
+    if func is None:
+        return keep
+    else:
+        return func(filename) and keep
+
+
 
 def select_from_file(*sampler_args,
                      band_specs=None,
@@ -23,9 +37,6 @@ def select_from_file(*sampler_args,
     '''select_from_file is the typical sampler used in the elm config
     file interface system via elm.pipeline.parse_run_config
 
-    It is called twice: once to determine a list of files to get (dry_run
-    =True is to check for files to sample), then again to read a given file.
-
     Parameters:
         sampler_args: tuple of one element - a filename
         band_specs: list of band_specs included in a data_source
@@ -39,7 +50,6 @@ def select_from_file(*sampler_args,
             may contain "reader" such as "hdf4", "tif", "hdf5", "netcdf"
 
     '''
-    from elm.sample_util.filename_selection import _filename_filter
     filename = sampler_args[0]
     keep_file = _filename_filter(filename,
                                  search=filename_search,
@@ -48,5 +58,5 @@ def select_from_file(*sampler_args,
     args_required, default_kwargs, var_keywords = get_args_kwargs_defaults(load_meta)
     if dry_run:
         return True
-    sample = load_array(filename, meta=meta, band_specs=band_specs, reader=kwargs.get('reader', None))
+    sample = load_array(filename, band_specs=band_specs, reader=kwargs.get('reader', None))
     return sample
