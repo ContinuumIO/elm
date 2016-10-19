@@ -125,6 +125,7 @@ It is easiest to copy the default config referenced above in snippets, and then 
 .. toctree::
    :maxdepth: 2
 
+   api.rst
    Configuration <Config/index>
    Environment Variables <environment_vars>
    Feature Selection <feature_selection>
