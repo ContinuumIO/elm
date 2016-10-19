@@ -70,6 +70,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
         # when the model has not been fit
         # do not initialize any models on the
         # final generation of ensemble training.
+        models = [models[idx] for idx in best_idxes]
         return models
     if drop_n > len(models):
         raise ValueError('All models would be dropped by drop_n {} '
