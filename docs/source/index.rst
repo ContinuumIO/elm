@@ -11,13 +11,13 @@ To use this code:
 
    Create the development environment:
 
-.. code-block:: bash 
+.. code-block:: bash
 
     conda env create
 
 - **Activate the environment:**
 
-.. code-block:: bash 
+.. code-block:: bash
 
     source activate elm-env
 
@@ -57,7 +57,7 @@ Run the faster running tests:
 .. code-block:: bash
 
     py.test -m "not slow"
-    
+
 .. code-block:: bash
 
     py.test
@@ -113,10 +113,15 @@ It is easiest to copy the default config referenced above in snippets, and then 
    :hidden:
    :maxdepth: 1
 
-   Home <self>
+   Install elm <self>
+   Use cases <use_cases>
    About <about>
    Getting started... <getting_started>
-   Features <features>
+   Pipeline <pipeline>
+   fit_ensemble <fit_ensemble>
+   fit_ea <fit_ea>
+   predict_many <predict_many>
+   API Docs <api.rst>
    Building <build_package>
    Cluster Help <cluster_help>
 
@@ -128,10 +133,8 @@ It is easiest to copy the default config referenced above in snippets, and then 
    Configuration <Config/index>
    Environment Variables <environment_vars>
    Feature Selection <feature_selection>
-   Example Pipeline <sample_pipeline>
    Testing <testing>
    Training <train>
    Transforms <transform>
-   Associated Projects <nasa_projects>
    FAQ <faq>
    Github source <http://github.com/ContinuumIO/elm>

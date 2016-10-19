@@ -190,7 +190,7 @@ def build_cli_parser(include_positional=True):
     parser = ArgumentParser(description='Run longer-running tests of elm')
     if include_positional:
         parser.add_argument('repo_dir', help='Directory that is the top dir of cloned elm repo')
-        parser.add_argument('elm_examples_path', help='Path to a directory which contains subdirectories "example_configs", "example_scripts", and "example_data" with yaml-configs, python-scripts, and example data, respectively')
+        parser.add_argument('elm_examples_path', help='Path to a directory which contains subdirectories "scripts", "scripts", and "example_data" with yaml-configs, python-scripts, and example data, respectively')
     parser.add_argument('--pytest-mark', help='Mark to pass to py.test -m (marker of unit tests)')
     parser.add_argument('--dask-clients', choices=DASK_CLIENTS, nargs='+',
                         help='Dask client(s) to test: {}'.format(DASK_CLIENTS))
@@ -228,10 +228,10 @@ def run_all_tests(args=None):
             run_all_unit_tests(args.repo_dir, new_env,
                                pytest_mark=args.pytest_mark)
         if not args.skip_scripts:
-            run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'example_scripts'),
+            run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
                                     glob_pattern=args.glob_pattern)
         if not args.skip_configs:
-            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'example_configs'),
+            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
                                     large_test_mode=args.add_large_test_settings,
                                     glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
