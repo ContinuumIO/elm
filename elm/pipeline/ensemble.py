@@ -215,7 +215,7 @@ def ensemble(pipe,
         dsk, model_keys, new_models_name = _one_generation_dask_graph(dsk,
                                                       models,
                                                       fit_score_kwargs,
-                                                      sample_keys,
+                                                      sample_keys_passed,
                                                       partial_fit_batches,
                                                       gen,
                                                       method)
