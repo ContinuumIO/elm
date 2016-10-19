@@ -161,7 +161,7 @@ class Pipeline(object):
             return pred
 
         output = fitter_or_predict(*args, **kwargs)
-        if sklearn_method in ('fit', 'partial_fit'):
+        if sklearn_method in ('fit', 'partial_fit', 'fit_predict'):
             self._score_estimator(X, y=y, sample_weight=sample_weight)
             return self
         # transform or fit_transform most likely
@@ -295,6 +295,9 @@ class Pipeline(object):
 
     def fit_transform(self, *args, **kwargs):
         return self._run_steps(*args, **dict(sklearn_method='fit_transform', **kwargs))
+
+    def fit_predict(self, *args, **kwargs):
+        return self._run_steps(*args, **dict(sklearn_method='fit_predict', **kwargs))
 
     def fit_ensemble(self, X=None, y=None, sample_weight=None, ngen=3,
                      sampler=None, args_list=None, client=None,
