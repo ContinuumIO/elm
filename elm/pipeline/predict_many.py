@@ -101,8 +101,8 @@ def predict_many(data_source,
 
 
         keys.append(name)
-    logger.info('Predict {} estimator and {} samples '
-                '({} combinations)'.format(len(ensemble),
+    logger.info('Predict {} estimator(s) and {} sample(s) '
+                '({} combination[s])'.format(len(ensemble),
                                          len(sample_keys),
                                          len(args_list)))
     preds = []
