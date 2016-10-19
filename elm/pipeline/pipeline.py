@@ -317,6 +317,10 @@ class Pipeline(object):
         ''' + _ensemble.__doc__
         data_source = dict(X=X, y=y, sample_weight=sample_weight, sampler=sampler,
                            args_list=args_list, **data_source)
+        if scoring:
+            self.scoring = scoring
+        if scoring_kwargs:
+            self.scoring_kwargs = scoring_kwargs
         self.ensemble = _ensemble(self, ngen, client=client,
                          init_ensemble_size=init_ensemble_size,
                          saved_ensemble_size=saved_ensemble_size,
@@ -324,7 +328,8 @@ class Pipeline(object):
                          models_share_sample=models_share_sample,
                          model_selection=model_selection,
                          model_selection_kwargs=model_selection_kwargs,
-                         scoring=scoring, scoring_kwargs=scoring_kwargs,
+                         scoring=self.scoring,
+                         scoring_kwargs=self.scoring_kwargs,
                          method=method, partial_fit_batches=partial_fit_batches,
                          serialize_pipe=serialize_pipe,
                          method_kwargs=method_kwargs,
@@ -336,7 +341,6 @@ class Pipeline(object):
                init_ensemble_size=1, ensemble_init_func=None,
                saved_ensemble_size=None,
                models_share_sample=True,
-               model_selection=None, model_selection_kwargs=None,
                scoring=None, scoring_kwargs=None, method='fit',
                partial_fit_batches=1,
                serialize_pipe=None,
@@ -393,6 +397,11 @@ class Pipeline(object):
         data_source = dict(X=X, y=y, sample_weight=sample_weight, sampler=sampler,
                            args_list=args_list, **data_source)
         ngen = evo_params.deap_params['control']['ngen']
+
+        if scoring:
+            self.scoring = scoring
+        if scoring_kwargs:
+            self.scoring_kwargs = scoring_kwargs
         models = evolve_train(self,
                              evo_params,
                              client=client,
@@ -400,10 +409,8 @@ class Pipeline(object):
                              saved_ensemble_size=saved_ensemble_size,
                              ensemble_init_func=ensemble_init_func,
                              models_share_sample=models_share_sample,
-                             model_selection=model_selection,
-                             model_selection_kwargs=model_selection_kwargs,
-                             scoring=scoring,
-                             scoring_kwargs=scoring_kwargs,
+                             scoring=self.scoring,
+                             scoring_kwargs=self.scoring_kwargs,
                              method=method,
                              partial_fit_batches=partial_fit_batches,
                              method_kwargs=method_kwargs,
