@@ -1,5 +1,4 @@
-
-Environment variables used by elm
+Environment Variables
 ==========
 
 The following are environment variables controlling how elm works:
