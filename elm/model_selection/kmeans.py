@@ -94,7 +94,9 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
         for idx in range(evolve_n):
             new_estimator = best.unfitted_copy()
             new_kwargs = copy.deepcopy(new_kwargs0)
-            new_params = {'init': meta_model.cluster_centers_, 'n_init': 1}
+            new_params = {'init': meta_model.cluster_centers_,
+                          'n_init': 1,
+                          'n_clusters': meta_model.cluster_centers_.shape[0]}
             new_estimator._estimator.set_params(**new_params)
             new_model = (_next_name(), new_estimator)
             new_models.append(new_model)
