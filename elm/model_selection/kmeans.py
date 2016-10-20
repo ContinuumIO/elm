@@ -64,6 +64,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     drop_n = kwargs['drop_n']
     evolve_n = kwargs['evolve_n']
     init_n = kwargs['init_n']
+    reps = kwargs.get('reps', 100)
     last_gen = kwargs['ngen'] - 1 == kwargs['generation']
     if last_gen:
         # To avoid attempting to predict
@@ -82,18 +83,26 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
 
     name_idx = 0
     new_models = []
-    best = models[0][1]
-    new_kwargs0 = best._estimator.get_params()
-    new_kwargs0['init'] = best._estimator.cluster_centers_
-    new_pipe_kwargs = best.get_params()
+    probs = np.linspace(len(models) + 1, 1, len(models))
+    probs /= probs.sum()
+    def get_best(simple=True):
+        best_idx = np.random.choice(np.arange(len(models)), p=probs)
+        best_tag, best = models[best_idx]
+        if simple:
+            return best
+        est_kw = best._estimator.get_params()
+        est_kw['init'] = best._estimator.cluster_centers_
+        est_kw['n_init'] = 1
+        est_kw['n_clusters'] = best._estimator.get_params()['n_clusters']
+        pipe_kw = best.get_params()
+        return (best_tag, best, est_kw, pipe_kw)
     if evolve_n:
-        centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for name, m in models))
-        meta_model = MiniBatchKMeans(**new_kwargs0)
-        new_kwargs0['batch_size'] = centroids.shape[0]
-        meta_model.fit(centroids)
         for idx in range(evolve_n):
-            new_estimator = best.unfitted_copy()
-            new_kwargs = copy.deepcopy(new_kwargs0)
+            resampling = [get_best() for _ in range(reps)]
+            centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for m in resampling))
+            meta_model = MiniBatchKMeans(**get_best()._estimator.get_params())
+            meta_model.fit(centroids)
+            new_estimator = get_best().unfitted_copy()
             new_params = {'init': meta_model.cluster_centers_,
                           'n_init': 1,
                           'n_clusters': meta_model.cluster_centers_.shape[0]}
@@ -101,8 +110,10 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
             new_model = (_next_name(), new_estimator)
             new_models.append(new_model)
     for new in range(init_n):
+        (best_tag, best, est_kw, pipe_kw) = get_best(simple=False)
         new = best.unfitted_copy()
-        new.set_params(**new_pipe_kwargs)
+        new.set_params(**pipe_kw)
+        new._estimator.set_params(**est_kw)
         new_models.append(('new-kmeans-{}'.format(idx), new))
     return tuple(new_models) + tuple(models)
 

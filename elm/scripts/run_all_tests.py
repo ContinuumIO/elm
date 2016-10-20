@@ -231,7 +231,7 @@ def run_all_tests(args=None):
             run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
                                     glob_pattern=args.glob_pattern)
         if not args.skip_configs:
-            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
+            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'configs'),
                                     large_test_mode=args.add_large_test_settings,
                                     glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
