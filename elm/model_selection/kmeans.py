@@ -57,8 +57,23 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
                             from the best model
                   ngen, generation: kwargs added by model_selection logic
                             to control behavior on last generation
+                  reps: repititions in meta-clustering (see below)
     Returns:
         list of (tag, Pipeline instance) tuples
+
+    Notes:
+        * First the drop_n worst AIC scoring (tag, Pipeline) tuples
+          are dropped
+        * The for repeat in range evolve_n:
+            * Bootstrap existing centroids with linear probability
+            density related to AIC score rank, preferring lower AIC
+            scores
+            * Run a K-Means on those centroids
+            * Initialize a new pipeline with those params
+        * For repeat in range init_n, add new Pipeline chosen with
+         linear prob density as described above.
+        The number of (tag, Pipeline) tuples is
+            len(models) + evolve_n + init_n - drop_n
     '''
 
     drop_n = kwargs['drop_n']
