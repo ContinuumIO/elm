@@ -197,7 +197,6 @@ train: {
     model_selection: "elm.model_selection.kmeans:kmeans_model_averaging",
     model_selection_kwargs: {
       drop_n: 0,
-      init_n: 0,
       evolve_n: 1,
     }
   }
