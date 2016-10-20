@@ -153,7 +153,7 @@ def test_kmeans_model_selection(client=None):
     n_clusters_choices = list(range(3, 10))
     def init(pipe, **kwargs):
         estimators = []
-        for _ in range(24):
+        for _ in range(200):
             n_clusters = np.random.choice(n_clusters_choices)
             estimator = copy.deepcopy(pipe)
             estimator.set_params(kmeans__n_clusters=n_clusters)

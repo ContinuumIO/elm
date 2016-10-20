@@ -100,9 +100,15 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     new_models = []
     probs = np.linspace(len(models) + 1, 1, len(models))
     probs /= probs.sum()
-    def get_best(simple=True):
+    def get_shape():
+        return np.random.choice([m._estimator.cluster_centers_.shape[1]
+                                 for tag, m in models], p=probs)
+
+    def get_best(shp1, simple=True):
         best_idx = np.random.choice(np.arange(len(models)), p=probs)
         best_tag, best = models[best_idx]
+        if best._estimator.cluster_centers_.shape[1] != shp1:
+            return get_best(shp1, simple=simple)
         if simple:
             return best
         est_kw = best._estimator.get_params()
@@ -111,13 +117,16 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
         est_kw['n_clusters'] = best._estimator.get_params()['n_clusters']
         pipe_kw = best.get_params()
         return (best_tag, best, est_kw, pipe_kw)
+
     if evolve_n:
         for idx in range(evolve_n):
-            resampling = [get_best() for _ in range(reps)]
+            shp = get_shape()
+            resampling = [get_best(shp) for _ in range(reps)]
             centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for m in resampling))
-            meta_model = MiniBatchKMeans(**get_best()._estimator.get_params())
+            new_estimator = resampling[0].unfitted_copy()
+            new_params = new_estimator._estimator.get_params()
+            meta_model = MiniBatchKMeans(**new_params)
             meta_model.fit(centroids)
-            new_estimator = get_best().unfitted_copy()
             new_params = {'init': meta_model.cluster_centers_,
                           'n_init': 1,
                           'n_clusters': meta_model.cluster_centers_.shape[0]}
@@ -125,7 +134,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
             new_model = (_next_name(), new_estimator)
             new_models.append(new_model)
     for new in range(init_n):
-        (best_tag, best, est_kw, pipe_kw) = get_best(simple=False)
+        (best_tag, best, est_kw, pipe_kw) = get_best(get_shape(),simple=False)
         new = best.unfitted_copy()
         new.set_params(**pipe_kw)
         new._estimator.set_params(**est_kw)
