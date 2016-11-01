@@ -18,6 +18,7 @@ install:
   - bash miniconda.sh -b -p $HOME/miniconda
   - export PATH="$HOME/miniconda/bin:$PATH"
   - conda config --set always_yes true
+  - conda install yaml
   - conda update conda conda-env
   - echo Create elm-env
   - conda env update || conda env create
