@@ -22,7 +22,6 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
 * :doc:`elm-store`
 * :doc:`pipeline`
-* :doc:`using-sampler-and-datasource`
 
 .. toctree::
    :maxdepth: 1

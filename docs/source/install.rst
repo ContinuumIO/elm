@@ -85,7 +85,7 @@ Run the faster running tests:
 Test
 ~~~~~~
 
-Test elm with ``py.test``::
+Test elm with ``py.test``
 
 .. code-block:: bash
 
