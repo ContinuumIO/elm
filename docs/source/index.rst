@@ -58,7 +58,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
    predict-many.rst
 
-**Running Config File**
+**Fit / Predict from Yaml Config**
 
 * :doc:`config-examples`
 
