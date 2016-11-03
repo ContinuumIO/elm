@@ -18,6 +18,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
    examples.rst
 
 
+
 **Data Structures**
 
 * :doc:`elm-store`
@@ -30,10 +31,9 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
    elm-store.rst
    pipeline.rst
-   using-sampler-and-datasource.rst
 
 
-**Algorithms**
+**Multi-Model Fitting**
 
 * :doc:`fit-ensemble`
 * :doc:`fit-ea`
@@ -41,40 +41,42 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Algorithms
+   :caption: Multi-Model Fitting
 
    fit-ensemble.rst
    fit-ea.rst
 
 
-**Prediction**
+**Multi-Model Prediction**
 
 * :doc:`predict-many`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Prediction
+   :caption: Multi-Model Prediction
 
    predict-many.rst
 
-**Fit / Predict from Yaml Config**
+**Train / Predict From Yaml Config**
 
 * :doc:`config-examples`
+* :doc:`elm-main`
 
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Running Config File
+   :caption: Train / Predict from `yaml`
 
    config-examples.rst
+   elm-main.rst
 
 **Help & Reference**
 
 * :doc:`api`
 * :doc:`environment-vars`
-* :doc:`contributing`
 * :doc:`testing`
+* :doc:`contributing`
 * :doc:`release`
 
 .. toctree::
@@ -84,6 +86,6 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
    api.rst
    environment-vars.rst
-   contributing.rst
    testing.rst
+   contributing.rst
    release.rst

@@ -64,33 +64,3 @@ If you have dask-distributed scheduler and worker(s) running or want to run with
     export DASK_SCHEDULER=10.0.0.10:8786
     elm-main --config elm-examples/configs/kmeans_hdf4.yaml
 
-Test
-~~~~~~
-
-These testing instructions assume you have cloned the ``elm`` repository locally and installed from source - TODO LINK
-
-*Note:* Many tests are skipped if you have not defined the environment variable ``ELM_EXAMPLE_DATA_PATH`` (referring to your local clone of http://github.com/ContinuumIO/elm-examples)
-
-Run the faster running tests:
-
-.. code-block:: bash
-
-    py.test -m "not slow"
-
-Running all tests:
-
-.. code-block:: bash
-
-    py.test
-
-or get the verbose test output
-
-.. code-block:: bash
-
-    py.test -v
-
-and cut and paste a test mark to run a specific test:
-
-.. code-block:: bash
-
-    py.test -k test_bad_train_config

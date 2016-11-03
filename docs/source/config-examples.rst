@@ -1,7 +1,7 @@
-Yaml Learning Configuration
-===========================
+``elm`` ``yaml`` Specs
+======================
 
-Workflows involving ensemble and evolutionary methods and ``predict_many`` can also be specified through a ``yaml`` configuration file.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.
+Workflows involving ensemble and evolutionary methods and ``predict_many`` can also be specified in a ``yaml`` config file for running with the ``elm-main`` console entry point - TODO LINK.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.
 
 The repository ``elm-examples`` (TODO LINK) has a number of example ``yaml`` configuration files for GeoTiff and HDF4 files as input to K-Means or stochastic gradient descent classifiers.
 

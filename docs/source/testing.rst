@@ -1,42 +1,96 @@
-Testing
-=======
+Testing ``elm``
+----------
+This page describes how to run the ``py.test`` unit tests and run all or some scripts and configs in ``elm-examples`` - TODO LINK.
 
- * Small-data unit tests of dask / xarray related functions asserting same results as similar numpy code.  These may not be necessarily tied to an image - in some cases these will be just tests of classifiers on arrays of semi-random data.
- * Testing analyst workflows through several steps of the pipeline, inclusive of input/ output to file.  There are two types:
-   * Artificial data
-     * This may involve creating image files from semi-random data then doing an analyst workflow with results that are more predictable than real-world data. Examples:
-     * A before-test patch creates images of 12 unique colors to validate a classifier with 12 classes, and then the same images with noise or a different number of classes
-   * Real world data
-     * Real world data Real world data tests may help us develop promotional material for the new image pipeline.
 
-Test Framework
-~~~~~~~~~~~
+``py.test`` Unit Tests
+~~~~~~~~~~~~~~~~~~~~~~
 
-Use `pytest`. Use `pytest.mark` to mark tests that need special resources, e.g. a test data set, or tests that are slow, e.g:
+These testing instructions assume you have cloned the ``elm`` repository locally and installed from source - TODO LINK
 
-.. code-block:: python 
+*Note:* Many tests are skipped if you have not defined the environment variable ``ELM_EXAMPLE_DATA_PATH`` (referring to your local clone of http://github.com/ContinuumIO/elm-examples)
 
-    import pytest
-    @pytest.mark.slow
-    def test_kmeans_reporting():
+Run the faster running tests:
 
-Over time, we can figure out marks other than `slow` that pertain to data sets that have to be unpacked and/or downloaded in advance.
+.. code-block:: bash
 
-Where temporary directories are needed, try to use the `pytest` local fixture `tmpdir`, e.g.:
+    py.test -m "not slow"
 
-.. code-block:: python 
+Running all tests:
 
-    def test_sgd_regressor_simple(tmpdir):
-        test_dir = str(tmpdir.join('test_sgd_regressor_simple'))
+.. code-block:: bash
 
-Continuous Integration
-~~~~~~~~~~~
+    py.test
 
- * Travis and/or anaconda-build on push events of every branch
- * Eventually, a nightly test cycle on an ec2 machine for longer running tests, as needed (tests marked slow or too slow for every push event)
- *
+or get the verbose test output
 
-Test Directory Structure
-~~~~~~~~~~~
+.. code-block:: bash
 
-Make a tests directory in each of the elm subpackages.
+    py.test -v
+
+and cut and paste a test mark to run a specific test:
+
+.. code-block:: bash
+
+    py.test -k test_bad_train_config
+
+When running ``py.test`` the environment variables related to dask determine whether dask-distributed or thread pool client or serial evaluation is used- TODO LINK are
+
+Longer Running Tests
+~~~~~~~~~~~~~~~~~~~~
+
+The ``elm-run-all-tests`` console entry point can automate running of some or all python scripts and ``yaml`` ``elm-main`` config files in ``elm-examples`` and/or the ``py.test`` unit tests.
+
+Here is an example that is run from inside the cloned ``elm`` repository with ``elm-examples`` cloned in the current directory (see the first two arguments: `./` - cloned ``elm`` repo and ``./elm-examples`` - the location of cloned ``elm-examples``)
+
+.. code-block:: bash
+
+
+   ELM_LOGGING_LEVEL=DEBUG elm-run-all-tests ./ elm-examples/ --skip-pytest --skip-scripts --dask-clients SERIAL DISTRIBUTED --dask-scheduler 10.0.0.10:8786
+
+Above the arguments ``--skip-scripts`` and ``skip-pytest`` refer to skipping the scripts in ``elm-examples`` and ``py.test``s in ``elm``, respectively, so the command above will run the all configs in ``elm-examples/configs`` once for serial evaluation and once with dask-distributed.
+
+Here is the full help on ``elm-run-all-tests`` entry point:
+
+.. code-block:: bash
+
+    $ elm-run-all-tests --help
+    usage: elm-run-all-tests [-h] [--pytest-mark PYTEST_MARK]
+                             [--dask-clients {ALL,SERIAL,DISTRIBUTED,THREAD_POOL} [{ALL,SERIAL,DISTRIBUTED,THREAD_POOL} ...]]
+                             [--dask-scheduler DASK_SCHEDULER] [--skip-pytest]
+                             [--skip-scripts] [--skip-configs]
+                             [--add-large-test-settings]
+                             [--glob-pattern GLOB_PATTERN]
+                             [--remote-git-branch REMOTE_GIT_BRANCH]
+                             repo_dir elm_examples_path
+
+    Run longer-running tests of elm
+
+    positional arguments:
+      repo_dir              Directory that is the top dir of cloned elm repo
+      elm_examples_path     Path to a directory which contains subdirectories
+                            "scripts", "scripts", and "example_data" with yaml-
+                            configs, python-scripts, and example data,
+                            respectively
+
+    optional arguments:
+      -h, --help            show this help message and exit
+      --pytest-mark PYTEST_MARK
+                            Mark to pass to py.test -m (marker of unit tests)
+      --dask-clients {ALL,SERIAL,DISTRIBUTED,THREAD_POOL} [{ALL,SERIAL,DISTRIBUTED,THREAD_POOL} ...]
+                            Dask client(s) to test: ['ALL', 'SERIAL',
+                            'DISTRIBUTED', 'THREAD_POOL']
+      --dask-scheduler DASK_SCHEDULER
+                            Dask scheduler URL
+      --skip-pytest         Do not run py.test (default is run py.test as well as
+                            configs)
+      --skip-scripts        Do not run scripts from elm-examples
+      --skip-configs        Do not run configs from elm-examples
+      --add-large-test-settings
+                            Adjust configs for larger ensembles / param_grids
+      --glob-pattern GLOB_PATTERN
+                            Glob within repo_dir
+      --remote-git-branch REMOTE_GIT_BRANCH
+                            Run on a remote git branch
+
+

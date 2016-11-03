@@ -1,4 +1,4 @@
-Predict Many
+Example with ``predict_many``
 ============
 
 ``elm``'s ``predict_many`` predicts for each estimator in a trained ensemble for one or more samples. ``predict_many`` takes some of the same data source keyword arguments that ``fit_ea`` and ``fit_ensemble`` use.  See also Data Sources for a ``Pipeline`` (TODO LINK to that section in pipeline.rst) - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for ``predict_many``.

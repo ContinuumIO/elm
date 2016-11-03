@@ -101,7 +101,7 @@ In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``ban
     with client_context() as client:
         ensemble_kwargs['client'] = client
         pipe.fit_ensemble(**data_source, **ensemble_kwargs)
-        pred = pipe.predict_many(**data_source, **ensemble_kwargs)
+        pred = pipe.predict_many(client=client, **data_source)
 
 
 Controlling Ensemble Initialization
@@ -133,7 +133,7 @@ To initialize the ensemble with ``Pipeline`` instances that do not all share the
     with client_context() as client:
         ensemble_kwargs['client'] = client
         pipe.fit_ensemble(**data_source, **ensemble_kwargs)
-        pred = pipe.predict_many(**data_source, **ensemble_kwargs)
+        pred = pipe.predict_many(client=client, **data_source)
 
 In the example above, ``Pipeline.new_with_params(kmeans__n_clusters)`` uses the scikit-learn syntax for parameter modifications of named steps in a pipeline.  In the initialization of ``Pipeline`` in the example above, the ``MiniBatchMeans`` step was named ``kmeans``, so ``kmeans__n_clusters=c`` sets the ``n_clusters`` parameter to the K-Means step and the ensemble in this case consists of one ``Pipeline`` for each of ``n_clusters`` choices in `(4, 5, 6, 7, 8)`.
 
