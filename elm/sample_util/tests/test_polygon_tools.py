@@ -1,7 +1,10 @@
 # set to debug, will plot out polygons etc
 _DEBUG = False
 
-from elm.data_selection.polygon_tools import points_in_polys, vec_points_in_polys, plot_poly, close_poly
+from elm.sample_util.polygon_tools import (points_in_polys,
+                                           vec_points_in_polys,
+                                           plot_poly,
+                                           close_poly)
 import numpy as np
 from itertools import product
 
