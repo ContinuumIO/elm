@@ -1,3 +1,1 @@
-include elm/config/defaults/*.yaml
-include elm/acquire/metadata/*
-include elm/examples/*.yaml
+recursive include elm/config/defaults/*

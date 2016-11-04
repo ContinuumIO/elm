@@ -1,4 +1,3 @@
-
 package:
   name: elm
   version: 0.0.0
@@ -14,25 +13,35 @@ requirements:
     - setuptools
   run:
     - python # [py35]
+    - blaze
     - bokeh
     - dask
+    - datashader
     - distributed
+    - fiona
     - gdal
     - h5py
     - jupyter
+    - krb5
     - matplotlib
     - netcdf4
     - networkx
     - numba
     - numpy
     - pandas
+    - pyproj
     - pytest
+    - rasterio
     - requests
     - scikit-image
     - scikit-learn
     - scipy
+    - shapely
+    - statsmodels
     - tblib
+    - xarray
     - yaml
+
 
 about:
   home: http://github.com/ContinuumIO/nasasbir

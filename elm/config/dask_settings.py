@@ -1,46 +1,70 @@
+'''
+dask_settings.py is a module of helpers for dask executors
+'''
 import contextlib
 import dask.array as da
 import os
 
+from concurrent.futures import as_completed
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Pool
+from dask.threaded import get as dask_threaded_get
+from dask.async import get_sync
 
 from dask import delayed as dask_delayed
 from toolz import curry
+try:
+    from distributed import Executor
+    from dask.diagnostics import ProgressBar
+except ImportError:
+    Executor = None
 
-SERIAL_EVAL = None # reset by elm.config.load_config.ConfigParser
+from elm.config.env import parse_env_vars
+
+
+def _find_get_func_for_client(client):
+    '''Return the "get" function corresponding to client'''
+    if client is None:
+        return get_sync
+    elif Executor and isinstance(client, Executor):
+        def get(*args, **kwargs):
+            pbar = ProgressBar()
+            pbar.register()
+            out = client.get(*args, **kwargs)
+            pbar.unregister()
+            return out
+        return get
+    elif isinstance(client, ThreadPool):
+        return dask_threaded_get
+    else:
+        raise ValueError('client argument not a thread pool dask scheduler or None')
 
 
 @contextlib.contextmanager
-def executor_context(dask_executor, dask_scheduler):
-    if dask_executor == 'DISTRIBUTED':
-        from distributed import Executor
-        executor = Executor(dask_scheduler)
-        get_func = executor.get
-    elif dask_executor == 'PROCESS_POOL':
-        pool = Pool(DASK_PROCESSES)
-    elif dask_executor == 'THREAD_POOL':
-        pool = ThreadPool(DASK_THREADS)
-    elif dask_executor == 'SERIAL':
-        executor = None
-        get_func = None
-    else:
-        raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_executor))
-    if dask_executor in ("PROCESS_POOL", "THREAD_POOL"):
-        with da.set_options(pool=executor):
-            yield pool
-    else:
-        yield executor
+def client_context(dask_client=None, dask_scheduler=None):
+    '''client_context creates a dask distributed or threadpool client or None
 
-@curry
-def delayed(func, **dec_kwargs):
-    def new_func(*args, **kwargs):
-        if not SERIAL_EVAL: # SERIAL_EVAL is set in the globals()
-                        # of this module when elm.config.load_config.ConfigParser
-                        # is called
-            return dask_delayed(func, **dec_kwargs)(*args, **kwargs)
-        else:
-            return func(*args, **kwargs)
-    return new_func
+    Parameters:
+        dask_client:     str from choices ("DISTRIBUTED", 'THREAD_POOL', 'SERIAL')
+                         or None to take DASK_CLIENT from environment
+        dask_scheduler:  Distributed scheduler url or None to take
+                         DASK_SCHEDULER from environment
+    '''
+    env = parse_env_vars()
+    dask_client = dask_client or env.get('DASK_CLIENT', 'SERIAL')
+    dask_scheduler = dask_scheduler or env.get('DASK_SCHEDULER')
+    if dask_client == 'DISTRIBUTED':
+        if Executor is None:
+            raise ValueError('distributed is not installed - "conda install distributed"')
+        client = Executor(dask_scheduler)
+    elif dask_client == 'THREAD_POOL':
+        client = ThreadPool(env.get('DASK_THREADS'))
+    elif dask_client == 'SERIAL':
+        client = None
+    else:
+        raise ValueError('Did not expect DASK_CLIENT to be {}'.format(dask_client))
+    get_func = _find_get_func_for_client(client)
+    with da.set_options(pool=dask_client):
+       yield client
 
-__all__ = ['delayed', 'executor_context', ]
+__all__ = ['client_context']

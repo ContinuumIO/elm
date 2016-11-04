@@ -8,6 +8,16 @@
 
 This will upload the `elm` package under organization `nasasbir`, forcing replacement if the version exists.
 
+## Upload elm-env Environment
+
+Change directories to the repo clone dir:
+```
+anaconda upload -u nasasbir environment.yml
+```
+Later install with something like this,:
+```
+conda install nasasbir/elm-env
+```
 ## Conda Packaging
 
-Note if new dependencies are added to environment.yaml, then they must also either appear in conda.recipe/meta.yaml as a conda requirement or conda.recipe/requirements.txt as a pip requirement.
+Note if new dependencies are added to environment.yaml, then they must also either appear in conda.recipe/meta.yaml as a conda requirement.  

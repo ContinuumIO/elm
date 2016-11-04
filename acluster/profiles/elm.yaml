@@ -11,6 +11,7 @@ num_nodes: 1
 plugins:
   - notebook
   - dask
+
 provider: aws_east_nasasbir
 root_size: 200   # GB
 user: ubuntu

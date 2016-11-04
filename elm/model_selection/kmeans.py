@@ -2,117 +2,139 @@ import array
 from collections import namedtuple
 import copy
 import inspect
+from itertools import product
 
 from deap import creator, base, tools
 from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
-from sklearn.cluster import MiniBatchKMeans
-from elm.config import delayed
-from elm.model_selection.util import get_args_kwargs_defaults
-toolbox = base.Toolbox()
-
-KmeansVar = namedtuple('KmeansVar',
-                       ['model',
-                        'df',
-                        'within_class_var',
-                        'class_counts'])
-
-def kmeans_add_within_class_var(model, df):
-    n_clusters = model.cluster_centers_.shape[0]
-    var = np.sum((model.cluster_centers_[model.labels_] - df.values) ** 2, axis=1)
-    within_class_var = np.zeros(n_clusters, dtype=np.float64)
-    df2 = pd.DataFrame({'var': var, 'label': model.labels_})
-    g = df2.groupby('label')
-    agg = g.sum()
-    for idx in range(n_clusters):
-        if idx in agg.index:
-            sel = agg.loc[idx]
-            within_class_var[idx] = sel.values[0]
-        else:
-            within_class_var[idx] = 0.
-    bc = np.bincount(model.labels_)
-    class_counts = np.zeros(model.cluster_centers_.shape[0])
-    class_counts[:bc.size] =  bc
-    return KmeansVar(model, df, within_class_var, class_counts)
+from sklearn.cluster import KMeans, MiniBatchKMeans
+from elm.model_selection.util import (get_args_kwargs_defaults,
+                                      filter_kwargs_to_func)
 
 
-def distance(c1, c2):
-    resids = (c1 - c2)
-    return np.sqrt(np.sum(resids ** 2))
+def kmeans_aic(model, X, **kwargs):
+    '''AIC (Akaike Information Criterion) for k-means for model selection
 
+    Parameters:
+        model:  An elm.pipeline.Pipeline with KMeans or MiniBatchKMeans as
+                final step in Pipeline
+        X:      The X data that were just given to "fit", or "partial_fit"
+        kwargs: placeholder - ignored
+    Returns:
+        AIC float
 
-def get_distance_matrix(centroids):
+    '''
 
-    distance_matrix = np.empty((centroids.shape[0], centroids.shape[0]), dtype=np.float64)
-    for i in range(centroids.shape[0]):
-        for j in range(0, i):
-            distance_matrix[i, j] = distance_matrix[j, i] = distance(centroids[i,:], centroids[j,:])
-    distance_matrix[np.diag_indices_from(distance_matrix)] = 0.
-    return distance_matrix
+    k, m = model._estimator.cluster_centers_.shape
+    n = X.flat.values.shape[0]
+    d = model._estimator.inertia_
+    aic =  d + 2 * m * k
+    delattr(model._estimator, 'labels_')
+    return aic
 
+name_idx = 0
+def _next_name():
+    global name_idx
+    n = 'kmeans-init-'.format(name_idx)
+    name_idx += 1
+    return n
 
-def pareto_front(objectives, centroids, take, weights):
-    creator.create("FitnessMulti", base.Fitness, weights=weights)
-    creator.create("Individual", array.array, typecode='d', fitness=creator.FitnessMulti)
-    toolbox.register('evaluate', lambda x: x)
-    objectives = [creator.Individual(objectives[idx, :]) for idx in range(objectives.shape[0])]
-    objectives2 = []
-    for (idx, (obj, cen)) in enumerate(zip(objectives, centroids)):
-        obj.idx = idx
-        obj.cen = cen
-        obj.fitness.values = toolbox.evaluate(obj)
-    sel = selNSGA2(objectives, take)
-    return tuple((item.cen, item.idx) for item in sel)
+def kmeans_model_averaging(models, best_idxes=None, **kwargs):
+    '''Run a KMeans on multiple KMeans models for cases where
+    the representative sample is larger than one training batch.
 
-def _rand_int_exclude(exclude, start, end, step):
-    choices = np.arange(start, end, step)
-    probs = np.ones(choices.size)
-    for e in exclude:
-        probs[e] = 0
-    probs /= probs.sum()
-    return int(np.random.choice(choices, p=probs))
+    Parameters:
+        models:  list of (tag, elm.pipeline.Pipeline instance) tuples
+                 where the final step in each of the Pipeline instances
+                 is either KMeans or MiniBatchKmeans from sklearn.cluster
+        best_idxes: integer indices of the best -> worst models in models
+        kwargs:   Keyword arguments passed via "model_selection_kwargs":
+                  drop_n:  how many models to drop each generation
+                  evolve_n: how many models to create from clustering
+                            on clusters from models
+                  ngen, generation: kwargs added by model_selection logic
+                            to control behavior on last generation
+                  reps: repititions in meta-clustering (see below)
+    Returns:
+        list of (tag, Pipeline instance) tuples
 
-def kmeans_model_averaging(models, **kwargs):
-    no_shuffle = kwargs['no_shuffle']
-    model_init_class = kwargs['model_init_class']
-    model_init_kwargs = kwargs['model_init_kwargs']
-    n_clusters = model_init_kwargs['n_clusters']
-    inertia = [(m.model.inertia_, idx) for idx, m in enumerate(models)]
-    inertia.sort()
-    best_idxes = [i[1] for i in inertia[:no_shuffle]]
-    centroids = np.concatenate([m.model.cluster_centers_ for m in models])
-    class_counts = np.concatenate([m.class_counts for m in models])
-    within_class_var = np.concatenate([m.within_class_var for m in models])
-    distance_matrix = get_distance_matrix(centroids)
-    new_models = [models[idx].model for idx in best_idxes]
-    centroid_idxes = list(range(centroids.shape[0]))
-    num_rows = n_clusters * len(models)
-    for idx in range(no_shuffle, len(models)):
-        model_stats = models[idx]
-        new_centroids = []
-        exclude = set()
-        for idx in range(n_clusters // 2 + 1):
-            cen_choice = _rand_int_exclude(exclude, 0, num_rows, 1)
-            exclude.add(cen_choice)
-            cen = model_stats.model.cluster_centers_[cen_choice % n_clusters]
-            new_centroids.append(cen)
-            distance_col = distance_matrix[cen_choice, :]
-            objectives = np.column_stack((distance_col,
-                                          within_class_var,
-                                          class_counts))
-            best = pareto_front(objectives,
-                                centroids,
-                                  take=1,
-                                  weights=(1, -1, 1))[0]
-            row = best[0]
-            position = best[1]
-            exclude.add(position)
-            new_centroids.append(np.array(row))
-        cluster_centers_ = np.row_stack(new_centroids)
-        cluster_centers_ = cluster_centers_[:n_clusters,:]
-        kw = copy.deepcopy(model_init_kwargs)
-        kw.update({'n_clusters':n_clusters, 'init': cluster_centers_})
-        model = model_init_class(**kw)
-        new_models.append(model)
-    return new_models
+    Notes:
+        * First the drop_n worst AIC scoring (tag, Pipeline) tuples
+          are dropped
+        * The for repeat in range evolve_n:
+            * Bootstrap existing centroids with linear probability
+            density related to AIC score rank, preferring lower AIC
+            scores
+            * Run a K-Means on those centroids
+            * Initialize a new pipeline with those params
+        The number of (tag, Pipeline) tuples is
+            len(models) + evolve_n - drop_n
+    '''
+
+    drop_n = kwargs.get('drop_n', 0)
+    evolve_n = kwargs.get('evolve_n', 0)
+    reps = kwargs.get('reps', 100)
+    last_gen = kwargs['ngen'] - 1 == kwargs['generation']
+    if last_gen:
+        # To avoid attempting to predict
+        # when the model has not been fit
+        # do not initialize any models on the
+        # final generation of ensemble training.
+        models = [models[idx] for idx in best_idxes]
+        return models
+    if drop_n > len(models):
+        raise ValueError('All models would be dropped by drop_n {} '
+                         'with len(models) {}'.format(drop_n, len(models)))
+
+    if drop_n:
+        dropped = models[-drop_n:]
+        models = models[:-drop_n]
+
+    name_idx = 0
+    new_models = []
+
+    def get_shape():
+        '''Get a random centroids shape from linear prob density'''
+        probs = np.linspace(len(models) + 1, 1, len(models))
+        probs /= probs.sum()
+        idx = np.random.choice(np.arange(len(models)), p=probs)
+        _, m = models[idx]
+        return m._estimator.cluster_centers_.shape
+
+    def get_best(shp):
+        '''Get the best of a given shape of centroids
+
+        The logic in these two functions is intended to avoid
+        selecting a model that has a different input
+        feature column dimension shape, such as Pipelines
+        with PCA before K-Means
+        '''
+        choices = [(tag, model) for tag, model in models
+                   if model._estimator.cluster_centers_.shape == shp]
+        assert choices, repr(models)
+        probs = np.linspace(len(choices) + 1, 1, len(choices))
+        probs /= probs.sum()
+
+        best_idx = np.random.choice(np.arange(len(choices)), p=probs)
+        best_tag, best = choices[best_idx]
+        if best._estimator.cluster_centers_.shape != shp:
+            return get_best(shp, simple=simple)
+        return best
+
+    for idx in range(evolve_n):
+        shp = get_shape()
+        resampling = [get_best(shp) for _ in range(reps)]
+        centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for m in resampling))
+        meta_model = resampling[0]
+        new_params = meta_model._estimator.get_params()
+        est = MiniBatchKMeans(**new_params)
+        est.partial_fit(centroids)
+        new_params.update({'init': est.cluster_centers_,
+                          'n_init': 1})
+        meta_model.steps[-1] = (meta_model.steps[-1][0], est)
+        meta_model._estimator = est
+        new_model = (_next_name(), meta_model)
+        new_models.append(new_model)
+    return tuple(new_models) + tuple(models)
+

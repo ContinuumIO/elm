@@ -1,27 +1,35 @@
 int_fields_specs:
- - {
-    name: DASK_THREADS,
-    required: False
-  }
- - {
-  name: DASK_PROCESSES,
-  required: False
-  }
+ - {name: DASK_THREADS,
+    required: False}
+ - {name: MAX_PARAM_RETRIES,
+    required: False}
 str_fields_specs:
- - {name: DASK_EXECUTOR,
+ - {name: DASK_CLIENT,
     default: SERIAL,
     required: False,
     choices: [
     DISTRIBUTED,
     SERIAL,
-    THREAD_POOL,
-    PROCESS_POOL]
-   }
+    THREAD_POOL]}
  - {name: DASK_SCHEDULER,
-    required: True
-   }
- - {name: LADSWEB_LOCAL_CACHE,
     required: True}
- - {name: HASHED_ARGS_CACHE,
-    default: ~/.elm_hashed_args,
-    required: True}
+ - {name: ELM_EXAMPLE_DATA_PATH,
+    default: ~/elm-data,
+    required: False,
+    expanduser: True}
+ - {name: ELM_TRAIN_PATH,
+    default: ~/elm-train-path,
+    required: True,
+    expanduser: True}
+ - {name: ELM_PREDICT_PATH,
+    default: ~/elm-predict-path,
+    required: True,
+    expanduser: True}
+ - {name: ELM_LOGGING_LEVEL,
+    default: INFO,
+    choices: [INFO, DEBUG]}
+ - {name: ELM_LARGE_TEST,
+    default: Null,
+    required: False,
+    expanduser: False}
+

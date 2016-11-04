@@ -5,7 +5,7 @@ import shutil
 import tempfile
 import yaml
 
-from elm.config.defaults import *
+from elm.config.config_info import *
 from elm.config import ElmConfigError, ConfigParser
 
 NOT_DICT = (2, 'abc', 2.2, [2,])
@@ -53,75 +53,31 @@ def test_bad_train_config():
             for item in NOT_DICT:
                 bad_config['train'][name][k] = item
                 bad_config = tst_bad_config(bad_config)
-    bad_config['train'][name]['fit_kwargs']['n_batches'] = 7.2
-    bad_config = tst_bad_config(bad_config)
+
     for item in NOT_DICT:
-        bad_config['train'][name]['ensemble_kwargs'] = item
+        bad_config['ensembles'] = item
         bad_config = tst_bad_config(bad_config)
+    k = tuple(bad_config['ensembles'].keys())[0]
     for item in NOT_INT:
-        bad_config['train'][name]['ensemble_kwargs']['ensemble_size'] = item
+        bad_config['ensembles'][k]['init_ensemble_size'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['saved_ensemble_size'] = item
+        bad_config['ensembles'][k]['saved_ensemble_size'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
+        bad_config['ensembles'][k]['ngen'] = item
         bad_config = tst_bad_config(bad_config)
-        bad_config['train'][name]['ensemble_kwargs']['n_generations'] = item
+        bad_config['ensembles'][k]['partial_fit_batches'] = item
         bad_config = tst_bad_config(bad_config)
 
-def test_bad_samplers_config():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['samplers'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['samplers'][name] = item
-        bad_config = tst_bad_config(bad_config)
-        if item:
-            bad_config['samplers'][name]['selection_kwargs'] = item
-            bad_config = tst_bad_config(bad_config)
-    for item in NOT_INT:
-        bad_config['samplers'][name]['files_per_sample'] = item
-        bad_config = tst_bad_config(bad_config)
-        bad_config['samplers'][name]['n_rows_per_sample'] = item
-        bad_config = tst_bad_config(bad_config)
 
 def test_bad_pipeline():
     bad_config = copy.deepcopy(DEFAULTS)
     for item in NOT_LIST:
-        bad_config['pipeline'] = item
+        bad_config['run'] = item
         bad_config = tst_bad_config(bad_config)
         for item in NOT_DICT:
-            bad_config['pipeline'][0] = item
+            bad_config['run'][0] = item
             bad_config = tst_bad_config(bad_config)
 
     # TODO more tests on valid operations
-    # e.g. train, download_data_sources, predict, resample, etc
+    # e.g. train, predict, resample, etc
 
-def test_readers():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['readers'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['readers'] = item
-        bad_config = tst_bad_config(bad_config)
-
-        bad_config['readers'][name] = item
-        bad_config = tst_bad_config(bad_config)
-    bad_config['readers'][name]['load'] = NOT_FUNCTION
-    bad_config = tst_bad_config(bad_config)
-    bad_config['readers'][name]['bounds'] = NOT_FUNCTION
-    bad_config = tst_bad_config(bad_config)
-
-def test_downloads():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['downloads'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['downloads'] = item
-        bad_config = tst_bad_config(bad_config)
-    bad_config['downloads'][name] = NOT_FUNCTION
-    bad_config = tst_bad_config(bad_config)
-
-def test_file_generators():
-    bad_config = copy.deepcopy(DEFAULTS)
-    name = tuple(bad_config['file_generators'].keys())[0]
-    for item in NOT_DICT:
-        bad_config['file_generators'] = item
-        bad_config = tst_bad_config(bad_config)
-    bad_config['file_generators'][name] = NOT_FUNCTION
