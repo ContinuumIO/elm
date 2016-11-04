@@ -44,9 +44,9 @@ ETIMES = {}
 @contextlib.contextmanager
 def env_patch(**new_env):
     old_env = {k: v for k, v in os.environ.copy().items()
-               if k in new_env}
+               if k in new_env if isinstance(k, str)}
     try:
-        os.environ.update(new_env)
+        os.environ.update({str(k): str(v) for k,v in new_env.items()})
         yield os.environ
     finally:
         os.environ.update(old_env)
