@@ -4,7 +4,7 @@ int_fields_specs:
  - {name: MAX_PARAM_RETRIES,
     required: False}
 str_fields_specs:
- - {name: DASK_EXECUTOR,
+ - {name: DASK_CLIENT,
     default: SERIAL,
     required: False,
     choices: [

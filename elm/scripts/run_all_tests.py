@@ -105,7 +105,7 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                 except Exception as e:
                     ret_val = repr(e)
                     print(e, traceback.format_exc())
-                exe = new_env.get("DASK_EXECUTOR")
+                exe = new_env.get("DASK_CLIENT")
                 if not fname in ETIMES:
                     ETIMES[fname] = {}
                 if not exe in ETIMES[fname]:
@@ -127,7 +127,7 @@ def run_all_example_scripts(env, path, glob_pattern):
             except Exception as e:
                 ret_val = repr(e)
                 print(e, traceback.format_exc())
-            exe = new_env.get("DASK_EXECUTOR")
+            exe = new_env.get("DASK_CLIENT")
             if not fname in ETIMES:
                 ETIMES[fname] = {}
             if not exe in ETIMES[fname]:
@@ -158,7 +158,7 @@ def run_all_unit_tests(repo_dir, env, pytest_mark=None):
         proc_kwargs = dict(cwd=repo_dir, env=new_env,
                       stdout=sp.PIPE, stderr=sp.STDOUT)
         proc = sp.Popen(proc_args, **proc_kwargs)
-        logger.info('{} with DASK_EXECUTOR={}'.format(proc_args, new_env['DASK_EXECUTOR']))
+        logger.info('{} with DASK_CLIENT={}'.format(proc_args, new_env['DASK_CLIENT']))
         ret_val = proc_wrapper(proc)
         print_status(ret_val, 'unit_tests')
 
@@ -222,7 +222,7 @@ def run_all_tests(args=None):
         if not os.path.exists(eedp):
             eedp = os.environ.get('ELM_EXAMPLE_DATA_PATH')
         new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
-                   'DASK_EXECUTOR': client,
+                   'DASK_CLIENT': client,
                    'ELM_EXAMPLE_DATA_PATH': eedp}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,

@@ -62,7 +62,7 @@ def client_context(dask_client=None, dask_scheduler=None):
     elif dask_client == 'SERIAL':
         client = None
     else:
-        raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_client))
+        raise ValueError('Did not expect DASK_CLIENT to be {}'.format(dask_client))
     get_func = _find_get_func_for_client(client)
     with da.set_options(pool=dask_client):
        yield client

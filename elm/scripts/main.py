@@ -68,7 +68,7 @@ def run_one_config(args=None, sys_argv=None,
         if client is None:
             if args.echo_config:
                 logger.info(str(config))
-            dask_client = getattr(config, 'DASK_EXECUTOR', 'SERIAL')
+            dask_client = getattr(config, 'DASK_CLIENT', 'SERIAL')
             dask_scheduler = getattr(config, 'DASK_SCHEDULER', None)
             with warnings.catch_warnings():
                 # scikit-learn has a number
@@ -100,8 +100,8 @@ def run_many_configs(args=None, sys_argv=None, return_0_if_ok=True,
     env_cmd_line = Namespace(**{k: v  for d in (vars(args), parse_env_vars())
                                 for k, v in d.items()
                                 })
-    logger.info('With --config-dir, DASK_EXECUTOR and DASK_SCHEDULER in config files are ignored')
-    dask_client = getattr(env_cmd_line, 'DASK_EXECUTOR', 'SERIAL')
+    logger.info('With --config-dir, DASK_CLIENT and DASK_SCHEDULER in config files are ignored')
+    dask_client = getattr(env_cmd_line, 'DASK_CLIENT', 'SERIAL')
     dask_scheduler = getattr(env_cmd_line, 'DASK_SCHEDULER', None)
     ret_val = 1
     with try_finally_log_etime(started) as _:
