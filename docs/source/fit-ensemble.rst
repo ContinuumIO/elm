@@ -59,7 +59,7 @@ Next a ``Pipeline`` is configured that flattens the separate band rasters to a s
                       ('scaler', steps.StandardScaler()),
                       ('pca', steps.Transform(IncrementalPCA(n_components=4), partial_fit_batches=2)),
                       ('kmeans', MiniBatchKMeans(n_clusters=4, compute_labels=True)),]
-    pipe = Pipeline(pipeline_steps, scoring=kmeans_aic)
+    pipe = Pipeline(pipeline_steps, scoring=kmeans_aic, scoring_kwargs=dict(score_weights=[-1]))
 
 See the signature for ``kmeans_aic`` here (TODO LINK to source code) to write a similar scoring function, otherwise ``scoring`` defaults to calling the estimator's ``.score` attribute.
 

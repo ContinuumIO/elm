@@ -7,7 +7,7 @@ The example below walks through configuring an evolutionary algorithm to select 
 
 Example
 -------
-..code-block:: python
+.. code-block:: python
 
     import os
 
@@ -44,7 +44,7 @@ Example
 
 Next the example sets up a ``Pipeline`` of transformations
 
-..code-block:: python
+.. code-block:: python
 
     def make_example_y_data(X, y=None, sample_weight=None, **kwargs):
         fitted = MiniBatchKMeans(n_clusters=5).fit(X.flat.values)
@@ -52,16 +52,16 @@ Next the example sets up a ``Pipeline`` of transformations
         return (X, y, sample_weight)
 
     pipeline_steps = [steps.Flatten(),
-                         steps.ModifySample(make_example_y_data),
-                         ('top_n', steps.SelectPercentile(percentile=80,score_func=f_classif)),
-                         ('kmeans', MiniBatchKMeans(n_clusters=4))]
-    pipeline = Pipeline(pipeline_steps, scoring=kmeans_aic)
+                      steps.ModifySample(make_example_y_data),
+                      ('top_n', steps.SelectPercentile(percentile=80,score_func=f_classif)),
+                      ('kmeans', MiniBatchKMeans(n_clusters=4))]
+    pipeline = Pipeline(pipeline_steps, scoring=kmeans_aic, scoring_kwargs=dict(score_weights=[-1]))
 
 The example above uses ``elm.pipeline.steps.ModifySample`` to return a ``y`` data set corresponding to ``X`` ``ElmStore`` so that the example can show ``SelectPercentile`` for feature selection.
 
-Next ``evo_params`` need to be called by passing a ``param_grid`` dict to ``elm.model_selection.evolve.ea_setup``.  The ``param_grid`` uses scikit-learn syntax for parameter replacement (i.e. a named step like "kmeans" then a double underscore then a parameter name for that step ["n_clusters"]), so this ``param_grid`` could potentially run models with ``n_clusters`` in ``range(3, 10)`` and ``percentile`` in ``range(20, 100, 5)``. The ``control`` dict sets parameters for the evolutionary algorithm (described below - TODO LINK TO BELOW).
+Next ``evo_params`` need to be called by passing a ``param_grid`` dict to ``elm.model_selection.evolve.ea_setup``.  The ``param_grid`` uses scikit-learn syntax for parameter replacement (i.e. a named step like "kmeans" then a double underscore then a parameter name for that step ["n_clusters"]), so this ``param_grid`` could potentially run models with ``n_clusters`` in ``range(3, 10)`` and ``percentile`` in ``range(20, 100, 5)``. The ``control`` dict sets parameters for the evolutionary algorithm (described below).
 
-..code-block:: python
+.. code-block:: python
 
     param_grid =  {
         'kmeans__n_clusters': list(range(3, 10)),
@@ -97,23 +97,33 @@ Next ``evo_params`` need to be called by passing a ``param_grid`` dict to ``elm.
 Reference ``param_grid`` - ``control``
 --------------------------------------
 
-TODO fill this out
- * **select_method**: selNSGA2
- * **crossover_method**: cxTwoPoint,
- * **mutate_method**: mutUniformInt,
- * **init_pop**: random,
- * **indpb**: 0.5,
- * **mutpb**: 0.9,
- * **cxpb**:  0.3,
- * **eta**:   20,
- * **ngen**:  2,
- * **mu**:    4,
- * **k**:     4,
- * **early_stop**: {'abs_change': [10], 'agg': 'all'},
-# alternatively early_stop: {percent_change: [10], agg: all}
-# alternatively early_stop: {threshold: [10], agg: any}
+In the example above the ``param_grid`` has a ``control`` dictionary specifying parameters of the evolutionary algorithm.  The ``control`` dict names the functions to be used for crossover, mutation, and selection, and the other arguments are passed to the those methods as needed.  The following section describes each key/value of a ``control`` dictionary.
+
+**Note** While it is possible to change the ``select_method``, ``crossover_method`` and ``mutate_method`` below from the example shown, it is important to use methods that are consistent with how ``fit_ea`` expresses parameter choices.  For each parameter in the ``param_grid``, such as ``kmeans__n_clusters=list(range(3, 10))``, ``fit_ea`` optimizes with *indices* into ``kmeans__n_clusters`` list, i.e. choosing among ``list(range(7))``, *not* optimizing an integer parameter between 3 and 10.  This allows ``fit_ea`` to avoid custom treatment of string, float, or integer data types in the parameters' lists of choices.  If changing the ``mutate_method`` keep in mind that it needs to take individuals that are sequences of integers as arguments and return the same.
+
+ * **select_method**: Selection method on each generation of evolutionary algorithm.  The selection method is typically ``selNSGA2`` but can be any ``deap.tools`` selection method (see the list of methods here - http://deap.gel.ulaval.ca/doc/dev/api/tools.html#selection)
+ * **crossover_method**: Crossover method between two individuals, e.g. ``cxTwoPoint``, or any ``deap.tools`` crossover method from http://deap.gel.ulaval.ca/doc/dev/api/tools.html#crossover
+ * **mutate_method**: Mutation method, typically ``mutUniformInt``, or another mutation method from ``deap.tools`` mutation methods http://deap.gel.ulaval.ca/doc/dev/api/tools.html#mutation
+ * **init_pop**: Placeholder for initialization features- must always be ``random`` (random initialization of solutions)
+ * **indpb**: Proability each attribute (feature) is mutated when an individual is mutated, e.g. ``0.5`` (passed to mutation methods in ``deap.tools``)
+ * **mutpb**: When two individuals crossover, this is the probability they will mutate immediately after crossover, e.g. ``0.9``
+ * **cxpb**:  Probabity of crossover ``0.3``
+ * **eta**:   Tuning parameter in NSGA-2 - passed to mutate and mate methods.  With a higher ``eta`` crowding is penalized and offspring are more different from their parents
+ * **ngen**:  Number of generations in genetic algorithm
+ * **mu**: Size of the population of solutions (individuals) initially
+ * **k**: Select the top ``k`` on each generation
+ * **early_stop**: Control stopping of algorithm before ``ngen`` number of generations is completed.  Examples are below (note ``agg`` refers to aggregation as ``all`` or ``any`` in the case it is a multi-objective problem)
+
+   * *Stop on absolute change in objective*: ``{'abs_change': [10], 'agg': 'all'}``
+   * *Stop on percent change in objective*: ``early_stop: {percent_change: [10], agg: all}``
+   * *Stop on reaching objective threshold*: ``early_stop: {threshold: [10], agg: any}``
 
 More Reading
 ------------
 
-TODO Links to ``deap``
+``fit_ea`` relies on ``deap`` for Pareto sorting and the genetic algorithm components described above.  Read more about ``deap``:
+
+ * Docs - http://deap.readthedocs.io/en/master/
+ * Source - https://github.com/deap
+ * ``deap`` NSGA-2 example on which ``fit_ea`` is based - https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+
