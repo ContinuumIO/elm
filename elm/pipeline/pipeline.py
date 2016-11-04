@@ -123,6 +123,8 @@ class Pipeline(object):
             X, y, sample_weight = self.create_sample(X=X, y=y, sampler=sampler,
                                                      args_list=args_list,
                                                      **data_source)
+        else:
+            X, y, sample_weight = _split_pipeline_output(X, X, y, sample_weight, sklearn_method)
         for idx, (_, step_cls) in enumerate(self.steps[:-1]):
 
             if prepare_for == 'train':
@@ -209,6 +211,7 @@ class Pipeline(object):
         from elm.sample_util.sample_pipeline import _split_pipeline_output
         X = data_source.get("X", None)
         y = data_source.get('y', None)
+        logger.info('Call create_sample')
         sample_weight = data_source.get('sample_weight', None)
         if not ('sampler' in data_source or 'args_list' in data_source):
             if not any(_ is not None for _ in (X, y, sample_weight)):
@@ -397,6 +400,8 @@ class Pipeline(object):
         from elm.pipeline.evolve_train import evolve_train
         if evo_params is None:
             raise ValueError('Expected evo_params to be not None (an instance of EvoParams)')
+        if saved_ensemble_size is None:
+            saved_ensemble_size = evo_params.deap_params['control']['mu']
         data_source = dict(X=X, y=y, sample_weight=sample_weight, sampler=sampler,
                            args_list=args_list, **data_source)
         ngen = evo_params.deap_params['control']['ngen']
@@ -419,7 +424,7 @@ class Pipeline(object):
                              method_kwargs=method_kwargs,
                              **data_source)
         self.ensemble = models
-        return self.ensemble
+        return self
 
     def predict(self, X=None, method_kwargs=None, return_X=False, **data_source):
         '''Call the final estimator's predict method

@@ -70,7 +70,6 @@ def evolve_train(pipe,
                  init_ensemble_size=1,
                  saved_ensemble_size=None,
                  ensemble_init_func=None,
-                 models_share_sample=True,
                  scoring_kwargs=None,
                  method='fit',
                  partial_fit_batches=1,
@@ -92,6 +91,7 @@ def evolve_train(pipe,
         most arguments are interpretted similary.
 
     ''' + ensemble.__doc__
+    models_share_sample = True
     method_kwargs = method_kwargs or {}
     scoring_kwargs = scoring_kwargs or {}
     get_func = _find_get_func_for_client(client)
@@ -136,14 +136,16 @@ def evolve_train(pipe,
             fmt = 'Evolve generation {4}: {0} models x {1} samples x {2} {3} calls = {5} calls in total'
             logger.info(fmt.format(*msg))
         log_once(len(pop), sample_keys_passed, 0)
+        pop_names = [ind.name for ind in pop]
         models, fitnesses = fit_one_generation(dsk, 0, sample_keys_passed, pop)
+        logger.info(repr(models))
         assign_check_fitness(pop,
                          fitnesses,
                          param_history,
                          evo_params.deap_params['choices'],
                          evo_params.score_weights)
         invalid_ind = True
-        fitted_models = dict(models)
+        fitted_models = {n: m for n, (_, m) in zip(pop_names, models)}
         ngen = evo_params.deap_params['control'].get('ngen') or None
         if not ngen and not evo_params.early_stop:
             raise ValueError('param_grids: pg_name: control: has neither '
@@ -160,10 +162,10 @@ def evolve_train(pipe,
 
             if gen > 0:
                 log_once(len(invalid_ind), sample_keys_passed, gen)
+                names = [ind.name for ind in invalid_ind]
                 models, fitnesses = fit_one_generation(dsk, gen, sample_keys_passed, invalid_ind)
-                fitted_models.update(dict(models))
+                fitted_models.update({n: m for n, (_, m) in zip(names,models)})
             (pop, invalid_ind, param_history) = ea_gen.send(fitnesses)
-
             pop_names = [ind.name for ind in pop]
             fitted_models = {k: v for k, v in fitted_models.items()
                              if k in pop_names}
@@ -171,6 +173,7 @@ def evolve_train(pipe,
                 break # If there are no new solutions to try, break
         pop = evo_params.toolbox.select(pop, saved_ensemble_size)
         pop_names = [ind.name for ind in pop]
+        logger.info(repr((pop, pop_names, fitted_models)))
         models = [(k, v) for k, v in fitted_models.items()
                   if k in pop_names]
 

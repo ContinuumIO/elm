@@ -95,9 +95,10 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
 
         if band_specs:
             for idx, band_spec in enumerate(band_specs):
-                if match_meta(band_meta, band_spec):
+                if (isinstance(band_spec, BandSpec) and match_meta(band_meta, band_spec)) or (isinstance(band_spec, str) and band_spec in tif):
                     band_order_info.append((idx, tif, band_spec, band_meta))
                     break
+
         else:
             band_name = 'band_{}'.format(band_idx)
             band_order_info.append((band_idx, tif, band_name, band_meta))

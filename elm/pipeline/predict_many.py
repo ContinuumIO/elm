@@ -75,6 +75,9 @@ def predict_many(data_source,
     '''
 
     env = parse_env_vars()
+    elm_predict_path = elm_predict_path or env.get('ELM_PREDICT_PATH')
+    if serialize and elm_predict_path and not os.path.exists(elm_predict_path):
+        os.mkdir(elm_predict_path)
     pipe_example = ensemble[0][1]
     ds = data_source.copy()
     X = ds.pop('X', None)

@@ -99,7 +99,7 @@ class ElmStore(xr.Dataset):
             self._add_band_order()
             self._add_es_meta()
         else:
-            if not hasattr(self, 'flat'):
+            if not 'flat' in self.data_vars:
                 self._add_band_order()
                 self._add_dummy_canvas(**es_kwargs)
 
@@ -116,24 +116,6 @@ class ElmStore(xr.Dataset):
                     shp = (shp[0], 1)
             band_arr.attrs['canvas'] = dummy_canvas(shp[1], shp[0],
                                                     band_arr.dims)
-
-    def get_shared_canvas(self):
-        '''Return a Canvas if all bands (DataArrays) share it, else False'''
-        canvas = getattr(self, 'canvas', None)
-        if canvas is not None:
-            return canvas
-        old_canvas = None
-        shared = True
-        for band in self.data_vars:
-            canvas = getattr(self, band).canvas
-            if canvas == old_canvas or old_canvas is None:
-                pass
-            else:
-                shared = False
-                break
-            old_canvas = canvas
-        return (canvas if shared else None)
-
     def _add_band_order(self):
         '''Ensure es.band_order is consistent with es.data_vars'''
         new = []
@@ -206,8 +188,8 @@ class ElmStore(xr.Dataset):
             logger.debug('Bands share coordinates')
 
     def __str__(self):
-        return "ElmStore:\n" + super().__str__()
+        return "ElmStore:\n" + super().__str__().replace('xarray', 'elm')
 
-
-
+    def __repr__(self):
+        return "ElmStore:\n" + super().__repr__().replace('xarray', 'elm')
 
