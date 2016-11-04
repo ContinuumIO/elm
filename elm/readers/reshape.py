@@ -13,7 +13,10 @@ import scipy.interpolate as spi
 import xarray as xr
 
 from elm.readers import ElmStore, Canvas
-from elm.readers.util import canvas_to_coords, VALID_X_NAMES, VALID_Y_NAMES
+from elm.readers.util import (canvas_to_coords,
+                              VALID_X_NAMES,
+                              VALID_Y_NAMES,
+                              get_shared_canvas)
 
 logger = logging.getLogger(__name__)
 
@@ -150,7 +153,8 @@ def flatten(es, ravel_order='C'):
     '''
     if check_is_flat(es, raise_err=False):
         return es
-    if not es.get_shared_canvas():
+    shared_canvas = get_shared_canvas(es)
+    if not shared_canvas:
         raise ValueError('es.select_canvas should be called before flatten when, as in this case, the bands do not all have the same Canvas')
     store = None
     band_names = [band for idx, band in enumerate(es.band_order)]
@@ -174,7 +178,7 @@ def flatten(es, ravel_order='C'):
             new_values = data_arr.values.ravel(order=ravel_order)
         store[:, idx] = new_values
     attrs = {}
-    attrs['canvas'] = es.get_shared_canvas()
+    attrs['canvas'] = shared_canvas
     attrs['old_canvases'] = old_canvases
     attrs['old_dims'] = old_dims
     attrs['flatten_data_array'] = True

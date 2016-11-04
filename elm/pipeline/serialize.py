@@ -64,6 +64,7 @@ def load_pipe_from_tag(elm_train_path, tag):
 
 def predict_to_pickle(prediction, fname_base):
     '''Dump a prediction y data'''
+    mkdir_p(fname_base)
     joblib.dump(prediction, fname_base + '.xr')
 
 

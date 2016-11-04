@@ -31,24 +31,26 @@ def _split_pipeline_output(output, X, y,
     '''Util to ensure a Pipeline func always
     returns (X, y, sample_weight) tuple'''
     if not isinstance(output, (tuple, list)):
-        return output, y, sample_weight
-    if output is None:
-        return X, y, sample_weight
-    if len(output) == 1:
-        return output[0], y, sample_weight
+        ret = output, y, sample_weight
+    elif output is None:
+        ret = X, y, sample_weight
+    elif len(output) == 1:
+        ret = output[0], y, sample_weight
     elif len(output) == 2:
         xx = output[0] if output[0] is not None else X
         yy = output[1] if output[1] is not None else y
-        return (xx, yy, sample_weight,)
+        ret = (xx, yy, sample_weight,)
     elif len(output) == 3:
         xx = output[0] if output[0] is not None else X
         yy = output[1] if output[1] is not None else y
         sw = output[2] if output[2] is not None else sample_weight
-        return (xx, yy, sw)
+        ret = (xx, yy, sw)
     else:
         raise ValueError('{} pipeline func returned '
                          'more than 3 outputs in a '
                          'tuple/list'.format(context))
+    assert isinstance(ret, tuple) and not isinstance(ret[0], tuple)
+    return ret
 
 
 def create_sample_from_data_source(config=None, **data_source):

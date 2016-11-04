@@ -44,9 +44,9 @@ ETIMES = {}
 @contextlib.contextmanager
 def env_patch(**new_env):
     old_env = {k: v for k, v in os.environ.copy().items()
-               if k in new_env}
+               if k in new_env if isinstance(k, str)}
     try:
-        os.environ.update(new_env)
+        os.environ.update({str(k): str(v) for k,v in new_env.items()})
         yield os.environ
     finally:
         os.environ.update(old_env)
@@ -105,7 +105,7 @@ def run_all_example_configs(env, path, large_test_mode, glob_pattern):
                 except Exception as e:
                     ret_val = repr(e)
                     print(e, traceback.format_exc())
-                exe = new_env.get("DASK_EXECUTOR")
+                exe = new_env.get("DASK_CLIENT")
                 if not fname in ETIMES:
                     ETIMES[fname] = {}
                 if not exe in ETIMES[fname]:
@@ -127,7 +127,7 @@ def run_all_example_scripts(env, path, glob_pattern):
             except Exception as e:
                 ret_val = repr(e)
                 print(e, traceback.format_exc())
-            exe = new_env.get("DASK_EXECUTOR")
+            exe = new_env.get("DASK_CLIENT")
             if not fname in ETIMES:
                 ETIMES[fname] = {}
             if not exe in ETIMES[fname]:
@@ -158,7 +158,7 @@ def run_all_unit_tests(repo_dir, env, pytest_mark=None):
         proc_kwargs = dict(cwd=repo_dir, env=new_env,
                       stdout=sp.PIPE, stderr=sp.STDOUT)
         proc = sp.Popen(proc_args, **proc_kwargs)
-        logger.info('{} with DASK_EXECUTOR={}'.format(proc_args, new_env['DASK_EXECUTOR']))
+        logger.info('{} with DASK_CLIENT={}'.format(proc_args, new_env['DASK_CLIENT']))
         ret_val = proc_wrapper(proc)
         print_status(ret_val, 'unit_tests')
 
@@ -222,7 +222,7 @@ def run_all_tests(args=None):
         if not os.path.exists(eedp):
             eedp = os.environ.get('ELM_EXAMPLE_DATA_PATH')
         new_env = {'DASK_SCHEDULER': args.dask_scheduler or '',
-                   'DASK_EXECUTOR': client,
+                   'DASK_CLIENT': client,
                    'ELM_EXAMPLE_DATA_PATH': eedp}
         if not args.skip_pytest:
             run_all_unit_tests(args.repo_dir, new_env,
@@ -231,7 +231,7 @@ def run_all_tests(args=None):
             run_all_example_scripts(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
                                     glob_pattern=args.glob_pattern)
         if not args.skip_configs:
-            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'scripts'),
+            run_all_example_configs(new_env, path=os.path.join(args.elm_examples_path, 'configs'),
                                     large_test_mode=args.add_large_test_settings,
                                     glob_pattern=args.glob_pattern)
     failed_unit_tests = STATUS_COUNTER.get('unit_tests') != 'ok' and not args.skip_pytest
