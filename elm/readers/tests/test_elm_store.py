@@ -6,6 +6,7 @@ import numpy as np
 
 from elm.pipeline.tests.util import random_elm_store
 from elm.readers.tests.util import HDF4_FILES, NETCDF_FILES, TIF_FILES
+from elm.readers.util import *
 from elm.readers import *
 from elm.readers.tests.test_hdf4 import band_specs as hdf4_band_specs
 from elm.readers.tests.test_tif import band_specs as tif_band_specs
@@ -76,7 +77,7 @@ def test_reshape(ftype, fnames_list):
     filled = filled_flattened(na_dropped)
     assert hasattr(filled, 'flat')
     assert filled.flat.values.shape == flat.flat.values.shape
-    canvas = es.get_shared_canvas()
+    canvas = get_shared_canvas(es)
     if canvas is None:
         for band in es_new.band_vars:
             canvas = getattr(es_new, band).canvas

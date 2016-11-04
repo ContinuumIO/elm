@@ -1,3 +1,4 @@
+'''Internal helpers for elm.pipeline'''
 from collections import Sequence
 
 from elm.model_selection.evolve import ea_setup
@@ -14,12 +15,15 @@ NO_ENSEMBLE = {'init_ensemble_size': 1,
 _next_idx = 0
 
 def _next_name(token):
+    '''name in a dask graph'''
     global _next_idx
     n = '{}-{}'.format(token, _next_idx)
     _next_idx += 1
     return n
 
 def _validate_ensemble_members(models):
+    '''Take a list of estimators or a list of (tag, estimator) tuples
+    Return (tag, estimator) tuples list'''
     err_msg = ('Failed to instantiate models as sequence of tuples '
                '(name, model) where model has a fit or '
                'partial_fit method.  ')
@@ -38,6 +42,11 @@ def _validate_ensemble_members(models):
 def _run_model_selection(models, model_selection, model_selection_kwargs,
                          ngen, generation,
                          scoring_kwargs):
+    '''Run a model selection after adding ngen and generation to kwargs
+    and finding the right sorting function for fitness
+
+    Returns:
+        list of (tag, model) tuples'''
     model_selection_kwargs['ngen'] = ngen
     model_selection_kwargs['generation'] = generation
     scoring_kwargs = scoring_kwargs or {}

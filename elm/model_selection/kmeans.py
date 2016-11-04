@@ -53,23 +53,35 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
                   drop_n:  how many models to drop each generation
                   evolve_n: how many models to create from clustering
                             on clusters from models
-                  init_n:   how many models to make new, initializing
-                            from the best model
                   ngen, generation: kwargs added by model_selection logic
                             to control behavior on last generation
+                  reps: repititions in meta-clustering (see below)
     Returns:
         list of (tag, Pipeline instance) tuples
+
+    Notes:
+        * First the drop_n worst AIC scoring (tag, Pipeline) tuples
+          are dropped
+        * The for repeat in range evolve_n:
+            * Bootstrap existing centroids with linear probability
+            density related to AIC score rank, preferring lower AIC
+            scores
+            * Run a K-Means on those centroids
+            * Initialize a new pipeline with those params
+        The number of (tag, Pipeline) tuples is
+            len(models) + evolve_n - drop_n
     '''
 
-    drop_n = kwargs['drop_n']
-    evolve_n = kwargs['evolve_n']
-    init_n = kwargs['init_n']
+    drop_n = kwargs.get('drop_n', 0)
+    evolve_n = kwargs.get('evolve_n', 0)
+    reps = kwargs.get('reps', 100)
     last_gen = kwargs['ngen'] - 1 == kwargs['generation']
     if last_gen:
         # To avoid attempting to predict
         # when the model has not been fit
         # do not initialize any models on the
         # final generation of ensemble training.
+        models = [models[idx] for idx in best_idxes]
         return models
     if drop_n > len(models):
         raise ValueError('All models would be dropped by drop_n {} '
@@ -81,25 +93,48 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
 
     name_idx = 0
     new_models = []
-    best = models[0][1]
-    new_kwargs0 = best._estimator.get_params()
-    new_kwargs0['init'] = best._estimator.cluster_centers_
-    new_pipe_kwargs = best.get_params()
-    if evolve_n:
-        centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for name, m in models))
-        meta_model = MiniBatchKMeans(**new_kwargs0)
-        new_kwargs0['batch_size'] = centroids.shape[0]
-        meta_model.fit(centroids)
-        for idx in range(evolve_n):
-            new_estimator = best.unfitted_copy()
-            new_kwargs = copy.deepcopy(new_kwargs0)
-            new_params = {'init': meta_model.cluster_centers_, 'n_init': 1}
-            new_estimator._estimator.set_params(**new_params)
-            new_model = (_next_name(), new_estimator)
-            new_models.append(new_model)
-    for new in range(init_n):
-        new = best.unfitted_copy()
-        new.set_params(**new_pipe_kwargs)
-        new_models.append(('new-kmeans-{}'.format(idx), new))
+
+    def get_shape():
+        '''Get a random centroids shape from linear prob density'''
+        probs = np.linspace(len(models) + 1, 1, len(models))
+        probs /= probs.sum()
+        idx = np.random.choice(np.arange(len(models)), p=probs)
+        _, m = models[idx]
+        return m._estimator.cluster_centers_.shape
+
+    def get_best(shp):
+        '''Get the best of a given shape of centroids
+
+        The logic in these two functions is intended to avoid
+        selecting a model that has a different input
+        feature column dimension shape, such as Pipelines
+        with PCA before K-Means
+        '''
+        choices = [(tag, model) for tag, model in models
+                   if model._estimator.cluster_centers_.shape == shp]
+        assert choices, repr(models)
+        probs = np.linspace(len(choices) + 1, 1, len(choices))
+        probs /= probs.sum()
+
+        best_idx = np.random.choice(np.arange(len(choices)), p=probs)
+        best_tag, best = choices[best_idx]
+        if best._estimator.cluster_centers_.shape != shp:
+            return get_best(shp, simple=simple)
+        return best
+
+    for idx in range(evolve_n):
+        shp = get_shape()
+        resampling = [get_best(shp) for _ in range(reps)]
+        centroids = np.concatenate(tuple(m._estimator.cluster_centers_ for m in resampling))
+        meta_model = resampling[0]
+        new_params = meta_model._estimator.get_params()
+        est = MiniBatchKMeans(**new_params)
+        est.partial_fit(centroids)
+        new_params.update({'init': est.cluster_centers_,
+                          'n_init': 1})
+        meta_model.steps[-1] = (meta_model.steps[-1][0], est)
+        meta_model._estimator = est
+        new_model = (_next_name(), meta_model)
+        new_models.append(new_model)
     return tuple(new_models) + tuple(models)
 

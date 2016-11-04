@@ -146,25 +146,35 @@ def test_supervised_feat_select_X_y(client=None):
 def test_kmeans_model_selection(client=None):
 
     pipe = Pipeline([steps.Flatten(),
+                     ('pca', steps.Transform(IncrementalPCA())),
                     ('kmeans', MiniBatchKMeans(n_clusters=5))],
                     scoring=kmeans_aic,
                     scoring_kwargs={'score_weights': [-1]})
+
+    def samp(*args, **kwargs):
+        return random_elm_store(bands=12,
+                mn=0, mx=1, height=20, width=40)
     en = ENSEMBLE_KWARGS.copy()
     n_clusters_choices = list(range(3, 10))
     def init(pipe, **kwargs):
         estimators = []
-        for _ in range(24):
+        for _ in range(100):
+            n_components = np.random.choice(np.arange(2, 6))
             n_clusters = np.random.choice(n_clusters_choices)
             estimator = copy.deepcopy(pipe)
-            estimator.set_params(kmeans__n_clusters=n_clusters)
+            estimator.set_params(kmeans__n_clusters=n_clusters,
+                                 pca__n_components=n_components)
             estimators.append(estimator)
         return estimators
+    en['ngen'] = 20
     en['model_scoring'] = kmeans_aic
     en['ensemble_init_func'] = init
-    en['model_selection_kwargs'] = dict(drop_n=8, evolve_n=16,
-                                        init_n=8, choices=n_clusters_choices)
+    en['model_selection_kwargs'] = dict(drop_n=30, evolve_n=30,
+                                        choices=n_clusters_choices)
     en['model_selection'] = kmeans_model_averaging
-    fitted = pipe.fit_ensemble(**SAMPLER_DATA_SOURCE, **en)
+    sa = SAMPLER_DATA_SOURCE.copy()
+    sa['sampler']  = samp
+    fitted = pipe.fit_ensemble(**sa, **en)
     assert len(fitted.ensemble) == en['saved_ensemble_size']
-    preds = fitted.predict_many(**SAMPLER_DATA_SOURCE)
+    preds = fitted.predict_many(**sa)
     assert len(preds) == len(fitted.ensemble) * len(SAMPLER_DATA_SOURCE['args_list'])

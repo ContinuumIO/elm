@@ -22,8 +22,9 @@ __all__ = ['predict_many',]
 
 def _predict_one_sample_one_arg(estimator,
                                 serialize,
-                                to_cube,
+                                to_raster,
                                 predict_tag,
+                                elm_predict_path,
                                 X_y_sample_weight):
     X, y, sample_weight = X_y_sample_weight
     if not isinstance(X, (ElmStore, xr.Dataset)):
@@ -51,27 +52,33 @@ def _predict_one_sample_one_arg(estimator,
                                      dims=('space', 'band'),
                                      attrs=attrs)},
                              attrs=attrs)
-    if to_cube:
+    if to_raster:
         new_es = inverse_flatten(prediction)
     else:
         new_es = prediction
     if serialize:
-        new_es = serialize(new_es, X_final, predict_tag)
+        new_es = serialize(y=new_es, X=X_final, tag=predict_tag,
+                           elm_predict_path=elm_predict_path)
     out.append(new_es)
     return out
 
 
 def predict_many(data_source,
                  saved_model_tag=None,
-                 tagged_models=None,
+                 ensemble=None,
                  client=None,
                  serialize=None,
-                 to_cube=True,
-                 elm_train_path=None):
+                 to_raster=True,
+                 elm_predict_path=None):
+    '''See elm.pipeline.Pipeline.predict_many method
 
+    '''
 
     env = parse_env_vars()
-    pipe_example = tagged_models[0][1]
+    elm_predict_path = elm_predict_path or env.get('ELM_PREDICT_PATH')
+    if serialize and elm_predict_path and not os.path.exists(elm_predict_path):
+        os.mkdir(elm_predict_path)
+    pipe_example = ensemble[0][1]
     ds = data_source.copy()
     X = ds.pop('X', None)
     y = ds.pop('y', None)
@@ -79,7 +86,7 @@ def predict_many(data_source,
     sampler = ds.pop('sampler', None)
     dsk = make_samples_dask(X, y, None, pipe_example, args_list, sampler, ds)
     sample_keys = tuple(dsk)
-    args_list = tuple(itertools.product(sample_keys, tagged_models))
+    args_list = tuple(itertools.product(sample_keys, ensemble))
     keys = []
     last_file_name = None
     for idx, (sample_key, (estimator_tag, estimator)) in enumerate(args_list):
@@ -90,14 +97,15 @@ def predict_many(data_source,
         dsk[name] = (_predict_one_sample_one_arg,
                      estimator,
                      serialize,
-                     to_cube,
+                     to_raster,
                      predict_tag,
-                     sample_key)
+                     elm_predict_path,
+                     sample_key,)
 
 
         keys.append(name)
-    logger.info('Predict {} estimator and {} samples '
-                '({} combinations)'.format(len(tagged_models),
+    logger.info('Predict {} estimator(s) and {} sample(s) '
+                '({} combination[s])'.format(len(ensemble),
                                          len(sample_keys),
                                          len(args_list)))
     preds = []

@@ -13,7 +13,10 @@ import scipy.interpolate as spi
 import xarray as xr
 
 from elm.readers import ElmStore, Canvas
-from elm.readers.util import canvas_to_coords, VALID_X_NAMES, VALID_Y_NAMES
+from elm.readers.util import (canvas_to_coords,
+                              VALID_X_NAMES,
+                              VALID_Y_NAMES,
+                              get_shared_canvas)
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,13 @@ __all__ = ['select_canvas',
            ]
 
 def transpose(es, new_dims):
+    '''transpose an ElmStore - elm.pipeline.steps.Transpose
+
+    Parameters:
+        new_dims: passed to xarray.DataArray.transpose
+    Returns:
+        ElmStore transposed
+    '''
     trans = OrderedDict()
     for band in es.data_vars:
         data_arr = getattr(es, band)
@@ -43,6 +53,16 @@ def transpose(es, new_dims):
 
 
 def aggregate_simple(es, **kwargs):
+    '''aggregate ElmStore - elm.pipeline.steps.Agg
+    Parameters:
+        kwargs: Keywords may contain:
+            func: aggregation func name like "mean", "std"
+            dim: dimension name
+            axis: dimension integer
+    Returns:
+        ElmStore aggregated
+
+    '''
     func = kwargs['func']
     if not func in AGG_METHODS:
         raise ValueError('Expected an agg "func" among: {}'.format(AGG_METHODS))
@@ -67,6 +87,16 @@ def aggregate_simple(es, **kwargs):
 
 
 def select_canvas(es, new_canvas):
+    '''reindex_like new_canvas for every band (DataArray) in ElmStore
+
+    Parameters:
+        es: ElmStore
+        new_canvas: an elm.readers.Canvas object
+
+    Returns:
+        es: ElmStore where every band (DataArray) has the same
+            coordinates - those of new_canvas
+    '''
     if getattr(es, '_dummy_canvas', False):
         raise ValueError('This ElmStore cannot be run through select_canvas because geo transform was not read correctly from input data')
     es_new_dict = OrderedDict()
@@ -98,6 +128,7 @@ def select_canvas(es, new_canvas):
 
 
 def drop_na_rows(flat):
+    '''Drop any NA rows from ElmStore flat'''
     check_is_flat(flat)
     flat_dropped = flat.flat.dropna(dim='space')
     flat_dropped.attrs.update(flat.attrs)
@@ -110,8 +141,9 @@ def drop_na_rows(flat):
 
 
 def flatten(es, ravel_order='C'):
-    '''Given an ElmStore with dims (band, y, x) return ElmStore
-    with shape (space, band) where space is a flattening of x,y
+    '''Given an ElmStore with different rasters (DataArray) as bands,
+    flatten the rasters into a single 2-D DataArray called "flat"
+    in a new ElmStore.
 
     Params:
         elm_store:  3-d ElmStore (band, y, x)
@@ -121,7 +153,8 @@ def flatten(es, ravel_order='C'):
     '''
     if check_is_flat(es, raise_err=False):
         return es
-    if not es.get_shared_canvas():
+    shared_canvas = get_shared_canvas(es)
+    if not shared_canvas:
         raise ValueError('es.select_canvas should be called before flatten when, as in this case, the bands do not all have the same Canvas')
     store = None
     band_names = [band for idx, band in enumerate(es.band_order)]
@@ -145,7 +178,7 @@ def flatten(es, ravel_order='C'):
             new_values = data_arr.values.ravel(order=ravel_order)
         store[:, idx] = new_values
     attrs = {}
-    attrs['canvas'] = es.get_shared_canvas()
+    attrs['canvas'] = shared_canvas
     attrs['old_canvases'] = old_canvases
     attrs['old_dims'] = old_dims
     attrs['flatten_data_array'] = True
@@ -161,7 +194,8 @@ def flatten(es, ravel_order='C'):
 
 
 def filled_flattened(na_dropped):
-
+    '''Used by inverse_flatten to fill areas that were dropped
+    out of X due to NA/NaN'''
     shp = getattr(na_dropped, 'shape_before_drop_na_rows', None)
     if not shp:
         return na_dropped
@@ -184,6 +218,15 @@ def filled_flattened(na_dropped):
 
 
 def check_is_flat(flat, raise_err=True):
+    '''Check if an ElmStore has a DataArray called flat
+    with dimensions (space, band)
+    Parameters:
+        flat: an ElmStore
+        raise_err: raise or not
+    Returns:
+        True if flat
+        False or ValueError if not flat (raise_err=True)
+    '''
     if not hasattr(flat, 'flat') or not all(hasattr(flat.flat, at) for at in ('space', 'band')):
         msg = 'Expected an ElmStore/Dataset with attribute "flat" and dims ("space", "band")'
         if raise_err:
@@ -211,7 +254,6 @@ def inverse_flatten(flat, add_canvas=False, **attrs):
     attrs = attrs2
     band_list = zip(flat.flat.band_order, flat.old_dims)
     es_new_dict = OrderedDict()
-    #attrs['canvas'] = getattr(flat, 'canvas', attrs['canvas'])
     if 'canvas' in attrs:
         new_coords = canvas_to_coords(attrs['canvas'])
     else:

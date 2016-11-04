@@ -1,3 +1,12 @@
+'''
+Tools for reading HDF5 files.  Typically use the interface through
+
+elm.readers.load_array
+elm.readers.load_meta
+
+'''
+
+
 from collections import OrderedDict
 import copy
 import gc
@@ -35,6 +44,7 @@ def _nc_str_to_dict(nc_str):
 
 
 def load_hdf5_meta(datafile):
+    '''Load dataset and subdataset metadata from HDF5 file'''
     f = gdal.Open(datafile, GA_ReadOnly)
     sds = f.GetSubDatasets()
     band_metas = []
@@ -58,6 +68,7 @@ def load_hdf5_meta(datafile):
                 name=datafile)
 
 def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
+    '''Load a single subdataset'''
     data_file = gdal.Open(subdataset)
     raster = raster_as_2d(data_file.ReadAsArray(**reader_kwargs))
     #raster = raster.T
@@ -96,6 +107,17 @@ def load_subdataset(subdataset, attrs, band_spec, **reader_kwargs):
 
 
 def load_hdf5_array(datafile, meta, band_specs):
+    '''Return an ElmStore where each subdataset is a DataArray
+
+    Parameters:
+
+        datafile: filename
+        meta:     meta from elm.readers.load_hdf5_meta
+        band_specs: list of elm.readers.BandSpec objects,
+                    defaulting to reading all subdatasets
+                    as bands
+    '''
+
     logger.debug('load_hdf5_array: {}'.format(datafile))
     f = gdal.Open(datafile, GA_ReadOnly)
     sds = meta['sub_datasets']

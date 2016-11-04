@@ -15,6 +15,7 @@ from dask import delayed as dask_delayed
 from toolz import curry
 try:
     from distributed import Executor
+    from dask.diagnostics import ProgressBar
 except ImportError:
     Executor = None
 
@@ -27,7 +28,6 @@ def _find_get_func_for_client(client):
         return get_sync
     elif Executor and isinstance(client, Executor):
         def get(*args, **kwargs):
-            from distributed import ProgressBar
             pbar = ProgressBar()
             pbar.register()
             out = client.get(*args, **kwargs)
@@ -38,6 +38,7 @@ def _find_get_func_for_client(client):
         return dask_threaded_get
     else:
         raise ValueError('client argument not a thread pool dask scheduler or None')
+
 
 @contextlib.contextmanager
 def client_context(dask_client=None, dask_scheduler=None):
@@ -61,7 +62,7 @@ def client_context(dask_client=None, dask_scheduler=None):
     elif dask_client == 'SERIAL':
         client = None
     else:
-        raise ValueError('Did not expect DASK_EXECUTOR to be {}'.format(dask_client))
+        raise ValueError('Did not expect DASK_CLIENT to be {}'.format(dask_client))
     get_func = _find_get_func_for_client(client)
     with da.set_options(pool=dask_client):
        yield client

@@ -1,7 +1,7 @@
 
 
 class StepMixin(object):
-
+    '''Base class for any step in an elm.pipeline.Pipeline'''
     _sp_step = None
     _func = None
     _required_kwargs = None

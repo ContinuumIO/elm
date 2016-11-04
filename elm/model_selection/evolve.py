@@ -605,8 +605,6 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
     del temp_pop
     eval_stop = eval_stop_wrapper(evo_params, original_fitness)
     for gen in range(1, ngen):
-        logger.info('Generation {} out of {} in evolutionary '
-                    'algorithm'.format(gen + 1, ngen))
         offspring1 = tools.selTournamentDCD(pop, len(pop))
 
         offspring2 = [toolbox.clone(ind) for ind in offspring1]
@@ -619,8 +617,10 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
             for ind1, ind2 in zip(offspring[::2], offspring[1::2]):
                 if random.random() <= cxpb:
                     toolbox.mate(ind1, ind2)
-                toolbox.mutate(ind1)
-                toolbox.mutate(ind2)
+                if random.random() < mutpb:
+                    toolbox.mutate(ind1)
+                if random.random() < mutpb:
+                    toolbox.mutate(ind2)
                 del ind1.fitness.values, ind2.fitness.values
         except ParamsSamplingError:
             logger.info('Evolutionary algorithm exited early (cannot find parameter set that has not been tried yet)')

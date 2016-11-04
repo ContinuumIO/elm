@@ -10,7 +10,7 @@ from elm.model_selection.evolve import ea_setup
 from elm.pipeline.ensemble import ensemble
 from elm.pipeline.pipeline import Pipeline
 from elm.readers import *
-from elm.sample_util.filename_selection import get_args_list
+
 
 from elm.pipeline.serialize import (serialize_prediction,
                                     serialize_pipe,
@@ -58,9 +58,7 @@ def config_to_pipeline(config, client=None):
         data_source['load_array'] = load_array
         if callable(data_source.get('args_list')):
             kw = {k: v for k, v in data_source.items() if k != 'args_list'}
-            kw['use_file_filter'] = False
-            gen = tuple(data_source['args_list'](**kw))
-            data_source['args_list'] = get_args_list(gen, **kw)
+            data_source['args_list'] = tuple(data_source['args_list'](**kw))
         if 'train' in step and not getattr(config, 'PREDICT_ONLY', False):
             s = train.get('model_scoring')
             if s:

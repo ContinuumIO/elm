@@ -1,3 +1,10 @@
+'''
+Tools for reading GeoTiff files.  Typically use the interface through
+
+elm.readers.load_array
+elm.readers.load_meta
+
+'''
 from collections import OrderedDict
 import copy
 import gc
@@ -27,6 +34,7 @@ __all__ = ['load_tif_meta',
 
 
 def load_tif_meta(filename):
+    '''Read the metadata of one TIF file'''
     r = rio.open(filename)
     if r.count != 1:
         raise ValueError('elm.readers.tif only reads tif files with 1 band (shape of [1, y, x]). Found {} bands'.format(r.count))
@@ -71,6 +79,13 @@ def array_template(r, meta, **reader_kwargs):
 
 
 def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
+    '''Load metadata from same-directory GeoTiffs representing
+    different bands of the same image.
+
+    Parameters:
+        dir_of_tiffs: Directory with GeoTiffs
+        band_specs:   List of elm.readers.BandSpec objects
+        meta:         included in returned metadata'''
     logger.debug('load_dir_of_tif_meta {}'.format(dir_of_tiffs))
     tifs = ls_tif_files(dir_of_tiffs)
     meta = copy.deepcopy(meta)
@@ -80,9 +95,10 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
 
         if band_specs:
             for idx, band_spec in enumerate(band_specs):
-                if match_meta(band_meta, band_spec):
+                if (isinstance(band_spec, BandSpec) and match_meta(band_meta, band_spec)) or (isinstance(band_spec, str) and band_spec in tif):
                     band_order_info.append((idx, tif, band_spec, band_meta))
                     break
+
         else:
             band_name = 'band_{}'.format(band_idx)
             band_order_info.append((band_idx, tif, band_name, band_meta))
@@ -114,6 +130,21 @@ def open_prefilter(filename, meta, **reader_kwargs):
         raise
 
 def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
+    '''Return an ElmStore where each subdataset is a DataArray
+
+    Parameters:
+
+        dir_of_tiffs: directory of GeoTiff files where each is a
+                      single band raster
+        meta:     meta from elm.readers.load_dir_of_tifs_meta
+        band_specs: list of elm.readers.BandSpec objects,
+                    defaulting to reading all subdatasets
+                    as bands
+    Returns:
+        X: ElmStore
+
+    '''
+
     logger.debug('load_dir_of_tifs_array: {}'.format(dir_of_tiffs))
     band_order_info = meta['band_order_info']
     tifs = ls_tif_files(dir_of_tiffs)

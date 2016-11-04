@@ -19,7 +19,7 @@ __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
            'xy_canvas','dummy_canvas', 'BandSpec',
-           'set_na_from_meta']
+           'set_na_from_meta', 'get_shared_canvas']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -339,3 +339,20 @@ def set_na_from_meta(es, **kwargs):
             logger.debug('Missing value {}'.format(missing_value_b))
             val[val == np.array([missing_value_b], dtype=val.dtype)[0]] = np.NaN
 
+
+def get_shared_canvas(es):
+    '''Return a Canvas if all bands (DataArrays) share it, else False'''
+    canvas = getattr(es, 'canvas', None)
+    if canvas is not None:
+        return canvas
+    old_canvas = None
+    shared = True
+    for band in es.data_vars:
+        canvas = getattr(es, band).canvas
+        if canvas == old_canvas or old_canvas is None:
+            pass
+        else:
+            shared = False
+            break
+        old_canvas = canvas
+    return (canvas if shared else None)
