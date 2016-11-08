@@ -1,7 +1,7 @@
 ElmStore
 ==============================
 
-``ElmStore``, from ``elm.readers``, is a fundamental data structure in ``elm`` and is the data structure used to pass arrays and metadata through each of the steps in an :doc:`Pipeline <pipeline>` (series of transformations).  ``ElmStore``s are oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. ``ElmStore`` is a light wrapper around ``xarray.Dataset``.
+``ElmStore``, from ``elm.readers``, is a fundamental data structure in ``elm`` and is the data structure used to pass arrays and metadata through each of the steps in an :doc:`Pipeline <pipeline>` (series of transformations).  An ``ElmStore`` is oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. ``ElmStore`` is a light wrapper around ``xarray.Dataset``.
 
 This page discusses:
 
@@ -317,3 +317,31 @@ In the example above, ``'median'`` could have been replaced by any of the follow
  * std
  * var
 
+``ElmStore`` and Metadata
+-------------------------
+
+This section describes ``elm`` functions useful for deriving information from file metadata.
+
+**set_na_from_meta**: This function searches the ``attrs`` of each ``DataArray`` in an ``ElmStore`` or ``xarray.Dataset`` and sets ``NaN`` values in each ``DataArray`` where metadata indicates it is necessary.  Currently ``set_na_from_meta`` searches ``attrs`` for the following keys using a case-, space- and punctuation-insenstive regular expression:
+
+ * ``missing_value``: Any values in the ``DataArray`` equal to the missing value will be set to ``NaN``.
+ * ``valid_range`` and ``invalid_range``: If ``attrs`` have a key like ``valid_range`` or ``invalid_range``, the function will check to see if it is a sequence of length 2 or a string that can be split on comma or spaces to form a sequnce of length 2.  If a sequence of length 2, then the invalid / valid ranges will be used to set ``NaN`` values appropriately.
+
+.. code-block:: python
+
+    from elm.readers.tests.util import HDF4_FILES
+    from elm.readers import load_array, set_na_from_meta
+    es = load_array(HDF4_FILES[0])
+    set_na_from_meta(es) # modifies ElmStore instance in place
+
+**meta_is_day**: This function takes a single argument, a dict that is typically the ``attrs`` of an ``ElmStore``, and searches for keys/values indicating whether the ``attrs`` correspond to a day or night sample.
+
+.. code-block:: python
+
+    from elm.readers.tests.util import HDF4_FILES
+    from elm.readers import load_array
+    from elm.sample_util.metadata_selection import example_meta_is_day
+    from scipy.stats import describe
+    es3 = load_array(HDF4_FILES[0])
+    es3.DayNightFlag # prints "Day"
+    meta_is_day(es3) # prints True
