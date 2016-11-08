@@ -11,18 +11,6 @@ from elm.model_selection.util import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
 
-
-DAY_NIGHT_WORDS = ('day', 'night')
-FLAG_WORDS = ('flag', 'indicator')
-DAY_NIGHT = []
-for f in FLAG_WORDS:
-    w1 = "".join(DAY_NIGHT_WORDS)
-    w2 = "".join(DAY_NIGHT_WORDS[::-1])
-    w3, w4 = DAY_NIGHT_WORDS
-    for w in (w1, w2, w3, w4):
-        w5, w6 = f + w, w + f
-        DAY_NIGHT.extend((w5, w6,))
-
 def _strip_key(k):
     if isinstance(k, str):
         for delim in ('.', '_', '-', ' '):
@@ -55,7 +43,7 @@ def match_meta(meta, band_spec):
     return False
 
 
-def example_meta_is_day(d):
+def meta_is_day(attrs):
     '''Helper to find day/ night flags in nested dict
     Parmeters:
         d: dict
@@ -63,21 +51,21 @@ def example_meta_is_day(d):
         True if day, False if night, else None
     '''
     dicts = []
-    for k, v in d.items():
+    for k, v in attrs.items():
         if isinstance(v, dict):
             dicts.append(v)
             continue
         key2 = _strip_key(k)
-        if key2 in DAY_NIGHT:
-            dayflag = 'day' in key2
-            nightflag = 'night' in key2
-            if dayflag and nightflag:
-                value2 = _strip_key(v)
-                return 'day' in value2
-            elif dayflag or nightflag:
-                return bool(v)
+        print('key2', key2)
+        dayflag = 'day' in key2
+        nightflag = 'night' in key2
+        if dayflag and nightflag:
+            value2 = _strip_key(v)
+            return 'day' in value2.lower()
+        elif dayflag or nightflag:
+            return bool(v)
     if dicts:
-        return any(example_meta_is_day(d2) for d2 in dicts)
+        return any(meta_is_day(d2) for d2 in dicts)
     return False
 
 
