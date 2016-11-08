@@ -138,7 +138,6 @@ def evolve_train(pipe,
         log_once(len(pop), sample_keys_passed, 0)
         pop_names = [ind.name for ind in pop]
         models, fitnesses = fit_one_generation(dsk, 0, sample_keys_passed, pop)
-        logger.info(repr(models))
         assign_check_fitness(pop,
                          fitnesses,
                          param_history,
@@ -173,7 +172,6 @@ def evolve_train(pipe,
                 break # If there are no new solutions to try, break
         pop = evo_params.toolbox.select(pop, saved_ensemble_size)
         pop_names = [ind.name for ind in pop]
-        logger.info(repr((pop, pop_names, fitted_models)))
         models = [(k, v) for k, v in fitted_models.items()
                   if k in pop_names]
 
