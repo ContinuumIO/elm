@@ -96,3 +96,9 @@ Predicting for Many Large Samples and/or Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``elm`` can use dask-distributed, a dask thread pool, or serial processing for predicting over a group (ensemble) of models and a single sample or series of samples.  ``elm``'s interface for large scale prediction, described here - TODO LINK in detail, is via the ``predict_many`` method of a ``Pipeline`` instance.
 
+
+``elm`` - Work in Progress
+~~~~~~~~~~~~~~~~
+``elm`` is immature and largely for experimental use.
+
+The developers do not promise backwards compatibility with future versions.

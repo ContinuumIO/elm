@@ -1,7 +1,7 @@
 ElmStore
-========
+==============================
 
-``ElmStore``, from ``elm.readers``, is the type of data structure commonly passed from transformation step to the next in a ``elm.pipeline.Pipeline``.  ``ElmStore``s are oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. They are a light wrapper around ``xarray.Dataset``.
+``ElmStore``, from ``elm.readers``, is a fundamental data structure in ``elm`` and is the data structure used to pass arrays and metadata through each of the steps in an :doc:`Pipeline <pipeline>` (series of transformations).  ``ElmStore``s are oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. ``ElmStore`` is a light wrapper around ``xarray.Dataset``.
 
 This page discusses:
 
