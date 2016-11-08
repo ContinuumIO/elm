@@ -38,7 +38,10 @@ def make_config(pipeline, data_source):
             }
 
 
-def tst_one_pipeline(pipeline, add_na_per_band=0):
+def tst_one_pipeline(pipeline,
+                     add_na_per_band=0,
+                     na_fields_as_str=True,
+                     delim='_'):
     from elm.sample_util.sample_pipeline import make_pipeline_steps
     sample = random_elm_store()
     if add_na_per_band:
@@ -51,12 +54,19 @@ def tst_one_pipeline(pipeline, add_na_per_band=0):
             y = inds % val.shape[0]
             slc = slice(None, add_na_per_band // 2)
             val[y[slc],x[slc]] = 99 * idx
-            band_arr.attrs['missing_value'] = 99 * idx
+            band_arr.attrs['missing{}value'.format(delim)] = 99 * idx
             slc = slice(add_na_per_band // 2, add_na_per_band)
             val[y[slc], x[slc]] = 199 * idx
-            band_arr.attrs['invalid-range'] = [198 * idx, 200 * idx]
-            band_arr.attrs['valid-range'] = [-1e12, 1e12]
-
+            band_arr.attrs['invalid{}range'.format(delim)] = [198 * idx, 200 * idx]
+            band_arr.attrs['valid{}range'.format(delim)] = [-1e12, 1e12]
+            if na_fields_as_str:
+                for field in ('missing{}value', 'invalid{}range', 'valid{}range'):
+                    field = field.format(delim)
+                    v = band_arr.attrs[field]
+                    if isinstance(v, list):
+                        band_arr.attrs[field] = ', '.join(map(str,v))
+                    else:
+                        band_arr.attrs[field] = str(v)
             assert val[np.isnan(val)].size == 0
     config = ConfigParser(config=make_config(pipeline, data_source))
     pipe = Pipeline(make_pipeline_steps(config, pipeline))
@@ -160,8 +170,12 @@ def test_agg_inverse_flatten():
 
 def test_set_na_from_meta():
     set_na = [{'modify_sample': 'elm.readers:set_na_from_meta'}]
-    es, new_es = tst_one_pipeline(set_na, add_na_per_band=13)
-    assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
-    for band in es.data_vars:
-        has_nan = getattr(new_es, band).values
-        assert has_nan.size - 13 == has_nan[~np.isnan(has_nan)].size
+    for delim in ('_', '-', ' ', '   '):
+        for as_str in (True, False):
+            es, new_es = tst_one_pipeline(set_na, add_na_per_band=13,
+                                          na_fields_as_str=as_str,
+                                          delim=delim)
+            assert np.all([np.all(getattr(es,b).values.shape == getattr(new_es, b).values.shape) for b in es.data_vars])
+            for band in es.data_vars:
+                has_nan = getattr(new_es, band).values
+                assert has_nan.size - 13 == has_nan[~np.isnan(has_nan)].size

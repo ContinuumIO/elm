@@ -19,7 +19,8 @@ __all__ = ['Canvas', 'xy_to_row_col', 'row_col_to_xy',
            'geotransform_to_coords', 'geotransform_to_bounds',
            'canvas_to_coords', 'VALID_X_NAMES', 'VALID_Y_NAMES',
            'xy_canvas','dummy_canvas', 'BandSpec',
-           'set_na_from_meta', 'get_shared_canvas']
+           'set_na_from_meta', 'get_shared_canvas',
+           'take_geo_transform_from_meta']
 logger = logging.getLogger(__name__)
 
 SPATIAL_KEYS = ('height', 'width', 'geo_transform', 'bounds')
@@ -272,12 +273,25 @@ def _case_insensitive_lookup(dic, lookup_list, has_seen):
         match = re.search(pattern, k, re.IGNORECASE)
         val = dic[k]
         if match:
-            if isinstance(val, numbers.Number) or (isinstance(val, Sequence) and all(isinstance(v, numbers.Number) for v in val)):
-                return val
+            if isinstance(val, str):
+                if ',' in val:
+                    val = val.split(',')
+                else:
+                    val = val.split()
+            if isinstance(val, Sequence):
+                val = [float(v) for v in val]
+            else:
+                val = float(val)
+            logger.debug('{} {}'.format(match, val))
+
+            return val
         elif isinstance(val, dict):
-            if tuple(val) not in has_seen:
-                has_seen.add(tuple(val))
-                return _case_insensitive_lookup(val, lookup_list, has_seen)
+            key = tuple(val) + (k, pattern)
+            if key not in has_seen:
+                has_seen.add(key)
+                ret = _case_insensitive_lookup(val, lookup_list, has_seen)
+                if ret:
+                    return ret
 
 def extract_valid_range(**attrs):
     return _case_insensitive_lookup(attrs, VALID_RANGE_WORDS, set())
@@ -300,8 +314,10 @@ def _set_invalid_na(values, invalid):
 
 
 def _set_na_from_valid_range(values, valid_range):
+    logger.debug('valid_range {}'.format(valid_range))
     valid_range = np.array(valid_range, dtype=values.dtype)
     if len(valid_range) == 2:
+        logger.debug('==2')
         values[~((values >= valid_range[0])&(values <= valid_range[1]))] = np.NaN
     else:
         logger.info('Ignoring valid range metadata (does not have length of 2)')
@@ -309,20 +325,31 @@ def _set_na_from_valid_range(values, valid_range):
 
 
 def set_na_from_meta(es, **kwargs):
-    attrs = es.attrs
-    invalid_range_o = extract_invalid_range(**attrs)
-    if invalid_range_o is not None:
-        logger.debug('Invalid range {}'.format(invalid_range_o))
-        _set_invalid_na(val, invalid_range_o)
+    '''Set NaNs based on "valid_range" "invalid_range" and/or "missing"
+     in ElmStore attrs or DataArray attrs
 
-    valid_range_o   = extract_valid_range(**attrs)
-    if valid_range_o is not None:
-        logger.debug('Valid range {}'.format(valid_range_o))
-        _set_na_from_valid_range(val, valid_range_o)
-    missing_value_o = extract_missing_value(**attrs)
-    if missing_value_o is not None:
-        logger.debug('Missing value {}'.format(missing_value_o))
-        val[val == np.array([missing_value_o], dtype=val.dtype)[0]] = np.NaN
+    Parameters:
+        es: elm.readers.ElmStore
+        kwargs: ignored
+
+    Recursively searches es's attrs for keys loosely matching:
+
+     "valid_range": expected value is a sequence of length 2
+     "invalid_range": expected value is a sequence of length 2
+     "missing": expected value is scalar
+
+    Band attributes are also searched. For example with:
+        es.band_1.attrs.valid_range == [0, 1]
+    Then all values in band_1 outside (0, 1) would be NaN
+    With es.attrs.valid_range == [0, 1] all values in all bands
+    outside of (0, 1) would be assigned NaN.
+
+    '''
+    attrs = es.attrs
+    for band in es.data_vars:
+        band_arr = getattr(es, band)
+        if 'int' in str(band_arr.values.dtype):
+            band_arr.values = band_arr.values.astype(np.float32)
     for idx, band in enumerate(es.data_vars):
         band_arr = getattr(es, band)
         val = band_arr.values
