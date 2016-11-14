@@ -13,7 +13,7 @@ It demonstrates the common steps of using ``elm`` :
 LANDSAT
 ~~~~~~~
 
-The LANDSAT classification notebook from ``elm-data`` - TODO LINK is a good "Hello World!" example of ``elm`` .  This section walks through that notebook, pointing out:
+The LANDSAT classification is notebook from `elm-data`_ .  This section walks through that notebook, pointing out:
 
  * How to use ``elm.readers`` for scientific data files like GeoTiffs
  * How to set up an ``elm.pipeline.Pipeline`` of transformations
@@ -256,7 +256,5 @@ Using the `xarray-pcolormesh`_ on the ``predict`` attribute ( ``DataArray`` ) of
 The best prediction in terms of ``AIC`` :
 
 .. image:: img/landsat_029.png
-
-**Read More** TODO LINK Notebook
 
 .. _xarray-pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html
