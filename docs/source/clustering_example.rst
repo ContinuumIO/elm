@@ -1,5 +1,17 @@
-``elm`` and LANDSAT Example
-===========================
+``elm`` Overview / Example
+==========================
+
+This page walks through a ``Jupyter`` notebook using ``elm`` to ensemble fit K-Means and predict from all members of the ensemble.
+
+It demonstrates the common steps of using ``elm`` :
+
+ * Working with ``elm.readers.load_array`` to read ``NetCDF`` , ``HDF4`` , ``HDF5`` , and GeoTiff files, and controlling how a sample is composed of bands or separate rasters with ``BandSpec`` . See also :ref:`elm-store-from-file`
+ * Defining a ``Pipeline`` of transformers (e.g. normalization and PCA) and an estimator, where the transformers use classes from ``elm.pipeline.steps`` and the estimator is a model with a ``fit`` / ``predict`` interface.  See also :doc:`Pipeline<pipeline>`
+ * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
+ * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
+
+LANDSAT
+~~~~~~~
 
 The LANDSAT classification notebook from ``elm-data`` - TODO LINK is a good "Hello World!" example of ``elm`` .  This section walks through that notebook, pointing out:
 
@@ -7,7 +19,7 @@ The LANDSAT classification notebook from ``elm-data`` - TODO LINK is a good "Hel
  * How to set up an ``elm.pipeline.Pipeline`` of transformations
  * How to use ``dask`` to ``fit`` a ``Pipeline`` in ensemble and predict from many models
 
-To follow along, make sure you follow the Prerequisites - TODO LINK below.
+**NOTE** : To follow along, make sure you follow the :ref:`Prerequisites`.
 
 ``elm.readers`` Walk-Through
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -18,10 +30,12 @@ Each GeoTiff file has 1 raster (band of LANDSAT data):
 
 .. image:: img/landsat_001.png
 
+See more inforation on ``ElmStore`` in :doc:`ElmStore<elm-store>`.
+
 ``elm.readers.BandSpec``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Using a list of `BandSpec` objects, as shown below, is how one can control which bands, or individual GeoTiff files, become the sample dimensions for learning:
+Using a list of ``BandSpec`` objects, as shown below, is how one can control which bands, or individual GeoTiff files, become the sample dimensions for learning:
 
  * ``buf_xsize``: The size of the output raster horizontal dimension
  * ``buf_ysize``: The size of the output raster vertical dimension
@@ -52,7 +66,9 @@ For ``NetCDF``, ``HDF4``, and ``HDF5`` the first argument is a single filename, 
 
 Using an ``ElmStore`` like an (xarray.Dataset)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-TODO - LINK http://xarray.pydata.org/en/stable/data-structures.html#dataset
+See also `xarray docs on Dataset`_
+
+.. _xarray docs on Dataset: http://xarray.pydata.org/en/stable/data-structures.html#dataset
 
 .. image:: img/landsat_006.png
 
@@ -92,7 +108,7 @@ This cell show typical import statments for working with a ``elm.pipeline.steps`
 Steps - ``Flatten``
 ~~~~~~~~~~~~~~~~~~~
 
-This step is essentially ``.ravel`` on each ``DataArray`` in ``X`` to create a single 2-D ``DataArray`` :
+This :ref:`transform-flatten` step is essentially ``.ravel`` on each ``DataArray`` in ``X`` to create a single 2-D ``DataArray`` :
 
 .. image:: img/landsat_010.png
 
@@ -106,7 +122,7 @@ The next step uses ``elm.pipeline.steps.ModifySample`` to run a custom callable 
 Steps - ``DropNaRows`` - Drop Null / NaN Rows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The next step is a transformer to remove the ``NaN`` values from the ``DataArray`` ``flat`` (the flattened (``ravel``) rasters as a single 2-D ``DataArray`` )
+The :ref:`transform-dropnarows` is a transformer to remove the ``NaN`` values from the ``DataArray`` ``flat`` (the flattened (``ravel``) rasters as a single 2-D ``DataArray`` )
 
 .. image:: img/landsat_012.png
 
@@ -144,7 +160,7 @@ We are calculating:
 
 **Using pcolormesh on normalized differences of bands**
 
-Here are the ``NDWI`` and ``NDVI``:
+Here are the ``NDWI`` and ``NDVI`` plotted with the `xarray-pcolormesh`_ method of the ``predict`` ``DataArray``
 
 .. image:: img/landsat_016.png
 
@@ -175,6 +191,10 @@ Use ``steps.Transform`` to wrap ``PCA`` or another method from ``sklearn.decompo
 
 .. image:: img/landsat_021.png
 
+Read `more on sklearn.decomposition models here`
+
+.. _more on sklearn.decomposition models here: http://scikit-learn.org/stable/modules/classes.html#module-sklearn.decomposition
+
 Use an estimator from ``scikit-learn``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -182,21 +202,31 @@ Use a model with a ``fit`` / ``predict`` interface, such as ``KMeans``.
 
 .. image:: img/landsat_022.png
 
+Most `scikit-learn models described here`_ are supported.
+
+.. _scikit-learn models described here: http://scikit-learn.org/stable/modules/classes.html#module-sklearn.base
+
 Create ``Pipeline`` instance
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The following uses all the steps we have created in sequence of tuples and configures scoring for K-Means with the Akaike Information Criterion.
+The following uses all the steps we have created in sequence of tuples and configures scoring for K-Means with the `Akaike Information Criterion`_.
+
+.. _Akaike Information Criterion: https://en.wikipedia.org/wiki/Akaike_information_criterion
 
 .. image:: img/landsat_023.png
 
-The next steps deal with controlling ``fit_ensemble`` (fitting with a group of models of different parameters)
+The next steps deal with controlling :doc:`fit_ensemble<fit-ensemble>` (fitting with a group of models of different parameters)
+
+See more info on :doc:`Pipeline here<pipeline>`.
 
 ``ensemble_init_func``
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This is an example ``ensemble_init_func`` to pass to ``fit_ensemble``, using ``pipe.new_with_params(**new_params)`` to create a new ``Pipeline`` instance (unfitted) with new parameters.
+This is an example ``ensemble_init_func`` to pass to :doc:`fit_ensemble<fit-ensemble>`, using ``pipe.new_with_params(**new_params)`` to create a new unfitted ``Pipeline`` instance with new parameters.
 
 .. image:: img/landsat_024.png
+
+The :doc:`fit_ensemble docs<fit-ensemble>` also show an example of an ``ensemble_init_func``.
 
 More ``fit_ensemble`` control
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -208,17 +238,17 @@ The following sets the number of generations ( ``ngen`` ) and the ``model_select
 Parallelism with ``dask-distributed``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``fit_ensemble`` , to fit a group of models in generations with model selection after each generation, and ``predict_many`` each take a ``client`` keyword as a dask ``Client`` (dask).  ``predict_many`` parallelizes over multiple models and samples, though here only one sample is used.
+:doc:`fit_ensemble<fit-ensemble>` , to fit a group of models in generations with model selection after each generation, and :doc:`predict_many<predict-many>` each take a ``client`` keyword as a dask ``Client`` (dask).  :doc:`predict_many<predict-many>` parallelizes over multiple models and samples, though here only one sample is used.
 
 .. image:: img/landsat_026.png
 .. image:: img/landsat_027.png
 
-Using an ``ElmStore`` from ``predict_many``
+Using an ``ElmStore`` from :doc:`predict_many<predict-many>`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``predict_many`` has called ``elm.readers.inverse_flatten`` to reshape the 1-D numpy array from the ``sklearn.cluster.KMeans.predict`` method to a 2-D raster with the coordinates of the original data.  Note also the ``inverse_flatten`` is typically able to preserve ``NaN`` regions of the original data (the ``NaN`` borders of this image are preserved).
+:doc:`predict_many<predict-many>` has called :ref:`transform-inverseflatten` to reshape the 1-D numpy array from the ``sklearn.cluster.KMeans.predict`` method to a 2-D raster with the coordinates of the original data.  Note also the ``inverse_flatten`` is typically able to preserve ``NaN`` regions of the original data (the ``NaN`` borders of this image are preserved).
 
-Using the ``pcolormesh`` on the ``predict`` attribute ( ``DataArray`` ) of an ``ElmStore`` returned by ``predict_many`` :
+Using the `xarray-pcolormesh`_ on the ``predict`` attribute ( ``DataArray`` ) of an ``ElmStore`` returned by :doc:`predict_many<predict-many>` :
 
 .. image:: img/landsat_028.png
 
@@ -228,3 +258,5 @@ The best prediction in terms of ``AIC`` :
 .. image:: img/landsat_029.png
 
 **Read More** TODO LINK Notebook
+
+.. _xarray-pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html

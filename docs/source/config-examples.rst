@@ -1,15 +1,21 @@
 ``elm`` ``yaml`` Specs
 ======================
 
-Workflows involving ensemble and evolutionary methods and ``predict_many`` can also be specified in a ``yaml`` config file for running with the ``elm-main`` console entry point - TODO LINK.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.
+Workflows involving ensemble and evolutionary methods and :doc:`predict_many<predict-many>` can also be specified in a ``yaml`` config file for running with the ``elm-main`` console entry point - TODO LINK.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.  Read more the `yaml configuration file format here`_
 
-The repository ``elm-examples`` (TODO LINK) has a number of example ``yaml`` configuration files for GeoTiff and HDF4 files as input to K-Means or stochastic gradient descent classifiers.
+.. _yaml configuration file format here: http://yaml.org/spec/1.2/spec.html
+
+The repository `elm-examples`_ has a number of example ``yaml`` configuration files for GeoTiff and ``HDF4`` files as input to K-Means or stochastic gradient descent classifiers.
+
+.. _elm-examples: http://github.com/ContinuumIO/elm-examples
+.. _elm-data: http://github.com/ContinuumIO/elm-data
+.. _elm-repo: http://github.com/ContinuumIO/elm
 
 This page walks through each part of a valid ``yaml`` config.
 
 ``ensembles``
 -------------
-The ``ensembles`` section creates named dicts of keyword arguments to ``fit_ensemble``.  The example below creates ``example_ensemble``, an identifier we can use elsewhere in the config.  If passing the keyword ``ensemble_init_func`` in an ensemble here, then it should be given in `"package.subpackage.module:callable"` notation like a setup.py console entry point, e.g. ``"my_kmeans_module:make_ensemble"``.
+The ``ensembles`` section creates named dicts of keyword arguments to :doc:`fit_ensemble<fit-ensemble>`.  The example below creates ``example_ensemble``, an identifier we can use elsewhere in the config.  If passing the keyword ``ensemble_init_func`` in an ensemble here, then it should be given in `"package.subpackage.module:callable"` notation like a setup.py console entry point, e.g. ``"my_kmeans_module:make_ensemble"``.
 
 .. code-block:: yaml
 
@@ -51,6 +57,8 @@ This examples creates ``ds_example`` which selects from files to get bands 1 thr
       file_pattern: "\\.hdf",
      },
     }
+
+See also :ref:`elm-store-from-file`
 
 ``model_scoring``
 -----------------
@@ -174,6 +182,8 @@ Flattens 2-D rasters as separate ``DataArray``s to a single ``DataArray`` called
 
     {flatten: True}
 
+See also :ref:`transform-flatten`.
+
 *See also:* ``elm.pipeline.steps.Flatten`` - TODO LINK
 
 **drop_na_rows**
@@ -184,7 +194,7 @@ Drops null rows from an ``ElmStore`` or ``xarray.Dataset`` with a ``DataArray`` 
 
     {drop_na_rows: True}
 
-*See also:* ``elm.pipeline.steps.DropNaRows`` - TODO LINK
+See also :ref:`transform-dropnarows`.
 
 **modify_sample**
 
@@ -194,7 +204,7 @@ Provides a callable and optionally keyword arguments to modify ``X`` and optiona
 
     {modify_sample: "mypackage.mysubpkg.mymodule:normalizer_func", keyword_1: 4, keyword_2: 99}
 
-*See also:* ``elm.pipeline.steps.ModifySample`` - TODO LINK
+See also ``ModifySample`` usage in a  :doc:`K-Means LANDSAT example<cluster_example>` .
 
 **transpose**
 
@@ -239,5 +249,3 @@ Note the config's ``transform`` section configures transform models like PCA but
     {transform: pca}
 
 where ``pca`` is a key in the config's ``transform`` dict.
-
-*See also:* ``elm.pipeline.steps.Transform`` - TODO LINK

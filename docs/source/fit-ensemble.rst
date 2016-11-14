@@ -6,15 +6,15 @@ Ensemble fitting may be helpful in cases where the representative sample is larg
 Ensemble fitting may:
 
  * Use one or more samples,
- * Use one or more models (``elm.pipeline.Pipeline`` instances), and/or
+ * Use one or more models (:doc:`Pipeline<pipeline>` instances), and/or
  * Use one or more generations of fitting, with model selection logic on each generation
 
-It is helpful to first read the section Data Sources for a ``Pipeline`` section - TODO LINK that shows how to use either a single ``X`` matrix or a series of samples from a ``sampler`` callable.
+It is helpful to first read the section Data Sources for a :doc:`Pipeline<pipeline>` section - TODO LINK that shows how to use either a single ``X`` matrix or a series of samples from a ``sampler`` callable.
 
 Define a Sampler
 ----------------
 
-The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The full script can be found here - TODO LINK.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (- TODO LINK to ELmSTore) to select a subset of bands in HDF4 files.
+The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The full script can be found here - TODO LINK.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (see also :doc:`ElmStore<elm-store>`) to select a subset of bands in ``HDF4`` files.
 
 .. code-block:: python
 
@@ -51,7 +51,9 @@ The example below uses a ``sampler`` function and ``args_list`` (list of unpacka
 Define ``Pipeline`` Steps
 -------------------------
 
-Next a ``Pipeline`` is configured that flattens the separate band rasters to a single 2-D ``DataArray`` (TODO LINK FLATTEN), uses standard scaling (TODO scikit-learn link), then transforms with ``IncrementalPCA`` with 2 ``partial_fit`` batches before K-Means.  The ``Pipeline`` constructor also takes a ``scoring`` callable and optional ``scoring_kwargs``.
+.. _standard scaling: http://scikit-learn.org/stable/modules/generated/sklearn.preprocessing.StandardScaler.html
+
+Next a :doc:`Pipeline<pipeline>` is configured that flattens the separate band rasters to a single 2-D ``DataArray`` (See also :ref:`transform-flatten`, uses `standard scaling`_ from scikit-learn, then transforms with ``IncrementalPCA`` with 2 ``partial_fit`` batches before K-Means.  The :doc:`Pipeline<pipeline>` constructor also takes a ``scoring`` callable and optional ``scoring_kwargs``.
 
 .. code-block:: python
 
@@ -61,9 +63,13 @@ Next a ``Pipeline`` is configured that flattens the separate band rasters to a s
                       ('kmeans', MiniBatchKMeans(n_clusters=4, compute_labels=True)),]
     pipe = Pipeline(pipeline_steps, scoring=kmeans_aic, scoring_kwargs=dict(score_weights=[-1]))
 
-See the signature for ``kmeans_aic`` here (TODO LINK to source code) to write a similar scoring function, otherwise ``scoring`` defaults to calling the estimator's ``.score` attribute.
+.. _signature for kmeans_aic: https://github.com/ContinuumIO/elm/blob/master/elm/model_selection/kmeans.py
 
-Example Step 3 - Configure Ensemble
+
+See the `signature for kmeans_aic`_ here to write a similar scoring function, otherwise ``scoring`` defaults to calling the estimator's ``.score` attribute.
+
+Configure Ensemble
+------------------
 
 Now we can call ``fit_ensemble`` after choosing some controls on the size of the ensemble, the number of generations, and the logic for selecting models after each generation.
 
@@ -88,13 +94,13 @@ In the example above:
  * ``ngen`` sets the number of generations to 3
  * There are 4 initial ensemble members (``init_ensemble_size``),
  * After each generation ``kmeans_model_averaging`` (TODO LINK) is called on the ensemble with ``model_selection_kwargs`` are passed.
- * There are 3 ``partial_fit`` batches for ``MiniBatchKMeans`` on every ``Pipeline`` instance (``partial_fit`` within the ``IncrementalPCA`` was configured in the initialization of ``steps.Transform`` above)
+ * There are 3 ``partial_fit`` batches for ``MiniBatchKMeans`` on every :doc:`Pipeline<pipeline>` instance (``partial_fit`` within the ``IncrementalPCA`` was configured in the initialization of ``steps.Transform`` above)
  * ``models_share_sample`` is set to ``True`` so in each generation every ensemble member is fit to the same sample, then on the next generation, every model is fit to the next sample determined by ``sampler`` and ``args_list`` in this case.  If ``models_share_sample`` were ``False``, then in each generation every ensemble member would be copied and fit to every sample, repeating the process on each generation.
 
 Fitting with Dask-Distributed
 -----------------------------
 
-In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``band_specs`` and ``args_list`` key / values.  We can pass this with the ``ensemble_kwargs`` ensemble configuration to ``fit_ensemble`` as well as ``predict_many`` (read more on ``predict_many`` here (TODO LINK) - the data source for ``predict_many`` does not necessarily have to be the same one given to ``fit_ensemble`` or ``fit_ea``).
+In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``band_specs`` and ``args_list`` key / values.  We can pass this with the ``ensemble_kwargs`` ensemble configuration to ``fit_ensemble`` as well as :doc:`predict_many<predict-many>` (read more on :doc:`predict_many<predict-many>` here (TODO LINK) - the data source for :doc:`predict_many<predict-many>` does not necessarily have to be the same one given to ``fit_ensemble`` or ``fit_ea``).
 
 .. code-block:: python
 
@@ -103,11 +109,12 @@ In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``ban
         pipe.fit_ensemble(**data_source, **ensemble_kwargs)
         pred = pipe.predict_many(client=client, **data_source)
 
+.. _controlling-ensemble:
 
 Controlling Ensemble Initialization
 -----------------------------------
 
-To initialize the ensemble with ``Pipeline`` instances that do not all share the same parameters (as above), we could replace ``init_ensemble_size`` above with ``ensemble_init_func``
+To initialize the ensemble with :doc:`Pipeline<pipeline>` instances that do not all share the same parameters (as above), we could replace ``init_ensemble_size`` above with ``ensemble_init_func``
 
 .. code-block:: python
 
@@ -135,5 +142,5 @@ To initialize the ensemble with ``Pipeline`` instances that do not all share the
         pipe.fit_ensemble(**data_source, **ensemble_kwargs)
         pred = pipe.predict_many(client=client, **data_source)
 
-In the example above, ``Pipeline.new_with_params(kmeans__n_clusters)`` uses the scikit-learn syntax for parameter modifications of named steps in a pipeline.  In the initialization of ``Pipeline`` in the example above, the ``MiniBatchMeans`` step was named ``kmeans``, so ``kmeans__n_clusters=c`` sets the ``n_clusters`` parameter to the K-Means step and the ensemble in this case consists of one ``Pipeline`` for each of ``n_clusters`` choices in `(4, 5, 6, 7, 8)`.
+In the example above, ``Pipeline.new_with_params(kmeans__n_clusters)`` uses the scikit-learn syntax for parameter modifications of named steps in a pipeline.  In the initialization of :doc:`Pipeline<pipeline>` in the example above, the ``MiniBatchMeans`` step was named ``kmeans``, so ``kmeans__n_clusters=c`` sets the ``n_clusters`` parameter to the K-Means step and the ensemble in this case consists of one :doc:`Pipeline<pipeline>` for each of ``n_clusters`` choices in `(4, 5, 6, 7, 8)`.
 
