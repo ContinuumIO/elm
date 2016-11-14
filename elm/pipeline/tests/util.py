@@ -116,10 +116,11 @@ def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
+    default_centers = len(bands)
     if centers is None:
-        centers = np.arange(0, len(bands) * 5).reshape((len(bands), 5))
+        centers = np.arange(100, 100 + len(bands) * default_centers).reshape((len(bands), default_centers))
     if std_devs is None:
-        std_devs = np.ones((len(bands), 5))
+        std_devs = np.ones((len(bands), default_centers))
     if len(centers) != len(bands) or len(bands) != len(std_devs):
         raise ValueError('Expected bands, centers, std_devs to have same length')
     if kwargs.get('attrs'):
@@ -130,11 +131,10 @@ def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=
                  'geo_transform': GEO,
                  'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
     es_dict = OrderedDict()
+    arr, y = make_blobs(n_samples=width * height, n_features=len(bands),
+                        centers=centers, cluster_std=std_devs)
     for idx, band in enumerate(bands):
-        arr = np.random.normal(centers[idx],
-                            std_devs[idx],
-                            width * height).reshape((height, width))
-        es_dict[band] = xr.DataArray(arr,
+        es_dict[band] = xr.DataArray(arr[:, idx].reshape((height, width)),
                                      coords=[('y', np.arange(height)),
                                              ('x', np.arange(width))],
                                      dims=('y', 'x'),

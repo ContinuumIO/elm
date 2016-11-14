@@ -170,8 +170,12 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
             reader_kwargs['height'] = reader_kwargs.pop('buf_ysize')
         if 'window' in reader_kwargs:
             reader_kwargs['window'] = tuple(map(tuple, reader_kwargs['window']))
-        multy = band_meta['height'] / reader_kwargs['height']
-        multx = band_meta['width'] / reader_kwargs['width']
+            # TODO multx, multy should be handled here as well?
+        if reader_kwargs:
+            multy = band_meta['height'] / reader_kwargs['height']
+            multx = band_meta['width'] / reader_kwargs['width']
+        else:
+            multx = multy = 1.
         band_meta.update(reader_kwargs)
         geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
         handle, raster = open_prefilter(filename, band_meta, **reader_kwargs)
