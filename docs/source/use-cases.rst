@@ -5,12 +5,12 @@ Use Cases
 
 Common computational challenges in satellite and weather data machine learning include:
 
- * Large Scale Model Training
- * Model Uncertainty
- * Hyperparameterization / Model Selection
- * Data/Metadata Formats
- * Preprocessing Input Data
- * Predicting for Many Large Samples and/or Models
+ * :ref:`large-scale-model`
+ * :ref:`model-uncertainty`
+ * :ref:`hyperparameterization`
+ * :ref:`data-metadata-formats`
+ * :ref:`preprocessing-input`
+ * :ref:`predict-many-samples-models`
 
 To address these challenges ``elm`` draws from existing Python packages:
 
@@ -21,6 +21,7 @@ To address these challenges ``elm`` draws from existing Python packages:
  * ``deap`` - TODO LINKS FOR EACH,
 
 
+.. _large-scale-model
 
 Large-Scale Model Training
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -38,12 +39,13 @@ Large-Scale Model Training
 
 More reading:
 
- * ``Pipeline``
- * ``fit_ensemble``
- * ``fit_ea``
- * ``predict_many``
- * ``client_context``
- * Environment variables.
+ * :doc:`Pipeline<pipeline>`
+ * :doc:`fit_ensemble<fit-ensemble>`
+ * :doc:`fit_ea<fit-ea>`
+ * :doc:`predict_many<predict-many>`
+ * :doc:`Environment variables<environment-vars>`.
+
+.. _model-uncertainty:
 
 Model Uncertainty
 ~~~~~~~~~~~~~~~~~
@@ -51,7 +53,9 @@ Model Uncertainty
 Ensemble modeling can be used to account for uncertainty that arises from uncertain model parameters or uncertainty in the fitting process.  The ensemble approach in ``elm`` allows training and prediction from an ensemble where model parameters are varied, including parameters related to preprocessing transformations, such as feature selection or PCA transforms.  See the following examples of ensembles with diverse members:
 
  * Loikith et al notebook - TODO LINK
- * Stochastic gradient descent classifier in ensemble - TODO LINK ``predict_many`` example
+ * Stochastic gradient descent classifier in ensemble - TODO LINK :doc:`predict_many<predict-many>` example
+
+.. _hyperparameterization:
 
 Hyperparameterization / Model Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -68,6 +72,8 @@ See also: - TODO LINKS on each
  * ``elm.model_selection``
  * ``scikit-learn`` scoring classes that work with ``elm``
 
+.. _data-metadata-formats:
+
 Data/Metadata Formats
 ~~~~~~~~~~~~~~~~~~~~~
 One challenge in satellite and weather data processing is the variety of input data formats, including GeoTiff, NetCDF, HDF4, HDF5, and others.  ``elm`` offers a function ``load_array`` which can load spatial array data in the following formats:
@@ -77,6 +83,8 @@ One challenge in satellite and weather data processing is the variety of input d
  * HDF4 / HDF5: Loads subdatasets from HDF4 and HDF5 files
 
 ``load_array`` creates an ``ElmStore`` (read more here), a fundamental data structure in ``elm`` that is essentially an ``xarray.Dataset`` with metadata standardization over the various file types.
+
+.. _preprocessing-input:
 
 Preprocessing Input Data
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -92,9 +100,11 @@ TODO LINKS ON THE LIST BELOW
  * In-polygon selection - TODO LINK
  * Feature extraction through transform models like PCA or ICA
 
+.. _predict-many-samples-models:
+
 Predicting for Many Large Samples and/or Models
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-``elm`` can use dask-distributed, a dask thread pool, or serial processing for predicting over a group (ensemble) of models and a single sample or series of samples.  ``elm``'s interface for large scale prediction, described here - TODO LINK in detail, is via the ``predict_many`` method of a ``Pipeline`` instance.
+``elm`` can use dask-distributed, a dask thread pool, or serial processing for predicting over a group (ensemble) of models and a single sample or series of samples.  ``elm``'s interface for large scale prediction, described here - TODO LINK in detail, is via the :doc:`predict_many<predict-many>` method of a ``Pipeline`` instance.
 
 
 ``elm`` - Work in Progress

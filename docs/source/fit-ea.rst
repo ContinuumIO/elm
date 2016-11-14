@@ -1,9 +1,9 @@
 Fit EA
 ======
 
-``elm`` can use an evolutionary algorithm for hyperparameterization.  This involves using the ``fit_ea`` method of ``elm.pipeline.Pipeline``.  It is helpful at this point to first read about ``elm.pipeline.Pipeline`` and how to configure a data source (TODO LINK pipeline.rst page somewhere) for the multi-model approaches in ``elm``.  That page summarizes how ``fit_ea`` and ``fit_ensemble`` may be fit to a single ``X`` matrix (when the keyword ``X`` is given) or a series of samples (when ``sampler`` and ``args_list`` are given).
+``elm`` can use an evolutionary algorithm for hyperparameterization.  This involves using the ``fit_ea`` method of :doc:`Pipeline<pipeline>`.  It is helpful at this point to first read about :doc:`Pipeline<pipeline>` and how to configure a data source (TODO LINK pipeline.rst page somewhere) for the multi-model approaches in ``elm``.  That page summarizes how ``fit_ea`` and :doc:`fit_ensemble<fit-ensemble>` may be fit to a single ``X`` matrix (when the keyword ``X`` is given) or a series of samples (when ``sampler`` and ``args_list`` are given).
 
-The example below walks through configuring an evolutionary algorithm to select the best K-Means model with preprocessing steps inclusive of standard scaling and PCA.  First it sets up a sampler from HDF4 files (note the set up of a data source is the same as in ``fit_ensemble`` -TODO link to this same snippet there)
+The example below walks through configuring an evolutionary algorithm to select the best K-Means model with preprocessing steps inclusive of standard scaling and PCA.  First it sets up a sampler from HDF4 files (note the set up of a data source is the same as in :doc:`fit_ensemble<fit-ensemble>`)
 
 Example
 -------
@@ -42,7 +42,7 @@ Example
         'args_list': HDF4_FILES,
     }
 
-Next the example sets up a ``Pipeline`` of transformations
+Next the example sets up a :doc:`Pipeline<pipeline>` of transformations
 
 .. code-block:: python
 
@@ -101,9 +101,15 @@ In the example above the ``param_grid`` has a ``control`` dictionary specifying 
 
 **Note** While it is possible to change the ``select_method``, ``crossover_method`` and ``mutate_method`` below from the example shown, it is important to use methods that are consistent with how ``fit_ea`` expresses parameter choices.  For each parameter in the ``param_grid``, such as ``kmeans__n_clusters=list(range(3, 10))``, ``fit_ea`` optimizes with *indices* into ``kmeans__n_clusters`` list, i.e. choosing among ``list(range(7))``, *not* optimizing an integer parameter between 3 and 10.  This allows ``fit_ea`` to avoid custom treatment of string, float, or integer data types in the parameters' lists of choices.  If changing the ``mutate_method`` keep in mind that it needs to take individuals that are sequences of integers as arguments and return the same.
 
- * **select_method**: Selection method on each generation of evolutionary algorithm.  The selection method is typically ``selNSGA2`` but can be any ``deap.tools`` selection method (see the list of methods here - http://deap.gel.ulaval.ca/doc/dev/api/tools.html#selection)
- * **crossover_method**: Crossover method between two individuals, e.g. ``cxTwoPoint``, or any ``deap.tools`` crossover method from http://deap.gel.ulaval.ca/doc/dev/api/tools.html#crossover
- * **mutate_method**: Mutation method, typically ``mutUniformInt``, or another mutation method from ``deap.tools`` mutation methods http://deap.gel.ulaval.ca/doc/dev/api/tools.html#mutation
+.. _see the list of selection methods here: http://deap.gel.ulaval.ca/doc/dev/api/tools.html#selection
+
+.. _crossover method from deap.tools: http://deap.gel.ulaval.ca/doc/dev/api/tools.html#crossover
+
+.. _mutation methods: http://deap.gel.ulaval.ca/doc/dev/api/tools.html#mutation
+
+ * **select_method**: Selection method on each generation of evolutionary algorithm.  The selection method is typically ``selNSGA2`` but can be any ``deap.tools`` selection method (see the `list of selection methods here`_)
+ * **crossover_method**: Crossover method between two individuals, e.g. ``cxTwoPoint``, or any `crossover method from deap.tools`_
+ * **mutate_method**: Mutation method, typically ``mutUniformInt``, or another mutation method from ``deap.tools`` `mutation methods`_
  * **init_pop**: Placeholder for initialization features- must always be ``random`` (random initialization of solutions)
  * **indpb**: Proability each attribute (feature) is mutated when an individual is mutated, e.g. ``0.5`` (passed to mutation methods in ``deap.tools``)
  * **mutpb**: When two individuals crossover, this is the probability they will mutate immediately after crossover, e.g. ``0.9``
@@ -121,9 +127,15 @@ In the example above the ``param_grid`` has a ``control`` dictionary specifying 
 More Reading
 ------------
 
+.. _deap Docs: http://deap.readthedocs.io/en/master/
+
+.. _deap source code: https://github.com/deap
+
+.. _deap NSGA-2 example on which fit_ea is based: https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+
 ``fit_ea`` relies on ``deap`` for Pareto sorting and the genetic algorithm components described above.  Read more about ``deap``:
 
- * Docs - http://deap.readthedocs.io/en/master/
- * Source - https://github.com/deap
- * ``deap`` NSGA-2 example on which ``fit_ea`` is based - https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+ * `deap Docs`_
+ * `deap source code`_
+ * `deap NSGA-2 example on which fit_ea is based`_
 

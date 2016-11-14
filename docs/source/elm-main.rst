@@ -9,7 +9,7 @@ The simple use of ``elm-main`` is to run one ``yaml`` config:
 
    elm-main --config elm-examples/configs/kmeans_hdf4.yaml
 
-``elm-main`` uses the environment variables described here - TODO LINK, many of which may be overriden by optional arguments to ``elm-main`` (see below).
+``elm-main`` uses the :doc:`environment variables described here<environment-vars>`, many of which may be overriden by optional arguments to ``elm-main`` (see below).
 
 The next section goes over all the command line options for ``elm-main``
 
@@ -29,7 +29,7 @@ The following arguments control which parts of the config are being run:
 Overriding Arguments to ``fit_ensemble``
 ----------------------------------------
 
-The following arguments, if given, will override similarly named values in the ``yaml`` config that are associated with the ``train`` section (configuration of a final estimator in an ``elm.pipeline.Pipeline`` - TODO LINK):
+The following arguments, if given, will override similarly named values in the ``yaml`` config that are associated with the ``train`` section (configuration of a final estimator in an :doc:`Pipeline<pipeline>`:
 
  * ``--partial-fit-batches``: Number of ``partial_fit`` batches for final estimator (this does not control ``partial_fit`` batches within a ``transform`` step in ``run`` - ``pipeline`` steps)
  * ``--init-ensemble-size``: Initial ensemble size (ignored if ``ensemble_init_func`` is given in config(s))
@@ -38,7 +38,7 @@ The following arguments, if given, will override similarly named values in the `
 Use Dask Client
 ---------------
 
-To use a dask-distributed or dask ``ThreadPool`` client, use the environment variables described here - TODO LINK - or override them with command line arguments to ``elm-main``:
+To use a ``dask-distributed`` or dask ``ThreadPool`` client, use the :doc:`environment variables described here<environment-vars>` - or override them with command line arguments to ``elm-main``:
 
  * ``--dask-executor``: One of \[``DISTRIBUTED``  ``SERIAL`` or ``THREAD_POOL`` \]
  * ``--dask-scheduler``: Dask-distributed scheduler url, e.g. ``10.0.0.10:8786``

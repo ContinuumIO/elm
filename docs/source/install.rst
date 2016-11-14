@@ -38,29 +38,12 @@ Clone the ``elm-data`` repo using Git LFS so that more tests can be run:
     git clone https://github.com/ContinuumIO/elm-data
     git remote add origin https://github.com/ContinuumIO/elm-data
 
-Add the following to your .bashrc or environment, changing the paths depending on where you have cloned elm-data:
+Add the following to your .bashrc or environment, changing the path depending on where you have cloned ``elm-data``:
 
 .. code-block:: bash
 
     export ELM_EXAMPLE_DATA_PATH=/Users/peter/Documents/elm-data
 
-Run one of the example configs:
-
-.. code-block:: bash
-
-    elm-main --config elm-examples/configs/kmeans_hdf4.yaml
-
-Or run all of the example configs:
-
-.. code-block:: bash
-
-    elm-main --config-dir elm-examples/configs/
-
-If you have dask-distributed scheduler and worker(s) running or want to run with a dask ``ThreadPool``, ``elm-main`` can be called with environment variables (described here - TODO LINK) to use dask-distributed
-
-.. code-block:: bash
-
-    export DASK_EXECUTOR=DISTRIBUTED
-    export DASK_SCHEDULER=10.0.0.10:8786
-    elm-main --config elm-examples/configs/kmeans_hdf4.yaml
-
+Do the tutorials and examples:
+ * :doc:`K-Means with LANDSAT example<clustering_example>`
+ * :doc:`Examples <examples>`

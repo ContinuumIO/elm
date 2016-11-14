@@ -1,13 +1,15 @@
-Example with ``predict_many``
+Example with :doc:`predict_many<predict-many>`
 ============
 
-``elm``'s ``predict_many`` predicts for each estimator in a trained ensemble for one or more samples. ``predict_many`` takes some of the same data source keyword arguments that ``fit_ea`` and ``fit_ensemble`` use.  See also Data Sources for a ``Pipeline`` (TODO LINK to that section in pipeline.rst) - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for ``predict_many``.
+``elm``'s :doc:`predict_many<predict-many>` predicts for each estimator in a trained ensemble for one or more samples. :doc:`predict_many<predict-many>` takes some of the same data source keyword arguments that :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` use.  See also Data Sources for a `Pipeline<pipeline>` - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for :doc:`predict_many<predict-many>`.
 
-``predict_many`` has a feature ``to_cube`` argument that is useful in prediction for spatial data.  ``to_cube=True`` (True by default) means to convert the 1-D numpy array of predictions from the estimator of a ``Pipeline`` instance to a 2-D raster with the coordinates of the input data before the input data were flattened for training.  This makes it easy to make ``pcolormesh`` plots of predictions in spatial coordinates that are derived from models trained on spatial satellite and weather data.
+:doc:`predict_many<predict-many>` has a feature ``to_cube`` argument that is useful in prediction for spatial data.  ``to_cube=True`` (``True`` by default) means to convert the 1-D numpy array of predictions from the estimator of a :doc:`Pipeline<pipeline>` instance to a 2-D raster with the coordinates of the input data before the input data were flattened for training.  This makes it easy to make `xarray-pcolormesh`_ plots of predictions in spatial coordinates that are derived from models trained on spatial satellite and weather data.
+
+.. _stochastic gradient descent: http://scikit-learn.org/stable/modules/generated/sklearn.linear_model.SGDClassifier.html#sklearn.linear_model.SGDClassifier
 
 Example - ``SGDClassifier``
 ---------------------------
-The following example shows fitting a stochastic gradient descent classifier in ensemble with ``partial_fit``, varying the ``alpha`` and ``penalty`` parameters to ``sklearn.linear_model.SGDClassifier`` and finally predicting from the best models of the ensemble over several input samples.
+The following example shows fitting a `stochastic gradient descent`_ classifier in ensemble with ``partial_fit``, varying the ``alpha`` and ``penalty`` parameters to ``sklearn.linear_model.SGDClassifier`` and finally predicting from the best models of the ensemble over several input samples.
 
 Import from ``elm`` and ``sklearn``
 -----------------------------------
@@ -34,9 +36,11 @@ We can define a callable with a signature like ``model_selection`` below to cont
         top_n = kwargs['top_n']
         return [models[idx] for idx in best_idxes[:top_n]]
 
+See also ``model_selection`` in :ref:`controlling-ensemble`.
+
 Define initial ensemble
 -----------------------
-To vary the parameters of the initial ensemble of ``Pipeline`` instances, provide an ``ensemble_init_func``.  ``pipe.new_with_params`` is used here to create a variety of ``Pipeline``s that have different ``SGDClassifier`` ``alpha`` and ``penalty`` parameters.
+To vary the parameters of the initial ensemble of :doc:`Pipeline<pipeline>` instances, provide an ``ensemble_init_func``.  ``pipe.new_with_params`` is used here to create a variety of :doc:`Pipeline<pipeline>`s that have different ``SGDClassifier`` ``alpha`` and ``penalty`` parameters.
 
 .. code-block:: python
 
@@ -48,9 +52,11 @@ To vary the parameters of the initial ensemble of ``Pipeline`` instances, provid
                 models.append(new_pipe)
         return models
 
+See also ``ensemble_init_func`` in :ref:`controlling-ensemble`.
+
 Control ``partial_fit`` and ensemble
 -----------------------------------------------
-The following ``dict`` are keywords to pass to ``fit_ensemble``, including setting the number of generations ``ngen``, using ``partial_fit`` twice per fitting of each model, and retaining finally the 2 best models (``saved_ensemble_size``).  Note also that ``partial_fit`` requires giving the keyword argument ``classes``, a sequence of all known classes, so this is passed via ``method_kwargs``:
+The following ``dict`` are keywords to pass to :doc:`fit_ensemble<fit-ensemble>`, including setting the number of generations ``ngen``, using ``partial_fit`` twice per fitting of each model, and retaining finally the 2 best models (``saved_ensemble_size``).  Note also that ``partial_fit`` requires giving the keyword argument ``classes``, a sequence of all known classes, so this is passed via ``method_kwargs``:
 
 .. code-block:: python
 
@@ -66,6 +72,8 @@ The following ``dict`` are keywords to pass to ``fit_ensemble``, including setti
         'method_kwargs': {'classes': np.arange(5)},
         'models_share_sample': True,
     }
+
+See also ``ensemble_kwargs`` in :ref:`controlling-ensemble`.
 
 Define a ``sampler``
 -------------------------------------------------
@@ -122,10 +130,10 @@ Testing out ``sampler_train``:
             2, 2, 1, 0, 2]))
 
 
-``Pipeline`` with scoring
+:doc:`Pipeline<pipeline>` with scoring
 -------------------------
 
-The example below sets up ``accuracy_score`` for scoring a ``Pipeline`` that will flatten the sample and run ``SGDClassifier``.  The ``scoring_kwargs`` include ``greater_is_better`` (passed to ``sklearn.model_selection.make_scorer`` and ``score_weights`` determining whether sort models from minimum to maximum fitness (-1) or maximum to minimum (1).  Here we are maximimizing the ``accuracy_score``:
+The example below sets up ``accuracy_score`` for scoring a :doc:`Pipeline<pipeline>` that will flatten the sample and run ``SGDClassifier``.  The ``scoring_kwargs`` include ``greater_is_better`` (passed to ``sklearn.model_selection.make_scorer`` and ``score_weights`` determining whether sort models from minimum to maximum fitness (-1) or maximum to minimum (1).  Here we are maximimizing the ``accuracy_score``:
 
 .. code-block:: python
 
@@ -134,19 +142,19 @@ The example below sets up ``accuracy_score`` for scoring a ``Pipeline`` that wil
                      scoring=accuracy_score,
                      scoring_kwargs=dict(greater_is_better=True, score_weights=[1]))
 
-Call ``fit_ensemble``
+Call :doc:`fit_ensemble<fit-ensemble>`
 -------------------
-Calling ``fit_ensemble`` with an ``args_list`` of length 3, we are fitting all models in the ensemble to the same sample in one generation, then proceeding to fitting all models against the next sample in the next generation.  Read more about the interaction of the keyword arguments ``args_list``, ``ngen`` and ``models_share_sample`` here - TODO LINK. In this case we have 3 generations (``ngen`` above) and 3 samples (``len(args_list)`` below) and ``models_share_sample=True``.  Each generation will have be a different sample and all models in a generation will be fitted to that sample.
+Calling :doc:`fit_ensemble<fit-ensemble>` with an ``args_list`` of length 3, we are fitting all models in the ensemble to the same sample in one generation, then proceeding to fitting all models against the next sample in the next generation.  Read more about the interaction of the keyword arguments ``args_list``, ``ngen`` and ``models_share_sample`` here - TODO LINK. In this case we have 3 generations (``ngen`` above) and 3 samples (``len(args_list)`` below) and ``models_share_sample=True``.  Each generation will have be a different sample and all models in a generation will be fitted to that sample.
 
 .. code-block:: python
 
     data_source = dict(sampler=sampler_train, args_list=[(100, 120)] * 3)
     fitted = pipe.fit_ensemble(**data_source, **ensemble_kwargs)
 
-Call ``predict_many``
+Call :doc:`predict_many<predict-many>`
 ---------------------
 
-We currently have 2 models in the ensemble (see ``saved_ensemble_size`` above that set the top N models to keep) and an ``args_list`` that will generate 3 samples: ``predict_many`` will predict 6 sample - model combinations.
+We currently have 2 models in the ensemble (see ``saved_ensemble_size`` above that set the top N models to keep) and an ``args_list`` that will generate 3 samples: :doc:`predict_many<predict-many>` will predict 6 sample - model combinations.
 
 .. code-block:: python
 
@@ -159,7 +167,11 @@ Checking the number of predictions returned:
     In [7]: len(preds)
     Out[7]: 6
 
-Each item in ``preds`` is an ``ElmStore`` with a ``DataArray`` called ``predict``.  In this case that ``DataArray`` is a 2-D raster because we used the default keyword argument ``to_raster=True`` when ``predict_many`` was called.  The next snippet shows using the `plot` attribute of the ``predict`` ``DataArray``:
+Each item in ``preds`` is an ``ElmStore`` with a ``DataArray`` called ``predict``.  In this case that ``DataArray`` is a 2-D raster because we used the default keyword argument ``to_raster=True`` when :doc:`predict_many<predict-many>` was called.  The next snippet shows using the `plot` attribute of the ``predict`` ``DataArray``:
+
+See also `documentation on plotting with xarray`_
+
+.. _documentation on plotting with xarray: http://xarray.pydata.org/en/stable/plotting.html
 
 .. code-block:: python
 
@@ -168,7 +180,7 @@ Each item in ``preds`` is an ``ElmStore`` with a ``DataArray`` called ``predict`
 
 Predicting from an Ensemble Subset
 ----------------------------------
-By default ``predict_many`` will look for an attribute on the ``Pipeline`` instance called ``.ensemble``, which is expected to be a list of ``(tag, pipeline)`` tuples, and predict from each trained ``Pipeline`` instance in ``.ensemble``.  Alternatively you can pass a list of ``(tag, pipeline)`` tuples as ``ensemble`` keyword argument.  The example below predicts only from the best model in the ensemble (the final ensemble is sorted by model score if ``scoring`` was given to ``Pipeline`` initialization). There are 3 predictions because there are 3 samples.
+By default :doc:`predict_many<predict-many>` will look for an attribute on the :doc:`Pipeline<pipeline>` instance called ``.ensemble``, which is expected to be a list of ``(tag, pipeline)`` tuples, and predict from each trained :doc:`Pipeline<pipeline>` instance in ``.ensemble``.  Alternatively you can pass a list of ``(tag, pipeline)`` tuples as ``ensemble`` keyword argument.  The example below predicts only from the best model in the ensemble (the final ensemble is sorted by model score if ``scoring`` was given to :doc:`Pipeline<pipeline>` initialization). There are 3 predictions because there are 3 samples.
 
 .. code-block:: python
 
@@ -180,7 +192,7 @@ By default ``predict_many`` will look for an attribute on the ``Pipeline`` insta
 Predictions Too Large For Memory
 --------------------------------
 
-In the examples above, ``predict_many`` has returned a list of ``ElmStore``s.  If the number of samples and/or models is large then keeping them all predictions in memory in a list is infeasible.  In these cases, pass a ``serialize`` argument (callable) to ``predict_many`` to serialize prediction ``ElmStore``s as they are generated.  Here is the docstring for the ``serialize`` argument (TODO LINK), showing that ``serialize`` should have a signature exactly like the example below:
+In the examples above, :doc:`predict_many<predict-many>` has returned a list of ``ElmStore``s.  If the number of samples and/or models is large then keeping them all predictions in memory in a list is infeasible.  In these cases, pass a ``serialize`` argument (callable) to :doc:`predict_many<predict-many>` to serialize prediction ``ElmStore``s as they are generated.  ``serialize`` should have a signature exactly like the example below:
 
 .. code-block:: python
 
@@ -210,15 +222,15 @@ In predicting over 3 samples and one model, we have created 3 ``joblib`` dump pr
 
 Here are some notes on the arguments passed to ``serialize`` if given:
 
-* `y` is an ``ElmStore`` either 1-D or 2-D (see ``to_raster`` keyword to ``predict_many``)
-* `X` is the ``X`` ``ElmStore`` that was used for prediction (the ``Pipeline`` will preserve ``attrs`` in ``X`` useful for serializing ``y`` as in the example above which used the `.canvas` attribute of ``X``)
-* `tag` is a unique tag of sample and ``Pipeline`` instance
-* `elm_predict_path` is the root dir for serialization output - ``ELM_PREDICT_PATH`` from environment variables - TODO LINK ENVIRONMENT VARS
+* `y` is an ``ElmStore`` either 1-D or 2-D (see ``to_raster`` keyword to :doc:`predict_many<predict-many>`)
+* `X` is the ``X`` ``ElmStore`` that was used for prediction (the :doc:`Pipeline<pipeline>` will preserve ``attrs`` in ``X`` useful for serializing ``y`` as in the example above which used the `.canvas` attribute of ``X``)
+* `tag` is a unique tag of sample and :doc:`Pipeline<pipeline>` instance
+* `elm_predict_path` is the root dir for serialization output - ``ELM_PREDICT_PATH`` from :doc:`environment variables<environment-vars>`.
 
 Parallel Prediction
 -------------------
 
-To run ``predict_many`` (or ``fit_ensemble`` or ``fit_ea``) in parallel using a dask-distributed client or dask ``ThreadPool`` client, use ``elm.config.client_context`` as shown here (continuing with the namespace defined by the snippets above)
+To run :doc:`predict_many<predict-many>` (or :doc:`fit_ensemble<fit-ensemble>` or :doc:`fit_ea<fit-ea>`) in parallel using a dask-distributed client or dask ``ThreadPool`` client, use ``elm.config.client_context`` as shown here (continuing with the namespace defined by the snippets above)
 
 .. code-block:: python
 
@@ -227,4 +239,4 @@ To run ``predict_many`` (or ``fit_ensemble`` or ``fit_ea``) in parallel using a 
         fitted = pipe.fit_ensemble(**data_source, **ensemble_kwargs)
         preds = pipe.predict_many(client=client, **data_source)
 
-In the example above, ``client_context`` could have been called with no arguments if ``DASK_EXECUTOR`` and ``DASK_SCHEDULER`` environment variables were defined.  See also environment variables - TODO LINK
+In the example above, ``client_context`` could have been called with no arguments if ``DASK_EXECUTOR`` and ``DASK_SCHEDULER`` :doc:`environment variables<environment-vars>`.

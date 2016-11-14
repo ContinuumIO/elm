@@ -5,14 +5,18 @@ ElmStore
 
 This page discusses:
 
- * Creating an ``ElmStore`` from File - TODO LINK to below
- * Creating an ``ElmStore`` - Constructor  - TODO LINK to below
- * Attributes of an ``ElmStore``
- * Common ``ElmStore`` transformations  - TODO LINK to below
+ * :ref:`elm-store-from-file`
+ * :ref:`elm-store-constructor`
+ * :ref:`elm-store-attributes`
+ * :ref:`common-elm-store-transformations`
+
+See also :doc:`API docs<api>`.
+
+.. _elm-store-from-file:
 
 Creating an ``ElmStore`` from File
 ----------------------------------
-An ``ElmStore`` can be created from HDF4 / 5 or NetCDF file with ``load_array`` from ``elm.readers``.  The simple case is to load all bands or subdatasets from an HDF or NetCDF file:
+An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with ``load_array`` from ``elm.readers``.  The simple case is to load all bands or subdatasets from an HDF or NetCDF file:
 
 .. code-block:: python
 
@@ -50,17 +54,21 @@ The example above for GeoTiffs loaded the correct bands, but labeled them in a w
 Controlling Which Bands Are Loaded
 ----------------------------------
 
-Use the ``band_specs`` keyword to ``load_array` to
+Use the ``band_specs`` keyword to ``load_array`` to
+
  * Control which subdatasets, or bands typically, are loaded into the ``ElmStore`` and/or
  * To standardize the names of the bands (``DataArrays``) in the ``ElmStore``.
 
  The ``band_specs`` work slightly differently for each file type:
- * HDF4 / HDF5: The ``band_specs`` determine matching against one of the HDF4 file's subdatasets (see also GDAL subdatasets TODO LINK).
- * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variable``s' metadata (TODO LINK netCDF4 python variables interface).
- * GeoTiff: When calling ``load_array`` for GeoTiffs, the argument is a directory (of GeoTiff files) not a single GeoTiff file.  The ``band_specs`` for a GeoTiff file determine matching based on the gdal metadata for each GeoTiff in the directory.
+ * HDF4 / HDF5: The ``band_specs`` determine matching against one of the HDF4 file's subdatasets (see also `GDAL subdatasets`_).
+ * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variable``s' metadata (`NetCDF4 python variables interface`_).
+ * GeoTiff: When calling ``load_array`` for GeoTiffs, the argument is a directory (of GeoTiff files) not a single GeoTiff file.  The ``band_specs`` for a GeoTiff file determine matching based on the gdal metadata for each GeoTiff in the directory.  GeoTiffs are read using ``rasterio`` , `a wrapper around GDAl`_.
 
+.. _GDAL subdatasets: http://www.gdal.org/gdalinfo.html
+.. _NetCDF4 python variables interface: http://unidata.github.io/netcdf4-python/
+.. _a wrapper around GDAl: https://mapbox.github.io/rasterio/
 
-In simple cases ``band_specs`` can be a list of strings to match a ``NetCDF` variable name, subdataset name, or GeoTiff file name, as shown below:
+In simple cases ``band_specs`` can be a list of strings to match a ``NetCDF`` variable name, subdataset name, or GeoTiff file name, as shown below:
 
 .. code-block:: python
 
@@ -82,7 +90,7 @@ With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff
     load_array(dir_of_tifs, band_specs=["B1.TIF", "B2.TIF","B3.TIF"])
 
 
-``band_specs`` can be given as a list of ``elm.readers.BandSpec`` objects.  The following shows an example of loading 4 bands from an HDF4 file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
+``band_specs`` can be given as a list of ``elm.readers.BandSpec`` objects.  The following shows an example of loading 4 bands from an ``HDF4`` file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
 
 .. code-block:: python
 
@@ -108,6 +116,7 @@ With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff
 
 Note the ``BandSpec`` objects could have also used the keyword arguments ``key_re_flags`` and ``value_re_flags`` with a list of flags passed to `re` for regular expression matching.
 
+.. _bandspec-file-reading-control:
 
 ``BandSpec`` - File Reading Control
 -----------------------------------
@@ -115,11 +124,15 @@ Note the ``BandSpec`` objects could have also used the keyword arguments ``key_r
 Here are a few more things a ``BandSpec`` can do:
 
  * A ``BandSpec`` can control the resolution at which a file is read (and improve loading speed).  To control resolution when loading rasters, provide ``buf_xsize`` and ``buf_ysize`` keyword arguments (integers) to ``BandSpec``.
- * A ``BandSpec`` can provide a ``window`` that subsets the file.  See `this rasterio demo<https://sgillies.net//2013/12/21/rasterio-windows-and-masks.html>` that shows how ``window`` is effectively interpreted in ``load_array``.
+ * A ``BandSpec`` can provide a ``window`` that subsets the file.  See `this rasterio demo`_ that shows how ``window`` is effectively interpreted in ``load_array``.
  * A ``BandSpec`` with a ``meta_to_geotransform`` callable attribute can be used to construct a ``geo_transform`` array from band metadata (e.g. when GDAL fails to detect the ``geo_transform`` accurately)
  * A ``BandSpec`` can control whether a raster is loaded with `("y", "x")`  pixel order (the default behavior that suits most top-left-corner based rasters) or `("x", "y")` pixel order.
 
-See also the definition of ``BandSpec`` in ``elm.readers`` (below) TODO LINK ALSO showing all the recognized fields.
+See also the definition of ``BandSpec`` in ``elm.readers`` showing all the recognized fields (`snippet taken from elm.readers.util`_).
+
+.. _this rasterio demo: https://sgillies.net//2013/12/21/rasterio-windows-and-masks.html
+
+.. _snippet taken from elm.readers.util: https://github.com/ContinuumIO/elm/blob/master/elm/readers/util.py
 
 .. code-block:: python
 
@@ -136,10 +149,13 @@ See also the definition of ``BandSpec`` in ``elm.readers`` (below) TODO LINK ALS
         meta_to_geotransform = attr.ib(default=None)
         stored_coords_order = attr.ib(default=('y', 'x'))
 
+.. _elm-store-constructor:
 
 Creating an ``ElmStore`` - Contructor
 -------------------------------------
-Here is an example of creating an ``ElmStore`` from ``numpy`` arrays and ``xarray.DataArrays``.  In most ways, an ``ElmStore`` is interchangeable with an ``xarray.Dataset``.
+Here is an example of creating an ``ElmStore`` from ``numpy`` arrays and ``xarray.DataArrays``.  In most ways, an ``ElmStore`` is interchangeable with an ``xarray.Dataset`` (see also `docs on working with a Dataset`_.
+
+.. _docs on working with a Dataset: http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html
 
 .. code-block:: python
 
@@ -178,8 +194,11 @@ Calling ``sampler`` above gives:
         _dummy_canvas: True
         band_order: ['b1', 'b2', 'b3', 'b4']
 
-``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the band metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See TODO LINK on standards for geo_transform (gdal?).  In the example above the ``DataArray``s did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` - TODO LINK TO THE NEXT SECTION ON SELECTCANVAS)
+``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the band metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See `the GDAL data model for more information on geo transforms`_.  In the example above the ``DataArray``s did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` described further below)
 
+.. _the GDAL data model for more information on geo transforms: http://www.gdal.org/classGDALDataset.html#a5101119705f5fa2bc1344ab26f66fd1d
+
+.. _elm-store-attributes:
 
 Attributes of an ``ElmStore``
 -----------------------------
@@ -192,9 +211,11 @@ If an ``ElmStore`` was initialized with ``add_canvas`` (the behavior in ``load_a
 
     Out[5]: Canvas(geo_transform=(-180.0, 0.1, 0, -90.0, 0, 0.1), buf_xsize=3600, buf_ysize=1800, dims=('lon', 'lat'), ravel_order='C', zbounds=None, tbounds=None, zsize=None, tsize=None, bounds=BoundingBox(left=-180.0, bottom=-90.0, right=179.90000000000003, top=89.9))
 
-The ``canvas`` is used in the ``Pipeline`` for transformations like ``elm.pipeline.steps.SelectCanvas`` which can be used to reindex all bands onto coordinates of one of the band's in the ``ElmStore``. TODO LINK to reshape
+The ``canvas`` is used in the ``Pipeline`` for transformations like ``elm.pipeline.steps.SelectCanvas`` which can be used to reindex all bands onto coordinates of one of the band's in the ``ElmStore``.
 
-An ``ElmStore`` has a ``data_vars`` attribute (inherited from ``xarray.Dataset``) - TODO LINK, and also has an attribute ``band_order``.  When ``elm.pipeline.steps.Flatten`` flattens the separate bands of an ``ElmStore``, ``band_order`` becomes the order of the bands in the single flattened 2-d array.
+An ``ElmStore`` has a ``data_vars`` attribute (inherited from ``xarray.Dataset`` - `described here`_), and also has an attribute ``band_order``.  When ``elm.pipeline.steps.Flatten`` flattens the separate bands of an ``ElmStore``, ``band_order`` becomes the order of the bands in the single flattened 2-D array.
+
+.. _described here: http://xarray.pydata.org/en/stable/generated/xarray.Dataset.data_vars.html
 
 .. code-block:: python
 
@@ -211,13 +232,16 @@ An ``ElmStore`` has a ``data_vars`` attribute (inherited from ``xarray.Dataset``
     In [8]: es.band_order
     Out[8]: ['band_0', 'band_1', 'band_2', 'band_3']
 
+.. _common-elm-store-transformations:
 
 Common ``ElmStore`` Transformations
----------------------------------
+-----------------------------------
+
+.. _transform-flatten:
 
 **Flatten**
 
-``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in bands (``DataArray``s) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on ``ElmStore``s, where the scikit-learn transforms expect a 2-D array (see also TODO LINK TO OTHER EXAMPLE BELOW)
+``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in bands (``DataArray``s) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on ``ElmStore``s, where the scikit-learn transforms expect a 2-D array.
 
 Here is an example of ``Flatten`` that continues the example above that defined ``sampler``, a function returning a random ``ElmStore`` of 2-D ``DataArrays``s:
 
@@ -247,9 +271,11 @@ Here is an example of ``Flatten`` that continues the example above that defined 
         flatten_data_array: True
         band_order: ['b1', 'b2', 'b3', 'b4']
 
+.. _transform-inverseflatten:
+
 **InverseFlatten**
 
-``elm.pipeline.steps.InverseFlatten`` converts an ``ElmStore`` that is flattened (typically the output of ``Flatten`` above) back to separate 2-D raster bands.
+``elm.pipeline.steps.InverseFlatten`` converts an ``ElmStore`` that is flattened (typically the output of :ref:`transform-flatten` above) back to separate 2-D raster bands.
 
 .. code-block:: python
 
@@ -258,9 +284,11 @@ Here is an example of ``Flatten`` that continues the example above that defined 
     restored, _, _ = steps.InverseFlatten().fit_transform(X_2d)
     np.all(restored.b1.values == es.b1.values)
 
+.. _transform-dropnarows:
+
 **DropNaRows**
 
-``elm.pipeline.steps.DropNaRows`` is a transformer that will drop any null rows from an ``ElmStore`` that has a ``DataArray`` called ``flat`` (see ``Flatten`` above - TODO LINK).  It drops the null rows while keeping metadata to allow ``elm.readers.reshape.inverse_flatten`` in ``predict_many`` (conversion of a 1-D prediction array back to a 2-D raster map of classification, for example) - TODO LINK TO PREDICT_MANY on inverse_transform - TODO ALSO LINK TO INVERSE TRANSFORM BELOW
+``elm.pipeline.steps.DropNaRows`` is a transformer that will drop any null rows from an ``ElmStore`` that has a ``DataArray`` called ``flat`` (see :ref:`transform-flatten`).  It drops the null rows while keeping metadata to allow :ref:`transform-inverseflatten` in :doc:`predict_many<predict-many>` . An example usage of ``DropNaRows`` is given in the :doc:`K-Means LANDSAT ``elm`` introduction<cluster_example>`
 
 Here is an example of using ``DropNaRows`` with the ``sampler`` function defined above.
 
@@ -276,9 +304,11 @@ Here is an example of using ``DropNaRows`` with the ``sampler`` function defined
     val = restored.b1.values
     assert val[np.isnan(val)].size == 2
 
+.. _transform-agg:
+
 **Agg**
 
-Aggregation along a dimension can be done with ``elm.pipeline.steps.Agg``, referencing either a ``dim`` or ``axis``:
+Aggregation along a dimension can be done with ``elm.pipeline.steps.Agg``, referencing either a ``dim`` or ``axis`` .
 
 .. code-block:: python
 
@@ -302,25 +332,33 @@ Aggregation along a dimension can be done with ``elm.pipeline.steps.Agg``, refer
         _dummy_canvas: True
         band_order: ['b1', 'b2', 'b3', 'b4']
 
-In the example above, ``'median'`` could have been replaced by any of the following:
+In the example above, ``median`` could have been replaced by any of the following:
 
- * all
- * any
- * argmax
- * argmin
- * max
- * mean
- * median
- * min
- * prod
- * sum
- * std
- * var
+ * ``all``
+ * ``any``
+ * ``argmax``
+ * ``argmin``
+ * ``max``
+ * ``mean``
+ * ``median``
+ * ``min``
+ * ``prod``
+ * ``sum``
+ * ``std``
+ * ``var``
+
+Read more on the implementation of the functions above in the `xarray.DataArray methods here`_.
+
+.. _xarray.DataArray methods here: http://xarray.pydata.org/en/stable/generated/xarray.DataArray.html
+
+.. _elm-store-metadata:
 
 ``ElmStore`` and Metadata
 -------------------------
 
 This section describes ``elm`` functions useful for deriving information from file metadata.
+
+.. set-na-from-meta:
 
 **set_na_from_meta**: This function searches the ``attrs`` of each ``DataArray`` in an ``ElmStore`` or ``xarray.Dataset`` and sets ``NaN`` values in each ``DataArray`` where metadata indicates it is necessary.  Currently ``set_na_from_meta`` searches ``attrs`` for the following keys using a case-, space- and punctuation-insenstive regular expression:
 
@@ -333,6 +371,8 @@ This section describes ``elm`` functions useful for deriving information from fi
     from elm.readers import load_array, set_na_from_meta
     es = load_array(HDF4_FILES[0])
     set_na_from_meta(es) # modifies ElmStore instance in place
+
+.. _meta-is-day:
 
 **meta_is_day**: This function takes a single argument, a dict that is typically the ``attrs`` of an ``ElmStore``, and searches for keys/values indicating whether the ``attrs`` correspond to a day or night sample.
 
