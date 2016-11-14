@@ -187,6 +187,11 @@ class ElmStore(xr.Dataset):
             self.attrs['canvas'] = band_arr.canvas
             logger.debug('Bands share coordinates')
 
+    def plot_3d(self, bands, title='', scale=None,
+                axis_labels=True, **imshow_kwargs):
+        from elm.sample_util.plotting_helpers import plot_3d
+        return plot_3d(self, bands, title, scale, axis_labels, **imshow_kwargs)
+
     def __str__(self):
         return "ElmStore:\n" + super().__str__().replace('xarray', 'elm')
 
