@@ -109,16 +109,19 @@ def test_one_config(config=None, cwd=None):
     return elm_main(sys_argv=sys_argv, return_0_if_ok=False)
 
 
-def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
+def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=80, **kwargs):
     bands = bands or ['band_{}'.format(idx + 1) for idx in range(3)]
     if isinstance(bands, int):
         bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
-    get_val = lambda: np.random.uniform(mn,
-                            mx,
-                            width * height).reshape((height, width))
+    if centers is None:
+        centers = np.arange(0, len(bands) * 5).reshape((len(bands), 5))
+    if std_devs is None:
+        std_devs = np.ones((len(bands), 5))
+    if len(centers) != len(bands) or len(bands) != len(std_devs):
+        raise ValueError('Expected bands, centers, std_devs to have same length')
     if kwargs.get('attrs'):
         attrs = kwargs['attrs']
     else:
@@ -128,7 +131,10 @@ def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
                  'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
     es_dict = OrderedDict()
     for idx, band in enumerate(bands):
-        es_dict[band] = xr.DataArray(get_val(),
+        arr = np.random.normal(centers[idx],
+                            std_devs[idx],
+                            width * height).reshape((height, width))
+        es_dict[band] = xr.DataArray(arr,
                                      coords=[('y', np.arange(height)),
                                              ('x', np.arange(width))],
                                      dims=('y', 'x'),
