@@ -6,6 +6,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
 * :doc:`install`
 * :doc:`use-cases`
+* :doc:`clustering_example.rst`
 * :doc:`examples`
 
 .. toctree::
@@ -15,6 +16,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
    install.rst
    use-cases.rst
+   clustering_example.rst
    examples.rst
 
 
