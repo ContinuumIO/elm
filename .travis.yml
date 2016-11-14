@@ -24,7 +24,6 @@ install:
   - conda env update || conda env create
   - source activate elm-env
   - conda list
-  - mkdir LADSWEB
   - export ELM_EXAMPLE_DATA_PATH=$(pwd)/elm-data
   - git clone http://github.com/ContinuumIO/elm-data || git checkout -f HEAD
   - cd $ELM_EXAMPLE_DATA_PATH && git remote add elm_data https://github.com/ContinuumIO/elm-data.git && git reset && git lfs pull elm_data && echo "git lfs pull ok"
@@ -36,5 +35,4 @@ install:
 
 script:
   - cd $BUILD_DIR
-  - LADSWEB_LOCAL_CACHE=LADSWEB DASK_SCHEDULER=SERIAL py.test -m 'not slow' -v
-  - cat elapsed_time_test.txt
+  - DASK_SCHEDULER=SERIAL py.test -m 'not slow' -v
