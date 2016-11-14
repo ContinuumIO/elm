@@ -97,10 +97,14 @@ In the example above:
  * There are 3 ``partial_fit`` batches for ``MiniBatchKMeans`` on every :doc:`Pipeline<pipeline>` instance (``partial_fit`` within the ``IncrementalPCA`` was configured in the initialization of ``steps.Transform`` above)
  * ``models_share_sample`` is set to ``True`` so in each generation every ensemble member is fit to the same sample, then on the next generation, every model is fit to the next sample determined by ``sampler`` and ``args_list`` in this case.  If ``models_share_sample`` were ``False``, then in each generation every ensemble member would be copied and fit to every sample, repeating the process on each generation.
 
+.. _dask-distributed: https://distributed.readthedocs.io/en/latest/quickstart.html#setup-dask-distributed-the-hard-way
+
 Fitting with Dask-Distributed
 -----------------------------
 
 In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``band_specs`` and ``args_list`` key / values.  We can pass this with the ``ensemble_kwargs`` ensemble configuration to ``fit_ensemble`` as well as :doc:`predict_many<predict-many>` (read more on :doc:`predict_many<predict-many>` here (TODO LINK) - the data source for :doc:`predict_many<predict-many>` does not necessarily have to be the same one given to ``fit_ensemble`` or ``fit_ea``).
+
+**Note** : If you want ``dask-distributed`` as a client, first make sure you are running a ``dask-scheduler`` and ``dask-worker`` .  Read more here on `dask-distributed`_ and follow instructions in :doc:`environment variables<environment-vars>` .
 
 .. code-block:: python
 
@@ -108,6 +112,8 @@ In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``ban
         ensemble_kwargs['client'] = client
         pipe.fit_ensemble(**data_source, **ensemble_kwargs)
         pred = pipe.predict_many(client=client, **data_source)
+
+Fitting with ``dask`` parallelizes over the ensemble members (:doc:`Pipeline<pipeline>` instances) and over the calls to ``partial_fit``  - currently transformers in the ``Pipeline`` are not parallelized with ``dask`` .
 
 .. _controlling-ensemble:
 

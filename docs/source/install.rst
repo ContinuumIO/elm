@@ -45,5 +45,6 @@ Add the following to your .bashrc or environment, changing the path depending on
     export ELM_EXAMPLE_DATA_PATH=/Users/peter/Documents/elm-data
 
 Do the tutorials and examples:
+
  * :doc:`K-Means with LANDSAT example<clustering_example>`
  * :doc:`Examples <examples>`
