@@ -227,10 +227,14 @@ Here are some notes on the arguments passed to ``serialize`` if given:
 * `tag` is a unique tag of sample and :doc:`Pipeline<pipeline>` instance
 * `elm_predict_path` is the root dir for serialization output - ``ELM_PREDICT_PATH`` from :doc:`environment variables<environment-vars>`.
 
+.. _dask-distributed: https://distributed.readthedocs.io/en/latest/quickstart.html#setup-dask-distributed-the-hard-way
+
 Parallel Prediction
 -------------------
 
 To run :doc:`predict_many<predict-many>` (or :doc:`fit_ensemble<fit-ensemble>` or :doc:`fit_ea<fit-ea>`) in parallel using a dask-distributed client or dask ``ThreadPool`` client, use ``elm.config.client_context`` as shown here (continuing with the namespace defined by the snippets above)
+
+First make sure you are running a ``dask-scheduler`` and ``dask-worker`` .  Read more here on `dask-distributed`_.
 
 .. code-block:: python
 
@@ -240,3 +244,5 @@ To run :doc:`predict_many<predict-many>` (or :doc:`fit_ensemble<fit-ensemble>` o
         preds = pipe.predict_many(client=client, **data_source)
 
 In the example above, ``client_context`` could have been called with no arguments if ``DASK_EXECUTOR`` and ``DASK_SCHEDULER`` :doc:`environment variables<environment-vars>`.
+
+With parallel ``predict_many`` , each ensemble member / sample combination is a separate task - there is no parallelism within transformations of the ``Pipeline`` .

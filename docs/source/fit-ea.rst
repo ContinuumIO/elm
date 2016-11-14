@@ -88,6 +88,14 @@ Next ``evo_params`` need to be called by passing a ``param_grid`` dict to ``elm.
                           param_grid_name='param_grid_example',
                           score_weights=[-1]) # minimization
 
+.. _dask-distributed: https://distributed.readthedocs.io/en/latest/quickstart.html#setup-dask-distributed-the-hard-way
+
+Running with ``dask`` to parallelize over the individual solutions (:doc:`Pipeline<pipeline>` instances) and their calls to ``partial_fit`` .
+
+**Note** : If you want ``dask-distributed`` as a client, first make sure you are running a ``dask-scheduler`` and ``dask-worker`` .  Read more here on `dask-distributed`_ and follow instructions in :doc:`environment variables<environment-vars>` .
+
+.. code-block:: python
+
     with client_context() as client:
         fitted = pipeline.fit_ea(evo_params=evo_params,
                                  client=client,
