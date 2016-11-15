@@ -26,6 +26,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
 * :doc:`elm-store`
 * :doc:`pipeline`
+* :doc:`pipeline-steps`
 
 .. toctree::
    :maxdepth: 1
@@ -34,6 +35,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
    elm-store.rst
    pipeline.rst
+   pipeline-steps.rst
 
 
 **Multi-Model Fitting**
