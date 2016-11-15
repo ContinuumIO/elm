@@ -172,8 +172,8 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
             reader_kwargs['window'] = tuple(map(tuple, reader_kwargs['window']))
             # TODO multx, multy should be handled here as well?
         if reader_kwargs:
-            multy = band_meta['height'] / reader_kwargs['height']
-            multx = band_meta['width'] / reader_kwargs['width']
+            multy = band_meta['height'] / reader_kwargs.get('height', band_meta['height'])
+            multx = band_meta['width'] / reader_kwargs.get('width', band_meta['width'])
         else:
             multx = multy = 1.
         band_meta.update(reader_kwargs)
