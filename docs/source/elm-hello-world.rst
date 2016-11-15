@@ -19,6 +19,7 @@ First import model(s) from scikit-learn and ``Pipeline`` and ``steps`` from ``el
 .. _an xarray.Dataset: http://xarray.pydata.org/en/stable/generated/xarray.Dataset.html
 
 * ``random_elm_store`` is a function that returns random rasters (``xarray.DataArray`` s) in an :doc:`ElmStore<elm-store>`, a data structure similar to `an xarray.Dataset`_
+* ``steps`` is a module of :doc:`all the transformation steps possible in a Pipeline<pipeline-steps>`
 
 See the :doc:`LANDSAT K-Means<clustering_example>` and :doc:`other examples<examples>` to see how to read an :doc:`ElmStore<elm-store>` from GeoTiff, ``HDF4``, ``HDF5``, or ``NetCDF``.
 

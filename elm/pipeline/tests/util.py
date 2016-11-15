@@ -140,7 +140,10 @@ def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=
                                      dims=('y', 'x'),
                                      attrs=attrs)
     attrs['band_order'] = bands
-    return ElmStore(es_dict, attrs=attrs)
+    X = ElmStore(es_dict, attrs=attrs)
+    if kwargs.get('return_y'):
+        return X, y
+    return X
 
 
 def make_blobs_elm_store(**make_blobs_kwargs):

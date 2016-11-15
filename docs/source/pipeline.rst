@@ -67,7 +67,8 @@ Alternatively, to train on a single HDF4 file, we could have done:
 Transformations
 ---------------
 
-A ``Pipeline`` is created by giving a list of steps - the steps before the final step are known as transformers and the final step is the estimator.
+A ``Pipeline`` is created by giving a list of steps - the steps before the final step are known as transformers and the final step is the estimator.  See also the full docs on :doc:`elm.pipeline.steps<pipeline-steps>`.
+
  * Transformer steps must be taken from one of the classes in ``elm.pipeline.steps``. The purpose of ``elm.pipeline.steps`` is to wrap preprocessors and transformers from scikit-learn for use with :doc:`ElmStore<elm-store>`s or ``xarray.Dataset``s.
 
 Here is an example ``Pipeline`` of transformations before K-Means
