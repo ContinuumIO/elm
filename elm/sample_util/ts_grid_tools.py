@@ -114,14 +114,13 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
     else:
         new_arr = np.empty((num_rows, col_count),dtype=np.float64)
     logger.info("Histogramming...")
-    values = band_arr.values
     small = 1e-8
     inds = _ij_for_axis(kwargs['axis'], 0, 0)
-    shp = tuple(s for idx, s in enumerate(values.shape)
+    shp = tuple(s for idx, s in enumerate(band_arr.values.shape)
                 if isinstance(inds[idx], int))
     for row, (i, j) in enumerate(product(*(range(s) for s in shp))):
         ind1, ind2, ind3 = _ij_for_axis(kwargs['axis'], i, j)
-        values_slc = values[ind1, ind2, ind3]
+        values_slc = band_arr.values[ind1, ind2, ind3]
         if bin_size is not None:
             indices = np.searchsorted(bins, values_slc, side='left')
             binned = np.bincount(indices).astype(np.float64)
