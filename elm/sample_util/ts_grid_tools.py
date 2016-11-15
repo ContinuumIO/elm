@@ -166,11 +166,10 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
 
 class TSProbs(StepMixin):
     def __init__(self, axis=0, band=None, bin_size=None,
-                 num_bins=None, log_counts=True, edges=False):
+                 num_bins=None, log_counts=True):
         __doc__ = ts_probs.__doc__
         self._kwargs = dict(axis=axis, band=band, bin_size=bin_size,
-                            num_bins=num_bins, log_counts=log_counts,
-                            edges=edges)
+                            num_bins=num_bins, log_counts=log_counts)
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         __doc__ = ts_probs.__doc__
