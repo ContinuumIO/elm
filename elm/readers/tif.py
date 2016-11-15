@@ -74,7 +74,6 @@ def array_template(r, meta, **reader_kwargs):
             width = reader_kwargs['width']
         else:
             width = np.diff(reader_kwargs['window'][0])
-    get_k = lambda k: reader_kwargs.get(k, meta.get(k))
     return np.empty((1, height, width), dtype=dtype)
 
 
@@ -171,19 +170,27 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
             reader_kwargs['height'] = reader_kwargs.pop('buf_ysize')
         if 'window' in reader_kwargs:
             reader_kwargs['window'] = tuple(map(tuple, reader_kwargs['window']))
+            # TODO multx, multy should be handled here as well?
+        if reader_kwargs:
+            multy = band_meta['height'] / reader_kwargs.get('height', band_meta['height'])
+            multx = band_meta['width'] / reader_kwargs.get('width', band_meta['width'])
+        else:
+            multx = multy = 1.
         band_meta.update(reader_kwargs)
+        geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
         handle, raster = open_prefilter(filename, band_meta, **reader_kwargs)
         raster = raster_as_2d(raster)
-        geo_transform = take_geo_transform_from_meta(band_spec, **attrs)
-        if geo_transform is None:
-
-            band_meta['geo_transform'] = handle.get_transform()
-        else:
-            band_meta['geo_transform'] = geo_transform
         if getattr(band_spec, 'stored_coords_order', ['y', 'x'])[0] == 'y':
             rows, cols = raster.shape
         else:
             rows, cols = raster.T.shape
+        if geo_transform is None:
+            band_meta['geo_transform'] = handle.get_transform()
+        else:
+            band_meta['geo_transform'] = geo_transform
+        band_meta['geo_transform'][1]  *= multx
+        band_meta['geo_transform'][-1] *= multy
+
         coords_x, coords_y = geotransform_to_coords(cols,
                                                     rows,
                                                     band_meta['geo_transform'])

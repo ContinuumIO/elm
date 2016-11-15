@@ -187,6 +187,23 @@ class ElmStore(xr.Dataset):
             self.attrs['canvas'] = band_arr.canvas
             logger.debug('Bands share coordinates')
 
+    def plot_3d(self, bands, title='', scale=None,
+                axis_labels=True, **imshow_kwargs):
+        '''Plot a true or pseudo color image of 3 bands
+
+        Parameters:
+            X: ElmStore or xarray.Dataset
+            bands: list of 3 band names that are in X
+            title: title for figure
+            scale: divide all values by this (e.g. 2** 16 for uint16)
+            axis_labels: True / False show axis_labels
+            **imshow_kwargs: passed to imshow
+        Returns:
+            (arr, fig) where arr is the 3-D numpy array and fig is the figure
+        '''
+        from elm.sample_util.plotting_helpers import plot_3d
+        return plot_3d(self, bands, title, scale, axis_labels, **imshow_kwargs)
+
     def __str__(self):
         return "ElmStore:\n" + super().__str__().replace('xarray', 'elm')
 

@@ -156,3 +156,28 @@ def test_flatten_inverse_flatten():
     inv3 = transpose(inv2, ('x', 'y'))
     assert np.all(inv3.band_1.values == es.band_1.transpose('x', 'y').values)
 
+
+
+def test_elm_store_plot_3d():
+    import matplotlib.pyplot as plt
+    def ret_99(*args, **kwargs):
+        return 99
+    old_imshow = plt.imshow
+    old_gcf = plt.gcf
+    old_title = plt.title
+    try:
+        plt.imshow = ret_99
+        plt.gcf    = ret_99
+        plt.title = ret_99
+        ftype, fnames_list = sorted(f for f in FILES.items()
+                                    if f[0] == 'hdf')[0]
+        es = _setup(ftype, fnames_list)
+        out = es.plot_3d(('band_1', 'band_2', 'band_3'), axis_labels=True)
+        assert len(out) == 2
+        assert hasattr(out[0], 'shape')
+        assert len(out[0].shape) == 3
+        assert out[1] == 99
+    finally:
+        plt.imshow = old_imshow
+        plt.gcf    = old_gcf
+        plt.title  = old_title

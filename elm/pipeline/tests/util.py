@@ -109,16 +109,20 @@ def test_one_config(config=None, cwd=None):
     return elm_main(sys_argv=sys_argv, return_0_if_ok=False)
 
 
-def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
+def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=80, **kwargs):
     bands = bands or ['band_{}'.format(idx + 1) for idx in range(3)]
     if isinstance(bands, int):
         bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
         # it is actually band_specs
         bands = [_[-1] for _ in bands]
-    get_val = lambda: np.random.uniform(mn,
-                            mx,
-                            width * height).reshape((height, width))
+    default_centers = len(bands)
+    if centers is None:
+        centers = np.arange(100, 100 + len(bands) * default_centers).reshape((len(bands), default_centers))
+    if std_devs is None:
+        std_devs = np.ones((len(bands), default_centers))
+    if len(centers) != len(bands) or len(bands) != len(std_devs):
+        raise ValueError('Expected bands, centers, std_devs to have same length')
     if kwargs.get('attrs'):
         attrs = kwargs['attrs']
     else:
@@ -127,8 +131,10 @@ def random_elm_store(bands=None, mn=0, mx=1, height=100, width=80, **kwargs):
                  'geo_transform': GEO,
                  'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
     es_dict = OrderedDict()
+    arr, y = make_blobs(n_samples=width * height, n_features=len(bands),
+                        centers=centers, cluster_std=std_devs)
     for idx, band in enumerate(bands):
-        es_dict[band] = xr.DataArray(get_val(),
+        es_dict[band] = xr.DataArray(arr[:, idx].reshape((height, width)),
                                      coords=[('y', np.arange(height)),
                                              ('x', np.arange(width))],
                                      dims=('y', 'x'),
