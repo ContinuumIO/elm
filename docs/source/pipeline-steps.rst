@@ -297,7 +297,7 @@ The above code would show the ``band`` dimension of ``Xnew`` consists of differe
     fixed_bins = steps.TSProbs(band='band_1',
                                bin_size=0.5,
                                num_bins=152,
-                               log_counts=True,
+                               log_probs=True,
                                axis=0)
     Xnew, y, sample_weight = fixed_bins.fit_transform(X)
 
@@ -309,7 +309,7 @@ And the following would use irregular ( ``numpy.histogram`` ) bins rather than f
 
     irregular_bins = steps.TSProbs(band='band_1',
                                    num_bins=152,
-                                   log_counts=False,
+                                   log_probs=False,
                                    axis=0)
     Xnew, y, sample_weight = irregular_bins.fit_transform(X)
 
