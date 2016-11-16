@@ -1,14 +1,16 @@
 Testing ``elm``
-----------
-This page describes how to run the ``py.test`` unit tests and run all or some scripts and configs in ``elm-examples`` - TODO LINK.
 
+.. _elm-examples: http://github.com/ContinuumIO/elm-examples
+
+----------
+This page describes how to run the ``py.test`` unit tests and run all or some scripts and configs in `elm-examples`_
 
 ``py.test`` Unit Tests
 ~~~~~~~~~~~~~~~~~~~~~~
 
-These testing instructions assume you have cloned the ``elm`` repository locally and installed from source - TODO LINK
+These testing instructions assume you have cloned the ``elm`` repository locally and :doc:`installed from source<install>`.
 
-*Note:* Many tests are skipped if you have not defined the environment variable ``ELM_EXAMPLE_DATA_PATH`` (referring to your local clone of http://github.com/ContinuumIO/elm-examples)
+*Note:* Many tests are skipped if you have not defined the environment variable ``ELM_EXAMPLE_DATA_PATH`` (referring to your local clone of `elm-examples`_)
 
 Run the faster running tests:
 
@@ -34,7 +36,9 @@ and cut and paste a test mark to run a specific test:
 
     py.test -k test_bad_train_config
 
-When running ``py.test`` the environment variables related to dask determine whether dask-distributed or thread pool client or serial evaluation is used- TODO LINK are
+.. _dask-distributed: https://distributed.readthedocs.io/en/latest/
+
+When running ``py.test`` the environment variables related to dask determine whether dask-distributed or thread pool client or serial evaluation is used (See also `dask-distributed`_).
 
 Longer Running Tests
 ~~~~~~~~~~~~~~~~~~~~

@@ -9,12 +9,14 @@ Ensemble fitting may:
  * Use one or more models (:doc:`Pipeline<pipeline>` instances), and/or
  * Use one or more generations of fitting, with model selection logic on each generation
 
-It is helpful to first read the section Data Sources for a :doc:`Pipeline<pipeline>` section - TODO LINK that shows how to use either a single ``X`` matrix or a series of samples from a ``sampler`` callable.
+It is helpful to first read the section Data Sources for a :doc:`Pipeline<pipeline>` showing how to use either a single ``X`` matrix or a series of samples from a ``sampler`` callable.
 
 Define a Sampler
 ----------------
 
-The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The full script can be found here - TODO LINK.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (see also :doc:`ElmStore<elm-store>`) to select a subset of bands in ``HDF4`` files.
+.. _full script can be found here: https://github.com/ContinuumIO/elm-examples/blob/master/scripts/api_example.py
+
+The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The `full script can be found here`_.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (see also :doc:`ElmStore<elm-store>`) to select a subset of bands in ``HDF4`` files.
 
 .. code-block:: python
 
@@ -93,7 +95,7 @@ Here's an example:
 In the example above:
  * ``ngen`` sets the number of generations to 3
  * There are 4 initial ensemble members (``init_ensemble_size``),
- * After each generation ``kmeans_model_averaging`` (TODO LINK) is called on the ensemble with ``model_selection_kwargs`` are passed.
+ * After each generation ``kmeans_model_averaging`` (See :doc:`API docs<api>`) is called on the ensemble with ``model_selection_kwargs`` are passed.
  * There are 3 ``partial_fit`` batches for ``MiniBatchKMeans`` on every :doc:`Pipeline<pipeline>` instance (``partial_fit`` within the ``IncrementalPCA`` was configured in the initialization of ``steps.Transform`` above)
  * ``models_share_sample`` is set to ``True`` so in each generation every ensemble member is fit to the same sample, then on the next generation, every model is fit to the next sample determined by ``sampler`` and ``args_list`` in this case.  If ``models_share_sample`` were ``False``, then in each generation every ensemble member would be copied and fit to every sample, repeating the process on each generation.
 
@@ -102,7 +104,7 @@ In the example above:
 Fitting with Dask-Distributed
 -----------------------------
 
-In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``band_specs`` and ``args_list`` key / values.  We can pass this with the ``ensemble_kwargs`` ensemble configuration to ``fit_ensemble`` as well as :doc:`predict_many<predict-many>` (read more on :doc:`predict_many<predict-many>` here (TODO LINK) - the data source for :doc:`predict_many<predict-many>` does not necessarily have to be the same one given to ``fit_ensemble`` or ``fit_ea``).
+In the snippets above, we have a ``data_source`` ``dict`` with ``sampler``,``band_specs`` and ``args_list`` key / values.  We can pass this with the ``ensemble_kwargs`` ensemble configuration to ``fit_ensemble`` as well as :doc:`predict_many<predict-many>` . The data source for :doc:`predict_many<predict-many>` does not necessarily have to be the same one given to ``fit_ensemble`` or ``fit_ea``).
 
 **Note** : If you want ``dask-distributed`` as a client, first make sure you are running a ``dask-scheduler`` and ``dask-worker`` .  Read more here on `dask-distributed`_ and follow instructions in :doc:`environment variables<environment-vars>` .
 
