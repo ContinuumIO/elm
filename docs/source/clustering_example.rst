@@ -10,6 +10,8 @@ It demonstrates the common steps of using ``elm`` :
  * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
  * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
 
+.. _elm-data: http://github.com/ContinuumIO/elm-data
+
 LANDSAT
 ~~~~~~~
 
@@ -72,12 +74,14 @@ See also `xarray docs on Dataset`_
 
 .. image:: img/landsat_006.png
 
+.. _xarray.DataArray: http://xarray.pydata.org/en/stable/generated/xarray.DataArray.html
+
 Visualization with ``ElmStore``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The notebook then goes through a number of examples similar to:
 
- * ``X.band_1.plot.pcolormesh()`` - The code uses names like ``band_1``, ``band_2``.  These are named ``DataArray`` objects in the ``ElmStore`` ``X`` because of the ``name`` argument to the ``BandSpec`` objects above.  The ``plot.pcolormesh()`` comes from the data viz tools with ``xarray.DataArray`` (read more here - TODO LINK).
+ * ``X.band_1.plot.pcolormesh()`` - The code uses names like ``band_1``, ``band_2``.  These are named ``DataArray`` objects in the ``ElmStore`` ``X`` because of the ``name`` argument to the ``BandSpec`` objects above.  The ``plot.pcolormesh()`` comes from the data viz tools with `xarray.DataArray`_ .
  * The output of ``X.band_1.plot.pcolormesh()``
 
 .. image:: img/landsat_007.png
@@ -191,9 +195,10 @@ Use ``steps.Transform`` to wrap ``PCA`` or another method from ``sklearn.decompo
 
 .. image:: img/landsat_021.png
 
-Read `more on sklearn.decomposition models here`
-
 .. _more on sklearn.decomposition models here: http://scikit-learn.org/stable/modules/classes.html#module-sklearn.decomposition
+
+Read `more on sklearn.decomposition models here`_.
+
 
 Use an estimator from ``scikit-learn``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -248,7 +253,7 @@ Using an ``ElmStore`` from :doc:`predict_many<predict-many>`
 
 :doc:`predict_many<predict-many>` has called :ref:`transform-inverseflatten` to reshape the 1-D numpy array from the ``sklearn.cluster.KMeans.predict`` method to a 2-D raster with the coordinates of the original data.  Note also the ``inverse_flatten`` is typically able to preserve ``NaN`` regions of the original data (the ``NaN`` borders of this image are preserved).
 
-Using the `xarray-pcolormesh`_ on the ``predict`` attribute ( ``DataArray`` ) of an ``ElmStore`` returned by :doc:`predict_many<predict-many>` :
+Using the `xarray's pcolormesh`_ on the ``predict`` attribute ( ``DataArray`` ) of an ``ElmStore`` returned by :doc:`predict_many<predict-many>` :
 
 .. image:: img/landsat_028.png
 
@@ -257,4 +262,4 @@ The best prediction in terms of ``AIC`` :
 
 .. image:: img/landsat_029.png
 
-.. _xarray-pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html
+.. _xarray's pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html

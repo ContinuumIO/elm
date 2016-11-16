@@ -1,22 +1,24 @@
-``elm-main`` Entry Point
+:doc:`elm-main<elm-main>` Entry Point
 ========================
 
-``elm-main`` runs the training and prediction steps configured in a ``yaml`` file, as described in the ``elm`` ``yaml`` Specs section - TODO LINK.
+.. _read about yaml here: http://yaml.org/spec/
 
-The simple use of ``elm-main`` is to run one ``yaml`` config:
+:doc:`elm-main<elm-main>` runs the training and prediction steps configured in a ``yaml`` file, as described in the :doc:`yaml config examples<config-examples>`.  If you have not used ``yaml`` before, `read about yaml here`_ first.
+
+The simple use of :doc:`elm-main<elm-main>` is to run one ``yaml`` config:
 
 .. code-block:: bash
 
    elm-main --config elm-examples/configs/kmeans_hdf4.yaml
 
-``elm-main`` uses the :doc:`environment variables described here<environment-vars>`, many of which may be overriden by optional arguments to ``elm-main`` (see below).
+:doc:`elm-main<elm-main>` uses the :doc:`environment variables described here<environment-vars>`, many of which may be overriden by optional arguments to :doc:`elm-main<elm-main>` (see below).
 
-The next section goes over all the command line options for ``elm-main``
+The next section goes over all the command line options for :doc:`elm-main<elm-main>`
 
 Config(s) To Run
 ----------------
 
-``elm-main`` can run a single ``yaml`` config or a directory of ``yaml`` config files. To run with a single ``yaml`` file, use the ``--config`` argument as above, or to run with a directory of config ``yaml`` files, use ``--config-dir``
+:doc:`elm-main<elm-main>` can run a single ``yaml`` config or a directory of ``yaml`` config files. To run with a single ``yaml`` file, use the ``--config`` argument as above, or to run with a directory of config ``yaml`` files, use ``--config-dir``
 
 Controlling Train vs. Predict
 -----------------------------
@@ -38,7 +40,7 @@ The following arguments, if given, will override similarly named values in the `
 Use Dask Client
 ---------------
 
-To use a ``dask-distributed`` or dask ``ThreadPool`` client, use the :doc:`environment variables described here<environment-vars>` - or override them with command line arguments to ``elm-main``:
+To use a ``dask-distributed`` or dask ``ThreadPool`` client, use the :doc:`environment variables described here<environment-vars>` - or override them with command line arguments to :doc:`elm-main<elm-main>`:
 
  * ``--dask-executor``: One of \[``DISTRIBUTED``  ``SERIAL`` or ``THREAD_POOL`` \]
  * ``--dask-scheduler``: Dask-distributed scheduler url, e.g. ``10.0.0.10:8786``
@@ -48,13 +50,13 @@ Directories for Serialization
 
 The following arguments control where trained models and predictions are saved:
 
- * ``--elm-train-path``: Trained ``Pipeline`` instances are saved here - see also ``ELM_TRAIN_PATH`` environment variable - TODO LINK
- * ``--elm-predict-path``: Predictions are saved here - see also ``ELM_PREDICT_PATH`` environment variable
+ * ``--elm-train-path``: Trained ``Pipeline`` instances are saved here - see also ``ELM_TRAIN_PATH`` in :doc:`environment variables<environment-vars>`.
+ * ``--elm-predict-path``: Predictions are saved here - see also ``ELM_PREDICT_PATH`` in :doc:`environment variables<environment-vars>`.
 
-Help for ``elm-main``
+Help for :doc:`elm-main<elm-main>`
 --------------------------
 
-Here is the full help for ``elm-main``:
+Here is the full help for :doc:`elm-main<elm-main>`:
 
 .. code-block:: bash
 
