@@ -91,10 +91,10 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
             band: The name of DataArray to time series bin (required)
             bin_size: Size of the fixed bin or None to use np.histogram (irregular bins)
             num_bins: How many bins
-            log_counts: Return probabilities associated with log counts? True / False
+            log_probs: Return probabilities associated with log counts? True / False
     Returns:
         X: ElmStore with DataArray called flat that has columns composed of:
-            * log transformed counts (if kwargs["log_counts"]) or
+            * log transformed counts (if kwargs["log_probs"]) or
             * counts (if kwargs["counts"])
 
         Number of columns will be equal to num_bins
@@ -103,37 +103,31 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
     band_arr = getattr(X, band)
     num_bins = kwargs['num_bins']
     bin_size = kwargs.get('bin_size', None)
-    log_counts = kwargs.get('log_counts', None)
+    log_probs = kwargs.get('log_probs', None)
     if bin_size is not None:
         bins = np.linspace(-bin_size * num_bins // 2, bin_size * num_bins // 2, num_bins)
     num_rows = np.prod(band_arr.shape[1:])
     col_count =  num_bins
-    if bin_size is not None:
-        new_arr = np.empty((num_rows, bins.size))
-        col_count = bins.size
-    else:
-        new_arr = np.empty((num_rows, col_count),dtype=np.float64)
+    new_arr = np.empty((num_rows, col_count),dtype=np.float64)
     logger.info("Histogramming...")
-    values = band_arr.values
     small = 1e-8
     inds = _ij_for_axis(kwargs['axis'], 0, 0)
-    shp = tuple(s for idx, s in enumerate(values.shape)
+    shp = tuple(s for idx, s in enumerate(band_arr.values.shape)
                 if isinstance(inds[idx], int))
     for row, (i, j) in enumerate(product(*(range(s) for s in shp))):
         ind1, ind2, ind3 = _ij_for_axis(kwargs['axis'], i, j)
-        values_slc = values[ind1, ind2, ind3]
+        values_slc = band_arr.values[ind1, ind2, ind3]
         if bin_size is not None:
             indices = np.searchsorted(bins, values_slc, side='left')
             binned = np.bincount(indices).astype(np.float64)
             # add small to avoid log zero
-            if log_counts:
+            if log_probs:
                 was_zero = binned[binned == 0].size
-                extra = small * was_zero
                 binned[binned == 0] = small
             else:
                 extra = 0.
-            binned /= (extra + values.shape[0])
-            if log_counts:
+            binned /= binned.sum()
+            if log_probs:
                 binned = np.log10(binned)
             new_arr[row, :binned.size] = binned
             if binned.size < new_arr.shape[1]:
@@ -141,14 +135,13 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
         else:
             hist, edges = np.histogram(values_slc, num_bins)
             # add one observation to avoid log zero
-            if log_counts:
+            if log_probs:
                 was_zero = hist[hist == 0].size
-                extra = was_zero * small
                 hist[hist == 0] = small
             else:
                 extra = 1.0
-            hist = hist / (extra + values_slc.size)
-            if log_counts:
+            hist = hist.sum()
+            if log_probs:
                 hist = np.log10(hist)
             new_arr[row, :] = hist
 
@@ -166,11 +159,10 @@ def ts_probs(X, y=None, sample_weight=None, **kwargs):
 
 class TSProbs(StepMixin):
     def __init__(self, axis=0, band=None, bin_size=None,
-                 num_bins=None, log_counts=True, edges=False):
+                 num_bins=None, log_probs=True):
         __doc__ = ts_probs.__doc__
         self._kwargs = dict(axis=axis, band=band, bin_size=bin_size,
-                            num_bins=num_bins, log_counts=log_counts,
-                            edges=edges)
+                            num_bins=num_bins, log_probs=log_probs)
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         __doc__ = ts_probs.__doc__
