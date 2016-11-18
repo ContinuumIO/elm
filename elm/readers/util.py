@@ -1,3 +1,10 @@
+'''
+------------
+
+``elm.reader.util``
+~~~~~~~~~~~~~~~~~~~
+'''
+
 from collections import namedtuple, OrderedDict, Sequence
 from itertools import product
 import logging
