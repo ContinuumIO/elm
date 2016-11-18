@@ -225,9 +225,9 @@ def grid_header_to_geo_transform(**meta):
     that can be used to make a geo_transform object.
 
     Parameters:
-        **meta:  some dict
+        :meta:  some dict
     Returns:
-        geo_transform: tuple
+        :geo_transform: tuple
     '''
     grid_header = {}
     for word1, v in meta.items():
@@ -336,17 +336,18 @@ def set_na_from_meta(es, **kwargs):
      in ElmStore attrs or DataArray attrs
 
     Parameters:
-        es: elm.readers.ElmStore
-        kwargs: ignored
+        :es: elm.readers.ElmStore
+        :kwargs: ignored
 
     Recursively searches es's attrs for keys loosely matching:
 
-     "valid_range": expected value is a sequence of length 2
-     "invalid_range": expected value is a sequence of length 2
-     "missing": expected value is scalar
+     - "valid_range": expected value is a sequence of length 2
+     - "invalid_range": expected value is a sequence of length 2
+     - "missing": expected value is scalar
 
     Band attributes are also searched. For example with:
-        es.band_1.attrs.valid_range == [0, 1]
+        - es.band_1.attrs.valid_range == [0, 1]
+
     Then all values in band_1 outside (0, 1) would be NaN
     With es.attrs.valid_range == [0, 1] all values in all bands
     outside of (0, 1) would be assigned NaN.
