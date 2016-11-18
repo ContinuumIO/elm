@@ -1,8 +1,13 @@
 '''
+--------------------
+
+``elm.readers.hdf5``
+~~~~~~~~~~~~~~~~~~~~~
+
 Tools for reading HDF5 files.  Typically use the interface through
 
-elm.readers.load_array
-elm.readers.load_meta
+    - :func:`elm.readers.load_array`
+    - :func:`elm.readers.load_meta`
 
 '''
 
@@ -110,12 +115,14 @@ def load_hdf5_array(datafile, meta, band_specs):
     '''Return an ElmStore where each subdataset is a DataArray
 
     Parameters:
-
-        datafile: filename
-        meta:     meta from elm.readers.load_hdf5_meta
-        band_specs: list of elm.readers.BandSpec objects,
+        :datafile: filename
+        :meta:     meta from elm.readers.load_hdf5_meta
+        :band_specs: list of elm.readers.BandSpec objects,
                     defaulting to reading all subdatasets
                     as bands
+
+    Returns:
+        :es: An ElmStore
     '''
 
     logger.debug('load_hdf5_array: {}'.format(datafile))
