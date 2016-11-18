@@ -345,11 +345,10 @@ def set_na_from_meta(es, **kwargs):
      - "invalid_range": expected value is a sequence of length 2
      - "missing": expected value is scalar
 
-    Band attributes are also searched. For example with:
-        - es.band_1.attrs.valid_range == [0, 1]
+    Band attributes are also searched.
 
-    Then all values in band_1 outside (0, 1) would be NaN
-    With es.attrs.valid_range == [0, 1] all values in all bands
+    For example with ``es.band_1.attrs.valid_range == [0, 1]`` all values in band_1 outside (0, 1)
+    would be NaN. With ``es.attrs.valid_range == [0, 1]`` all values in all bands
     outside of (0, 1) would be assigned NaN.
 
     '''
