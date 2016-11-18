@@ -85,7 +85,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 * :doc:`release`
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
    :hidden:
    :caption: Help & Reference
 
