@@ -1,3 +1,11 @@
+'''
+-----------------------
+
+``elm.readers.reshape``
+~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
+
 from collections import (namedtuple,
                          Sequence,
                          OrderedDict)
@@ -33,12 +41,12 @@ __all__ = ['select_canvas',
            ]
 
 def transpose(es, new_dims):
-    '''transpose an ElmStore - elm.pipeline.steps.Transpose
+    '''Transpose an ElmStore - elm.pipeline.steps.Transpose
 
     Parameters:
-        new_dims: passed to xarray.DataArray.transpose
+        :new_dims: passed to xarray.DataArray.transpose
     Returns:
-        ElmStore transposed
+        :ElmStore transposed
     '''
     trans = OrderedDict()
     for band in es.data_vars:
@@ -54,13 +62,15 @@ def transpose(es, new_dims):
 
 def aggregate_simple(es, **kwargs):
     '''aggregate ElmStore - elm.pipeline.steps.Agg
+
     Parameters:
-        kwargs: Keywords may contain:
-            func: aggregation func name like "mean", "std"
-            dim: dimension name
-            axis: dimension integer
+        :kwargs: Keywords may contain
+            - :func: aggregation func name like "mean", "std"
+            - :dim: dimension name
+            - :axis: dimension integer
+
     Returns:
-        ElmStore aggregated
+        :ElmStore: aggregated
 
     '''
     func = kwargs['func']
@@ -90,11 +100,11 @@ def select_canvas(es, new_canvas):
     '''reindex_like new_canvas for every band (DataArray) in ElmStore
 
     Parameters:
-        es: ElmStore
-        new_canvas: an elm.readers.Canvas object
+        :es: ElmStore
+        :new_canvas: an elm.readers.Canvas object
 
     Returns:
-        es: ElmStore where every band (DataArray) has the same
+        :es: ElmStore where every band (DataArray) has the same
             coordinates - those of new_canvas
     '''
     if getattr(es, '_dummy_canvas', False):
@@ -146,10 +156,10 @@ def flatten(es, ravel_order='C'):
     in a new ElmStore.
 
     Params:
-        elm_store:  3-d ElmStore (band, y, x)
+        :elm_store:  3-d ElmStore (band, y, x)
 
     Returns:
-        elm_store:  2-d ElmStore (space, band)
+        :elm_store:  2-d ElmStore (space, band)
     '''
     if check_is_flat(es, raise_err=False):
         return es
@@ -218,14 +228,14 @@ def filled_flattened(na_dropped):
 
 
 def check_is_flat(flat, raise_err=True):
-    '''Check if an ElmStore has a DataArray called flat
-    with dimensions (space, band)
+    '''Check if an ElmStore has a DataArray called flat with dimensions (space, band)
+
     Parameters:
-        flat: an ElmStore
-        raise_err: raise or not
+        :flat: an ElmStore
+        :raise_err: raise or not
+
     Returns:
-        True if flat
-        False or ValueError if not flat (raise_err=True)
+        :bool: ``True`` if flat ``False`` or ``ValueError`` if not flat (raise_err=True)
     '''
     if not hasattr(flat, 'flat') or not all(hasattr(flat.flat, at) for at in ('space', 'band')):
         msg = 'Expected an ElmStore/Dataset with attribute "flat" and dims ("space", "band")'
@@ -242,11 +252,11 @@ def inverse_flatten(flat, add_canvas=False, **attrs):
     about x,y dims were preserved when the 2-d input ElmStore was created
 
     Params:
-        flat: a 2-d ElmStore (space, band)
-        attrs: attribute dict to update the dict of the returned ElmStore
+        :flat: a 2-d ElmStore (space, band)
+        :attrs: attribute dict to update the dict of the returned ElmStore
 
     Returns:
-        es:  ElmStore (band, y, x)
+        :es:  ElmStore (band, y, x)
     '''
     flat = filled_flattened(flat)
     attrs2 = copy.deepcopy(flat.attrs)
@@ -270,4 +280,3 @@ def inverse_flatten(flat, add_canvas=False, **attrs):
                                 attrs=attrs)
         es_new_dict[band] = data_arr
     return ElmStore(es_new_dict, attrs=attrs, add_canvas=add_canvas)
-

@@ -12,9 +12,13 @@ The packages include:
 
 .. _readers-api:
 
+
 ``elm.readers``
 ~~~~~~~~~~~~~~~
----------------
+
+.. automodule:: elm.readers.elm_store
+    :members:
+    :undoc-members:
 
 .. automodule:: elm.readers.load_array
     :members:
@@ -41,6 +45,9 @@ The packages include:
    :undoc-members:
 
 .. automodule:: elm.readers.local_file_iterators
+   :members:
+
+.. automodule:: elm.readers.reshape
    :members:
    :undoc-members:
 
