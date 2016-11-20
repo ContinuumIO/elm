@@ -1,4 +1,6 @@
 '''
+------------------
+
 ``elm.readers.load_array``
 ++++++++++++++++++++++++++
 load_array returns an ElmStore for HDF, NetCDF, GeoTiff files

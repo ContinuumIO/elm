@@ -1,8 +1,8 @@
 '''
-------------------
+----------------------
 
-``netcdf.py``
-~~~~~~~~~~~~~
+``elm.readers.netcdf``
+~~~~~~~~~~~~~~~~~~~~~~
 
 Tools for reading NetCDF files.  Typically use the interface through
 
