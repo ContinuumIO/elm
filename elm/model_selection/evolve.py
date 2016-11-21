@@ -1,3 +1,10 @@
+'''
+----------------------------
+
+``elm.model_selection.evolve``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''
+
 import array
 from collections import (defaultdict, OrderedDict, Sequence)
 import copy
@@ -72,8 +79,7 @@ def assign_names(pop, names=None):
 
 
 def get_param_grid(config, step):
-    '''Get the metadata for one config step that has a
-    param_grid or return None'''
+    '''Get the metadata for one config step that has a param_grid or return None'''
     param_grid_name = step.get('param_grid') or None
     if not param_grid_name:
         return None
@@ -150,14 +156,14 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
     '''Mutation for the method, choices and other config options
 
     Parameters:
-        method:  string - imported from deap.tools such as mutUniformInt
-        choices: list of lists choices for each parameter
-        max_param_retries: how many times to retry when getting invalid params
-        individual:        deap Individual parameter ste
-        kwargs:            kwargs passed as args to method given
+        :method:  string - imported from deap.tools such as mutUniformInt
+        :choices: list of lists choices for each parameter
+        :max_param_retries: how many times to retry when getting invalid params
+        :individual:        deap Individual parameter ste
+        :kwargs:            kwargs passed as args to method given
 
     Returns:
-        tuple of one Individual parameter set
+        :tuple: of one Individual parameter set
 
     '''
     kwargs = copy.deepcopy(kwargs)
@@ -182,8 +188,7 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
 
 
 def init_Individual(icls, content):
-    '''Initialize a genetic algorithm individual with class icls
-    and content (parameters)'''
+    '''Initialize a genetic algorithm individual with class icls and content (parameters)'''
     individual = icls(content)
     return individual
 
@@ -198,17 +203,20 @@ def init_Population(pcls, ind_init, initializer, mu):
 
 def crossover(toolbox, method, ind1, ind2, **kwargs):
     '''crossover two solutions using crossover 'method'
+
     Parameters:
-        toolbox: deap toolbox
-        ind1:    individual
-        ind2:    individual
-        method:  method name from deap.tools, e.g. cxTwoPoint
-        kwargs:  passed as args where needed to method, e.g.:
-            alpha: if using cxBlend, cxESBlend
-            indpb: if using cxUniform or cxUniformPartialyMatched
-            eta: if using cxSimulatedBinary or cxSimulatedBinaryBounded
-            low: if using cxSimulatedBinaryBounded
-            up:  if using cxSimulatedBinaryBounded
+        :toolbox: deap toolbox
+        :ind1:    individual
+        :ind2:    individual
+        :method:  method name from deap.tools, e.g. cxTwoPoint
+        :kwargs:  passed as args where needed to method, e.g.:
+
+            * :alpha: if using cxBlend, cxESBlend
+            * :indpb: if using cxUniform or cxUniformPartialyMatched
+            * :eta: if using cxSimulatedBinary or cxSimulatedBinaryBounded
+            * :low: if using cxSimulatedBinaryBounded
+            * :up:  if using cxSimulatedBinaryBounded
+
     '''
     child1, child2 = [toolbox.clone(ind) for ind in (ind1, ind2)]
     cx = getattr(tools, method, None)
@@ -232,14 +240,15 @@ def wrap_select(method, individuals, k, **kwargs):
     '''wraps a selection method such as selNSGA2 from deap.tools
 
     Parameters:
-        method:       method such as selNSGA2 or selBest
-        individuals:  population of solutions
-        k:            how many to select
-        kwargs:       passed as args to method, e.g.:
-            fitness_size:   with method selDoubleTournament
-            parsimony_size: with method selDoubleTournament
-            fitness_first:  with method selDoubleTournament
-            tournsize:      with method selTournament
+        :method:       method such as selNSGA2 or selBest
+        :individuals:  population of solutions
+        :k:            how many to select
+        :kwargs:       passed as args to method, e.g.:
+
+            * :fitness_size:   with method selDoubleTournament
+            * :parsimony_size: with method selDoubleTournament
+            * :fitness_first:  with method selDoubleTournament
+            * :tournsize:      with method selTournament
 
     '''
     sel = getattr(tools, method, None)
@@ -256,7 +265,7 @@ def wrap_select(method, individuals, k, **kwargs):
 
 
 def _set_from_keys(config_dict, keys, value):
-    '''Set a value in a new config given keys like
+    '''Set a value in a new config given keys like /
        ("train", "pca", "model_init_kwargs", "n_components")
     '''
     d = config_dict
@@ -269,12 +278,12 @@ def ind_to_new_pipe(pipe, deap_params, ind):
     '''Take an Individual (ind), return new elm.config.ConfigParser instance
 
     Parameters:
-        pipe:         an existing elm.pipeline.Pipeline instance
-        deap_params:  deap_params field from EvoParams object
-        ind:          Individual (list of indices into deap_params
+        :pipe:         an existing elm.pipeline.Pipeline instance
+        :deap_params:  deap_params field from EvoParams object
+        :ind:          Individual (list of indices into deap_params /
                       in same order as deap_params['param_order'])
     Returns:
-        new_pipe:     Unfitted copy of original elm.pipeline.Pipeline
+        :new_pipe:     Unfitted copy of original elm.pipeline.Pipeline /
                       with parameter replacements
     '''
     logger.debug('ind_to_new_pipe ind: {}'.format(ind))
@@ -296,12 +305,10 @@ def avoid_repeated_params(max_param_retries):
     '''Keep a running set of hashes to avoid repeating parameter trials
 
     Parameters:
-        max_param_reties: int - max number of retries to find
-                          unused param set
+        :max_param_reties: int - max number of retries to find unused param set
 
     Returns:
-        dec:              decorator of mutate, mate, or other functions
-                          returning Individuals
+        :dec: decorator of mutate, mate, or other functions returning Individuals
     '''
     hashed_params = set()
     def dec(func):
@@ -323,8 +330,7 @@ def avoid_repeated_params(max_param_retries):
 
 
 def _configure_toolbox(toolbox, deap_params, config, **kwargs):
-    '''Configure a deap toolbox for mate, mutate, select,
-    Individual init, and population init methods'''
+    '''Configure a deap toolbox for mate, mutate, select, Individual init, and population init methods'''
     max_param_retries = getattr(config, 'MAX_PARAM_RETRIES', DEFAULT_MAX_PARAM_RETRIES)
     dec = avoid_repeated_params(max_param_retries)
     toolbox.register('mate', dec(partial(crossover, toolbox,
@@ -367,22 +373,19 @@ def _get_evolve_meta(config):
 
 def ea_setup(config=None, param_grid=None, param_grid_name=None,
              score_weights=None):
-    '''ea_setup parses a yaml config or param_grid dictionary
-    to create an EvoParams instance with fields needed for algorithm
+    '''ea_setup parses a yaml config or param_grid dictionary to create an EvoParams instance with fields needed for algorithm
 
     Parameters:
-        config:         elm.config.ConfigParser instance or None
-        param_grid:     param_grid dictionary if not giving config
-        param_grid_name:name of param_grid, if not giving config
-        score_weights:  list of weights, -1 or 1, for each objective,
-                        ignored if config is not None
+        :config:         elm.config.ConfigParser instance or None
+        :param_grid:     param_grid dictionary if not giving config
+        :param_grid_name: name of param_grid, if not giving config
+        :score_weights:  list of weights, -1 or 1, for each objective, ignored if config is not None
 
     Returns:
-        if config was given:
-            dict of EvoParams for each step in config's "run" list
-            (integers as key, EvoParams instances as values)
-        elif config was None:
-            EvoParams instance
+
+        * if config was given dict of `EvoParams` for each step in config's "run" list (integers as key, EvoParams instances as values)
+        * elif config was None `EvoParams` instance
+
     '''
     if config and not param_grid:
         idx_to_param_grid = _get_evolve_meta(config)
@@ -450,13 +453,14 @@ def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_w
     '''Assign fitness to each individual in invalid_ind, record parameter history
 
     Parameters:
-        invalid_ind:   Individuals Sequence
-        fitnesses:     Sequence of fitness Sequences
-        param_history: List onto which param choices are appended
-        choices:       List of actual param values corresponding to indices in Individuals
-        score_weights: List of -1 or 1 ints indicating minimize/maximize
+        :invalid_ind:   Individuals Sequence
+        :fitnesses:     Sequence of fitness Sequences
+        :param_history: List onto which param choices are appended
+        :choices:       List of actual param values corresponding to indices in Individuals
+        :score_weights: List of -1 or 1 ints indicating minimize/maximize
+
     Returns:
-        None (assigns fitness to Individuals in place)
+        :None: (assigns fitness to Individuals in place)
     '''
     check_fitnesses(fitnesses, score_weights)
     for ind, fit in zip(invalid_ind, fitnesses):
@@ -517,18 +521,19 @@ def _no_stop(agg, score_weights, value, old, new):
 
 
 def eval_stop_wrapper(evo_params, original_fitness):
-    '''Handle sections of config's {param_grids: {pg_name: control: {
+    '''Handle sections of config's {param_grids: {pg_name: control: {}}
 
     Examples of configs handled by this function:
 
-         early_stop: {abs_change: [10], agg: all},
-         early_stop: {percent_change: [10], agg: all}
-         early_stop: {threshold: [10], agg: any}
-    }
-    Parameters
-        evo_params: EvoParams namedtuple
-    Returns
-        decorator - evaluates stop on each EA iteration
+         * :early_stop: {abs_change: [10], agg: all},
+         * :early_stop: {percent_change: [10], agg: all}
+         * :early_stop: {threshold: [10], agg: any}
+
+    Parameters:
+        :evo_params: EvoParams namedtuple
+
+    Returns:
+        :decorator: Evaluates stop on each EA iteration
     '''
     early_stop = evo_params.early_stop
     if not early_stop:
@@ -569,18 +574,17 @@ def eval_stop_wrapper(evo_params, original_fitness):
 
 
 def ea_general(evo_params, cxpb, mutpb, ngen, k):
-    '''This is a general EA based
-    on an NSGA2 example from deap:
-
+    '''This is a general EA based on an NSGA2 example from deap: /
         https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
+
     Parameters:
-        toolbox: deap toolbox with select, mate, mutate methods
-        pop:     population from toolbox.population_guess() or similar
-        cxpb:    crossover prob (float 0 < cxpb < 1)
-        mutpb:   mutation prob (float 0 < cxpb < 1)
-        ngen:    number of generations (int)
+        :toolbox: deap toolbox with select, mate, mutate methods
+        :pop:     population from toolbox.population_guess() or similar
+        :cxpb:    crossover prob (float 0 < cxpb < 1)
+        :mutpb:   mutation prob (float 0 < cxpb < 1)
+        :ngen:    number of generations (int) /
                      (Note: the loop here starts at generation 1 not zero)
-        mu:      population size
+        :mu:      population size
     '''
     toolbox = evo_params.toolbox
     param_history = []
@@ -655,4 +659,3 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
     # based on the None in 2nd position below
     logger.info('Evolutionary algorithm finished')
     yield (pop, None, param_history)
-
