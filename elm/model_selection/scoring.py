@@ -1,5 +1,5 @@
 '''
-----------------------------
+--------------------------------
 
 ``elm.model_selection.scroring``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -107,7 +107,7 @@ def score_one_model(model,
             * :greater_is_better: True if high scores are good
             * :needs_proba:    Estimator needs proba
             * :needs_threshold: Estimator needs threshold
-            
+
     '''
     if scoring is None:
         if not hasattr(model, 'score') or not callable(model.score):
