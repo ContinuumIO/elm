@@ -56,7 +56,6 @@ The packages include:
 
 ``elm.pipeline``
 ~~~~~~~~~~~~~~~~
-----------------
 
 .. automodule:: elm.pipeline.pipeline
    :members:
