@@ -18,24 +18,24 @@ def make_3d():
 def test_ts_probs():
 
     s = steps.TSProbs()
-    s.set_params(band='band_1', bin_size=0.5, num_bins=152, log_counts=True)
+    s.set_params(band='band_1', bin_size=0.5, num_bins=152, log_probs=True)
     orig = make_3d()
     X, _, _ = s.fit_transform(orig)
     assert hasattr(X, 'flat')
     assert X.flat.values.shape[1] == 152
     s.set_params(band='band_1', bin_size=0.5, num_bins=152,
-                 log_counts=False)
+                 log_probs=False)
     X2, _, _ = s.fit_transform(orig)
     assert hasattr(X2, 'flat')
     assert X2.flat.values.shape[1] == 152
-    s.set_params(band='band_1', bin_size=0.5, num_bins=152, log_counts=True)
+    s.set_params(band='band_1', bin_size=0.5, num_bins=152, log_probs=True)
     X3, _, _ = s.fit_transform(orig)
     assert hasattr(X3, 'flat')
     assert X3.flat.values.shape[1] == 152
     with pytest.raises(ValueError):
         s = steps.TSProbs()
         s.fit_transform(orig)
-    s.set_params(band='band_1', num_bins=152, log_counts=False)
+    s.set_params(band='band_1', num_bins=152, log_probs=False)
     X4, _, _ = s.fit_transform(orig)
     assert hasattr(X4, 'flat')
     assert X4.flat.values.shape[1] == 152

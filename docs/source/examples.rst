@@ -1,13 +1,13 @@
 Examples
 ========
-This page provides examples of Python sessions using ``elm`` code and ``yaml`` config files that can be run with ``elm-main`` (TODO LINK elm-main).
+This page provides examples of Python sessions using ``elm`` code and ``yaml`` config files that can be run with :doc:`elm-main<elm-main>`.
 
 .. _Prerequisites:
 
 Prerequisites for Examples
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Follow the instructions for installation of ``elm`` and the ``elm-env`` conda environment- TODO LINK, then clone:
+Follow the instructions for installation of ``elm`` and the ``elm-env`` conda environment ( :doc:`Install<install>` ):
 
 * https://github.com/ContinuumIO/elm-examples/
 * https://github.com/ContinuumIO/elm-data/

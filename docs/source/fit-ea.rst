@@ -1,7 +1,7 @@
 Fit EA
 ======
 
-``elm`` can use an evolutionary algorithm for hyperparameterization.  This involves using the ``fit_ea`` method of :doc:`Pipeline<pipeline>`.  It is helpful at this point to first read about :doc:`Pipeline<pipeline>` and how to configure a data source (TODO LINK pipeline.rst page somewhere) for the multi-model approaches in ``elm``.  That page summarizes how ``fit_ea`` and :doc:`fit_ensemble<fit-ensemble>` may be fit to a single ``X`` matrix (when the keyword ``X`` is given) or a series of samples (when ``sampler`` and ``args_list`` are given).
+``elm`` can use an evolutionary algorithm for hyperparameterization.  This involves using the ``fit_ea`` method of :doc:`Pipeline<pipeline>`.  It is helpful at this point to first read about :doc:`Pipeline<pipeline>` and how to configure a data source for the multi-model approaches in ``elm``.  That page summarizes how :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` may be fit to a single ``X`` matrix (when the keyword ``X`` is given) or a series of samples (when ``sampler`` and ``args_list`` are given).
 
 The example below walks through configuring an evolutionary algorithm to select the best K-Means model with preprocessing steps inclusive of standard scaling and PCA.  First it sets up a sampler from HDF4 files (note the set up of a data source is the same as in :doc:`fit_ensemble<fit-ensemble>`)
 
