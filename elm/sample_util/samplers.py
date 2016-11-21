@@ -1,3 +1,10 @@
+'''
+-----------------------------
+
+``elm.sample_util.sampleres``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 from collections import namedtuple
 
 import attr
@@ -36,16 +43,16 @@ def make_samples_dask(X, y, sample_weight, pipe, args_list, sampler, data_source
     '''Dask graph of sampler calls, used in ensemble and EA methods
 
     Parameters:
-        X:  ElmStore or None
-        y:  numpy array or None
-        sample_weight: numpy array or None
-        args_list: arguments to pass to sampler
-        sampler: function called on each element of args_list
-                 sampler(*each_element) if X not given
-        data_source: keyword args to sampler
+        :X:  ElmStore or None
+        :y:  numpy array or None
+        :sample_weight: numpy array or None
+        :args_list: arguments to pass to sampler
+        :sampler: function called on each element of args_list sampler(\*each_element) if X not given
+        :data_source: keyword args to sampler
 
     Returns:
-        dsk:  Dask dict
+        :dsk:  Dask dict
+
     '''
     if X is None:
         dsk = make_samples(pipe, args_list, sampler, data_source)

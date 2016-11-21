@@ -1,3 +1,10 @@
+'''
+--------------------------------
+
+``elm.sample_util.prepoc_scale``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import copy
 from functools import WRAPPER_ASSIGNMENTS, wraps, partial
 
@@ -168,9 +175,10 @@ for k, cls in clses:
 
 def require_positive(X, small_num=0.0001):
     '''Helper function to ensure positivity before functions like "log"
+
     Params:
-        X:  numpy array
-        small_num: small float number which should replace values <= 0'''
+        :X:  numpy array
+        :small_num: small float number which should replace values <= 0'''
 
 
     if X.dtype.kind != 'f':

@@ -1,5 +1,12 @@
-'''Utilities for taking the "pipelines" section of an elm
-config and creating an elm.pipeline.Pipeline from them'''
+'''
+-----------------------------------
+
+``elm.sample_util.sample_pipeline``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Utilities for taking the "pipelines" section of an elm
+config and creating an elm.pipeline.Pipeline from them
+'''
 
 from collections import Sequence
 import copy
@@ -28,8 +35,7 @@ _SAMPLE_PIPELINE_SPECS = {}
 
 def _split_pipeline_output(output, X, y,
                            sample_weight, context):
-    '''Util to ensure a Pipeline func always
-    returns (X, y, sample_weight) tuple'''
+    '''Util to ensure a Pipeline func always returns (X, y, sample_weight) tuple'''
     if not isinstance(output, (tuple, list)):
         ret = output, y, sample_weight
     elif output is None:
@@ -58,11 +64,10 @@ def create_sample_from_data_source(config=None, **data_source):
     return pipe, a list of (func, args, kwargs) actions
 
     Params:
-        train_or_predict_dict: a "train" or "predict" dict from config
-        config:                full config
-        step:                  a dictionary that is the current step
-                               in the pipeline, like a "train" or "predict"
-                               step
+        :train_or_predict_dict: a "train" or "predict" dict from config
+        :config:                full config
+        :step:                  a dictionary that is the current step in the pipeline, like a "train" or "predict" step
+
     '''
     sampler_func = data_source['sampler'] # TODO: this needs to be
                                                         # added to ConfigParser
@@ -95,11 +100,12 @@ def create_sample_from_data_source(config=None, **data_source):
 def make_pipeline_steps(config, pipeline):
     '''Turn the config's "pipeline" into a list of steps
     to pass to elm.pipeline.Pipeline
-    Params:
-        config: validated config from elm.config.ConfigParser
-        step:   a dictionary that is one step of a "pipeline" list
 
-    This is used by elm.pipeline.parse_run_config
+    Params:
+        :config: validated config from elm.config.ConfigParser
+        :step:   a dictionary that is one step of a "pipeline" list
+
+    This is used by :func:``elm.pipeline.parse_run_config``
     '''
     actions = []
     for action_idx, action in enumerate(pipeline):
@@ -193,17 +199,20 @@ def final_on_sample_step(fitter,
     '''This is the final transformation before the last estimator
     in a Pipeline is called.  It takes the numpy array for X
     needed by the estimator from X as an ElmStore
+
     Parameters:
-        fitter: fit function object
-        model:  the final estimator in a Pipeline
-        X:      ElmStore with DataArray "flat"
-        fit_kwargs: kwargs to fitter
-        y:      numpy array y if needed
-        sample_weight: numpy array if needed
-        require_flat: raise an error if the ElmStore has no "flat" band
-        prepare_for:  determines whether y is included in fit_args
+        :fitter: fit function object
+        :model:  the final estimator in a Pipeline
+        :X:      ElmStore with DataArray "flat"
+        :fit_kwargs: kwargs to fitter
+        :y:      numpy array y if needed
+        :sample_weight: numpy array if needed
+        :require_flat: raise an error if the ElmStore has no "flat" band
+        :prepare_for:  determines whether y is included in fit_args
+
     Returns
-        args, kwargs that fitter should use
+        :args, kwargs: that fitter should use
+
     '''
     fit_kwargs = copy.deepcopy(fit_kwargs or {})
     if y is None:
@@ -257,5 +266,3 @@ def final_on_sample_step(fitter,
         logger.debug('set batch_size {}'.format(X_values.shape[0]))
         model.set_params(batch_size=X_values.shape[0])
     return fit_args, fit_kwargs
-
-

@@ -1,3 +1,10 @@
+'''
+---------------------------------
+
+``elm.sample_util.ts_grig_tools``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import calendar
 from collections import OrderedDict
 import copy
