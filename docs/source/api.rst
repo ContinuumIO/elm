@@ -70,7 +70,7 @@ The packages include:
    :members:
    :undoc-members:
 
-.. automodule:: elm.pipeline.utils
+.. automodule:: elm.pipeline.util
    :members:
    :undoc-members:
 
