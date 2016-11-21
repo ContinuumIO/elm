@@ -126,10 +126,6 @@ The packages include:
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.elm_store_concat
-   :members
-   :undoc-members:
-
 .. automodule:: elm.sample_util.metadata_selection
    :members:
    :undoc-members:
