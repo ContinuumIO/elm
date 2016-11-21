@@ -1,3 +1,10 @@
+'''
+---------------------------------
+
+``elm.sample_util.polygon_tools``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import numpy as np
 from numba import njit
 from matplotlib.path import Path
@@ -18,12 +25,13 @@ def close_poly(vx, vy):
     Returns a closed form of coordinates of a polygon.
     (Essentially tack the first coordinate to the end of the list of
     coordinates to close the shape).
+
     Parameters:
-        vx - the x coordinates of the polygon (in drawing order)
-        vy - the y coordinates of the polygon (in drawing order)
+        :vx: The x coordinates of the polygon (in drawing order)
+        :vy: The y coordinates of the polygon (in drawing order)
+
     Returns:
-        tuple(X, Y) where X and Y correspond to closed versions of vx
-        and vy respectively.
+        :tuple(X, Y): where X and Y correspond to closed versions of vx and vy respectively.
     """
     Px = np.empty(vx.size + 1)
     Px[:-1] = vx
@@ -38,17 +46,17 @@ def close_poly(vx, vy):
 def point_in_poly(x, y, vx, vy, inon=True, closedPoly=False):
     """
     Point in poly determines if a point is in a polygon.
+
     Parameters:
-        x - the x coordinate of the point
-        y - the y coordinate of the point
-        vx - the x coordinates of the polygon (in drawing order)
-        vy - the y coordinates of the polygon (in drawing order)
-        inon - if True consider points on edges and vertices as inside
-               the polygon
-        closedPoly - if True the polygon is closed in the [vx, vy]
-                     coordinate definitions.
+        :x: The x coordinate of the point
+        :y: The y coordinate of the point
+        :vx: The x coordinates of the polygon (in drawing order)
+        :vy: The y coordinates of the polygon (in drawing order)
+        :inon: If True consider points on edges and vertices as inside the polygon
+        :closedPoly: If True the polygon is closed in the [vx, vy] coordinate definitions
+
     Returns:
-        nonzero if the point is in the polygon
+        :nonzero: if the point is in the polygon
     """
     if not closedPoly:
         (Px, Py) = close_poly(vx, vy)
@@ -96,17 +104,17 @@ def point_in_poly(x, y, vx, vy, inon=True, closedPoly=False):
 def points_in_polys(xs, ys, polys, inon=True, closedPolys=False):
     """
     Checks a set of points to determine those which are in a set of polygons
+
     Parameters:
-        xs - the x coordinates of the points to test (1D numpy array)
-        ys - the y coordinates of the points to test (must be the same size of xs)
-        polys - a tuple of numpy arrays size (N, 2), where the first column
-                contains the x coordinates of a polygon and the second the y.
-        inon - if True consider points on edges and vertices as inside
-               the polygon
-        closedPolys - if True the polygons are closed in the polygons' coordinate definitions.
+        :xs: The x coordinates of the points to test (1D numpy array)
+        :ys: The y coordinates of the points to test (must be the same size of xs)
+        :polys: A tuple of numpy arrays size (N, 2), where the first column
+                contains the x coordinates of a polygon and the second the y
+        :inon: If True consider points on edges and vertices as inside the polygon
+        :closedPolys: If True the polygons are closed in the polygons' coordinate definitions
+
     Returns:
-        a vector the size of xs which has a nonzero at an index, i,
-        corresponding to (xs[i], ys[i]) if the point is within the polygons.
+        :vector: A vector the size of xs which has a nonzero at an index, i, corresponding to (xs[i], ys[i]) if the point is within the polygons.
     """
     n = xs.size
     inpoly = np.zeros(n, dtype=np.int16)
@@ -141,19 +149,20 @@ def vec_points_in_polys(x_vec, y_vec, polys, inon=True, closedPolys=False):
     """
     Checks a set of points defined by the meshgrid of two input vectors to determine
     those which are in a set of polygons.
+
     Parameters:
-        x_vec - the x coordinates of the points to test (1D numpy array)
-        y_vec - the y coordinates of the points to test (1D numpy array)
-        polys - a tuple of numpy arrays size (N, 2), where the first column
-                contains the x coordinates of a polygon and the second the y.
-        inon - if True consider points on edges and vertices as inside
-               the polygon
-        closedPolys - if True the polygons are closed in the polygons' coordinate definitions.
+        :x_vec: The x coordinates of the points to test (1D numpy array)
+        :y_vec: The y coordinates of the points to test (1D numpy array)
+        :polys: A tuple of numpy arrays size (N, 2), where the first column contains the x coordinates of a polygon and the second the y.
+        :inon: If True consider points on edges and vertices as inside the polygon
+        :closedPolys: If True the polygons are closed in the polygons' coordinate definitions.
+
     Returns:
-        an array size (x_vec.size, y_vect.size) which has a nonzero at an index  (i, j),
-        corresponding to:
-        (X, Y) = meshgrid(x_vec, y_vec);
-        (X[i], Y[j]) if the point is within the polygons.
+        :array: an array size (x_vec.size, y_vect.size) which has a nonzero at an index  (i, j), corresponding to:
+
+            (X, Y) = meshgrid(x_vec, y_vec);
+            (X[i], Y[j]) if the point is within the polygons.
+            
     """
     nx = x_vec.size
     ny = y_vec.size

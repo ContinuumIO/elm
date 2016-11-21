@@ -1,3 +1,10 @@
+'''
+---------------------------------
+
+``elm.sample_util.transform``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import copy
 import logging
 
@@ -19,10 +26,9 @@ class Transform(StepMixin):
         '''Wraps transform models like IncrementalPCA for use in elm.pipeline.Pipeline
 
            Parameters:
-                estimator: such as sklearn.decomposition.IncrementalPCA,
-                           a model with fit and transform methods
-                partial_fit_batches: how many times to call partial_fit
-                           each time Pipeline is evaluated
+                :estimator: such as sklearn.decomposition.IncrementalPCA, a model with fit and transform methods
+                :partial_fit_batches: how many times to call partial_fit  each time Pipeline is evaluated
+                
         '''
 
         self._estimator = estimator
@@ -96,5 +102,3 @@ class Transform(StepMixin):
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         fitted = self.fit(X, y=y, sample_weight=sample_weight, **kwargs)
         return self.transform(X, y=y, sample_weight=sample_weight, **kwargs)
-
-

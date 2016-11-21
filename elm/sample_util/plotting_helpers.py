@@ -1,3 +1,10 @@
+'''
+------------------------------------
+
+``elm.sample_util.plotting_helpers``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -6,14 +13,16 @@ def plot_3d(X, bands, title='', scale=None, axis_labels=True,
     '''Plot a true or pseudo color image of 3 bands
 
     Parameters:
-        X: ElmStore or xarray.Dataset
-        bands: list of 3 band names that are in X
-        title: title for figure
-        scale: divide all values by this (e.g. 2** 16 for uint16)
-        axis_labels: True / False show axis_labels
-        **imshow_kwargs: passed to imshow
+        :X: ElmStore or xarray.Dataset
+        :bands: list of 3 band names that are in X
+        :title: title for figure
+        :scale: divide all values by this (e.g. 2\*\* 16 for uint16)
+        :axis_labels: True / False show axis_labels
+        :\*\*imshow_kwargs: passed to imshow
+
     Returns:
-        (arr, fig) where arr is the 3-D numpy array and fig is the figure
+        :(arr, fig): where arr is the 3-D numpy array and fig is the figure
+        
     '''
     arr = np.empty((X.band_1.values.shape) + (len(bands),), dtype=np.float32)
     scale = 1 if scale is None else scale

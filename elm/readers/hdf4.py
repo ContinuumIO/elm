@@ -1,8 +1,13 @@
 '''
+--------------------
+
+``elm.readers.hdf4``
+~~~~~~~~~~~~~~~~~~~~~
+
 Tools for reading HDF4 files.  Typically use the interface through
 
-elm.readers.load_array
-elm.readers.load_meta
+    - :func:`elm.readers.load_array`
+    - :func:`elm.readers.load_meta`
 
 '''
 
@@ -57,12 +62,14 @@ def load_hdf4_array(datafile, meta, band_specs=None):
     '''Return an ElmStore where each subdataset is a DataArray
 
     Parameters:
-
-        datafile: filename
-        meta:     meta from elm.readers.load_hdf4_meta
-        band_specs: list of elm.readers.BandSpec objects,
+        :datafile: filename
+        :meta:     meta from elm.readers.load_hdf4_meta
+        :band_specs: list of elm.readers.BandSpec objects,
                     defaulting to reading all subdatasets
                     as bands
+
+    Returns:
+        :Elmstore: Elmstore of teh hdf4 data
     '''
     from elm.readers import ElmStore
     from elm.sample_util.metadata_selection import match_meta

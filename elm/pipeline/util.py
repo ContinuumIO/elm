@@ -1,4 +1,11 @@
-'''Internal helpers for elm.pipeline'''
+'''
+----------------------
+
+``elm.pipeline.util``
+~~~~~~~~~~~~~~~~~~~~~
+
+Internal helpers for elm.pipeline'''
+
 from collections import Sequence
 
 from elm.model_selection.evolve import ea_setup
@@ -65,4 +72,3 @@ def _run_model_selection(models, model_selection, model_selection_kwargs,
                             **kw)
     models = _validate_ensemble_members(models)
     return models
-

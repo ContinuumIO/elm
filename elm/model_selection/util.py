@@ -1,4 +1,9 @@
+'''
+----------------------------
 
+``elm.model_selection.util``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''
 import inspect
 
 
@@ -6,11 +11,11 @@ def get_args_kwargs_defaults(func):
     '''Get the required args, defaults, and var keywords of func
 
     Parameters:
-        func: callable
+        :func: callable
     Returns:
-        (args, kwargs, takes_var_keywords) where args are names
-        of required args, kwargs are keyword args with defaults,
-        and takes_var_keywords indicates whether func has a **param
+        :(args, kwargs, takes_var_keywords): where args are names /
+        of required args, kwargs are keyword args with defaults, and
+        takes_var_keywords indicates whether func has a \*\*param
      '''
     sig = inspect.signature(func)
     params = sig.parameters

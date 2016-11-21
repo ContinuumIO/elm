@@ -1,8 +1,13 @@
 '''
+------------------
+
+``elm.readers.tif``
+~~~~~~~~~~~~~~~~~~~
+
 Tools for reading GeoTiff files.  Typically use the interface through
 
-elm.readers.load_array
-elm.readers.load_meta
+    - :func:`elm.readers.load_array`
+    - :func:`elm.readers.`load_meta`
 
 '''
 from collections import OrderedDict
@@ -34,7 +39,24 @@ __all__ = ['load_tif_meta',
 
 
 def load_tif_meta(filename):
-    '''Read the metadata of one TIF file'''
+    '''Read the metadata of one TIF file
+
+    Parameters:
+        :filename: str: path and filename of TIF to read
+
+    Returns:
+        :file: TIF file
+        :meta: Dictionary with meta data about the file, including;
+
+            - **meta**: Meta attributes of the TIF file
+            - **geo_transform**: transform
+            - **bounds**: Bounds of the TIF
+            - **height**: Hight of the TIF
+            - **width**: Width of the TIF
+            - **name**: The filename
+            - **sub_dataset_name**: The filename
+
+    '''
     r = rio.open(filename)
     if r.count != 1:
         raise ValueError('elm.readers.tif only reads tif files with 1 band (shape of [1, y, x]). Found {} bands'.format(r.count))
@@ -82,9 +104,9 @@ def load_dir_of_tifs_meta(dir_of_tiffs, band_specs=None, **meta):
     different bands of the same image.
 
     Parameters:
-        dir_of_tiffs: Directory with GeoTiffs
-        band_specs:   List of elm.readers.BandSpec objects
-        meta:         included in returned metadata'''
+        :dir_of_tiffs: Directory with GeoTiffs
+        :band_specs:   List of elm.readers.BandSpec objects
+        :meta:         included in returned metadata'''
     logger.debug('load_dir_of_tif_meta {}'.format(dir_of_tiffs))
     tifs = ls_tif_files(dir_of_tiffs)
     meta = copy.deepcopy(meta)
@@ -132,15 +154,14 @@ def load_dir_of_tifs_array(dir_of_tiffs, meta, band_specs=None):
     '''Return an ElmStore where each subdataset is a DataArray
 
     Parameters:
-
-        dir_of_tiffs: directory of GeoTiff files where each is a
+        :dir_of_tiffs: directory of GeoTiff files where each is a
                       single band raster
-        meta:     meta from elm.readers.load_dir_of_tifs_meta
-        band_specs: list of elm.readers.BandSpec objects,
+        :meta:     meta from elm.readers.load_dir_of_tifs_meta
+        :band_specs: list of elm.readers.BandSpec objects,
                     defaulting to reading all subdatasets
                     as bands
     Returns:
-        X: ElmStore
+        :X: ElmStore
 
     '''
 

@@ -1,3 +1,10 @@
+'''
+----------------------------------
+
+``elm.sample_util.meta_selection``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 from collections import OrderedDict
 
 from gdalconst import GA_ReadOnly
@@ -19,14 +26,13 @@ def _strip_key(k):
 
 def match_meta(meta, band_spec):
     '''
-    Parmeters
-    ---------
-    meta: dataset meta information object
-    band_spec: BandSpec object
+    Parmeters:
+        :meta: dataset meta information object
+        :band_spec: BandSpec object
 
-    Returns
-    -------
-    boolean of whether band_spec matches meta
+    Returns:
+        :boolean: of whether band_spec matches meta
+
     '''
     if not isinstance(band_spec, BandSpec):
         raise ValueError('band_spec must be elm.readers.BandSpec object')
@@ -45,10 +51,13 @@ def match_meta(meta, band_spec):
 
 def meta_is_day(attrs):
     '''Helper to find day/ night flags in nested dict
+
     Parmeters:
-        d: dict
+        :d: dict
+
     Returns:
-        True if day, False if night, else None
+        :True: if day, **False** if night, else None
+
     '''
     dicts = []
     for k, v in attrs.items():
@@ -67,5 +76,3 @@ def meta_is_day(attrs):
     if dicts:
         return any(meta_is_day(d2) for d2 in dicts)
     return False
-
-
