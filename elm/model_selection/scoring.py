@@ -1,5 +1,15 @@
-'''This module scores models, creating a ._score attribute
-that can be used for sorted members of an ensemble'''
+'''
+--------------------------------
+
+``elm.model_selection.scroring``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+This module scores models, creating a ._score attribute
+that can be used for sorted members of an ensemble
+
+'''
+
 import copy
 
 import sklearn.metrics as sk_metrics
@@ -87,16 +97,17 @@ def score_one_model(model,
     '''Score model with scoring function, adding ._score attribute to model
 
     Parameters:
-        model:   elm.pipeline.Pipeline instance
-        scoring: A scorer in sklearn.metrics or callable
-                 of the form "mypackage.mymodule:myfunc"
-        X:       elm.readers.ElmStore instance
-        y:       numpy array y data, if needed
-        sample_weight: ignored
-        kwargs:  keywords to scoring function, such as:
-                 greater_is_better: True if high scores are good
-                 needs_proba:    Estimator needs proba
-                 needs_threshold: Estimator needs threshold
+        :model:   elm.pipeline.Pipeline instance
+        :scoring: A scorer in sklearn.metrics or callable of the form "mypackage.mymodule:myfunc"
+        :X:       elm.readers.ElmStore instance
+        :y:       numpy array y data, if needed
+        :sample_weight: ignored
+        :kwargs:  keywords to scoring function, such as:
+
+            * :greater_is_better: True if high scores are good
+            * :needs_proba:    Estimator needs proba
+            * :needs_threshold: Estimator needs threshold
+
     '''
     if scoring is None:
         if not hasattr(model, 'score') or not callable(model.score):

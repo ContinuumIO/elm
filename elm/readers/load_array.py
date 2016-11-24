@@ -1,4 +1,11 @@
-'''load_array returns an ElmStore for HDF, NetCDF, GeoTiff files'''
+'''
+------------------
+
+``elm.readers.load_array``
+++++++++++++++++++++++++++
+load_array returns an ElmStore for HDF, NetCDF, GeoTiff files
+'''
+
 from collections import OrderedDict
 import logging
 import os
@@ -40,17 +47,13 @@ def load_array(filename, meta=None, band_specs=None, reader=None):
     '''Create ElmStore from HDF4 / 5 or NetCDF files or TIF directories
 
     Parameters:
-
-        filename:   filename (HDF4 / 5 or NetCDF) or
-                    directory name (TIF)
-        meta:       meta data from "filename" already loaded
-        band_specs: list of strings or elm.readers.BandSpec objects
-        reader:     named reader from elm.readers - one of:
-                     ('tif', 'hdf4', 'hdf5', 'netcdf')
+        :filename:   filename (HDF4 / 5 or NetCDF) or directory name (TIF)
+        :meta:       meta data from "filename" already loaded
+        :band_specs: list of strings or elm.readers.BandSpec objects
+        :reader:     named reader from elm.readers - one of:  ('tif', 'hdf4', 'hdf5', 'netcdf')
 
     Returns:
-        es:         ElmStore (xarray.Dataset) with bands specified
-                    by band_specs as DataArrays in "data_vars" attribute
+        :es:         ElmStore (xarray.Dataset) with bands specified by band_specs as DataArrays in "data_vars" attribute
     '''
     ftype = reader or _find_file_type(filename)
     if meta is None:
@@ -97,13 +100,12 @@ def load_meta(filename, **kwargs):
     '''Load metadata for a HDF4 / HDF5 or NetCDF file or TIF directory
 
     Parameters:
-        filename:       filename (HDF4 / 5 and NetCDF) or directory (TIF)
-        kwargs:         keyword args that may include "band_specs",
-                        a list of string band names or elm.readers.BandSpec
-                        objects
+        :filename:       filename (HDF4 / 5 and NetCDF) or directory (TIF)
+        :kwargs:         keyword args that may include "band_specs", \
+                        a list of string band names or elm.readers.BandSpec objects
 
     Returns:
-        meta:           dict with the following keys
+        :meta:           dict with the following keys
     '''
 
     reader = kwargs.get('reader')
@@ -114,4 +116,3 @@ def load_meta(filename, **kwargs):
         kw = kwargs
         ftype = reader
     return _load_meta(filename, ftype, **kw)
-

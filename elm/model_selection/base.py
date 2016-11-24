@@ -1,3 +1,31 @@
+'''
+----------------------------
+
+``elm.model_selection.base``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Calls given model_selection after sort_fitness is called (if given)
+
+Params:
+    :models: sequence of 2-tuples (model_name, model)
+    :model_selection: called with the signature:
+
+        * `model_selection(models, best_idxes, **model_selection_kwargs)` /
+            where best_idxes is the sorted fitness order if sort_fitness is given /
+        * Otherwise if sort_fitness is not given, the signature is: /
+            `model_selection(models, **model_selection_kwargs)`
+
+    :sort_fitness: a function, pareto_front by default, to sort scores
+            signature: sort_fitness(weights, objectives, take=None)
+    :score_weights: passed to sort_fitness as weights, e.g.: /
+        [-1, 1] for minimizing the first element of model _score array /
+        and maximizing the second element
+    :model_selection_kwargs: passed to model_selection
+
+Returns:
+    :models: sequence of 2-tuples (model_name, model)
+'''
+
 from collections import namedtuple
 import copy
 from functools import partial
@@ -20,24 +48,25 @@ def base_selection(models,
                    score_weights=None,
                    **model_selection_kwargs):
     '''Calls given model_selection after sort_fitness is called (if given)
+
     Params:
-        models: sequence of 2-tuples (model_name, model)
-        model_selection: called with the signature:
-            model_selection(models, best_idxes, **model_selection_kwargs)
+        :models: sequence of 2-tuples (model_name, model)
+        :model_selection: called with the signature:
 
-            where best_idxes is the sorted fitness order if sort_fitness is given
+            * `model_selection(models, best_idxes, **model_selection_kwargs)` /
+                where best_idxes is the sorted fitness order if sort_fitness is given /
+            * Otherwise if sort_fitness is not given, the signature is: /
+                `model_selection(models, **model_selection_kwargs)`
 
-            Otherwise if sort_fitness is not given, the signature is:
-
-            model_selection(models, **model_selection_kwargs)
-        sort_fitness: a function, pareto_front by default, to sort scores
-            signature: sort_fitness(weights, objectives, take=None)
-        score_weights: passed to sort_fitness as weights, e.g.:
-            [-1, 1] for minimizing the first element of model _score array
+        :sort_fitness: a function, pareto_front by default, to sort scores
+                signature: sort_fitness(weights, objectives, take=None)
+        :score_weights: passed to sort_fitness as weights, e.g.: /
+            [-1, 1] for minimizing the first element of model _score array /
             and maximizing the second element
-        model_selection_kwargs: passed to model_selection
+        :model_selection_kwargs: passed to model_selection
+
     Returns:
-        models: sequence of 2-tuples (model_name, model)
+        :models: sequence of 2-tuples (model_name, model)
     '''
     logger.debug('base_selection with kwargs: {}'.format(model_selection_kwargs))
     if sort_fitness == 'pareto_front':
@@ -65,4 +94,3 @@ def base_selection(models,
     else:
         models = model_selection(models, **model_selection_kwargs)
     return models
-

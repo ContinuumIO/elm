@@ -1,8 +1,13 @@
 '''
+----------------------
+
+``elm.readers.netcdf``
+~~~~~~~~~~~~~~~~~~~~~~
+
 Tools for reading NetCDF files.  Typically use the interface through
 
-elm.readers.load_array
-elm.readers.load_meta
+    - :func:`elm.readers.load_array`
+    - :func:`elm.readers.load_meta`
 
 '''
 from __future__ import print_function
@@ -51,7 +56,14 @@ def _get_subdatasets(nc_dataset):
 
 
 def _normalize_coords(ds):
-    '''makes sure that output dataset has `x` and `y` coordinates.
+    '''
+    Makes sure that output dataset has `x` and `y` coordinates.
+
+    Parameters:
+        :ds:
+
+    Returns:
+        :coords: Dictionary with 'x_coord' coordinates and 'y_coord' coordinates
     '''
 
     coord_names = [k for k in ds.coords.keys()]
@@ -70,15 +82,13 @@ def _normalize_coords(ds):
 
 def load_netcdf_meta(datafile):
     '''
-    loads metadata for NetCDF
+    Loads metadata for NetCDF
 
-    Parameters
-    ----------
-    datafile - str: Path on disk to NetCDF file
+    Parameters:
+        :datafile: str: Path on disk to NetCDF file
 
-    Returns
-    -------
-    Dictionary of metadata
+    Returns:
+        :meta: Dictionary of metadata
     '''
     ras = nc.Dataset(datafile)
     attrs = _get_nc_attrs(ras)
@@ -93,17 +103,15 @@ def load_netcdf_meta(datafile):
 
 def load_netcdf_array(datafile, meta, band_specs=None):
     '''
-    loads metadata for NetCDF
+    Loads metadata for NetCDF
 
-    Parameters
-    ----------
-    datafile - str: Path on disk to NetCDF file
-    meta - dict: netcdf metadata object
-    variables - dict<str:str>, list<str>: list of variables to load
+    Parameters:
+        :datafile: str: Path on disk to NetCDF file
+        :meta: dict: netcdf metadata object
+        :variables: dict<str:str>, list<str>: list of variables to load
 
-    Returns
-    -------
-    ElmStore xarray.Dataset
+    Returns:
+        :new_es: ElmStore xarray.Dataset
     '''
     logger.debug('load_netcdf_array: {}'.format(datafile))
     ds = xr.open_dataset(datafile)

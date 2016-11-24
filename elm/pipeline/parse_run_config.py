@@ -1,3 +1,9 @@
+'''
+----------------------
+
+``elm.pipeline.parse_run_config``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''
 from collections import defaultdict
 import copy
 from functools import partial
@@ -32,8 +38,8 @@ def config_to_pipeline(config, client=None):
     --ngen 4
 
     Parameters:
-        config: elm.config.ConfigParser instance
-        client: dask client or None
+        :config: elm.config.ConfigParser instance
+        :client: dask client or None
     '''
     from elm.sample_util.sample_pipeline import make_pipeline_steps
     _makedirs(config)
@@ -98,10 +104,9 @@ def config_to_pipeline(config, client=None):
 def parse_run_config(config, client):
     '''Run all steps of a config's "run" section
     Parameters:
-        config: elm.config.ConfigParser instance
-        client: Executor/client from Distributed, thread pool
+        :config: elm.config.ConfigParser instance
+        :client: Executor/client from Distributed, thread pool
                 or None for serial evaluation
     '''
     config_to_pipeline(config, client)
     return 0
-

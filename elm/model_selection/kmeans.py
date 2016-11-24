@@ -1,3 +1,10 @@
+'''
+----------------------------
+
+``elm.model_selection.kmeans``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+'''
+
 import array
 from collections import namedtuple
 import copy
@@ -17,12 +24,12 @@ def kmeans_aic(model, X, **kwargs):
     '''AIC (Akaike Information Criterion) for k-means for model selection
 
     Parameters:
-        model:  An elm.pipeline.Pipeline with KMeans or MiniBatchKMeans as
-                final step in Pipeline
-        X:      The X data that were just given to "fit", or "partial_fit"
-        kwargs: placeholder - ignored
+        :model:  An elm.pipeline.Pipeline with KMeans or MiniBatchKMeans as final step in Pipeline
+        :X:      The X data that were just given to "fit", or "partial_fit"
+        :kwargs: placeholder - ignored
+
     Returns:
-        AIC float
+        :AIC: float
 
     '''
 
@@ -45,31 +52,32 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
     the representative sample is larger than one training batch.
 
     Parameters:
-        models:  list of (tag, elm.pipeline.Pipeline instance) tuples
-                 where the final step in each of the Pipeline instances
+        :models:  list of (tag, elm.pipeline.Pipeline instance) tuples /
+                 where the final step in each of the Pipeline instances /
                  is either KMeans or MiniBatchKmeans from sklearn.cluster
-        best_idxes: integer indices of the best -> worst models in models
-        kwargs:   Keyword arguments passed via "model_selection_kwargs":
-                  drop_n:  how many models to drop each generation
-                  evolve_n: how many models to create from clustering
-                            on clusters from models
-                  ngen, generation: kwargs added by model_selection logic
-                            to control behavior on last generation
-                  reps: repititions in meta-clustering (see below)
+        :best_idxes: integer indices of the best -> worst models in models
+        :kwargs:   Keyword arguments passed via "model_selection_kwargs":
+
+                  * :drop_n:  how many models to drop each generation
+                  * :evolve_n: how many models to create from clustering on clusters from models
+                  * :ngen, generation: kwargs added by model_selection logic to control behavior on last generation
+                  * :reps: repititions in meta-clustering (see below)
+                  
     Returns:
-        list of (tag, Pipeline instance) tuples
+        :list of tuples: of (tag, Pipeline instance) tuples
 
     Notes:
-        * First the drop_n worst AIC scoring (tag, Pipeline) tuples
-          are dropped
+
+        * First the drop_n worst AIC scoring (tag, Pipeline) tuples are dropped
         * The for repeat in range evolve_n:
-            * Bootstrap existing centroids with linear probability
-            density related to AIC score rank, preferring lower AIC
-            scores
+
+            * Bootstrap existing centroids with linear probability density /
+              related to AIC score rank, preferring lower AICscores
             * Run a K-Means on those centroids
             * Initialize a new pipeline with those params
-        The number of (tag, Pipeline) tuples is
-            len(models) + evolve_n - drop_n
+
+        * The number of (tag, Pipeline) tuples is `len(models) + evolve_n - drop_n`
+
     '''
 
     drop_n = kwargs.get('drop_n', 0)
@@ -137,4 +145,3 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
         new_model = (_next_name(), meta_model)
         new_models.append(new_model)
     return tuple(new_models) + tuple(models)
-

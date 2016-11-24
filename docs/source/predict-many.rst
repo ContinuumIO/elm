@@ -146,7 +146,7 @@ Read more :doc:`documentation here<pipeline-steps>` on all the options available
 
 Call :doc:`fit_ensemble<fit-ensemble>`
 -------------------
-Calling :doc:`fit_ensemble<fit-ensemble>` with an ``args_list`` of length 3, we are fitting all models in the ensemble to the same sample in one generation, then proceeding to fitting all models against the next sample in the next generation.  Read more about the interaction of the keyword arguments ``args_list``, ``ngen`` and ``models_share_sample`` here - TODO LINK. In this case we have 3 generations (``ngen`` above) and 3 samples (``len(args_list)`` below) and ``models_share_sample=True``.  Each generation will have be a different sample and all models in a generation will be fitted to that sample.
+Calling :doc:`fit_ensemble<fit-ensemble>` with an ``args_list`` of length 3, we are fitting all models in the ensemble to the same sample in one generation, then proceeding to fitting all models against the next sample in the next generation. In this case we have 3 generations (``ngen`` above) and 3 samples (``len(args_list)`` below) and ``models_share_sample=True``.  Each generation will have be a different sample and all models in a generation will be fitted to that sample.
 
 .. code-block:: python
 

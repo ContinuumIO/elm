@@ -14,7 +14,7 @@ Overview of ``Pipeline`` in ``elm``
 * **Multi-Model / Multi-Sample Fitting**: In ``elm``, a ``Pipeline`` can be fit with:
    * :doc:`fit_ensemble<fit-ensemble>`: This method repeats model fitting over a series of samples and/or a ensemble of ``Pipeline`` instances.  The ``Pipeline`` instances in the ensemble may or may not have the same initialization parameters.  :doc:`fit_ensemble<fit-ensemble>` can run in generations, optionally applying user-given model selection logic between generations.  This :doc:`fit_ensemble<fit-ensemble>` method is aimed at improved model fitting in cases where a representative sample is large and/or there is a need to account for parameter uncertainty.
    * :doc:`fit_ea<fit-ea>`:  This method uses `Distributed Evolutionary Algorithms in Python`_ (``deap``) to run a genetic algorithm, typically NSGA-2, that selects the best ``Pipeline`` instance(s).  The interface for :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` are similar, but :doc:`fit_ea<fit-ea>` takes an ``evo_params`` argument to configure the genetic algorithm.
-* **Multi-Model / Multi-Sample Prediction**: ``elm``'s ``Pipeline`` has a method :doc:`predict_many<predict-many>` - TODO LINK which can use dask-distributed to predict from one or more ``Pipeline`` instances and/or one or more samples (:doc:`ElmStore<elm-store>`s or ``xarray.Datasets``s).  By default :doc:`predict_many<predict-many>` will predict for all models in the final ensemble output by :doc:`fit_ensemble<fit-ensemble>`.
+* **Multi-Model / Multi-Sample Prediction**: ``elm``'s ``Pipeline`` has a method :doc:`predict_many<predict-many>` that can use dask-distributed to predict from one or more ``Pipeline`` instances and/or one or more samples (:doc:`ElmStore<elm-store>`s or ``xarray.Datasets``s).  By default :doc:`predict_many<predict-many>` will predict for all models in the final ensemble output by :doc:`fit_ensemble<fit-ensemble>`.
 
 .. _Distributed Evolutionary Algorithms in Python: http://deap.readthedocs.io/en/master/
 
@@ -106,7 +106,7 @@ Multi-Model / Multi-Sample Fitting
 There are two multi-model approaches to fitting that can be used with a ``Pipeline``: :doc:`fit_ensemble<fit-ensemble>` or :doc:`fit_ea<fit-ea>`.  The examples above with a data source to a ``Pipeline`` and the transformation steps within one ``Pipeline`` instance work similarly in :doc:`fit_ensemble<fit-ensemble>` and :doc:`fit_ea<fit-ea>`.
 
 Other similarities between :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` include the following common keyword arguments:
- * ``scoring`` a callable with a signature like ``elm.model_selection.kmeans.kmeans_aic`` - TODO LINK THAT FUNCTION or a string like ``f_classif`` attribute name from ``sklearn.metrics``
+ * ``scoring`` a callable with a signature like ``elm.model_selection.kmeans.kmeans_aic`` (See :doc:`API docs<api>` ) or a string like ``f_classif`` attribute name from ``sklearn.metrics``
  * ``scoring_kwargs`` kwargs passed to the ``scoring`` callable if needed
  * ``saved_ensemble_size`` an integer indicating how many ``Pipeline`` estimators to retain in the final ensemble
 
@@ -120,4 +120,4 @@ Multi-Model / Multi-Sample Prediction
 
 After :doc:`fit_ensemble<fit-ensemble>` or :doc:`fit_ea<fit-ea>` has been called on a ``Pipeline`` instance, the instance will have the attribute ``ensemble`` a list of `(tag, pipeline)` tuples which are the final ``Pipeline`` instances selected by either of the fitting functions (see also ``saved_ensemble_size`` - See :ref:`controlling-ensemble`).  With a fitted ``Pipeline`` instance, :doc:`predict_many<predict-many>` can be called on the instance to predict from every ensemble member (``Pipeline`` instance) on a single ``X`` sample or from every ensemble member and every sample if ``sampler`` and ``args_list`` are given in place of ``X``.
 
-Read more on controlling :doc:`predict_many<predict-many>` here -TODO LINK
+Read more on controlling :doc:`predict_many<predict-many>`.

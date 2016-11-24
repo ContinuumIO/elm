@@ -1,4 +1,9 @@
-'''elm.pipeline.Pipeline
+'''
+----------------------
+
+``elm.pipeline.Pipeline``
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Run a series of transformations on a series of samples, using
 ensemble approach or evolutionary algorithms (EA) that have model
 scoring selection logic.
@@ -11,16 +16,15 @@ MiniBatchKMeans.
 Dask graphs are used for parallelism - pass the "client" argument
 to methods such
 
-Each sample in the series of samples is expressed as a tuple
+Each sample in the series of samples is expressed as a tuple::
 
-(X, y, sample_weight)
+    (X, y, sample_weight)
 
 with X as an elm.readers.ElmStore
 and y and sample_weight as a numpy arrays or None if not needed.
 
-elm.pipeline.Pipeline is similar to scikit-learn's Pipeline concept
+``elm.pipeline.Pipeline`` is similar to scikit-learn's Pipeline concept
 (sklearn.pipeline.Pipeline) in usage
-
 
 '''
 from collections import Sequence
@@ -44,6 +48,23 @@ from elm.pipeline.util import _next_name
 logger = logging.getLogger(__name__)
 
 class Pipeline(object):
+    '''
+    Pipeline of transformation, fit steps for
+    ensemble, evolutionary and/or partial_fit with dask
+
+    Parameters:
+        :steps:  Steps or transformers and final estimators. Formats:
+
+                - Each step may be a tuple with a label and estimator/transformer \('kmeans', KMeans\(n_clusters\)\) or just an estimator
+                - All transformers except the last, must be from: ``elm.pipeline.steps``, e.g. ``elm.pipeline.steps.Transform(PCA(), partial_fit_batches=2)``
+                - The final estimator is typically from sklearn, with fit and predict methods
+
+        :scoring: Scoring function. See model scoring functions in scikit-learn docs
+                  http://scikit-learn.org/stable/modules/model_evaluation.html.
+                  Also see a custom scoring example in :any:``elm.model_selection.kmeans.kmeans_aic``
+        :scoring_kwargs: Keyword args passed to scoring
+    '''
+
 
     def __init__(self, steps, scoring=None, scoring_kwargs=None):
         '''
@@ -51,29 +72,26 @@ class Pipeline(object):
         ensemble, evolutionary and/or partial_fit with dask
 
         Parameters:
-            steps:  Steps or transformers and final estimators. Formats:
+            :steps:  Steps or transformers and final estimators. Formats:
 
-                    Each step may be a tuple with a label and estimator/transformer
+                    - Each step may be a tuple with a label and estimator/transformer
+                    ('kmeans', KMeans(n_clusters)) or just an estimator
+                    - All transformers except the last, must be from:
 
-                    ('kmeans', KMeans(n_clusters))
+                        - elm.pipeline.steps, e.g.
+                        - elm.pipeline.steps.Transform(PCA(), partial_fit_batches=2)
 
-                    or just an estimator
-
-                    All transformers except the last, must be from:
-                        elm.pipeline.steps, e.g.
-
-                        elm.pipeline.steps.Transform(PCA(), partial_fit_batches=2)
-                    The final estimator is typically from sklearn, with
+                    - The final estimator is typically from sklearn, with
                     fit and predict methods
-            scoring: Scoring function. See model scoring functions
+
+            :scoring: Scoring function. See model scoring functions
                      in scikit-learn docs:
                         http://scikit-learn.org/stable/modules/model_evaluation.html
 
                      And also see an custom scoring example in:
-                        elm.model_selection.kmeans.kmeans_aic
+                        :func:``elm.model_selection.kmeans.kmeans_aic``
 
-            scoring_kwargs: Keyword args passed to scoring
-
+            :scoring_kwargs: Keyword args passed to scoring
         '''
         self._re_init_args_kwargs = copy.deepcopy(((steps,), dict(scoring=scoring, scoring_kwargs=scoring_kwargs)))
         self.steps = steps
@@ -192,20 +210,21 @@ class Pipeline(object):
         Calls the sampler if given in data_source.  Typically the sampler
         takes
 
-        **data_source should have:
+        :\*\*data_source: should have:
 
+            :sampler: a function taking (\*args, \*\*kwargs), returning an
+                      X ElmStore or tuple of (X, y, sample_weight) with X as
+                      ElmStore.  Arguments to the sampler are sampler_args
+                      and \*\*data_source is also passed.
+            :sampler_args: if passed to this function, sampler_args are typically
+                         created by unpacking of each of element of "args_list" given
+                         to other methods in this class.
 
-        sampler: a function taking (*args, **kwargs), returning an
-                 X ElmStore or tuple of (X, y, sample_weight) with X as
-                 ElmStore.  Arguments to the sampler are sampler_args and
-                 **data_source is also passed.
-        sampler_args: if passed to this function, sampler_args are typically
-                     created by unpacking of each of element of "args_list" given
-                     to other methods in this class.
-        OR the **data_source may have:
-            X, y, and/or sample_weight keys/values, with X as an ElmStore,
-            in which case, this function just passes them through.  See
-            usage in ensemble
+        OR the \*\*data_source may have:
+
+            - :X:, :y:, and/or :sample_weight: keys/values, with X as an ElmStore,
+                in which case, this function just passes them through.  See
+                usage in ensemble
         '''
         from elm.sample_util.sample_pipeline import create_sample_from_data_source
         from elm.sample_util.sample_pipeline import _split_pipeline_output
@@ -315,9 +334,7 @@ class Pipeline(object):
                      **data_source):
         '''Run ensemble approach to fitting
 
-        This function passes the Pipeline to
-
-        elm.pipeline.ensemble
+        This function passes the Pipeline to :mod:``elm.pipeline.ensemble``
 
         See the argument spec there:
         ''' + _ensemble.__doc__
@@ -353,45 +370,46 @@ class Pipeline(object):
                method_kwargs=None,
                **data_source):
 
-        '''Passes the Pipeline to elm.pipeline.evolve_train
+        '''Passes the Pipeline to :any:``elm.pipeline.evolve_train``
 
         Arguments for evolve_train and ensemble are similar,
         with the differences being:
 
         1) evolve_train requires evo_params argument, typically
-            from ea_setup:
-            from elm.model_selection import ea_setup
-            param_grid =  {
-                'kmeans__n_clusters': list(range(3, 10)),
-                'top_n__percentile': list(range(20, 100, 5)),
-                'control': {
-                    # methods from deap for selection, crossover, mutation
-                    'select_method': 'selNSGA2',
-                    'crossover_method': 'cxTwoPoint',
-                    'mutate_method': 'mutUniformInt',
-                    'init_pop': 'random', # 'random' is the only init_pop
+            from ea_setup::
 
-                    # arguments passed to select, crossover and mutate
-                    'indpb': 0.5, # if using cxUniform or cxUniformPartialyMatched
-                    'mutpb': 0.9, # mutation prob
-                    'cxpb':  0.3, # crossover prob
-                    'eta':   20,  # passed to selNSGA2
-                    'ngen':  2,   # number of generations
-                    'mu':    4,   # population size (number of Pipeline instances)
-                    'k':     4,   # select top k (NSGA-2)
-                    # Control stopping on absolute change in objectives
-                    # (agg controls application of abs change check to each
-                       objective, is using multi-objective scoring)
-                    'early_stop': {'abs_change': [10], 'agg': 'all'},
-                    # Or on percent change or threshold in objective scores
-                    # alternatively early_stop: {percent_change: [10], agg: all}
-                    # alternatively early_stop: {threshold: [10], agg: any}
+                from elm.model_selection import ea_setup
+                param_grid =  {
+                    'kmeans__n_clusters': list(range(3, 10)),
+                    'top_n__percentile': list(range(20, 100, 5)),
+                    'control': {
+                        # methods from deap for selection, crossover, mutation
+                        'select_method': 'selNSGA2',
+                        'crossover_method': 'cxTwoPoint',
+                        'mutate_method': 'mutUniformInt',
+                        'init_pop': 'random', # 'random' is the only init_pop
+
+                        # arguments passed to select, crossover and mutate
+                        'indpb': 0.5, # if using cxUniform or cxUniformPartialyMatched
+                        'mutpb': 0.9, # mutation prob
+                        'cxpb':  0.3, # crossover prob
+                        'eta':   20,  # passed to selNSGA2
+                        'ngen':  2,   # number of generations
+                        'mu':    4,   # population size (number of Pipeline instances)
+                        'k':     4,   # select top k (NSGA-2)
+                        # Control stopping on absolute change in objectives
+                        # (agg controls application of abs change check to each
+                           objective, is using multi-objective scoring)
+                        'early_stop': {'abs_change': [10], 'agg': 'all'},
+                        # Or on percent change or threshold in objective scores
+                        # alternatively early_stop: {percent_change: [10], agg: all}
+                        # alternatively early_stop: {threshold: [10], agg: any}
+                    }
                 }
-            }
 
-            evo_params = ea_setup(param_grid=param_grid,
-                          param_grid_name='param_grid_example',
-                          score_weights=[-1]) # minimization
+            :evo_params: ea_setup(param_grid=param_grid, param_grid_name='param_grid_example',
+                         score_weights=[-1]) # minimization
+
         2) ensemble takes "model_selection" and "model_selection_kwargs"
         while evolve_train takes evo_params, which typically uses selNSGA2
         from deap as a model selector.
@@ -436,16 +454,16 @@ class Pipeline(object):
         not this Pipeline.predict.
 
         Parameters:
-            X: ElmStore or None if "data_source" in kwargs has
+            :X: ElmStore or None if "data_source" in kwargs has
                a sampler and sampler_args keys/values
-            method_kwargs: kwargs to predict if any
-            return_X: also return the final X ElmStore ( the
+            :method_kwargs: kwargs to predict if any
+            :return_X: also return the final X ElmStore ( the
                       X ElmStore with a Dataset "flat" whose
                       values are used in prediction)
-            data_source: if X is None, data_source must have a
+            :data_source: if X is None, data_source must have a
                sampler_func and sampler_args
         Returns:
-            Numpy array, typically 1-D, y predicted from final
+            :Numpy array:, typically 1-D, y predicted from final
             estimator in self.steps
 
         '''
@@ -457,8 +475,9 @@ class Pipeline(object):
         '''Calls fit and predict with same data_source.
 
         See also
-         * Pipeline.fit
-         * Pipeline.predict
+
+         - :any:``Pipeline.fit``
+         - :any:``Pipeline.predict``
         '''
         return self.fit(*args, **kwargs).predict(*args, **kwargs)
 
@@ -471,50 +490,48 @@ class Pipeline(object):
         sampler calls.
 
         Parameters:
-            X:  If predicting one or more models on one X ElmStore sample,
-                then pass X
-            sampler: If not passing X, pass sampler, a function called
-                 on an *unpacking each element of args_list.
-            args_list: If not passing X, each element of args_list is
-               unpacked as *args to sampler
-            client: dask distributed or ThreadPool client
-            ensemble: list of ('tag_0', Pipeline) instances or None
+            :X:  If predicting one or more models on one X ElmStore sample,then pass X
+            :sampler: If not passing X, pass sampler, a function called
+                 on an unpacking each element of args_list.
+            :args_list: If not passing X, each element of args_list is
+               unpacked as \*args to sampler
+            :client: dask distributed or ThreadPool client
+            :ensemble: list of ``('tag_0', Pipeline)`` instances or ``None``
                to use the last "fit_ensemble" or "fit_ea" output
                trained models
-            to_raster: True means to convert the 1-D predicted Y to
+            :to_raster: True means to convert the 1-D predicted Y to
                2-D Dataset (common use case is converting prediction
                to image view of classifier output in space)
 
-               See also elm.readers.inverse_flatten which converts
+               See also ``elm.readers.inverse_flatten`` which converts
                1-D y to 2-D Dataset and ElmStore.  inverse_flatten is
                called if to_raster is True
-            saved_model_tag: This is a tag for an ensemble.  An ensemble
-              is a list of (tag, Pipeline) tuples and saved_model_tag is
-              the higher level tag.  This argument is used in the
-              config file elm interface.  See also:
+            :saved_model_tag: This is a tag for an ensemble. An ensemble
+               is a list of ``(tag, Pipeline)`` tuples and ``saved_model_tag`` is
+               the higher level tag.  This argument is used in the
+               config file elm interface.  See also:
 
-                elm.pipeline.parse_run_config
+                :func:``elm.pipeline.parse_run_config``
 
-            serialize: None to return all prediction arrays (not
+            :serialize: None to return all prediction arrays (not
                feasible in many cases) or a serializer of arrays
-                with this signature:
+               with this signature::
 
+                   serialize(y=y, X=X_final, tag=predict_tag,
+                             elm_predict_path=elm_predict_path,)
 
-               serialize(y=y, X=X_final, tag=predict_tag,
-                           elm_predict_path=elm_predict_path,)
-
-                where:
-                    y is an ElmStore either 1-D or 2-D (see to_raster)
-                    X_final is the X ElmStore that was fit (the Pipeline
+                where
+                    :y: is an ElmStore either 1-D or 2-D (see to_raster)
+                    :X_final: is the X ElmStore that was fit (the Pipeline
                         will preserve attrs in X useful for serializing y)
-                    tag is a unique tag of sample, Pipeline instance and saved_model_tag
-                    elm_predict_path is the root dir for serialization
+                    :tag: is a unique tag of sample, Pipeline instance and saved_model_tag
+                    :elm_predict_path: is the root dir for serialization
                         output, defaulting to ELM_PREDICT_PATH from environment
                         variables
-            **data_source: keyword args passed to the sampler on each call
+            :\*\*data_source: keyword args passed to the sampler on each call
 
         Returns:
-            preds: Sequence of predictions if serialize is None else Sequence
+            :preds: Sequence of predictions if serialize is None else Sequence
                    of the outputs from serialize
 
         '''
@@ -552,7 +569,8 @@ class Pipeline(object):
         '''save the Pipeline to filename
 
         Parameters:
-            filename: string filename
+            :filename: string filename
+
         Returns:
             None
 
@@ -563,13 +581,13 @@ class Pipeline(object):
     @classmethod
     def load(self, filename):
         '''load a Pipeline from joblib dump
+
         Parameters:
-            filename: string filename
+            :filename: string filename
+
         Returns:
-            Pipeline (fitted pipeline with "ensemble" attribute
-            if fit_ensemble or fit_ea were called.)
+            :Pipeline: fitted pipeline with "ensemble" attribute if fit_ensemble or fit_ea were called.
         '''
         return joblib.load(filename)
 
     __str__ = __repr__
-

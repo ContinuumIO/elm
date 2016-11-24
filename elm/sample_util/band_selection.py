@@ -1,3 +1,10 @@
+'''
+----------------------------------
+
+``elm.sample_util.band_selection``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 from collections import OrderedDict
 
 from gdalconst import GA_ReadOnly
@@ -38,16 +45,15 @@ def select_from_file(*sampler_args,
     file interface system via elm.pipeline.parse_run_config
 
     Parameters:
-        sampler_args: tuple of one element - a filename
-        band_specs: list of band_specs included in a data_source
-        metadata_filter: ignored
-        filename_search: a search token for a filenames
-        filename_filter: a function that returns True/False to keep filename
-        dry_run:  if True, don't actually read file, just return True if accepted
-        load_meta: Function, typically from elm.readers, to load metadata
-        load_array: Function, typically from elm.readers, to load ElmStore
-        kwargs:
-            may contain "reader" such as "hdf4", "tif", "hdf5", "netcdf"
+        :sampler_args: tuple of one element - a filename
+        :band_specs: list of band_specs included in a data_source
+        :metadata_filter: ignored
+        :filename_search: a search token for a filenames
+        :filename_filter: a function that returns True/False to keep filename
+        :dry_run:  if True, don't actually read file, just return True if accepted
+        :load_meta: Function, typically from elm.readers, to load metadata
+        :load_array: Function, typically from elm.readers, to load ElmStore
+        :kwargs: may contain "reader" such as "hdf4", "tif", "hdf5", "netcdf"
 
     '''
     filename = sampler_args[0]

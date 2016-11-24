@@ -1,3 +1,10 @@
+'''
+---------------------------------
+
+``elm.sample_util.change_coords``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 import numpy as np
 
 from elm.sample_util.step_mixin import StepMixin
@@ -24,19 +31,21 @@ CHANGE_COORDS_ACTIONS = (
 
 
 class SelectCanvas(StepMixin):
+    '''Reindex all bands (DataArrays) to the coordinates of band given
+
+    Parameters:
+        :band:  a string name of a DataArray in the ElmStore's data_vars
+
+    See also:
+        :func:`elm.readers.select_canvas`
+        :mod:`elm.readers.reshape`
+    '''
     _sp_step = 'select_canvas'
     def __init__(self, band=None):
-        '''Reindex all bands (DataArrays) to the coordinates of band given
-        Parameters:
-            band:  a string name of a DataArray in the ElmStore's
-                   data_vars
-        See also:
-            elm.readers.select_canvas
-            elm.readers.reshape
-        '''
         self.band = band
 
     def get_params(self):
+        '''Returns the band'''
         return {'band': self.band}
 
     def set_params(self, **params):
@@ -59,16 +68,18 @@ class SelectCanvas(StepMixin):
         return cls(kwargs['select_canvas'])
 
 class Flatten(StepMixin):
+    '''
+    flatten an ElmStore from rasters in separate DataArrays to
+    single flat DataArray
+
+    See also:
+        :class:`elm.readers.flatten`
+        :mod:`elm.readers.reshape`
+    '''
     _sp_step = 'flatten'
 
     def __init__(self):
-        '''
-        flatten an ElmStore from rasters in separate DataArrays to
-        single flat DataArray
-        See also:
-            elm.readers.flatten
-            elm.readers.reshape
-        '''
+        pass
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
         return (_flatten(X), y, sample_weight)
@@ -86,12 +97,19 @@ class Flatten(StepMixin):
         return cls()
 
 class DropNaRows(StepMixin):
+    '''In an ElmStore that has a DataArray flat, drop NA rows
+
+    See Also:
+        :class:`elm.readers.drop_na_rows`
+        :mod:`elm.readers.reshape`
+    '''
     _sp_step = 'drop_na_rows'
     def __init__(self):
         '''In an ElmStore that has a DataArray flat, drop NA rows
+
         See also:
-            elm.readers.drop_na_rows
-            elm.readers.reshape
+            :class:`elm.readers.drop_na_rows`
+            :mod:`elm.readers.reshape`
         '''
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
@@ -115,8 +133,8 @@ class InverseFlatten(StepMixin):
     def __init__(self):
         '''Convert a flattened ElmStore back to separate bands
         See also:
-            elm.readers.inverse_flatten
-            elm.readers.reshape
+            :func:`elm.readers.inverse_flatten`
+            :mod:`elm.readers.reshape`
         '''
 
 
@@ -142,10 +160,11 @@ class Transpose(StepMixin):
         '''Calls the xarray.DataArray.transpose method
 
         Parameters:
-            trans_arg: Passed to xarray.DataArray.transpose
+            :trans_arg: Passed to xarray.DataArray.transpose
+
         See also:
-            elm.readers.transpose
-            elm.readers.reshape
+            :func:`elm.readers.transpose`
+            :mod:`elm.readers.reshape`
 
         '''
         self.trans_arg = trans_arg
@@ -172,12 +191,13 @@ class Agg(StepMixin):
         '''Aggregate along a dim or axis using func
 
         Parameters:
-            func: aggregation function word like "mean", "std"
-            axis: integer axis argument
-            dim:  dimension name for aggregation
+            :func: aggregation function word like "mean", "std"
+            :axis: integer axis argument
+            :dim:  dimension name for aggregation
+
         See also:
-            elm.readers.aggregate_simple
-            elm.readers.reshape
+            :func:`elm.readers.aggregate_simple`
+            :mod:`elm.readers.reshape`
 
         '''
         self.axis = axis
@@ -213,12 +233,12 @@ class ModifySample(StepMixin):
         '''Call func with kwargs on a step of a Pipeline
 
         Parameters:
-            func: function with the signature:
-                func(X, y=None, sample_weight=None, **kwargs)
-            kwargs: keyword arguments passed to func
+            :func: function with the signature ``func(X, y=None, sample_weight=None, **kwargs)``
+            :kwargs: keyword arguments passed to func
+
         See also:
-            elm.readers.modify_sample
-            elm.readers.reshape
+            :func:`elm.readers.modify_sample`
+            :mod:`elm.readers.reshape`
 
         '''
         self.func = func
@@ -254,4 +274,3 @@ __all__ = []
 for k,v in gs:
     if isinstance(v, type) and issubclass(v, StepMixin):
         __all__.append(k)
-

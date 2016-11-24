@@ -1,4 +1,10 @@
+'''
+---------------------------------
 
+``elm.sample_util.step_mixin``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+'''
 
 class StepMixin(object):
     '''Base class for any step in an elm.pipeline.Pipeline'''
@@ -59,4 +65,3 @@ class StepMixin(object):
         return '<elm.steps.{}>:\n\t{}'.format(name, '\n\t'.join(params))
 
     __str__ = __repr__
-

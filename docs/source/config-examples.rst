@@ -1,7 +1,7 @@
 ``elm`` ``yaml`` Specs
 ======================
 
-Workflows involving ensemble and evolutionary methods and :doc:`predict_many<predict-many>` can also be specified in a ``yaml`` config file for running with the ``elm-main`` console entry point - TODO LINK.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.  Read more the `yaml configuration file format here`_
+Workflows involving ensemble and evolutionary methods and :doc:`predict_many<predict-many>` can also be specified in a ``yaml`` config file for running with the :doc:`elm-main<elm-main>` console entry point.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.  Read more the `yaml configuration file format here`_
 
 .. _yaml configuration file format here: http://yaml.org/spec/1.2/spec.html
 
@@ -38,7 +38,7 @@ In the config, ``args_list`` can be a callable.  In this case, it is ``iter_file
 
 This examples creates ``ds_example`` which selects from files to get bands 1 through 6, iterating recursively over ``.hdf`` files in ``ELM_EXAMPLE_DATA_PATH`` from the environment (``env:SOMETHING`` means take ``SOMETHING`` from environment variables).
 
-``band_specs`` in the data source are passed to ``elm.readers.BandSpec`` (TODO several links) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
+``band_specs`` in the data source are passed to ``elm.readers.BandSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
 
 .. code-block:: yaml
 
@@ -150,7 +150,7 @@ The ``run`` section names fitting and prediction jobs to be done by using identi
 About the ``run`` section:
  * It is a list of actions
  * Each action in the list is a dict
- * Each action should have the key ``pipeline`` that is a list of dictionaries specifying steps (analogous to the interactive session ``Pipeline`` examples here - TODO LINK)
+ * Each action should have the key ``pipeline`` that is a list of dictionaries specifying steps (analogous to the interactive session :doc:`Pipeline<pipeline>` )
  * Each action should have a ``data_source`` key pointing to one of the ``data_sources`` named above
  * Each action can have ``predict`` and/or ``train`` key/value with the value being one of the named ``train`` dicts above
 
@@ -176,7 +176,7 @@ This section shows all of the valid steps that can be a config's ``run`` - ``pip
 
 **flatten**
 
-Flattens 2-D rasters as separate ``DataArray``s to a single ``DataArray`` called ``flat`` in an ``ElmStore`` (see also examples here and here TODO LINK).
+Flattens 2-D rasters as separate ``DataArray``s to a single ``DataArray`` called ``flat`` in an :doc:`ElmStore<elm-store>`.
 
 .. code-block:: yaml
 
@@ -184,7 +184,7 @@ Flattens 2-D rasters as separate ``DataArray``s to a single ``DataArray`` called
 
 See also :ref:`transform-flatten`.
 
-*See also:* ``elm.pipeline.steps.Flatten`` - TODO LINK
+*See also:* :docs:`elm.pipeline.steps<pipeline-steps>`
 
 **drop_na_rows**
 
@@ -214,8 +214,6 @@ Transpose the dimensions of the ``ElmStore``, like this example for converting f
 
     {transpose: ['x', 'y']}
 
-*See also:* ``elm.pipeline.steps.Transpose`` - TODO LINK
-
 **sklearn_preprocessing**
 
 If a config has a dict called ``sklearn_preprocessing`` as in the example above, then named preprocessors in that dict can be used in the ``run`` - ``pipeline`` lists as follows:
@@ -226,7 +224,7 @@ If a config has a dict called ``sklearn_preprocessing`` as in the example above,
 
 where ``poly2_interact`` is a key in ``sklearn_preprocessing``
 
-*See also:* ``elm.pipeline.steps.PolynomialFeatures`` - TODO LINK and ``elm.sample_util.preproc_scale`` - TODO LINK
+*See also:* ``elm.pipeline.steps.PolynomialFeatures`` in :doc:`elm.pipeline.steps<pipeline-steps>`
 
 **feature_selection**
 
@@ -237,8 +235,6 @@ If a config has a dict called ``feature_selection`` as in the example above, the
     {feature_selection: top_half}
 
 where ``top_half`` is a named feature selector in ``feature_selection``.
-
-*See also:* ``elm.pipeline.steps.SelectPercentile`` - TODO LINK and ``elm.sample_util.preproc_scale`` - TODO LINK
 
 **transform**
 
