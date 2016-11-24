@@ -6,19 +6,15 @@ build:
   number: 0
   pin_depends: record
 
-
 requirements:
   build:
     - python
     - setuptools
   run:
     - python # [py35]
-    - blaze
     - bokeh
     - dask
-    - datashader
     - distributed
-    - fiona
     - gdal
     - h5py
     - jupyter
@@ -29,20 +25,21 @@ requirements:
     - numba
     - numpy
     - pandas
-    - pyproj
     - pytest
     - rasterio
     - requests
     - scikit-image
     - scikit-learn
     - scipy
-    - shapely
-    - statsmodels
     - tblib
     - xarray
     - yaml
 
-
 about:
-  home: http://github.com/ContinuumIO/nasasbir
+  home: http://github.com/ContinuumIO/elm
   license: MIT
+
+extra:
+  maintainers:
+    - Peter Steinberg - Continuum Analytics - psteinberg [at] continuum [dot] io
+
