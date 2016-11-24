@@ -10,7 +10,7 @@ To install the latest release of elm
 
 .. code-block:: bash
 
-    conda install -c elm -c conda-forge elm elm 
+    conda install -c elm -c conda-forge elm 
 
 This installs elm and all common dependencies. The channel arguments (``c elm -c conda-forge`` ) are typically required.
 
