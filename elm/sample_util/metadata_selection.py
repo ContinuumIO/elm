@@ -65,7 +65,6 @@ def meta_is_day(attrs):
             dicts.append(v)
             continue
         key2 = _strip_key(k)
-        print('key2', key2)
         dayflag = 'day' in key2
         nightflag = 'night' in key2
         if dayflag and nightflag:

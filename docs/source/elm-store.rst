@@ -60,9 +60,10 @@ Use the ``band_specs`` keyword to ``load_array`` to
  * To standardize the names of the bands (``DataArrays``) in the ``ElmStore``.
 
  The ``band_specs`` work slightly differently for each file type:
- * HDF4 / HDF5: The ``band_specs`` determine matching against one of the HDF4 file's subdatasets (see also `GDAL subdatasets`_).
- * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variables`` metadata (`NetCDF4 python variables interface`_).
- * GeoTiff: When calling ``load_array`` for GeoTiffs, the argument is a directory (of GeoTiff files) not a single GeoTiff file.  The ``band_specs`` for a GeoTiff file determine matching based on the gdal metadata for each GeoTiff in the directory.  GeoTiffs are read using ``rasterio`` , `a wrapper around GDAl`_.
+
+  * HDF4 / HDF5: The ``band_specs`` determine matching against one of the HDF4 file's subdatasets (see also `GDAL subdatasets`_).
+  * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variables`` metadata (`NetCDF4 python variables interface`_).
+  * GeoTiff: When calling ``load_array`` for GeoTiffs, the argument is a directory (of GeoTiff files) not a single GeoTiff file.  The ``band_specs`` for a GeoTiff file determine matching based on the gdal metadata for each GeoTiff in the directory.  GeoTiffs are read using ``rasterio`` , `a wrapper around GDAl`_.
 
 .. _GDAL subdatasets: http://www.gdal.org/gdalinfo.html
 .. _NetCDF4 python variables interface: http://unidata.github.io/netcdf4-python/
@@ -74,8 +75,7 @@ In simple cases ``band_specs`` can be a list of strings to match a ``NetCDF`` va
 
     In [4]: from elm.readers import load_array
     In [5]: filename = '3B-HHR-E.MS.MRG.3IMERG.20160708-S153000-E155959.0930.V03E.HDF5.nc'
-    In [6]: es = load_array(filename, band_specs=['HQobservationTime'
-   ...: ])
+    In [6]: es = load_array(filename, band_specs=['HQobservationTime'])
     In [7]: es.data_vars
     Out[7]:
     Data variables:
