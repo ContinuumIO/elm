@@ -22,14 +22,14 @@ Define platform/setup specific environment variables *(fill in with your specifi
     # Platform code. For me it's `osx-64`
     PLATFORM=osx-64
 
-    # Version number of datashader being released (e.g. 0.2.0)
+    # Version number of elm being released (e.g. 0.2.0)
     VERSION=0.2.0
 
 
 .. code-block:: bash
 
     # requires conda-build (conda install conda-build)
-    conda build conda.recipe/ --python 2.7 --python 3.4 --python 3.5
+    conda build conda.recipe/ --python 3.5 --no-anaconda-upload -c conda-forge
 
 Next, `cd` into the folder where the builds end up.
 
@@ -44,7 +44,9 @@ the platform you're currently on):
 
     conda convert --platform osx-64 elm-$VERSION*.tar.bz2 -o ../
     conda convert --platform linux-64 elm-$VERSION*.tar.bz2 -o ../
+    conda convert --platform linux-32 elm-$VERSION*.tar.bz2 -o ../
     conda convert --platform win-64 elm-$VERSION*.tar.bz2 -o ../
+    conda convert --platform win-32 elm-$VERSION*.tar.bz2 -o ../
 
 Use ``anaconda upload`` to upload the build to the ``elm`` channel. This requires
 you to be setup on `anaconda.org`, and have the proper credentials to push to
