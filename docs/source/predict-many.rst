@@ -40,7 +40,7 @@ See also ``model_selection`` in :ref:`controlling-ensemble`.
 
 Define initial ensemble
 -----------------------
-To vary the parameters of the initial ensemble of :doc:`Pipeline<pipeline>` instances, provide an ``ensemble_init_func``.  ``pipe.new_with_params`` is used here to create a variety of :doc:`Pipeline<pipeline>`s that have different ``SGDClassifier`` ``alpha`` and ``penalty`` parameters.
+To vary the parameters of the initial ensemble of :doc:`Pipeline<pipeline>` instances, provide an ``ensemble_init_func`` .  ``pipe.new_with_params`` is used here to create a variety of :doc:`Pipeline<pipeline>` objects that have different ``SGDClassifier`` ``alpha`` and ``penalty`` parameters.
 
 .. code-block:: python
 
