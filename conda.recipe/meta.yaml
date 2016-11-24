@@ -1,6 +1,6 @@
 package:
   name: elm
-  version: 0.0.0
+  version: 0.0.1
 
 build:
   number: 0
@@ -12,6 +12,8 @@ requirements:
     - setuptools
   run:
     - python # [py35]
+    - deap
+    - attrs
     - bokeh
     - dask
     - distributed
@@ -42,4 +44,14 @@ about:
 extra:
   maintainers:
     - Peter Steinberg - Continuum Analytics - psteinberg [at] continuum [dot] io
+
+test:
+  imports:
+    - elm.config
+    - elm.model_selection
+    - elm.pipeline.pipeline
+    - elm.pipeline.steps
+    - elm.readers
+    - elm.sample_util
+    - elm.scripts
 

@@ -7,7 +7,7 @@ import versioneer
 version = versioneer.get_version()
 cmdclass = versioneer.get_cmdclass()
 yamls = glob.glob(os.path.join('elm', 'config', 'defaults', '*'))
-data_files = [('elm', yamls)]
+yamls = [os.path.relpath(y, os.path.join('elm')) for y in yamls]
 setup(name='elm',
       version=version,
       cmdclass=cmdclass,
@@ -15,7 +15,7 @@ setup(name='elm',
       include_package_data=True,
       install_requires=[],
       packages=find_packages(),
-      data_files=data_files,
+      package_data=dict(elm=yamls),
       entry_points={
         'console_scripts': [
             'elm-main = elm.scripts.main:main',

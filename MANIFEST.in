@@ -1,1 +1,2 @@
-recursive include elm/config/defaults/*
+include elm/config/defaults/environment_vars_spec.yaml
+include elm/config/defaults/config_standard.yaml
