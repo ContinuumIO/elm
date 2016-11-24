@@ -179,6 +179,8 @@ class TSProbs(StepMixin):
         m = ModifySample(ts_probs, **self._kwargs)
         return (m.fit_transform(X)[0], y, sample_weight)
 
+    transform = fit = fit_transform
+
     def get_params(self):
         return self._kwargs.copy()
 
@@ -200,6 +202,8 @@ class TSDescribe(StepMixin):
         m = ModifySample(ts_describe, **self._kwargs)
         X_new = m.fit_transform(X)[0]
         return (X_new, y, sample_weight)
+
+    transform = fit = fit_transform
 
     def get_params(self):
         return self._kwargs.copy()
