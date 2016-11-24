@@ -48,13 +48,13 @@ the platform you're currently on):
 
 Use ``anaconda upload`` to upload the build to the ``elm`` channel. This requires
 you to be setup on `anaconda.org`, and have the proper credentials to push to
-the bokeh channel.
+the ``elm`` channel.
 
 .. code-block:: bash
 
     # requires anaconda-client (conda install anaconda-client)
     anaconda login
-    anaconda upload $CONDA_DIR/conda-bld/*/elm-$VERSION*.tar.bz2 -u bokeh
+    anaconda upload $CONDA_DIR/conda-bld/*/elm-$VERSION*.tar.bz2 -u elm
 
 - Write the release notes:
 
