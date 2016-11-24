@@ -61,7 +61,7 @@ Use the ``band_specs`` keyword to ``load_array`` to
 
  The ``band_specs`` work slightly differently for each file type:
  * HDF4 / HDF5: The ``band_specs`` determine matching against one of the HDF4 file's subdatasets (see also `GDAL subdatasets`_).
- * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variable``s' metadata (`NetCDF4 python variables interface`_).
+ * NetCDF: The ``band_specs`` determine matching against one of the NetCDF file's ``variables`` metadata (`NetCDF4 python variables interface`_).
  * GeoTiff: When calling ``load_array`` for GeoTiffs, the argument is a directory (of GeoTiff files) not a single GeoTiff file.  The ``band_specs`` for a GeoTiff file determine matching based on the gdal metadata for each GeoTiff in the directory.  GeoTiffs are read using ``rasterio`` , `a wrapper around GDAl`_.
 
 .. _GDAL subdatasets: http://www.gdal.org/gdalinfo.html
@@ -194,7 +194,7 @@ Calling ``sampler`` above gives:
         _dummy_canvas: True
         band_order: ['b1', 'b2', 'b3', 'b4']
 
-``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the band metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See `the GDAL data model for more information on geo transforms`_.  In the example above the ``DataArray``s did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` described further below)
+``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the band metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See `the GDAL data model for more information on geo transforms`_.  In the example above each ``DataArray`` did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` described further below)
 
 .. _the GDAL data model for more information on geo transforms: http://www.gdal.org/classGDALDataset.html#a5101119705f5fa2bc1344ab26f66fd1d
 
@@ -241,9 +241,9 @@ Common ``ElmStore`` Transformations
 
 **Flatten**
 
-``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in bands (``DataArray``s) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on ``ElmStore``s, where the scikit-learn transforms expect a 2-D array.
+``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in bands (each band as a ``DataArray`` ) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on an ``ElmStore``, where the scikit-learn transforms expect a 2-D array.
 
-Here is an example of ``Flatten`` that continues the example above that defined ``sampler``, a function returning a random ``ElmStore`` of 2-D ``DataArrays``s:
+Here is an example of ``Flatten`` that continues the example above that defined ``sampler``, a function returning a random ``ElmStore`` of 2-D ``DataArray`` bands:
 
 .. code-block:: python
 

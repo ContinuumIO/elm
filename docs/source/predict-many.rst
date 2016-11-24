@@ -78,7 +78,7 @@ See also ``ensemble_kwargs`` in :ref:`controlling-ensemble`.
 Define a ``sampler``
 -------------------------------------------------
 
-The following lines of code use the synthetic data helper ``make_blobs`` from ``sklearn.datasets`` to create an ``ElmStore`` with 5 bands (``DataArray``s)
+The following lines of code use the synthetic data helper ``make_blobs`` from ``sklearn.datasets`` to create an ``ElmStore`` with 5 bands (each band is a ``DataArray`` )
 
 .. code-block:: python
 
@@ -194,7 +194,7 @@ By default :doc:`predict_many<predict-many>` will look for an attribute on the :
 Predictions Too Large For Memory
 --------------------------------
 
-In the examples above, :doc:`predict_many<predict-many>` has returned a list of ``ElmStore``s.  If the number of samples and/or models is large then keeping them all predictions in memory in a list is infeasible.  In these cases, pass a ``serialize`` argument (callable) to :doc:`predict_many<predict-many>` to serialize prediction ``ElmStore``s as they are generated.  ``serialize`` should have a signature exactly like the example below:
+In the examples above, :doc:`predict_many<predict-many>` has returned a list of ``ElmStore`` objects.  If the number of samples and/or models is large then keeping them all predictions in memory in a list is infeasible.  In these cases, pass a ``serialize`` argument (callable) to :doc:`predict_many<predict-many>` to serialize prediction ``ElmStore`` outputs as they are generated.  ``serialize`` should have a signature exactly like the example below:
 
 .. code-block:: python
 

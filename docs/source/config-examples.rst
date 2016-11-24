@@ -32,7 +32,7 @@ The ``ensembles`` section creates named dicts of keyword arguments to :doc:`fit_
 ``data_sources``
 ----------------
 
-The dicts in ``data_sources`` create named ``sampler``s with their keyword arguments.
+The dicts in ``data_sources`` create a named ``sampler`` with their keyword arguments.
 
 In the config, ``args_list`` can be a callable.  In this case, it is ``iter_files_recursively`` a function which takes ``top_dir`` and ``file_pattern`` as arguments.  The filenames returned by ``iter_files_recursively`` will be filtered by ``example_meta_is_day`` an example function for detecting whether a satellite data file is night or day based on its metadata.  If ``args_list`` is callable, it should take a variable number of keyword arguments (``**kwargs``).
 
@@ -176,7 +176,7 @@ This section shows all of the valid steps that can be a config's ``run`` - ``pip
 
 **flatten**
 
-Flattens 2-D rasters as separate ``DataArray``s to a single ``DataArray`` called ``flat`` in an :doc:`ElmStore<elm-store>`.
+Flattens 2-D each ``DataArray`` raster to a column within a single ``DataArray`` called ``flat`` in an :doc:`ElmStore<elm-store>`.
 
 .. code-block:: yaml
 
