@@ -31,7 +31,7 @@ To address these challenges ``elm`` draws from existing Python packages:
  * `deap`_
 
 
-.. _large-scale-model
+.. _large-scale-model:
 
 Large-Scale Model Training
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
