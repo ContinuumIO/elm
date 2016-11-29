@@ -34,7 +34,9 @@ If fitting more than one sample, then define a ``sampler`` function to pass to :
     N_SAMPLES = 2
     bands = ['band_{}'.format(idx + 1) for idx in range(10)]
     sampler = partial(random_elm_store,
-                      bands=bands)
+                      bands=bands,
+                      width=60,
+                      height=60)
     args_list = [(),] * N_SAMPLES
 
 Step 2 - Define a :doc:`Pipeline<pipeline>`
