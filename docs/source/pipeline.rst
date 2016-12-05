@@ -91,13 +91,15 @@ Here is an example ``Pipeline`` of transformations before K-Means
                       ('kmeans', MiniBatchKMeans(n_clusters=4, compute_labels=True)),]
 
 
- * The example above calls ``steps.Flatten`` first (See :ref:`transformers-flatten`) first, as utility for flattening our multi-band raster HDF4 sample(s) into an :doc:`ElmStore<elm-store>` with a single `xarray.DataArray`_, called ``flat``, with each band as a column in ``flat``.
- * The next step calls `StandardScaler`_ with default arguments from ``sklearn.prepreprocessing`` (all other transformers from `sklearn.preprocessing`_ and `sklearn.feature_selection`_ are also attributes of ``elm.pipeline.steps`` and could be used here)
- * PCA is done using ``elm.pipeline.steps.Transform`` which wraps scikit-learn transformers to allow multiple calls to ``partial_fit`` within a single fitting task of the final estimator.  ``steps.Transform`` is initialized with
+The example above calls:
+
+* ``steps.Flatten`` first (See :ref:`transformers-flatten`) first, as utility for flattening our multi-band raster HDF4 sample(s) into an :doc:`ElmStore<elm-store>` with a single `xarray.DataArray`_, called ``flat``, with each band as a column in ``flat``.
+* `StandardScaler`_ with default arguments from ``sklearn.prepreprocessing`` (all other transformers from `sklearn.preprocessing`_ and `sklearn.feature_selection`_ are also attributes of ``elm.pipeline.steps`` and could be used here)
+* PCA with ``elm.pipeline.steps.Transform`` to wrap scikit-learn transformers to allow multiple calls to ``partial_fit`` within a single fitting task of the final estimator - ``steps.Transform`` is initialized with:
 
   * A scikit-learn transformer as an argument
-  * ``partial_fit_batches`` as a keyword, defaulting 1. Note: using ``partial_fit_batches != 1`` requires a transformer with a ``partial_fit`` method
-  * Finally `MiniBatchKMeans`_ is fit
+  * ``partial_fit_batches`` as a keyword, defaulting to 1. Note: using ``partial_fit_batches != 1`` requires a transformer with a ``partial_fit`` method
+* Finally `MiniBatchKMeans`_
 
 
 Multi-Model / Multi-Sample Fitting
