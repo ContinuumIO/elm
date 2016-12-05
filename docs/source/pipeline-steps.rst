@@ -1,7 +1,7 @@
 ``elm.pipeline.steps``
 ======================
 
-The examples below assume you have created a random :doc:`ElmStore<elm-store` as follows:
+The examples below assume you have created a random :doc:`ElmStore<elm-store>` as follows:
 
 .. code-block:: python
 
@@ -63,7 +63,7 @@ There are two choices for running a user-given callable in a :doc:`Pipeline<pipe
          for band in X.data_vars:
              arr = getattr(X, band)
              if kwargs.get('normalize'):
-                 arr.values /= arr.values.sum()
+                 arr.values /= arr.values.max()
          return X, y, sample_weight
 
     steps.ModifySample(modifier, normalize=True).fit_transform(X)
@@ -79,7 +79,7 @@ There are two choices for running a user-given callable in a :doc:`Pipeline<pipe
     Xnew, y, sample_weight = steps.FunctionTransformer(func=np.log).fit_transform(Xnew)
 
 Preprocessing - Scaling / Normalization
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each of the following classes from scikit-learn have been wrapped for usage as a :doc:`Pipeline<pipeline>` step.  Each requires that the :doc:`ElmStore<elm-store>`
 
