@@ -149,6 +149,9 @@ class Pipeline(object):
                 fit_func = step_cls.fit_transform
             else:
                 fit_func = step_cls.transform
+                if not hasattr(getattr(step_cls, '_estimator', None), 'transform'):
+                    # Estimator such as TSNE with no transform method, just fit_transform
+                    fit_func = step_cls.fit_transform
             func_out = fit_func(X, y=y, sample_weight=sample_weight)
             if func_out is not None:
                 X, y, sample_weight = _split_pipeline_output(func_out, X, y,

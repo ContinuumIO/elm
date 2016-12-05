@@ -22,12 +22,14 @@ def plot_3d(X, bands, title='', scale=None, axis_labels=True,
 
     Returns:
         :(arr, fig): where arr is the 3-D numpy array and fig is the figure
-        
+
     '''
-    arr = np.empty((X.band_1.values.shape) + (len(bands),), dtype=np.float32)
+    arr = None
     scale = 1 if scale is None else scale
     for idx, band in enumerate(bands):
         val = getattr(X, band).values
+        if idx == 0:
+            arr = np.empty((val.shape) + (len(bands),), dtype=np.float32)
         arr[:, :, idx] = val.astype(np.float64) / scale
     plt.imshow(arr, **imshow_kwargs)
     plt.title('{:^100}'.format(title))
