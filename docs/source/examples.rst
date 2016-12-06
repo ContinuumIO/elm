@@ -33,7 +33,7 @@ Scripts using ``elm``
  * `api_example.py`_ : A K-Means example with PCA preprocessing in ensemble
  * `api_example_evo.py`_ : A K-Means example with feature selection in NSGA-2
 
-.. _Clustering of temperature probability : https://github.com/ContinuumIO/elm-examples/tree/master/notebooks/loikith_viz.ipynb
+.. _Clustering of temperature probability : https://github.com/ContinuumIO/elm-examples/tree/master/notebooks/temperature-PDFs-clustering.ipynb
 
 .. _Land cover clustering with K-Means : https://github.com/ContinuumIO/elm-examples/tree/master/notebooks/LANDSAT_Example.ipynb
 

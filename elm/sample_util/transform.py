@@ -28,7 +28,7 @@ class Transform(StepMixin):
            Parameters:
                 :estimator: such as sklearn.decomposition.IncrementalPCA, a model with fit and transform methods
                 :partial_fit_batches: how many times to call partial_fit  each time Pipeline is evaluated
-                
+
         '''
 
         self._estimator = estimator
@@ -100,5 +100,7 @@ class Transform(StepMixin):
         return self._fit_trans('transform', X, y=y, sample_weight=sample_weight, **kwargs)
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
+        if not hasattr(self._estimator, 'transform'):
+            return self._fit_trans('fit_transform', X, y=y, sample_weight=sample_weight, **kwargs)
         fitted = self.fit(X, y=y, sample_weight=sample_weight, **kwargs)
         return self.transform(X, y=y, sample_weight=sample_weight, **kwargs)
