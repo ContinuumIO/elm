@@ -85,9 +85,15 @@ def config_to_pipeline(config, client=None):
             pipe = Pipeline(pipe_steps, scoring=scoring, scoring_kwargs=scoring_kwargs)
             evo_params = idx_to_evo_params.get(idx, None)
             if evo_params:
-                pipe.fit_ea(evo_params=evo_params, **data_source, **ensemble_kwargs)
+                kw = dict(evo_params=evo_params)
+                kw.update(data_source)
+                kw.update(ensemble_kwargs)
+                pipe.fit_ea(**kw)
             else:
-                pipe.fit_ensemble(**data_source, **ensemble_kwargs)
+                kw = {}
+                kw.update(data_source)
+                kw.update(ensemble_kwargs)
+                pipe.fit_ensemble(**kw)
 
             serialize_pipe(pipe, config.ELM_TRAIN_PATH, step['train'])
         elif 'predict' in step and not getattr(config, 'TRAIN_ONLY', False):

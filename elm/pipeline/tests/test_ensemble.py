@@ -60,7 +60,8 @@ def test_simple():
     args_list = [(100, 200, 5)] * 10 # (height, width, bands)
     data_source = dict(sampler=example_sampler, args_list=args_list)
     ensemble_kw = dict(ngen=2, init_ensemble_size=2)
-    fitted = p.fit_ensemble(**data_source, **ensemble_kw)
+    ensemble_kw.update(data_source)
+    fitted = p.fit_ensemble(**ensemble_kw)
     tagged_fitted_models = fitted.ensemble
     (tag1, model1), (tag2, model2) = tagged_fitted_models # ensemble size of 2 here
     X = example_sampler(100, 400, 5)
@@ -96,7 +97,9 @@ def _train_asserts(fitted, expected_len):
 def test_kmeans_simple_sampler(client=None):
     pipe = Pipeline([steps.Flatten(),
                      MiniBatchKMeans(n_clusters=6)])
-    fitted = pipe.fit_ensemble(**SAMPLER_DATA_SOURCE, **ENSEMBLE_KWARGS)
+    kw = SAMPLER_DATA_SOURCE.copy()
+    kw.update(ENSEMBLE_KWARGS)
+    fitted = pipe.fit_ensemble(**kw)
     ens = fitted.ensemble
     _train_asserts(fitted, ENSEMBLE_KWARGS['saved_ensemble_size'])
     pred = fitted.predict_many(**SAMPLER_DATA_SOURCE)
@@ -122,7 +125,8 @@ def test_supervised_feat_select_sampler(client=None):
                 steps.SelectPercentile(score_func=f_classif, percentile=50),
                 SGDClassifier()])
     en = dict(method_kwargs=dict(classes=[0, 1, 2]), **ENSEMBLE_KWARGS)
-    fitted = pipe.fit_ensemble(**SAMPLER_DATA_SOURCE, **en)
+    en.update(SAMPLER_DATA_SOURCE)
+    fitted = pipe.fit_ensemble(**en)
     ens = fitted.ensemble
     _train_asserts(fitted, en['saved_ensemble_size'])
     pred = fitted.predict_many(**SAMPLER_DATA_SOURCE)
@@ -136,7 +140,8 @@ def test_supervised_feat_select_X_y(client=None):
             steps.SelectPercentile(score_func=f_classif, percentile=50),
             SGDClassifier()])
     en = dict(method_kwargs=dict(classes=[0, 1, 2]), **ENSEMBLE_KWARGS)
-    fitted = pipe.fit_ensemble(**X_Y_DATA_SOURCE, **en)
+    en.update(X_Y_DATA_SOURCE)
+    fitted = pipe.fit_ensemble(**en)
     _train_asserts(fitted, en['saved_ensemble_size'])
     pred = fitted.predict_many(**X_Y_DATA_SOURCE)
     assert len(pred) == len(fitted.ensemble)
@@ -174,7 +179,8 @@ def test_kmeans_model_selection(client=None):
     en['model_selection'] = kmeans_model_averaging
     sa = SAMPLER_DATA_SOURCE.copy()
     sa['sampler']  = samp
-    fitted = pipe.fit_ensemble(**sa, **en)
+    en.update(sa)
+    fitted = pipe.fit_ensemble(**en)
     assert len(fitted.ensemble) == en['saved_ensemble_size']
     preds = fitted.predict_many(**sa)
     assert len(preds) == len(fitted.ensemble) * len(SAMPLER_DATA_SOURCE['args_list'])
