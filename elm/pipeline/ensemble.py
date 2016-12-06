@@ -105,7 +105,7 @@ def _one_generation_dask_graph(dsk,
     def tuple_of_args(*args):
         return tuple(args)
     new_models_name = _next_name('ensemble_generation_{}'.format(gen))
-    dsk[new_models_name] = (tuple_of_args, *collect_keys)
+    dsk[new_models_name] = (tuple_of_args, ) + tuple(collect_keys)
     return dsk, collect_keys, new_models_name
 
 def ensemble(pipe,

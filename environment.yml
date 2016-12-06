@@ -2,7 +2,7 @@ name: elm-env
 channels:
  - conda-forge # essential for rasterio on osx
 dependencies:
- - python=3.5
+ - python>=3.4
  - attrs
  - bokeh
  - dask
