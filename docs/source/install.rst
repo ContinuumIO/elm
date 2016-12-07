@@ -10,13 +10,13 @@ To install the latest release of elm
 
 .. code-block:: bash
 
-    conda install -c elm -c conda-forge elm 
+    conda install -c elm -c conda-forge elm
 
 This installs elm and all common dependencies. The channel arguments (``c elm -c conda-forge`` ) are typically required.
 
 
 Install from Source
-~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 To install elm from source, clone the repository from `github
 <https://github.com/ContinuumIO/elm>`_:
@@ -29,7 +29,7 @@ To install elm from source, clone the repository from `github
     source activate elm-env
     python setup.py develop
 
-Clone the ``elm-data`` repo using Git LFS so that more tests can be run:
+Clone the ``elm-data`` repo and pull using Git Large File Storage (LFS) so that more tests can be run:
 
 .. code-block:: bash
 
