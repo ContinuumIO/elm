@@ -11,7 +11,7 @@ requirements:
     - python
     - setuptools
   run:
-    - python # [py34] [py35]
+    - python x.x
     - deap 
     - attrs
     - bokeh

@@ -57,7 +57,7 @@ the ``elm`` channel.
     # requires anaconda-client (conda install anaconda-client)
     anaconda login
     anaconda upload $CONDA_DIR/conda-bld/*/elm-$VERSION*.tar.bz2 -u elm
-
+- Repeat ``conda build`` and ``anaconda upload`` steps above for ``--python 3.4`` as well
 - Write the release notes:
 
  1. Run ``git log`` to get a listing of all the changes

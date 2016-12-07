@@ -10,12 +10,14 @@ It demonstrates the common steps of using ``elm`` :
  * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
  * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
 
+.. _elm-examples: http://github.com/ContinuumIO/elm-examples
+
 .. _elm-data: http://github.com/ContinuumIO/elm-data
 
 LANDSAT
 ~~~~~~~
 
-The LANDSAT classification is notebook from `elm-data`_ .  This section walks through that notebook, pointing out:
+The LANDSAT classification is notebook from `elm-examples`_ .  This section walks through that notebook, pointing out:
 
  * How to use ``elm.readers`` for scientific data files like GeoTiffs
  * How to set up an ``elm.pipeline.Pipeline`` of transformations
@@ -26,7 +28,7 @@ The LANDSAT classification is notebook from `elm-data`_ .  This section walks th
 ``elm.readers`` Walk-Through
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-First the notebook sets some environment variables related to usage of a ``dask-distributed`` ``Client`` and the path to the GeoTiff example files from ``elm-data``:
+First the notebook sets some environment variables related to usage of a ``dask-distributed`` ``Client`` and the path to the GeoTiff example files from `elm-data`_:
 
 Each GeoTiff file has 1 raster (band of LANDSAT data):
 
