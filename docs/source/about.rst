@@ -23,6 +23,7 @@ Ensemble Learning Models (``elm`` ) is a set of tools for parallel ensemble unsu
 
 These capabilities are best shown in the
 
+ * :doc:`Elm introduction<elm-hello-world>`
  * :doc:`Elm clustering introduction<clustering_example>`
  * :doc:`Other elm examples<examples>`
  * :doc:`Use cases<use-cases>`
