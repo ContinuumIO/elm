@@ -4,6 +4,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 
 **Getting Started**
 
+* :doc:`about`
 * :doc:`install`
 * :doc:`use-cases`
 * :doc:`elm-hello-world.rst`
@@ -15,6 +16,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
    :hidden:
    :caption: Getting Started
 
+   about.rst
    install.rst
    use-cases.rst
    elm-hello-world.rst

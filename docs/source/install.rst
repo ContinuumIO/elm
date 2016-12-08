@@ -4,15 +4,25 @@ Install ELM
 You can install elm with ``conda`` or by installing from source.
 
 Install from Conda
-~~~~~~
+~~~~~~~~~~~~~~~~~~
 
-To install the latest release of elm
+**Mac-OSX and Linux**: To install the latest release of ``elm`` on Mac-OSX or Linux:
 
 .. code-block:: bash
 
-    conda install -c elm -c conda-forge elm
+    conda create --name elm-env -c elm -c conda-forge elm python=3.5
+    source activate elm-env
 
-This installs elm and all common dependencies. The channel arguments (``c elm -c conda-forge`` ) are typically required.
+**Windows**: To install the latest release of ``elm`` on Windows:
+
+.. code-block:: bash
+
+    conda create --name elm-env -c elm -c conda-forge elm python=3.4
+    activate elm-env
+
+If you have any trouble, adjust the `python=3.4` to `python=3.5` as package availability may change in the future.
+
+This installs elm and all common dependencies. The channel arguments (``-c elm -c conda-forge`` ) are typically required.
 
 
 Install from Source

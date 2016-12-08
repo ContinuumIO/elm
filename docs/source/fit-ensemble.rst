@@ -68,7 +68,7 @@ Next a :doc:`Pipeline<pipeline>` is configured that flattens the separate band r
 .. _signature for kmeans_aic: https://github.com/ContinuumIO/elm/blob/master/elm/model_selection/kmeans.py
 
 
-See the `signature for kmeans_aic`_ here to write a similar scoring function, otherwise ``scoring`` defaults to calling the estimator's ``.score` attribute.
+See the `signature for kmeans_aic`_ here to write a similar scoring function, otherwise ``scoring`` defaults to calling the estimator's ``.score`` callable or exception if ``.score`` is not defined.
 
 Configure Ensemble
 ------------------
@@ -93,6 +93,7 @@ Here's an example:
     }
 
 In the example above:
+
  * ``ngen`` sets the number of generations to 3
  * There are 4 initial ensemble members (``init_ensemble_size``),
  * After each generation ``kmeans_model_averaging`` (See :doc:`API docs<api>`) is called on the ensemble with ``model_selection_kwargs`` are passed.
