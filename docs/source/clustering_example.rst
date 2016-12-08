@@ -14,6 +14,8 @@ It demonstrates the common steps of using ``elm`` :
 
 .. _elm-data: http://github.com/ContinuumIO/elm-data
 
+.. AWS S3 LANDSAT bucket here: http://landsat-pds.s3.amazonaws.com/L8/015/033/LC80150332013207LGN00/index.html
+
 LANDSAT
 ~~~~~~~
 
@@ -23,7 +25,7 @@ The LANDSAT classification is notebook from `elm-examples`_ .  This section walk
  * How to set up an ``elm.pipeline.Pipeline`` of transformations
  * How to use ``dask`` to ``fit`` a ``Pipeline`` in ensemble and predict from many models
 
-**NOTE** : To follow along, make sure you follow the :ref:`Prerequisites`.
+**NOTE** : To follow along, make sure you follow the :ref:`Prerequisites`.  The LANDSAT sample used here can be found in the `AWS S3 LANDSAT bucket here`_.
 
 ``elm.readers`` Walk-Through
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~

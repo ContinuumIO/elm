@@ -68,6 +68,7 @@ Hyperparameterization / Model Selection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``elm`` offers two different algorithms for multi-model training with model selection:
+
  * :doc:`fit_ensemble<fit-ensemble>`: Running one batch of models at a time (a generation), running a user-given model selection function after each generation
  * :doc:`fit_ea<fit-ea>`: Using the NSGA-2 evolutionary algorithm to select best parameters for the best fit.
 
@@ -118,8 +119,8 @@ Predicting for Many Large Samples and/or Models
 ``elm`` can use dask-distributed, a dask thread pool, or serial processing for predicting over a group (ensemble) of models and a single sample or series of samples.  ``elm``'s interface for large scale prediction, described here, is via the :doc:`predict_many<predict-many>` method of a ``Pipeline`` instance.
 
 
-``elm`` - Work in Progress
-~~~~~~~~~~~~~~~~
+``elm`` is a Work in Progress
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 ``elm`` is immature and largely for experimental use.
 
 The developers do not promise backwards compatibility with future versions.

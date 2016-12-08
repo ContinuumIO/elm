@@ -1,7 +1,9 @@
 Example with :doc:`predict_many<predict-many>`
 ============
 
-``elm``'s :doc:`predict_many<predict-many>` predicts for each estimator in a trained ensemble for one or more samples. :doc:`predict_many<predict-many>` takes some of the same data source keyword arguments that :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` use.  See also Data Sources for a `Pipeline<pipeline>` - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for :doc:`predict_many<predict-many>`.
+``elm``'s :doc:`predict_many<predict-many>` predicts for each estimator in a trained ensemble for one or more samples. :doc:`predict_many<predict-many>` takes some of the same data source keyword arguments that :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` use.  See also :doc:`Data Sources for a Pipeline<pipeline>` - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for :doc:`predict_many<predict-many>`.
+
+.. _xarray-pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html
 
 :doc:`predict_many<predict-many>` has a feature ``to_cube`` argument that is useful in prediction for spatial data.  ``to_cube=True`` (``True`` by default) means to convert the 1-D numpy array of predictions from the estimator of a :doc:`Pipeline<pipeline>` instance to a 2-D raster with the coordinates of the input data before the input data were flattened for training.  This makes it easy to make `xarray-pcolormesh`_ plots of predictions in spatial coordinates that are derived from models trained on spatial satellite and weather data.
 
@@ -28,7 +30,7 @@ This is a common set of ``import`` statements when working with ``elm``
 
 Define model selection
 ----------------------
-We can define a callable with a signature like ``model_selection`` below to control which models are passed from generation to generation in an ensemble.  This function just uses ``best_idxes`` (Pareto sorted model fitness from the ``accuracy_score`):
+We can define a callable with a signature like ``model_selection`` below to control which models are passed from generation to generation in an ensemble.  This function just uses ``best_idxes`` (Pareto sorted model fitness from the ``accuracy_score``):
 
 .. code-block:: python
 
