@@ -5,6 +5,7 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 '''
+from collections import Sequence
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -30,7 +31,11 @@ def plot_3d(X, bands, title='', scale=None, axis_labels=True,
         val = getattr(X, band).values
         if idx == 0:
             arr = np.empty((val.shape) + (len(bands),), dtype=np.float32)
-        arr[:, :, idx] = val.astype(np.float64) / scale
+        if isinstance(scale, Sequence):
+            s = scale[idx]
+        else:
+            s = scale
+        arr[:, :, idx] = val.astype(np.float64) / s
     plt.imshow(arr, **imshow_kwargs)
     plt.title('{:^100}'.format(title))
     fig = plt.gcf()

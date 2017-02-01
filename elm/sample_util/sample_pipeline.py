@@ -186,7 +186,7 @@ def check_array(arr, msg, **kwargs):
 
 
 def _has_arg(a):
-    return not (a is None or a == [] or (hasattr(a, 'size') and a.size == 0))
+    return not (a is None or (isinstance(a, list) and not a) or (hasattr(a, 'size') and a.size == 0))
 
 
 def final_on_sample_step(fitter,
@@ -259,9 +259,11 @@ def final_on_sample_step(fitter,
         logger.debug('X (shape {})'.format(X_values.shape))
     check_array(X_values, "final_on_sample_step - X")
     if has_y:
-        check_array(y, "final_on_sample_step - y")
+        if not y.size == X_values.shape[0]:
+            raise ValueError("Bad size for y ({}) - does not match X.shape[0] ({})".format(y.size, X_values.shape[0]))
     if has_sw:
-        check_array(sample_weight, 'final_on_sample_step - sample_weight')
+        if not sample_weight.size == X_values.shape[0]:
+            raise ValueError("Bad size for sample_weight ({}) - does not match X.shape[0] ({})".format(sample_weight.size, X_values.shape[0]))
     if 'batch_size' in model.get_params():
         logger.debug('set batch_size {}'.format(X_values.shape[0]))
         model.set_params(batch_size=X_values.shape[0])
