@@ -16,6 +16,7 @@ requirements:
     - attrs
     - bokeh
     - dask
+    - dill
     - distributed
     - gdal
     - h5py
