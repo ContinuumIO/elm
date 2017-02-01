@@ -11,9 +11,9 @@ import pickle
 import re
 
 import attr
+import dill
 import numpy as np
 
-from sklearn.externals import joblib
 
 __all__ = ['serialize_pipe', 'serialize_prediction']
 
@@ -72,7 +72,9 @@ def load_pipe_from_tag(elm_train_path, tag):
 def predict_to_pickle(prediction, fname_base):
     '''Dump a prediction y data'''
     mkdir_p(fname_base)
-    joblib.dump(prediction, fname_base + '.xr')
+    fname = fname_base + '.xr'
+    with open(fname, 'wb') as f:
+        return dill.dump(prediction, f)
 
 
 def predict_file_name(elm_predict_path, tag, bounds):

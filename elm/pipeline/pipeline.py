@@ -32,9 +32,9 @@ from functools import partial
 import copy
 import logging
 
+import dill
 import numpy as np
 import xarray as xr
-from sklearn.externals import joblib
 from sklearn.exceptions import NotFittedError
 
 from elm.model_selection import get_args_kwargs_defaults
@@ -577,13 +577,14 @@ class Pipeline(object):
         Returns:
             None
 
-        Uses sklearn.externals.joblib.dump
+        Uses dill.dump
         '''
-        return joblib.dump(self, filename)
+        with open(filename, 'wb') as f:
+            return dill.dump(self, f)
 
     @classmethod
     def load(self, filename):
-        '''load a Pipeline from joblib dump
+        '''load a Pipeline from dill dump
 
         Parameters:
             :filename: string filename
@@ -591,6 +592,7 @@ class Pipeline(object):
         Returns:
             :Pipeline: fitted pipeline with "ensemble" attribute if fit_ensemble or fit_ea were called.
         '''
-        return joblib.load(filename)
+        with open(filename, 'rb') as f:
+            return dill.load(f)
 
     __str__ = __repr__
