@@ -31,7 +31,7 @@ def test_sum():
     Xnew, _, _ = BandsSum(spec=spec).fit_transform(X)
     assert np.all(Xnew.abc.values == getattr(X, band1).values + getattr(X, band2).values)
 
-def test_diff():
+def test_ratio():
     X, band1, band2 = setup()
     spec = dict(abc=(band1, band2))
     Xnew, _, _ = BandsRatio(spec=spec).fit_transform(X)
