@@ -39,11 +39,11 @@ from sklearn.exceptions import NotFittedError
 
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import score_one_model
-from elm.readers import ElmStore
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline import steps as STEPS
 from elm.pipeline.ensemble import ensemble as _ensemble
 from elm.pipeline.util import _next_name
+from elm.sample_util.elm_store import check_X_data_type
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +156,7 @@ class Pipeline(object):
             if func_out is not None:
                 X, y, sample_weight = _split_pipeline_output(func_out, X, y,
                                                        sample_weight, repr(fit_func))
-        if fit_func and not isinstance(X, (ElmStore, xr.Dataset)):
-            raise ValueError('Expected the return value of {} to be an '
-                             'elm.readers:ElmStore'.format(fit_func))
+        check_X_data_type(X)
         fitter_or_predict = getattr(self._estimator, sklearn_method, None)
         if fitter_or_predict is None:
             raise ValueError('Final estimator in Pipeline {} has no method {}'.format(self._estimator, sklearn_method))

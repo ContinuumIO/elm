@@ -20,7 +20,7 @@ from deap import creator
 from deap import tools
 import numpy as np
 
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.config import (import_callable,
                         ElmConfigError,
                         ConfigParser)
@@ -311,9 +311,8 @@ def avoid_repeated_params(max_param_retries):
         :dec: decorator of mutate, mate, or other functions returning Individuals
     '''
     hashed_params = set()
-    def dec(func):
-        def wrapper(*args, **kwargs):
-            nonlocal hashed_params
+    def dec(hashed_params, func):
+        def wrapper(hashed_params, *args, **kwargs):
             for retries in range(max_param_retries):
                 params = func(*args, **kwargs)
                 if isinstance(params[0], Sequence):
@@ -325,8 +324,8 @@ def avoid_repeated_params(max_param_retries):
                     hashed_params.add(pt)
                     return params
             raise ParamsSamplingError('Cannot find a param set that has not been tried')
-        return wrapper
-    return dec
+        return partial(wrapper, hashed_params)
+    return partial(dec, hashed_params)
 
 
 def _configure_toolbox(toolbox, deap_params, config, **kwargs):

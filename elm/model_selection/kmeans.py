@@ -16,8 +16,8 @@ from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
-from elm.model_selection.util import (get_args_kwargs_defaults,
-                                      filter_kwargs_to_func)
+from elm.config.func_signatures import (get_args_kwargs_defaults,
+                                        filter_kwargs_to_func)
 
 
 def kmeans_aic(model, X, **kwargs):
@@ -62,7 +62,7 @@ def kmeans_model_averaging(models, best_idxes=None, **kwargs):
                   * :evolve_n: how many models to create from clustering on clusters from models
                   * :ngen, generation: kwargs added by model_selection logic to control behavior on last generation
                   * :reps: repititions in meta-clustering (see below)
-                  
+
     Returns:
         :list of tuples: of (tag, Pipeline instance) tuples
 

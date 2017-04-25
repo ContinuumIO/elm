@@ -13,11 +13,11 @@ class StepMixin(object):
     _required_kwargs = None
     _context = 'sample pipeline step'
 
-    def __init__(self, *args, func=None, **kwargs):
+    def __init__(self, *args, **kwargs):
         self._args = args
+        self.func = kwargs.pop('func', self._func)
         self._kwargs = kwargs
 
-        self.func = (func or self._func)
         if self.func:
             self.func = self.func(*args, **kwargs)
         self._validate_init_base()

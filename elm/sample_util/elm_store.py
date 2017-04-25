@@ -32,11 +32,13 @@ onto the same coordinate system, for example::
 from collections import OrderedDict
 import logging
 
+import dask.array as da
 import xarray as xr
 
-from elm.readers.util import (_extract_valid_xy, Canvas,
-                              geotransform_to_bounds,
-                              dummy_canvas)
+from elm.sample_util.geo_transform import (_extract_valid_xy,
+                                           Canvas,
+                                           geotransform_to_bounds,
+                                           dummy_canvas)
 
 
 __all__ = ['ElmStore', ]
@@ -213,3 +215,14 @@ class ElmStore(xr.Dataset):
 
     def __repr__(self):
         return "ElmStore:\n" + super().__repr__().replace('xarray', 'elm')
+
+
+OK_X_DATA_TYPES = (ElmStore, xr.Dataset, da.Array)
+def check_X_data_type(X):
+    if not isinstance(X, OK_X_DATA_TYPES):
+        raise ValueError('Expected the return value of fitting function '
+                         'to be one of the following: '
+                         '{} but found it was an {}'.format(OK_X_DATA_TYPES, type(X)))
+
+
+__all__ = ['ElmStore', 'check_X_data_type',]

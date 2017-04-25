@@ -19,7 +19,7 @@ import yaml
 from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.config.config_info import CONFIG_KEYS
 
 logger = logging.getLogger(__name__)

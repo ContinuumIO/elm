@@ -20,11 +20,12 @@ import numpy as np
 import scipy.interpolate as spi
 import xarray as xr
 
-from elm.readers import ElmStore, Canvas
-from elm.readers.util import (canvas_to_coords,
-                              VALID_X_NAMES,
-                              VALID_Y_NAMES,
-                              get_shared_canvas)
+from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.geo_transform import (canvas_to_coords,
+                                           VALID_X_NAMES,
+                                           VALID_Y_NAMES,
+                                           get_shared_canvas,
+                                           Canvas)
 
 logger = logging.getLogger(__name__)
 

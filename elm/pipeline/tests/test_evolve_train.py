@@ -9,10 +9,10 @@ import yaml
 from elm.config import ConfigParser
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.pipeline.tests.util import (tmp_dirs_context,
-                                     test_one_config as tst_one_config,
-                                     make_blobs_elm_store)
+                                     test_one_config as tst_one_config)
+from elm.sample_util.make_blobs import make_blobs_elm_store
 
 DEFAULT_CONFIG = yaml.load(CONFIG_STR)
 

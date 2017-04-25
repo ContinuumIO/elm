@@ -14,7 +14,7 @@ import pandas as pd
 import re
 
 from elm.readers.util import BandSpec
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
 

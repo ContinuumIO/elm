@@ -1,7 +1,7 @@
 import numpy as np
 
 
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
 from elm.sample_util.bands_operation import *
 
 def setup():

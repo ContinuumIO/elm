@@ -12,7 +12,7 @@ import gdal
 import logging
 
 from elm.config import import_callable
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
 

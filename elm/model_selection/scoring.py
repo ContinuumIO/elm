@@ -1,7 +1,7 @@
 '''
 --------------------------------
 
-``elm.model_selection.scroring``
+``elm.model_selection.scoring``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -15,9 +15,9 @@ import copy
 import sklearn.metrics as sk_metrics
 
 from elm.config.util import  import_callable
-from elm.model_selection.util import filter_kwargs_to_func
+from elm.config.func_signatures import (filter_kwargs_to_func,
+                                        get_args_kwargs_defaults)
 from elm.model_selection.metrics import METRICS
-from elm.model_selection.util import get_args_kwargs_defaults
 
 
 def import_scorer(scoring):

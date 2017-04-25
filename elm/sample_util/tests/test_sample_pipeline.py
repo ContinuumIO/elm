@@ -8,11 +8,12 @@ import xarray as xr
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.sample_util.sample_pipeline as pipeline
-from elm.readers import *
-from elm.pipeline.tests.util import (tmp_dirs_context,
-                                     random_elm_store,
-                                     BANDS,
-                                     GEO)
+from elm.sample_util.elm_store import ElmStore
+from elm.pipeline.tests.util import tmp_dirs_context
+from elm.sample_util.make_blobs import (random_elm_store,
+                                        BANDS,
+                                        GEO)
+from elm.sample_util.reshape import *
 from elm.pipeline import Pipeline
 BASE = copy.deepcopy(DEFAULTS)
 

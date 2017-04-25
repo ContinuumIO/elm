@@ -8,11 +8,14 @@ Internal helpers for elm.pipeline'''
 
 from collections import Sequence
 
+import dask.array as da
+import xarray as xr
+
 from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable
 from elm.model_selection.base import base_selection
 from elm.model_selection.sorting import pareto_front
-
+from elm.sample_util.elm_store import ElmStore
 
 NO_ENSEMBLE = {'init_ensemble_size': 1,
                'ngen': 1,
@@ -27,6 +30,7 @@ def _next_name(token):
     n = '{}-{}'.format(token, _next_idx)
     _next_idx += 1
     return n
+
 
 def _validate_ensemble_members(models):
     '''Take a list of estimators or a list of (tag, estimator) tuples

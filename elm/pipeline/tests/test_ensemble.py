@@ -24,11 +24,12 @@ import numpy as np
 import pytest
 
 from elm.config import parse_env_vars, client_context
-from elm.readers import *
+from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.reshape import flatten
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
 from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
 
 ENSEMBLE_KWARGS = dict(ngen=2, init_ensemble_size=2,

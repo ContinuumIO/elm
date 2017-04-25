@@ -5,6 +5,7 @@ from elm.config.env import parse_env_vars
 from elm.config.config_info import *
 from elm.config.util import (ElmConfigError,
                              import_callable)
+from elm.config.func_signatures import *
 import elm.config.logging_config
 
 

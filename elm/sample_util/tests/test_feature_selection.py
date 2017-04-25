@@ -1,8 +1,9 @@
 import numpy as np
 
-from elm.readers import *
+from elm.sample_util.elm_store import ElmStore
 from elm.pipeline import steps
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
+from elm.sample_util.reshape import *
 
 X = random_elm_store()
 flat_X = flatten(X)

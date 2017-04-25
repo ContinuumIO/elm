@@ -21,7 +21,7 @@ from scipy.stats import describe
 import xarray as xr
 
 from elm.model_selection.kmeans import kmeans_aic, kmeans_model_averaging
-from elm.readers import ElmStore
+from elm.sample_util.elm_store import ElmStore
 from elm.sample_util.step_mixin import StepMixin
 
 

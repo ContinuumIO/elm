@@ -21,12 +21,16 @@ import sklearn.preprocessing as skpre
 import sklearn.feature_selection as skfeat
 
 from elm.config import import_callable
-from elm.model_selection.util import get_args_kwargs_defaults
-from elm.readers import (ElmStore, flatten as _flatten, load_meta, load_array)
+from elm.config.func_signatures import get_args_kwargs_defaults
+from elm.sample_util.elm_store import ElmStore
+from elm.sample_util.reshape import flatten as _flatten
 from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
 from elm.pipeline import steps
 from elm.sample_util.preproc_scale import SKLEARN_PREPROCESSING
-
+try:
+    from elm.readers import load_meta, load_array
+except ImportError:
+    load_array = load_meta = None
 
 logger = logging.getLogger(__name__)
 
@@ -268,3 +272,4 @@ def final_on_sample_step(fitter,
         logger.debug('set batch_size {}'.format(X_values.shape[0]))
         model.set_params(batch_size=X_values.shape[0])
     return fit_args, fit_kwargs
+

@@ -15,7 +15,6 @@ from elm.config import ConfigParser, import_callable
 from elm.model_selection.evolve import ea_setup
 from elm.pipeline.ensemble import ensemble
 from elm.pipeline.pipeline import Pipeline
-from elm.readers import *
 
 
 from elm.pipeline.serialize import (serialize_prediction,
