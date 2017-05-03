@@ -20,7 +20,7 @@ Each sample in the series of samples is expressed as a tuple::
 
     (X, y, sample_weight)
 
-with X as an elm.readers.ElmStore
+with X as an earthio.ElmStore
 and y and sample_weight as a numpy arrays or None if not needed.
 
 ``elm.pipeline.Pipeline`` is similar to scikit-learn's Pipeline concept
@@ -504,7 +504,7 @@ class Pipeline(object):
                2-D Dataset (common use case is converting prediction
                to image view of classifier output in space)
 
-               See also ``elm.readers.inverse_flatten`` which converts
+               See also ``earthio.inverse_flatten`` which converts
                1-D y to 2-D Dataset and ElmStore.  inverse_flatten is
                called if to_raster is True
             :saved_model_tag: This is a tag for an ensemble. An ensemble

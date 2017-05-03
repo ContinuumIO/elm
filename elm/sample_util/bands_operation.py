@@ -5,7 +5,7 @@ import xarray as xr
 from elm.sample_util.change_coords import ModifySample
 
 def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwargs):
-    from elm.readers import ElmStore
+    from earthio import ElmStore
     bands = X.band_order.copy()
     es = {}
     if not spec:

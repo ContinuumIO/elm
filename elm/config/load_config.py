@@ -157,7 +157,7 @@ class ConfigParser(object):
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
-        from elm.readers.util import BandSpec
+        from earthio.util import BandSpec
         if all(isinstance(bs, BandSpec) for bs in band_specs):
             return band_specs
         if not band_specs or not isinstance(band_specs, (tuple, list)):

@@ -13,7 +13,7 @@ import logging
 import pandas as pd
 import re
 
-from elm.readers.util import BandSpec
+from earthio.util import BandSpec
 from elm.config.func_signatures import get_args_kwargs_defaults
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ def match_meta(meta, band_spec):
 
     '''
     if not isinstance(band_spec, BandSpec):
-        raise ValueError('band_spec must be elm.readers.BandSpec object')
+        raise ValueError('band_spec must be earthio.BandSpec object')
 
     for mkey in meta:
         key_re_flags = [getattr(re, att)

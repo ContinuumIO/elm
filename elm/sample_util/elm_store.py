@@ -2,14 +2,14 @@
 
 -------------------------
 
-``elm.readers.elm_store``
+``earthio.elm_store``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``elm.readers.ElmStore`` inherits from xarray.Dataset to provide named
+``earthio.ElmStore`` inherits from xarray.Dataset to provide named
 "bands" or Datasets for satellite data.
 
 When an ElmStore is created with a "geo_transform" key/value
-in its attrs initialization argument, then an elm.readers.Canvas
+in its attrs initialization argument, then an earthio.Canvas
 object is constructed from the geo transform.  The Canvas attribute
 is on each band, or xarray.DataArray, in the ElmStore because bands
 may have different coordinates.
@@ -18,7 +18,7 @@ The Canvas object is used in elm for forcing different bands, DataArrays,
 onto the same coordinate system, for example::
 
     from sklearn.cluster import KMeans
-    from elm.readers import *
+    from earthio import *
     from elm.pipeline import steps, Pipeline
     from elm.pipeline.tests.util import random_elm_store
 
@@ -82,11 +82,11 @@ class ElmStore(xr.Dataset):
               same.
 
     Parameters unique to ElmStore are used internally in elm in
-    :mod:`elm.readers.reshape`, including :func:`lost_axis` and :func:`add_canvas`.  See also
-    :func:`elm.readers.reshape.inverse_flatten`
+    :mod:`earthio.reshape`, including :func:`lost_axis` and :func:`add_canvas`.  See also
+    :func:`earthio.reshape.inverse_flatten`
 
     ElmStore attrs:
-        :canvas: elm.readers.Canvas object for elm.pipeline.steps.SelectCanvas
+        :canvas: earthio.Canvas object for elm.pipeline.steps.SelectCanvas
         :band_order: list of the band names in the order they will appear as columns
                     when steps.Flatten() is called to flatten raster DataArrays
                     to a single "flat" DataArray

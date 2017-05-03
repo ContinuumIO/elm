@@ -45,7 +45,6 @@ test:
     - elm.model_selection
     - elm.pipeline.pipeline
     - elm.pipeline.steps
-    - elm.readers
     - elm.sample_util
     - elm.scripts
 

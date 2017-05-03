@@ -1,7 +1,7 @@
 '''
 -----------------------
 
-``elm.readers.reshape``
+``earthio.reshape``
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 '''
@@ -102,7 +102,7 @@ def select_canvas(es, new_canvas):
 
     Parameters:
         :es: ElmStore
-        :new_canvas: an elm.readers.Canvas object
+        :new_canvas: an earthio.Canvas object
 
     Returns:
         :es: ElmStore where every band (DataArray) has the same

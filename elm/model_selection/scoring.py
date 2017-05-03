@@ -99,7 +99,7 @@ def score_one_model(model,
     Parameters:
         :model:   elm.pipeline.Pipeline instance
         :scoring: A scorer in sklearn.metrics or callable of the form "mypackage.mymodule:myfunc"
-        :X:       elm.readers.ElmStore instance
+        :X:       earthio.ElmStore instance
         :y:       numpy array y data, if needed
         :sample_weight: ignored
         :kwargs:  keywords to scoring function, such as:

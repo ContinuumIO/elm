@@ -28,7 +28,7 @@ from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
 from elm.pipeline import steps
 from elm.sample_util.preproc_scale import SKLEARN_PREPROCESSING
 try:
-    from elm.readers import load_meta, load_array
+    from earthio import load_meta, load_array
 except ImportError:
     load_array = load_meta = None
 
@@ -234,7 +234,7 @@ def final_on_sample_step(fitter,
             X_values = X.flat.values
         else:
             logger.info("After running Pipeline, X is not an ElmStore with a DataArray called 'flat' and X is not a numpy array.  Found {}".format(type(X)))
-            logger.info("Trying elm.readers.reshape:flatten on X. If this fails, try a elm.pipeline.steps:ModifySample step to create ElmStore with 'flat' DataArray")
+            logger.info("Trying earthio.reshape:flatten on X. If this fails, try a elm.pipeline.steps:ModifySample step to create ElmStore with 'flat' DataArray")
             X = _flatten(X)
             X_values = X.flat.values
     else:

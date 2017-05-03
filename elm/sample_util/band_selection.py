@@ -51,8 +51,8 @@ def select_from_file(*sampler_args,
         :filename_search: a search token for a filenames
         :filename_filter: a function that returns True/False to keep filename
         :dry_run:  if True, don't actually read file, just return True if accepted
-        :load_meta: Function, typically from elm.readers, to load metadata
-        :load_array: Function, typically from elm.readers, to load ElmStore
+        :load_meta: Function, typically from earthio, to load metadata
+        :load_array: Function, typically from earthio, to load ElmStore
         :kwargs: may contain "reader" such as "hdf4", "tif", "hdf5", "netcdf"
 
     '''

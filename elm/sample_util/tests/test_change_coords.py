@@ -170,7 +170,7 @@ def test_agg_inverse_flatten():
 
 
 def test_set_na_from_meta():
-    set_na = [{'modify_sample': 'elm.readers:set_na_from_meta'}]
+    set_na = [{'modify_sample': 'earthio:set_na_from_meta'}]
     for delim in ('_', '-', ' ', '   '):
         for as_str in (True, False):
             es, new_es = tst_one_pipeline(set_na, add_na_per_band=13,
