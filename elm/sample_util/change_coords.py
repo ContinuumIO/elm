@@ -5,19 +5,20 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 '''
+from earthio.reshape import (select_canvas as _select_canvas,
+                             drop_na_rows as _drop_na_rows,
+                             ElmStore,
+                             flatten as _flatten,
+                             inverse_flatten as _inverse_flatten,
+                             Canvas,
+                             check_is_flat,
+                             transpose as _transpose,
+                             aggregate_simple)
+
 import numpy as np
 
 from elm.sample_util.step_mixin import StepMixin
 from elm.config import ElmConfigError, import_callable
-from elm.sample_util.reshape import (select_canvas as _select_canvas,
-                                     drop_na_rows as _drop_na_rows,
-                                     ElmStore,
-                                     flatten as _flatten,
-                                     inverse_flatten as _inverse_flatten,
-                                     Canvas,
-                                     check_is_flat,
-                                     transpose as _transpose,
-                                     aggregate_simple)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',

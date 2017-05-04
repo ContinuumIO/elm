@@ -1,11 +1,12 @@
 from collections import OrderedDict
+
+from earthio import xy_canvas, ElmStore
 import numpy as np
 import xarray as xr
 from sklearn.datasets import make_blobs
 
 from elm.config import filter_kwargs_to_func
-from elm.sample_util.geo_transform import xy_canvas
-from elm.sample_util.elm_store import ElmStore
+
 
 BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
 GEO = [-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995]

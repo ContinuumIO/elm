@@ -8,8 +8,8 @@ import yaml
 
 from sklearn.decomposition import IncrementalPCA
 
-from elm.sample_util.reshape import *
-from elm.sample_util.elm_store import ElmStore
+from earthio.reshape import *
+from earthio import ElmStore
 from elm.pipeline import steps
 from elm.sample_util.make_blobs import random_elm_store
 

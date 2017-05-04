@@ -8,14 +8,14 @@
 import copy
 from functools import WRAPPER_ASSIGNMENTS, wraps, partial
 
+from earthio import ElmStore
+import numpy as np
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
-import numpy as np
 import xarray as xr
 
 from elm.config import import_callable
 from elm.config.func_signatures import get_args_kwargs_defaults
-from elm.sample_util import ElmStore
 from elm.sample_util.step_mixin import StepMixin
 
 class SklearnBase(StepMixin):

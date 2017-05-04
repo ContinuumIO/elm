@@ -9,13 +9,13 @@ Internal helpers for elm.pipeline'''
 from collections import Sequence
 
 import dask.array as da
+from earthio import ElmStore
 import xarray as xr
 
 from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable
 from elm.model_selection.base import base_selection
 from elm.model_selection.sorting import pareto_front
-from elm.sample_util.elm_store import ElmStore
 
 NO_ENSEMBLE = {'init_ensemble_size': 1,
                'ngen': 1,

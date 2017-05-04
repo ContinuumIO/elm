@@ -14,6 +14,8 @@ from functools import partial
 import logging
 from pprint import pformat
 
+from earthio import ElmStore
+from earthio.reshape import flatten as _flatten
 import numpy as np
 import xarray as xr
 from sklearn.utils import check_array as _check_array
@@ -22,8 +24,6 @@ import sklearn.feature_selection as skfeat
 
 from elm.config import import_callable
 from elm.config.func_signatures import get_args_kwargs_defaults
-from elm.sample_util.elm_store import ElmStore
-from elm.sample_util.reshape import flatten as _flatten
 from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
 from elm.pipeline import steps
 from elm.sample_util.preproc_scale import SKLEARN_PREPROCESSING

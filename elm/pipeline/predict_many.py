@@ -6,15 +6,15 @@ import logging
 import os
 
 import dask
+from earthio import check_X_data_type, ElmStore
+from earthio.reshape import inverse_flatten
 import numpy as np
 import xarray as xr
 
 
 from elm.config import import_callable, parse_env_vars
-from elm.sample_util import inverse_flatten, ElmStore
 from elm.sample_util.samplers import make_samples_dask
 from elm.pipeline.util import _next_name
-from elm.sample_util.elm_store import check_X_data_type
 
 logger = logging.getLogger(__name__)
 

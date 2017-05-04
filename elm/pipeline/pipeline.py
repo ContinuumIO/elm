@@ -33,6 +33,7 @@ import copy
 import logging
 
 import dill
+from earthio import check_X_data_type
 import numpy as np
 import xarray as xr
 from sklearn.exceptions import NotFittedError
@@ -43,7 +44,7 @@ from elm.pipeline.predict_many import predict_many
 from elm.pipeline import steps as STEPS
 from elm.pipeline.ensemble import ensemble as _ensemble
 from elm.pipeline.util import _next_name
-from elm.sample_util.elm_store import check_X_data_type
+
 
 logger = logging.getLogger(__name__)
 

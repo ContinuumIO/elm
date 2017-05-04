@@ -16,16 +16,16 @@ import copy
 from itertools import product
 import os
 
+from earthio import ElmStore
+from earthio.reshape import flatten
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.linear_model import SGDClassifier
 from sklearn.decomposition import IncrementalPCA
 from sklearn.feature_selection import f_classif
+from sklearn.linear_model import SGDClassifier
 import numpy as np
 import pytest
 
 from elm.config import parse_env_vars, client_context
-from elm.sample_util.elm_store import ElmStore
-from elm.sample_util.reshape import flatten
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps

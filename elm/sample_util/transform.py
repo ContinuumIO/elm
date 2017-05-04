@@ -8,11 +8,11 @@
 import copy
 import logging
 
+from earthio import ElmStore
 import numpy as np
 import xarray as xr
 
 from elm.sample_util.step_mixin import StepMixin
-from elm.sample_util.elm_store import ElmStore
 
 logger = logging.getLogger(__name__)
 

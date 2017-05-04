@@ -2,7 +2,7 @@ from functools import partial
 
 import xarray as xr
 
-from earthio.change_coords import ModifySample
+from elm.sample_util.change_coords import ModifySample
 
 def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwargs):
     from earthio import ElmStore
