@@ -14,7 +14,8 @@ else
     conda remove -n root conda-build;conda install -n root conda-build;
     conda remove elm &> /dev/null;
     pip uninstall -y elm &> /dev/null;
-    conda build conda.recipe --python $EARTH_VERS
-    conda install --use-local elm
+    cd $ELM_BUILD_DIR
+    conda build -c conda-forge conda.recipe --python $EARTH_VERS;
+    conda install --use-local elm;
 fi
 
