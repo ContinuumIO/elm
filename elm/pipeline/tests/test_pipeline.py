@@ -10,6 +10,7 @@ This tests Pipeline:
 
 import numpy as np
 
+from earthio import ElmStore
 from sklearn.cluster import KMeans
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError

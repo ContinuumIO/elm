@@ -11,7 +11,7 @@ Example:
 
     from sklearn.cluster import MiniBatchKMeans
     from sklearn.decomposition import IncrementalPCA
-    from elm.pipeline.tests.util import random_elm_store
+    from elm.sample_util.make_blobs import random_elm_store
     from elm.pipeline import Pipeline, steps
 
     X = random_elm_store()

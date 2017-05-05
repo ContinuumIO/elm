@@ -49,7 +49,7 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
         'verbose': 0,
     }
     config['train']['kmeans']['model_init_class'] =  'sklearn.cluster:KMeans'
-    mb = 'elm.pipeline.tests.util:make_blobs_elm_store'
+    mb = 'elm.sample_util.make_blobs:random_elm_store'
     syn['sampler'] = mb
     syn.update({'n_samples': 10000,
                 'n_features': n_features,

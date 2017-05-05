@@ -167,14 +167,14 @@ class ConfigParser(object):
             raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
 
         new_band_specs = []
+        field_names = [x.name for x in attr.fields(BandSpec)]
         for band_spec in band_specs:
             if isinstance(band_spec, str):
                 new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
                                                 'search_value': band_spec,
                                                 'name': band_spec}))
-            elif not all(k.name in band_spec for k in attr.fields(BandSpec)
-                       if not k.default == attr.NOTHING):
-                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
+            elif not all(k in field_names for k in band_spec):
+                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, field_names))
             else:
                 new_band_specs.append(BandSpec(**band_spec))
         return new_band_specs
