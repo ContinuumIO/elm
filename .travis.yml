@@ -11,7 +11,7 @@ env:
 install:
   - export ELM_BUILD_DIR=`pwd -P`
   - git clone http://github.com/ContinuumIO/earthio && cd earthio
-  - . build_earthio_env.sh
+  - MAKE_MINICONDA=1 . build_earthio_env.sh
   - python setup.py develop
 
 script:
