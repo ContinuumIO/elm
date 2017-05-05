@@ -16,6 +16,6 @@ else
     pip uninstall -y elm &> /dev/null;
     cd $ELM_BUILD_DIR
     conda build -c conda-forge conda.recipe --python $EARTH_VERS;
-    conda install --use-local elm;
+    conda install -c conda-forge --use-local elm;
 fi
 

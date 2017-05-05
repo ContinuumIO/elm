@@ -1,6 +1,9 @@
 package:
   name: elm
-  version: {{ environ.get('GIT_DESCRIBE_TAG', 'no-tag') }}
+  version: {{ environ.get('GIT_DESCRIBE_TAG', 'notag') }}
+
+source:
+  path: ..
 
 build:
   number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0)|int }}
