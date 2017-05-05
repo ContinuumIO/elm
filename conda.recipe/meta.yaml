@@ -2,12 +2,8 @@ package:
   name: elm
   version: {{ environ['GIT_DESCRIBE_TAG'] }}
 
-source:
-  path: ..
-
 build:
-  number: 0
-  pin_depends: record
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0)|int }}
 
 requirements:
   build:
@@ -38,6 +34,7 @@ about:
 extra:
   maintainers:
     - Peter Steinberg - Continuum Analytics - psteinberg [at] continuum [dot] io
+    - Greg Brener     - Continuum Analytics - gbrener [at] continuum [dot] io
 
 test:
   imports:
