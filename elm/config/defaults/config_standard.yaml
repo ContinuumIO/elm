@@ -28,7 +28,7 @@ data_sources: {
   {search_key: long_name, search_value: "Band 11 ", name: band_11}],
   args_list: "earthio.local_file_iterators:iter_files_recursively",
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-  metadata_filter: "elm.sample_util.metadata_selection:meta_is_day",
+  metadata_filter: "earthio.metadata_selection:meta_is_day",
   file_pattern: "\\.hdf",
  },
  S3_LANDSAT_L2_TIFS: {
