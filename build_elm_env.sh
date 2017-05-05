@@ -10,6 +10,8 @@ git clone http://github.com/ContinuumIO/earthio && cd earthio
 if [ "$EARTH_VERS" = "" ];then
     echo FAIL - Must define EARTH_VERS environment variable such as 2.7, 3.5 or 3.6 - FAIL
 else
+    conda update conda;
+    conda install conda-build;
     conda remove elm &> /dev/null;
     pip uninstall -y elm &> /dev/null;
     conda build conda.recipe --python $EARTH_VERS
