@@ -12,7 +12,8 @@ BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
 GEO = [-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995]
 
 def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=80, **kwargs):
-    bands = bands or ['band_{}'.format(idx + 1) for idx in range(3)]
+    lenn = len(centers) if centers is not None else 3
+    bands = bands or ['band_{}'.format(idx + 1) for idx in range(lenn)]
     if isinstance(bands, int):
         bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
     if isinstance(bands[0], (list, tuple)):
