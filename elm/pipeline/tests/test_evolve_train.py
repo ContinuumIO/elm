@@ -54,7 +54,7 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
     syn.update({'n_samples': 10000,
                 'n_features': n_features,
                 'centers': synthetic_centers(n_clusters, n_features),
-                'cluster_std': 0.0000001,})
+                'std_devs': 0.0000001,})
     syn['sampler_args'] = None
     tag = 'test_sklearn_finds_n_clusters_{}'
     tag = tag.format(n_clusters) + '_' + '_'.join(early_stop.keys() if early_stop else "None")

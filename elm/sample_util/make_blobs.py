@@ -12,20 +12,17 @@ BANDS = ['band_{}'.format(idx + 1) for idx in range(40)]
 GEO = [-2223901.039333, 926.6254330549998, 0.0, 8895604.157333, 0.0, -926.6254330549995]
 
 def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=80, **kwargs):
-    lenn = len(centers) if centers is not None else 3
-    bands = bands or ['band_{}'.format(idx + 1) for idx in range(lenn)]
+    print('Enter with', bands, centers, std_devs, height, width)
     if isinstance(bands, int):
         bands = ['band_{}'.format(idx + 1) for idx in range(bands)]
-    if isinstance(bands[0], (list, tuple)):
-        # it is actually band_specs
-        bands = [_[-1] for _ in bands]
-    default_centers = len(bands)
+    if centers is not None:
+        centers = np.array(centers)
+    lenn = centers.shape[1] if centers is not None else 3 if not bands else len(bands)
+    bands = bands or ['band_{}'.format(idx + 1) for idx in range(lenn)]
     if centers is None:
-        centers = np.arange(100, 100 + len(bands) * default_centers).reshape((len(bands), default_centers))
+        centers = np.arange(100, 100 + lenn * len(bands)).reshape((lenn, len(bands)))
     if std_devs is None:
-        std_devs = np.ones((len(bands), default_centers))
-    if len(centers) != len(bands) or len(bands) != len(std_devs):
-        raise ValueError('Expected bands, centers, std_devs to have same length')
+        std_devs = np.ones((len(centers), len(bands)))
     if kwargs.get('attrs'):
         attrs = kwargs['attrs']
     else:
@@ -34,6 +31,7 @@ def random_elm_store(bands=None, centers=None, std_devs=None, height=100, width=
                  'geo_transform': GEO,
                  'canvas': xy_canvas(GEO, width, height, ('y', 'x'))}
     es_dict = OrderedDict()
+    print('SHAPES', width, height, len(bands), centers, std_devs)
     arr, y = make_blobs(n_samples=width * height, n_features=len(bands),
                         centers=centers, cluster_std=std_devs)
     for idx, band in enumerate(bands):

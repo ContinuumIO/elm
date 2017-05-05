@@ -42,6 +42,7 @@ def config_to_pipeline(config, client=None):
         :client: dask client or None
     '''
     from elm.sample_util.sample_pipeline import make_pipeline_steps
+    from earthio import load_meta, load_array
     _makedirs(config)
     idx_to_evo_params = ea_setup(config)
     for idx, step in enumerate(config.run):
