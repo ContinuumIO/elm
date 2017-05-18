@@ -20,7 +20,7 @@ build_elm_env(){
         conda remove elm &> /dev/null;
         pip uninstall -y elm &> /dev/null;
         cd $ELM_BUILD_DIR || return 1;
-        conda build -c conda-forge conda.recipe --python $PYTHON_TEST_VERSION || return 1;;
+        conda build -c conda-forge conda.recipe --python $PYTHON_TEST_VERSION conda.recipe || return 1;;
         conda install -c conda-forge --use-local elm || return 1;;
     fi
 }
