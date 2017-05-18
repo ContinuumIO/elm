@@ -4,11 +4,14 @@ python:
   - "3.5"
 
 env:
-  - EARTH_VERS=2.7
-  - EARTH_VERS=3.5
-  - EARTH_VERS=3.6
+  - PYTHON_TEST_VERSION=2.7
+  - PYTHON_TEST_VERSION=3.5
+  - PYTHON_TEST_VERSION=3.6
 
 install:
+  # The following control which earthio is part of build /test
+  - export EARTHIO_VERSION=fix-travis-data-download # branch or tag
+  - export EARTHIO_INSTALL_METHOD="conda" # or "git"
   - MAKE_MINICONDA=1 . build_elm_env.sh
 
 script:
