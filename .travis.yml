@@ -11,7 +11,7 @@ env:
 install:
   # The following control which earthio is part of build /test
   - export EARTHIO_VERSION=fix-travis-data-download # branch or tag
-  - export EARTHIO_INSTALL_METHOD="conda" # or "git"
+  - export EARTHIO_INSTALL_METHOD="git" # or "conda"
   - export EARTHIO_TEST_ENV=earth-env-test
   - MAKE_MINICONDA=1 . build_elm_env.sh
 
