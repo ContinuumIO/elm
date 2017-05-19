@@ -6,7 +6,7 @@ export ELM_BUILD_DIR=`pwd -P`
 # test data to be downloaded as well.
 build_elm_env(){
     rm -rf .earthio_tmp;
-    git clone http://github.com/ContinuumIO/earthio /tmp/earthio && cd .earthio_tmp || return 1;
+    git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp || return 1;
     if [ "$EARTHIO_VERSION" = "" ];then
         export EARTHIO_VERSION="master";
     fi
