@@ -10,7 +10,7 @@ env:
 
 install:
   # The following control which earthio is part of build /test
-  - export EARTHIO_VERSION=fix-travis-data-download # branch or tag
+  - export EARTHIO_VERSION=master # branch or tag of earthio
   # The following controls whether earthio is
   # * installed from setup.py - use "git"
   # * installed from conda build - use "conda"
