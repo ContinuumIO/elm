@@ -12,20 +12,20 @@ build_elm_env(){
     fi
     git checkout $EARTHIO_VERSION || return 1;
     conda config --set always_yes true;
-    . build_earthio_env.sh || return 1;
+    . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV || return 1;
     cd $ELM_BUILD_DIR || return 1;
     # End of earthio and test data related section
     if [ "$PYTHON_TEST_VERSION" = "" ];then
         echo FAIL - Must define PYTHON_TEST_VERSION environment variable such as 2.7, 3.5 or 3.6 - FAIL
-    else
-        conda update -n root conda || return 1;
-        conda remove -n root conda-build;conda install -n root conda-build;
-        conda remove elm &> /dev/null;
-        pip uninstall -y elm &> /dev/null;
-        cd $ELM_BUILD_DIR || return 1;
-        conda build -c conda-forge --python $PYTHON_TEST_VERSION conda.recipe || return 1;
-        conda install -c conda-forge --use-local elm || return 1;
+        return 1;
     fi
+    conda update -n root conda || return 1;
+    conda remove -n root conda-build;conda install -n root conda-build;
+    conda remove elm &> /dev/null;
+    pip uninstall -y elm &> /dev/null;
+    cd $ELM_BUILD_DIR || return 1;
+    conda build -c conda-forge --python $PYTHON_TEST_VERSION conda.recipe || return 1;
+    conda install -c conda-forge --use-local elm || return 1;
 }
 
 build_elm_env && source activate $EARTHIO_TEST_ENV && echo OK
