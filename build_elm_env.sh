@@ -6,12 +6,12 @@ export ELM_BUILD_DIR=`pwd -P`
 # test data to be downloaded as well.
 build_elm_env(){
     rm -rf .earthio_tmp;
-    conda config --set always_yes true;
     git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp || return 1;
     if [ "$EARTHIO_VERSION" = "" ];then
         export EARTHIO_VERSION="master";
     fi
     git checkout $EARTHIO_VERSION || return 1;
+    conda config --set always_yes true;
     . build_earthio_env.sh || return 1;
     cd $ELM_BUILD_DIR || return 1;
     # End of earthio and test data related section
