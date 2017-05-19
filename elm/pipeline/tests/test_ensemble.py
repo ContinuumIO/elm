@@ -16,8 +16,11 @@ import copy
 from itertools import product
 import os
 
-from earthio import ElmStore
-from earthio.reshape import flatten
+try:
+    from earthio import ElmStore
+    from earthio.reshape import flatten
+except:
+    ElmStore = flatten = None # TODO handle case where earthio not installed
 from sklearn.cluster import MiniBatchKMeans
 from sklearn.decomposition import IncrementalPCA
 from sklearn.feature_selection import f_classif

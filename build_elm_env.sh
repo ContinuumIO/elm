@@ -28,4 +28,4 @@ build_elm_env(){
     fi
 }
 
-build_elm_env && source activate $EARTHIO_ENV_TEST && echo OK
+build_elm_env && source activate $EARTHIO_TEST_ENV && echo OK

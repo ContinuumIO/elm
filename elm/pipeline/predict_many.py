@@ -6,8 +6,11 @@ import logging
 import os
 
 import dask
-from earthio import check_X_data_type, ElmStore
-from earthio.reshape import inverse_flatten
+try:
+    from earthio import check_X_data_type, ElmStore
+    from earthio.reshape import inverse_flatten
+except:
+    inverse_flatten = check_X_data_type = ElmStore = None # TODO handle case where earthio not installed
 import numpy as np
 import xarray as xr
 

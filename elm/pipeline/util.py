@@ -9,7 +9,10 @@ Internal helpers for elm.pipeline'''
 from collections import Sequence
 
 import dask.array as da
-from earthio import ElmStore
+try:
+    from earthio import ElmStore
+except:
+    ElmStore = None # TODO this module needs to handle where ElmStore is None
 import xarray as xr
 
 from elm.model_selection.evolve import ea_setup

@@ -10,7 +10,10 @@ This tests Pipeline:
 
 import numpy as np
 
-from earthio import ElmStore
+try:
+    from earthio import ElmStore
+except:
+    ElmStore = None # TODO handle case where earthio is not installed
 from sklearn.cluster import KMeans
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError

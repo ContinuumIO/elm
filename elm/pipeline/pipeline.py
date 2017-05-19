@@ -33,7 +33,10 @@ import copy
 import logging
 
 import dill
-from earthio import check_X_data_type
+try:
+    from earthio import check_X_data_type
+except:
+    check_X_data_type = None # TODO handle case where earthio not installed
 import numpy as np
 import xarray as xr
 from sklearn.exceptions import NotFittedError

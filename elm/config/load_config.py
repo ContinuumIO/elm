@@ -15,6 +15,10 @@ import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
 import yaml
 
+try:
+    from earthio.util import BandSpec
+except:
+    BandSpec = None # TODO handle cases where BandSpec is None
 
 from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
@@ -157,7 +161,8 @@ class ConfigParser(object):
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
-        from earthio.util import BandSpec
+
+
         if all(isinstance(bs, BandSpec) for bs in band_specs):
             return band_specs
         if not band_specs or not isinstance(band_specs, (tuple, list)):
