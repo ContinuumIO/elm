@@ -16,7 +16,7 @@ install:
   # * installed from conda build - use "conda"
   - export EARTHIO_INSTALL_METHOD="git" # or "conda"
   # Name of test env
-  - export EARTHIO_TEST_ENV=master
+  - export EARTHIO_TEST_ENV=earth-test-env
   # Where is the test data stored - don't put it in elm or earthio folders
   - export ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
   - if [ "$IGNORE_ELM_DATA_DOWNLOAD" = "" ]; then mkdir -p $ELM_EXAMPLE_DATA_PATH; rm -rf $ELM_EXAMPLE_DATA_PATH/*;fi
