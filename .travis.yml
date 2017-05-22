@@ -10,15 +10,17 @@ env:
 
 install:
   # The following control which earthio is part of build /test
-  - export EARTHIO_VERSION=master # branch or tag of earthio
+  - export EARTHIO_VERSION=master # branch or tag of earthio, ignored if using conda
   # The following controls whether earthio is
   # * installed from setup.py - use "git"
   # * installed from conda build - use "conda"
-  - export EARTHIO_INSTALL_METHOD="git" # or "conda"
+  - export EARTHIO_INSTALL_METHOD="conda" # or "conda"
   # Name of test env
   - export EARTHIO_TEST_ENV=earth-test-env
   # Where is the test data stored - don't put it in elm or earthio folders
   - export ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
+  # Which channels are required for installs of earthio and elm
+  - export EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
   - mkdir -p $ELM_EXAMPLE_DATA_PATH; rm -rf $ELM_EXAMPLE_DATA_PATH/*
   - MAKE_MINICONDA=1 . build_elm_env.sh
 

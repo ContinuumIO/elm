@@ -10,9 +10,12 @@ build_elm_env(){
     if [ "$EARTHIO_VERSION" = "" ];then
         export EARTHIO_VERSION="master";
     fi
+    git fetch --all || return 1;
+    echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION || return 1;
     conda config --set always_yes true;
     . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV || return 1;
+    conda config --set always_yes true;
     cd $ELM_BUILD_DIR || return 1;
     # End of earthio and test data related section
     if [ "$PYTHON_TEST_VERSION" = "" ];then
@@ -24,8 +27,14 @@ build_elm_env(){
     conda remove elm &> /dev/null;
     pip uninstall -y elm &> /dev/null;
     cd $ELM_BUILD_DIR || return 1;
-    conda build -c conda-forge --python $PYTHON_TEST_VERSION conda.recipe || return 1;
-    conda install -c conda-forge --use-local elm || return 1;
+    echo conda list is ------
+    conda list || return 1;
+    echo conda "env" list is ------
+    conda env list || return 1;
+    conda build $EARTHIO_CHANNEL_STR --python $PYTHON_TEST_VERSION conda.recipe || return 1;
+    conda install $EARTHIO_CHANNEL_STR --use-local elm || return 1;
 }
 
 build_elm_env && source activate $EARTHIO_TEST_ENV && echo OK
+
+

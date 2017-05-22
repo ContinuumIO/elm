@@ -13,16 +13,17 @@ requirements:
     - python
     - setuptools
   run:
-    - python
-    - deap
     - attrs
+    - deap
     - dill
     - distributed
+    - earthio
     - networkx
     - numba
     - numpy
     - pandas
     - pytest
+    - python
     - requests
     - scikit-image
     - scikit-learn
