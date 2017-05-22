@@ -19,11 +19,11 @@ install:
   - export EARTHIO_TEST_ENV=earth-test-env
   # Where is the test data stored - don't put it in elm or earthio folders
   - export ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-  - if [ "$IGNORE_ELM_DATA_DOWNLOAD" = "" ]; then mkdir -p $ELM_EXAMPLE_DATA_PATH; rm -rf $ELM_EXAMPLE_DATA_PATH/*;fi
+  - mkdir -p $ELM_EXAMPLE_DATA_PATH; rm -rf $ELM_EXAMPLE_DATA_PATH/*
   - MAKE_MINICONDA=1 . build_elm_env.sh
 
 script:
   - cd $ELM_BUILD_DIR
   - echo ELM_EXAMPLE_DATA_PATH is $ELM_EXAMPLE_DATA_PATH
   - py.test -m 'not slow' -v
-  - if [ "$IGNORE_ELM_DATA_DOWNLOAD" = "" ]; then rm -rf $ELM_EXAMPLE_DATA_PATH/*;fi
+  - rm -rf $ELM_EXAMPLE_DATA_PATH/*
