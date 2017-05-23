@@ -75,7 +75,12 @@ def parse_env_vars():
         elm_env_vars[item['name']] = val
     for f in ('DASK_PROCESSES', 'DASK_THREADS'):
         if not elm_env_vars.get(f):
-            elm_env_vars[f] = os.cpu_count()
+            try:
+                import psutil
+            except ImportError:
+                psutil = None
+            cpu_count = getattr(os, 'cpu_count', getattr(psutil, 'cpu_count', None))
+            elm_env_vars[f] = cpu_count() if cpu_count else 4
     example_path = elm_env_vars['ELM_EXAMPLE_DATA_PATH']
     if not example_path or not os.path.exists(example_path):
         elm_env_vars['ELM_HAS_EXAMPLES'] = False

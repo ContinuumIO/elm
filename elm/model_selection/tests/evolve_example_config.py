@@ -55,7 +55,7 @@ param_grids: {
 
 data_sources: {
   synthetic: {
-    sampler: 'elm.pipeline.tests.util:random_elm_store',
+    sampler: 'elm.sample_util.make_blobs:random_elm_store',
     sampler_args: [[["band_1", "band_2", "band_3", "band_4", "band_5"]]],
   }
 }

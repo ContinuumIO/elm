@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 import xarray as xr
 
-from elm.readers import *
+from earthio import ElmStore
 from elm.pipeline import steps
 
 def make_3d():

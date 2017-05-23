@@ -1,5 +1,6 @@
+from __future__ import print_function
 from elm.config.util import import_callable
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 PARTIAL_FIT_MODEL_STR = (
     'sklearn.naive_bayes:MultinomialNB',
     'sklearn.naive_bayes:BernoulliNB',
@@ -88,14 +89,3 @@ DECOMP_MODEL_STR = (
     'sklearn.decomposition:DictionaryLearning',
     'sklearn.decomposition:LatentDirichletAllocation',
 ) + DECOMP_PARTIAL_FIT_MODEL_STR
-UNSUPERVISED_MODEL_STR = [k for k, v in MODELS_WITH_PREDICT_DICT.items()
-                          if hasattr(v, 'fit')
-                          and 'y' in get_args_kwargs_defaults(v.fit)[1]]
-
-
-MODELS_WITH_PREDICT_ESTIMATOR_TYPES = {k: getattr(v, '_estimator_type', None)
-                              for k,v in MODELS_WITH_PREDICT_DICT.items()}
-
-
-
-

@@ -1,43 +1,33 @@
 package:
   name: elm
-  version: {{ environ['GIT_DESCRIBE_TAG'] }}
+  version: {{ environ.get('GIT_DESCRIBE_TAG', 'notag') }}
 
 source:
   path: ..
 
 build:
-  number: 0
-  pin_depends: record
+  number: {{ environ.get('GIT_DESCRIBE_NUMBER', 0)|int }}
 
 requirements:
   build:
     - python
     - setuptools
   run:
-    - python >=3.4
-    - deap
     - attrs
-    - bokeh
-    - dask
+    - deap
     - dill
     - distributed
-    - gdal
-    - h5py
-    - jupyter
-    - krb5
-    - matplotlib
-    - netcdf4
+    - earthio
     - networkx
     - numba
     - numpy
     - pandas
     - pytest
-    - rasterio
+    - python
     - requests
     - scikit-image
     - scikit-learn
     - scipy
-    - tblib
     - xarray
     - yaml
 
@@ -48,6 +38,7 @@ about:
 extra:
   maintainers:
     - Peter Steinberg - Continuum Analytics - psteinberg [at] continuum [dot] io
+    - Greg Brener     - Continuum Analytics - gbrener [at] continuum [dot] io
 
 test:
   imports:
@@ -55,7 +46,6 @@ test:
     - elm.model_selection
     - elm.pipeline.pipeline
     - elm.pipeline.steps
-    - elm.readers
     - elm.sample_util
     - elm.scripts
 

@@ -10,16 +10,19 @@ This tests Pipeline:
 
 import numpy as np
 
+try:
+    from earthio import ElmStore
+except:
+    ElmStore = None # TODO handle case where earthio is not installed
 from sklearn.cluster import KMeans
 from sklearn.decomposition import IncrementalPCA
 from sklearn.exceptions import NotFittedError
 import pytest
 
-from elm.readers import *
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
 
 data_source = {'sampler': random_elm_store}
 

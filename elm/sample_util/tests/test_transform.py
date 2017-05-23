@@ -1,3 +1,4 @@
+from collections import OrderedDict
 import copy
 import glob
 import os
@@ -7,9 +8,10 @@ import yaml
 
 from sklearn.decomposition import IncrementalPCA
 
-from elm.readers import *
+from earthio.reshape import *
+from earthio import ElmStore
 from elm.pipeline import steps
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
 
 X = flatten(random_elm_store())
 

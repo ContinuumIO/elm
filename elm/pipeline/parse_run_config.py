@@ -8,16 +8,18 @@ from collections import defaultdict
 import copy
 from functools import partial
 import logging
+import os
 
 import dask
+try:
+    from earthio import load_meta, load_array
+except:
+    load_array = load_array = None # TODO handle cases where load_* = None
 
 from elm.config import ConfigParser, import_callable
 from elm.model_selection.evolve import ea_setup
 from elm.pipeline.ensemble import ensemble
 from elm.pipeline.pipeline import Pipeline
-from elm.readers import *
-
-
 from elm.pipeline.serialize import (serialize_prediction,
                                     serialize_pipe,
                                     load_pipe_from_tag)
@@ -42,6 +44,7 @@ def config_to_pipeline(config, client=None):
         :client: dask client or None
     '''
     from elm.sample_util.sample_pipeline import make_pipeline_steps
+
     _makedirs(config)
     idx_to_evo_params = ea_setup(config)
     for idx, step in enumerate(config.run):

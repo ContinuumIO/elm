@@ -6,12 +6,16 @@ import logging
 import os
 
 import dask
+try:
+    from earthio import check_X_data_type, ElmStore
+    from earthio.reshape import inverse_flatten
+except:
+    inverse_flatten = check_X_data_type = ElmStore = None # TODO handle case where earthio not installed
 import numpy as np
 import xarray as xr
 
 
 from elm.config import import_callable, parse_env_vars
-from elm.readers import inverse_flatten, ElmStore
 from elm.sample_util.samplers import make_samples_dask
 from elm.pipeline.util import _next_name
 
@@ -27,8 +31,7 @@ def _predict_one_sample_one_arg(estimator,
                                 elm_predict_path,
                                 X_y_sample_weight):
     X, y, sample_weight = X_y_sample_weight
-    if not isinstance(X, (ElmStore, xr.Dataset)):
-        raise ValueError('Expected an ElmStore or xarray.Dataset')
+    check_X_data_type(X)
     out = []
     prediction, X_final = estimator.predict(X, return_X=True)
     if prediction.ndim == 1:

@@ -8,14 +8,14 @@
 import copy
 from functools import WRAPPER_ASSIGNMENTS, wraps, partial
 
+from earthio import ElmStore
+import numpy as np
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
-import numpy as np
 import xarray as xr
 
 from elm.config import import_callable
-from elm.model_selection.util import get_args_kwargs_defaults
-from elm.readers import *
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.sample_util.step_mixin import StepMixin
 
 class SklearnBase(StepMixin):
@@ -39,7 +39,7 @@ class SklearnBase(StepMixin):
 
     def require_flat(self, X):
         if not (isinstance(X, (ElmStore, xr.Dataset)) and hasattr(X, 'flat')):
-            raise ValueError("Expected an elm.readers.ElmStore or xarray.Dataset with DataArray 'flat' (2-d array with dims [space, band])")
+            raise ValueError("Expected an earthio.ElmStore or xarray.Dataset with DataArray 'flat' (2-d array with dims [space, band])")
 
     def _filter_kw(self, func, X, y=None, sample_weight=None, **kwargs):
         args, defaults, var_kwargs = get_args_kwargs_defaults(func)

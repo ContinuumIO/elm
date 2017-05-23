@@ -1,11 +1,11 @@
 '''
 ----------------------------
 
-``elm.model_selection.util``
+``elm.config.func_signatures``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 import inspect
-
+import sys
 
 def get_args_kwargs_defaults(func):
     '''Get the required args, defaults, and var keywords of func
@@ -17,21 +17,41 @@ def get_args_kwargs_defaults(func):
         of required args, kwargs are keyword args with defaults, and
         takes_var_keywords indicates whether func has a \*\*param
      '''
-    sig = inspect.signature(func)
+    if hasattr(inspect, 'signature'):
+        sig = inspect.signature(func) # Python 3
+        empty = inspect._empty
+    else:
+        import funcsigs
+        sig = funcsigs.signature(func) # Python 2
+        empty = funcsigs._empty
     params = sig.parameters
     kwargs = {}
     args = []
     takes_variable_keywords = None
     for k, v in params.items():
-        if v.default != inspect._empty:
+        if v.default != empty:
             kwargs[k] = v.default
         else:
             args.append(k)
         if v.kind == 4:
             #<_ParameterKind.VAR_KEYWORD: 4>
             takes_variable_keywords = k
-    return args, kwargs, takes_variable_keywords
 
+        '''sig = inspect.getargpsec(func) # Python 2
+        args = sig.args
+        kwargs = sig.keywords
+        called = None
+        for x in range(100):
+            test_args = (func,) + tuple(range(x))
+            try:
+                called = inspect.getcallargs(*test_args)
+                break
+            except:
+                pass
+        if called is None:
+            raise
+        '''
+    return args, kwargs, takes_variable_keywords
 
 def filter_kwargs_to_func(func, **kwargs):
     '''Remove keys/values from kwargs if cannot be passed to func'''
@@ -44,3 +64,5 @@ def filter_kwargs_to_func(func, **kwargs):
         new[takes_variable_keywords] = {k: v for k,v in kwargs.items()
                                         if not k in new}
     return new
+
+__all__ = ['get_args_kwargs_defaults', 'filter_kwargs_to_func']

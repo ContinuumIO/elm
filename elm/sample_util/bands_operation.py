@@ -1,11 +1,14 @@
 from functools import partial
 
 import xarray as xr
-
+try:
+    from earthio import ElmStore
+except:
+    ElmStore = None # TODO handle case where earthio is not installed
 from elm.sample_util.change_coords import ModifySample
 
 def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwargs):
-    from elm.readers import ElmStore
+
     bands = X.band_order.copy()
     es = {}
     if not spec:

@@ -5,19 +5,20 @@
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 '''
+from earthio.reshape import (select_canvas as _select_canvas,
+                             drop_na_rows as _drop_na_rows,
+                             ElmStore,
+                             flatten as _flatten,
+                             inverse_flatten as _inverse_flatten,
+                             Canvas,
+                             check_is_flat,
+                             transpose as _transpose,
+                             aggregate_simple)
+
 import numpy as np
 
 from elm.sample_util.step_mixin import StepMixin
 from elm.config import ElmConfigError, import_callable
-from elm.readers import (select_canvas as _select_canvas,
-                         drop_na_rows as _drop_na_rows,
-                         ElmStore,
-                         flatten as _flatten,
-                         inverse_flatten as _inverse_flatten,
-                         Canvas,
-                         check_is_flat,
-                         transpose as _transpose,
-                         aggregate_simple)
 
 CHANGE_COORDS_ACTIONS = (
     'select_canvas',
@@ -37,8 +38,8 @@ class SelectCanvas(StepMixin):
         :band:  a string name of a DataArray in the ElmStore's data_vars
 
     See also:
-        :func:`elm.readers.select_canvas`
-        :mod:`elm.readers.reshape`
+        :func:`earthio.select_canvas`
+        :mod:`earthio.reshape`
     '''
     _sp_step = 'select_canvas'
     def __init__(self, band=None):
@@ -73,8 +74,8 @@ class Flatten(StepMixin):
     single flat DataArray
 
     See also:
-        :class:`elm.readers.flatten`
-        :mod:`elm.readers.reshape`
+        :class:`earthio.flatten`
+        :mod:`earthio.reshape`
     '''
     _sp_step = 'flatten'
 
@@ -100,16 +101,16 @@ class DropNaRows(StepMixin):
     '''In an ElmStore that has a DataArray flat, drop NA rows
 
     See Also:
-        :class:`elm.readers.drop_na_rows`
-        :mod:`elm.readers.reshape`
+        :class:`earthio.drop_na_rows`
+        :mod:`earthio.reshape`
     '''
     _sp_step = 'drop_na_rows'
     def __init__(self):
         '''In an ElmStore that has a DataArray flat, drop NA rows
 
         See also:
-            :class:`elm.readers.drop_na_rows`
-            :mod:`elm.readers.reshape`
+            :class:`earthio.drop_na_rows`
+            :mod:`earthio.reshape`
         '''
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
@@ -133,8 +134,8 @@ class InverseFlatten(StepMixin):
     def __init__(self):
         '''Convert a flattened ElmStore back to separate bands
         See also:
-            :func:`elm.readers.inverse_flatten`
-            :mod:`elm.readers.reshape`
+            :func:`earthio.inverse_flatten`
+            :mod:`earthio.reshape`
         '''
 
 
@@ -163,8 +164,8 @@ class Transpose(StepMixin):
             :trans_arg: Passed to xarray.DataArray.transpose
 
         See also:
-            :func:`elm.readers.transpose`
-            :mod:`elm.readers.reshape`
+            :func:`earthio.transpose`
+            :mod:`earthio.reshape`
 
         '''
         self.trans_arg = trans_arg
@@ -196,8 +197,8 @@ class Agg(StepMixin):
             :dim:  dimension name for aggregation
 
         See also:
-            :func:`elm.readers.aggregate_simple`
-            :mod:`elm.readers.reshape`
+            :func:`earthio.aggregate_simple`
+            :mod:`earthio.reshape`
 
         '''
         self.axis = axis
@@ -237,8 +238,8 @@ class ModifySample(StepMixin):
             :kwargs: keyword arguments passed to func
 
         See also:
-            :func:`elm.readers.modify_sample`
-            :mod:`elm.readers.reshape`
+            :func:`earthio.modify_sample`
+            :mod:`earthio.reshape`
 
         '''
         self.func = func

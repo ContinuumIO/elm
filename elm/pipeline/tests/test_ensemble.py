@@ -16,19 +16,23 @@ import copy
 from itertools import product
 import os
 
+try:
+    from earthio import ElmStore
+    from earthio.reshape import flatten
+except:
+    ElmStore = flatten = None # TODO handle case where earthio not installed
 from sklearn.cluster import MiniBatchKMeans
-from sklearn.linear_model import SGDClassifier
 from sklearn.decomposition import IncrementalPCA
 from sklearn.feature_selection import f_classif
+from sklearn.linear_model import SGDClassifier
 import numpy as np
 import pytest
 
 from elm.config import parse_env_vars, client_context
-from elm.readers import *
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps
-from elm.pipeline.tests.util import random_elm_store
+from elm.sample_util.make_blobs import random_elm_store
 from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
 
 ENSEMBLE_KWARGS = dict(ngen=2, init_ensemble_size=2,

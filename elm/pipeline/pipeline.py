@@ -20,7 +20,7 @@ Each sample in the series of samples is expressed as a tuple::
 
     (X, y, sample_weight)
 
-with X as an elm.readers.ElmStore
+with X as an earthio.ElmStore
 and y and sample_weight as a numpy arrays or None if not needed.
 
 ``elm.pipeline.Pipeline`` is similar to scikit-learn's Pipeline concept
@@ -33,17 +33,21 @@ import copy
 import logging
 
 import dill
+try:
+    from earthio import check_X_data_type
+except:
+    check_X_data_type = None # TODO handle case where earthio not installed
 import numpy as np
 import xarray as xr
 from sklearn.exceptions import NotFittedError
 
 from elm.model_selection import get_args_kwargs_defaults
 from elm.model_selection.scoring import score_one_model
-from elm.readers import ElmStore
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline import steps as STEPS
 from elm.pipeline.ensemble import ensemble as _ensemble
 from elm.pipeline.util import _next_name
+
 
 logger = logging.getLogger(__name__)
 
@@ -156,9 +160,7 @@ class Pipeline(object):
             if func_out is not None:
                 X, y, sample_weight = _split_pipeline_output(func_out, X, y,
                                                        sample_weight, repr(fit_func))
-        if fit_func and not isinstance(X, (ElmStore, xr.Dataset)):
-            raise ValueError('Expected the return value of {} to be an '
-                             'elm.readers:ElmStore'.format(fit_func))
+        check_X_data_type(X)
         fitter_or_predict = getattr(self._estimator, sklearn_method, None)
         if fitter_or_predict is None:
             raise ValueError('Final estimator in Pipeline {} has no method {}'.format(self._estimator, sklearn_method))
@@ -506,7 +508,7 @@ class Pipeline(object):
                2-D Dataset (common use case is converting prediction
                to image view of classifier output in space)
 
-               See also ``elm.readers.inverse_flatten`` which converts
+               See also ``earthio.inverse_flatten`` which converts
                1-D y to 2-D Dataset and ElmStore.  inverse_flatten is
                called if to_raster is True
             :saved_model_tag: This is a tag for an ensemble. An ensemble

@@ -139,7 +139,7 @@ def ensemble(pipe,
     Parameters:
         pipe: instance of elm.pipeline.Pipeline
         ngen: number of ensemble generations
-        X:    elm.readers.ElmStore, if not using "sampler" and "args_list"
+        X:    earthio.ElmStore, if not using "sampler" and "args_list"
         y:    numpy array if not using "sampler" and "args_list", or None
               if not needed by Pipeline
         sample_weight: numpy array if not using "sampler" and "args_list", or None

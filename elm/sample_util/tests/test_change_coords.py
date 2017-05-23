@@ -4,10 +4,11 @@ import xarray as xr
 from sklearn.decomposition import PCA
 
 from elm.config import ConfigParser
-from elm.pipeline.tests.util import (random_elm_store,
-                                     test_one_config as tst_one_config,
+from elm.pipeline.tests.util import (test_one_config as tst_one_config,
                                      tmp_dirs_context)
-from elm.readers import *
+from elm.sample_util.make_blobs import random_elm_store
+from earthio.reshape import *
+from earthio import ElmStore
 from elm.pipeline import Pipeline
 
 X = random_elm_store()
@@ -169,7 +170,7 @@ def test_agg_inverse_flatten():
 
 
 def test_set_na_from_meta():
-    set_na = [{'modify_sample': 'elm.readers:set_na_from_meta'}]
+    set_na = [{'modify_sample': 'earthio:set_na_from_meta'}]
     for delim in ('_', '-', ' ', '   '):
         for as_str in (True, False):
             es, new_es = tst_one_pipeline(set_na, add_na_per_band=13,

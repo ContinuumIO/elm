@@ -9,10 +9,10 @@ import yaml
 from elm.config import ConfigParser
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.pipeline.tests.util import (tmp_dirs_context,
-                                     test_one_config as tst_one_config,
-                                     make_blobs_elm_store)
+                                     test_one_config as tst_one_config)
+from elm.sample_util.make_blobs import make_blobs_elm_store
 
 DEFAULT_CONFIG = yaml.load(CONFIG_STR)
 
@@ -49,12 +49,12 @@ def tst_finds_true_n_clusters_once(n_clusters, n_features, early_stop):
         'verbose': 0,
     }
     config['train']['kmeans']['model_init_class'] =  'sklearn.cluster:KMeans'
-    mb = 'elm.pipeline.tests.util:make_blobs_elm_store'
+    mb = 'elm.sample_util.make_blobs:random_elm_store'
     syn['sampler'] = mb
     syn.update({'n_samples': 10000,
                 'n_features': n_features,
                 'centers': synthetic_centers(n_clusters, n_features),
-                'cluster_std': 0.0000001,})
+                'std_devs': 0.0000001,})
     syn['sampler_args'] = None
     tag = 'test_sklearn_finds_n_clusters_{}'
     tag = tag.format(n_clusters) + '_' + '_'.join(early_stop.keys() if early_stop else "None")

@@ -109,7 +109,7 @@ def serialize_prediction(config, y, X, tag, **kwargs):
 
     Assumes:
 
-        X has a elm.readers.Canvas object with a "bounds" attr
+        X has a earthio.Canvas object with a "bounds" attr
         (bounds are used in the filenaming, assuming that X
         is taken from different images in space)
     '''

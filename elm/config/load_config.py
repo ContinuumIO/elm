@@ -15,11 +15,15 @@ import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
 import yaml
 
+try:
+    from earthio.util import BandSpec
+except:
+    BandSpec = None # TODO handle cases where BandSpec is None
 
 from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.config.config_info import CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
@@ -157,7 +161,8 @@ class ConfigParser(object):
 
     def _validate_band_specs(self, band_specs, name):
         '''Validate "band_specs"'''
-        from elm.readers.util import BandSpec
+
+
         if all(isinstance(bs, BandSpec) for bs in band_specs):
             return band_specs
         if not band_specs or not isinstance(band_specs, (tuple, list)):
@@ -167,14 +172,14 @@ class ConfigParser(object):
             raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
 
         new_band_specs = []
+        field_names = [x.name for x in attr.fields(BandSpec)]
         for band_spec in band_specs:
             if isinstance(band_spec, str):
                 new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
                                                 'search_value': band_spec,
                                                 'name': band_spec}))
-            elif not all(k.name in band_spec for k in attr.fields(BandSpec)
-                       if not k.default == attr.NOTHING):
-                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, attr.fields(BandSpec)))
+            elif not all(k in field_names for k in band_spec):
+                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, field_names))
             else:
                 new_band_specs.append(BandSpec(**band_spec))
         return new_band_specs

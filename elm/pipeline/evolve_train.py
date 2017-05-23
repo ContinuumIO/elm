@@ -12,7 +12,7 @@ from elm.model_selection.evolve import (ea_general,
                                         evo_init_func,
                                         assign_check_fitness,
                                         ind_to_new_pipe)
-from elm.model_selection.util import get_args_kwargs_defaults
+from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.pipeline.util import _validate_ensemble_members
 from elm.pipeline.ensemble import _one_generation_dask_graph, ensemble
 from elm.pipeline.serialize import serialize_pipe
