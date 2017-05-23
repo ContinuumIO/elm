@@ -51,12 +51,10 @@ def client_context(dask_client=None, dask_scheduler=None):
                          DASK_SCHEDULER from environment
     '''
     env = parse_env_vars()
-    dask_client = dask_client or env.get('DASK_CLIENT', 'SERIAL')
+    dask_client = dask_client or env.get('DASK_CLIENT', 'DISTRIBUTED')
     dask_scheduler = dask_scheduler or env.get('DASK_SCHEDULER')
     if dask_client == 'DISTRIBUTED':
-        if Executor is None:
-            raise ValueError('distributed is not installed - "conda install distributed"')
-        client = Executor(dask_scheduler)
+        client = Executor(dask_scheduler) if dask_scheduler else Executor()
     elif dask_client == 'THREAD_POOL':
         client = ThreadPool(env.get('DASK_THREADS'))
     elif dask_client == 'SERIAL':
