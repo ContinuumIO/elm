@@ -7,6 +7,7 @@ import yaml
 
 from elm.config.config_info import *
 from elm.config import ElmConfigError, ConfigParser
+from elm.config.tests.fixtures import *
 
 NOT_DICT = (2, 'abc', 2.2, [2,])
 NOT_INT = ({2:2}, [2, 2], 'abc', 2.2,)

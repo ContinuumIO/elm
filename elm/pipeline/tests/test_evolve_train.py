@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from elm.config import ConfigParser
+from elm.config.tests.fixtures import *
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 from elm.config.func_signatures import get_args_kwargs_defaults

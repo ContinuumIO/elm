@@ -29,6 +29,7 @@ import numpy as np
 import pytest
 
 from elm.config import parse_env_vars, client_context
+from elm.config.tests.fixtures import *
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps
@@ -82,11 +83,16 @@ X_Y_DATA_SOURCE = {'X': X, 'y':example_get_y(flatten(X))[1]}
 DATA_SOURCES = [SAMPLER_DATA_SOURCE, X_Y_DATA_SOURCE]
 
 def dist_test(func):
-    with client_context() as client: # taking dask env variables
+    if bool(int(os.environ.get('IS_TRAVIS', 1))):
         def new(*a, **kw):
-            kw = dict(client=client, **kw)
             return func(*a, **kw)
         return new
+    else:
+        with client_context() as client: # taking dask env variables
+            def new(*a, **kw):
+                kw = dict(client=client, **kw)
+                return func(*a, **kw)
+            return new
 
 
 def _train_asserts(fitted, expected_len):

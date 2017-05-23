@@ -1,6 +1,6 @@
 import numpy as np
 
-
+from elm.config.tests.fixtures import *
 from elm.sample_util.make_blobs import random_elm_store
 from elm.sample_util.bands_operation import *
 

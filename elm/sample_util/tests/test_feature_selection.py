@@ -1,6 +1,7 @@
 from earthio import ElmStore
 import numpy as np
 
+from elm.config.tests.fixtures import *
 from elm.pipeline import steps
 from elm.sample_util.make_blobs import random_elm_store
 from earthio.reshape import *
