@@ -5,7 +5,7 @@ The examples below assume you have created a random :doc:`ElmStore<elm-store>` a
 
 .. code-block:: python
 
-    from elm.pipeline.tests.util import random_elm_store
+    from elm.sample_util.make_blobs import random_elm_store
     X = random_elm_store()
 
 Operations to reshape an :doc:`ElmStore<elm-store>`
@@ -258,7 +258,7 @@ Setup - make a compatible :doc:`ElmStore<elm-store>`:
 
 .. code-block:: python
 
-    from elm.readers import ElmStore
+    from earthio import ElmStore
     import numpy as np
     import xarray as xr
     def make_3d():

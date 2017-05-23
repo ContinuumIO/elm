@@ -1,5 +1,7 @@
-``elm`` ``yaml`` Specs
-======================
+``elm`` ``yaml`` Specs - *Deprecated Until ca. August 1, 2017*
+============================================================
+
+ *elm-main is deprecated temporarily while ``elm`` and ``earthio`` undergo significant churn and changes in usage patterns.  Around August 1, 2017 ``elm-main`` will be revisited as it provides a ``yaml`` based interface to ``elm`` and may assist in ``elm`` UI contexts or in interoperability.*
 
 Workflows involving ensemble and evolutionary methods and :doc:`predict_many<predict-many>` can also be specified in a ``yaml`` config file for running with the :doc:`elm-main<elm-main>` console entry point.  The ``yaml`` config can refer to functions from ``elm`` or user-given packages or modules.  Read more the `yaml configuration file format here`_
 
@@ -38,7 +40,7 @@ In the config, ``args_list`` can be a callable.  In this case, it is ``iter_file
 
 This examples creates ``ds_example`` which selects from files to get bands 1 through 6, iterating recursively over ``.hdf`` files in ``ELM_EXAMPLE_DATA_PATH`` from the environment (``env:SOMETHING`` means take ``SOMETHING`` from environment variables).
 
-``band_specs`` in the data source are passed to ``elm.readers.BandSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
+``band_specs`` in the data source are passed to ``earthio.BandSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
 
 .. code-block:: yaml
 
@@ -51,9 +53,9 @@ This examples creates ``ds_example`` which selects from files to get bands 1 thr
       {search_key: long_name, search_value: "Band 4 ", name: band_4},
       {search_key: long_name, search_value: "Band 5 ", name: band_5},
       {search_key: long_name, search_value: "Band 6 ", name: band_6},],
-      args_list: "elm.readers.local_file_iterators:iter_files_recursively",
+      args_list: "earthio.local_file_iterators:iter_files_recursively",
       top_dir: "env:ELM_EXAMPLE_DATA_PATH",
-      metadata_filter: "elm.sample_util.metadata_selection:example_meta_is_day",
+      metadata_filter: "earthio.metadata_selection:example_meta_is_day",
       file_pattern: "\\.hdf",
      },
     }

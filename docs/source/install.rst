@@ -6,53 +6,35 @@ You can install elm with ``conda`` or by installing from source.
 Install from Conda
 ~~~~~~~~~~~~~~~~~~
 
-**Mac-OSX and Linux**: To install the latest release of ``elm`` on Mac-OSX or Linux:
+To install the latest release of ``elm`` and ``earthio`` do:
 
 .. code-block:: bash
 
-    conda create --name elm-env -c elm -c conda-forge elm python=3.5
-    source activate elm-env
+    conda create -c elm/label/dev -c elm -c conda-forge -c ioam -c conda-forge -c scitools/label/dev --name earth-env-35 python=3.5 elm earthio
 
-**Windows**: To install the latest release of ``elm`` on Windows:
+Note the command above uses the ``elm`` organization on `anaconda.org<http://anaconda.org>`_ and the command uses the ``dev`` label within that organization to get ``elm`` and the default ``main`` label for ``earthio`` .
 
-.. code-block:: bash
-
-    conda create --name elm-env -c elm -c conda-forge elm python=3.4
-    activate elm-env
-
-If you have any trouble, adjust the `python=3.4` to `python=3.5` as package availability may change in the future.
-
-This installs elm and all common dependencies. The channel arguments (``-c elm -c conda-forge`` ) are typically required.
-
+This installs ``elm`` and ``earthio`` and all common dependencies. The channel arguments shown above may change with build system refactoring over the next few months.  If you encounter any issues with installation of the latest release from ``conda`` or source, then raise a github issue ``in the elm repo here <http://github.com/ContinuumIO/elm/issues>``_ or email psteinberg [at] continuum [dot] io.
 
 Install from Source
 ~~~~~~~~~~~~~~~~~~~
 
-To install elm from source, clone the repository from `github
-<https://github.com/ContinuumIO/elm>`_:
+To install elm from `` source
+<https://github.com/ContinuumIO/elm>``_ and quick check the install:
 
 .. code-block:: bash
 
-    git clone https://github.com/ContinuumIO/elm.git
+    git clone https://github.com/ContinuumIO/elm
     cd elm
-    conda env create
-    source activate elm-env
-    python setup.py develop
+    export ELM_EXAMPLE_DATA_PATH=/home/peter/elm-data
+    PYTHON_TEST_VERSION=3.5 EARTHIO_INSTALL_METHOD=conda . build_elm_env.sh
+    python -c "from earthio import *;from elm import *"
 
-Clone the ``elm-data`` repo and pull using Git Large File Storage (LFS) so that more tests can be run:
-
-.. code-block:: bash
-
-    brew install git-lfs # or apt-get, yum, etc
-    git lfs install
-    git clone https://github.com/ContinuumIO/elm-data
-    git remote add origin https://github.com/ContinuumIO/elm-data
-
-Add the following to your .bashrc or environment, changing the path depending on where you have cloned ``elm-data``:
+Add the following ``ELM_EXAMPLE_DATA_PATH`` to your .bashrc or environment to avoid >1 download of the test data:
 
 .. code-block:: bash
 
-    export ELM_EXAMPLE_DATA_PATH=/Users/peter/Documents/elm-data
+    export ELM_EXAMPLE_DATA_PATH=/home/peter/elm-data
 
 Do the tutorials and examples:
 

@@ -1,7 +1,7 @@
 ElmStore
 ==============================
 
-``ElmStore``, from ``elm.readers``, is a fundamental data structure in ``elm`` and is the data structure used to pass arrays and metadata through each of the steps in an :doc:`Pipeline <pipeline>` (series of transformations).  An ``ElmStore`` is oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. ``ElmStore`` is a light wrapper around ``xarray.Dataset``.
+``ElmStore``, from ``earthio``, is a fundamental data structure in ``elm`` and is the data structure used to pass arrays and metadata through each of the steps in an :doc:`Pipeline <pipeline>` (series of transformations).  An ``ElmStore`` is oriented around multi-band rasters and cubes stored in HDF4 / 5, NetCDF, or GeoTiff formats. ``ElmStore`` is a light wrapper around ``xarray.Dataset``.
 
 This page discusses:
 
@@ -16,11 +16,11 @@ See also :doc:`API docs<api>`.
 
 Creating an ``ElmStore`` from File
 ----------------------------------
-An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with ``load_array`` from ``elm.readers``.  The simple case is to load all bands or subdatasets from an HDF or NetCDF file:
+An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with ``load_array`` from ``earthio``.  The simple case is to load all bands or subdatasets from an HDF or NetCDF file:
 
 .. code-block:: python
 
-    from elm.readers import load_array
+    from earthio import load_array
     filename = '3B-HHR-E.MS.MRG.3IMERG.20160708-S153000-E155959.0930.V03E.HDF5.nc'
     es = load_array(filename)
 
@@ -28,7 +28,7 @@ For GeoTiffs the argument is a directory name rather than a file name and each b
 
 .. code-block:: python
 
-    In [1]: from elm.readers import BandSpec, load_array
+    In [1]: from earthio import BandSpec, load_array
 
     In [2]: ls
     LC80150332013207LGN00_B1.TIF  LC80150332013207LGN00_B5.TIF
@@ -73,7 +73,7 @@ In simple cases ``band_specs`` can be a list of strings to match a ``NetCDF`` va
 
 .. code-block:: python
 
-    In [4]: from elm.readers import load_array
+    In [4]: from earthio import load_array
     In [5]: filename = '3B-HHR-E.MS.MRG.3IMERG.20160708-S153000-E155959.0930.V03E.HDF5.nc'
     In [6]: es = load_array(filename, band_specs=['HQobservationTime'])
     In [7]: es.data_vars
@@ -85,16 +85,16 @@ With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff
 
 .. code-block:: python
 
-    from elm.readers import load_array
+    from earthio import load_array
     dir_of_tifs = '.'
     load_array(dir_of_tifs, band_specs=["B1.TIF", "B2.TIF","B3.TIF"])
 
 
-``band_specs`` can be given as a list of ``elm.readers.BandSpec`` objects.  The following shows an example of loading 4 bands from an ``HDF4`` file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
+``band_specs`` can be given as a list of ``earthio.BandSpec`` objects.  The following shows an example of loading 4 bands from an ``HDF4`` file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
 
 .. code-block:: python
 
-    In [1]: from elm.readers import BandSpec, load_array
+    In [1]: from earthio import BandSpec, load_array
 
     In [2]: band_specs = list(map(lambda x: BandSpec(**x),
        [{'search_key': 'long_name', 'search_value': "Band 1 ", 'name': 'band_1'},
@@ -128,11 +128,11 @@ Here are a few more things a ``BandSpec`` can do:
  * A ``BandSpec`` with a ``meta_to_geotransform`` callable attribute can be used to construct a ``geo_transform`` array from band metadata (e.g. when GDAL fails to detect the ``geo_transform`` accurately)
  * A ``BandSpec`` can control whether a raster is loaded with `("y", "x")`  pixel order (the default behavior that suits most top-left-corner based rasters) or `("x", "y")` pixel order.
 
-See also the definition of ``BandSpec`` in ``elm.readers`` showing all the recognized fields (`snippet taken from elm.readers.util`_).
+See also the definition of ``BandSpec`` in ``earthio`` showing all the recognized fields (`snippet taken from earthio.util`_).
 
 .. _this rasterio demo: https://sgillies.net//2013/12/21/rasterio-windows-and-masks.html
 
-.. _snippet taken from elm.readers.util: https://github.com/ContinuumIO/elm/blob/master/elm/readers/util.py
+.. _snippet taken from earthio.util: https://github.com/ContinuumIO/elm/blob/master/earthio/util.py
 
 .. code-block:: python
 
@@ -162,7 +162,7 @@ Here is an example of creating an ``ElmStore`` from ``numpy`` arrays and ``xarra
     from collections import OrderedDict
     import numpy as np
     import xarray as xr
-    from elm.readers import ElmStore
+    from earthio import ElmStore
 
     rand_array = lambda: np.random.normal(0, 1, 1000000).reshape(-1,10)
 
@@ -367,8 +367,8 @@ This section describes ``elm`` functions useful for deriving information from fi
 
 .. code-block:: python
 
-    from elm.readers.tests.util import HDF4_FILES
-    from elm.readers import load_array, set_na_from_meta
+    from earthio.tests.util import HDF4_FILES
+    from earthio import load_array, set_na_from_meta
     es = load_array(HDF4_FILES[0])
     set_na_from_meta(es) # modifies ElmStore instance in place
 
@@ -378,9 +378,9 @@ This section describes ``elm`` functions useful for deriving information from fi
 
 .. code-block:: python
 
-    from elm.readers.tests.util import HDF4_FILES
-    from elm.readers import load_array
-    from elm.sample_util.metadata_selection import example_meta_is_day
+    from earthio.tests.util import HDF4_FILES
+    from earthio import load_array
+    from earthio.metadata_selection import example_meta_is_day
     from scipy.stats import describe
     es3 = load_array(HDF4_FILES[0])
     es3.DayNightFlag # prints "Day"

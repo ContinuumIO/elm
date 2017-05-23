@@ -21,7 +21,7 @@ This is a common set of ``import`` statements when working with ``elm``
 
     from collections import OrderedDict
     from elm.pipeline import Pipeline, steps
-    from elm.readers import *
+    from earthio import *
     from sklearn.datasets import make_blobs
     from sklearn.linear_model import SGDClassifier
     from sklearn.metrics import accuracy_score

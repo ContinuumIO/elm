@@ -11,7 +11,7 @@ First import model(s) from scikit-learn and ``Pipeline`` and ``steps`` from ``el
 .. code-block:: python
 
     from elm.config import client_context
-    from elm.pipeline.tests.util import random_elm_store
+    from elm.sample_util.make_blobs import random_elm_store
     from elm.pipeline import Pipeline, steps
     from sklearn.decomposition import PCA
     from sklearn.cluster import AffinityPropagation

@@ -11,4 +11,5 @@ The following are environment variables control ``elm-main`` and are also inputs
  * ``ELM_PREDICT_PATH``: Base path for saving prediction output
  * ``ELM_TRAIN_PATH``: Base path for saving trained ensembles
  * ``MAX_PARAM_RETRIES``: How many times to retry in genetic algorithm when parameters are repeatedly infeasible
+ * ``IS_TRAVIS``:  If ``IS_TRAVIS=1`` , then dask's distributed client is not used (the client if started in CI tests can cause hanging)
 
