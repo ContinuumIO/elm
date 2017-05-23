@@ -8,6 +8,7 @@ import yaml
 
 from sklearn.decomposition import IncrementalPCA
 
+from elm.config.tests.fixtures import *
 from earthio.reshape import *
 from earthio import ElmStore
 from elm.pipeline import steps
