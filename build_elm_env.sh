@@ -5,37 +5,35 @@ export ELM_BUILD_DIR=`pwd -P`
 # using build_earthio_env.sh allows the
 # test data to be downloaded as well.
 build_elm_env(){
-    rm -rf .earthio_tmp;
-    git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp || return 1;
-    if [ "$EARTHIO_VERSION" = "" ];then
+    set -e
+    rm -rf .earthio_tmp
+    git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp
+    if [ "x$EARTHIO_VERSION" = "x" ]; then
         export EARTHIO_VERSION="master";
     fi
-    git fetch --all || return 1;
+    git fetch --all
     echo git checkout $EARTHIO_VERSION
-    git checkout $EARTHIO_VERSION || return 1;
-    conda config --set always_yes true;
-    . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV || return 1;
-    conda config --set always_yes true;
-    cd $ELM_BUILD_DIR || return 1;
+    git checkout $EARTHIO_VERSION
+    . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
+    cd $ELM_BUILD_DIR
     # End of earthio and test data related section
-    if [ "$PYTHON" = "" ];then
+    if [ "x$PYTHON" = "x" ]; then
         echo FAIL - Must define PYTHON environment variable such as 2.7, 3.5 or 3.6 - FAIL
-        return 1;
+        return 1
     fi
-    conda update -n root conda || return 1;
-    conda remove -n root conda-build anaconda-client;
-    conda config --set anaconda_upload no;
-    conda remove elm &> /dev/null;
-    pip uninstall -y elm &> /dev/null;
-    cd $ELM_BUILD_DIR || return 1;
+    conda config --set always_yes true
+    conda update -n root conda conda-build
+    conda config --set anaconda_upload no
+    conda remove elm &> /dev/null
+    pip uninstall -y elm &> /dev/null
+    cd $ELM_BUILD_DIR
     echo conda list is ------
-    conda list || return 1;
+    conda list
     echo conda "env" list is ------
-    conda env list || return 1;
-    conda build $EARTHIO_CHANNEL_STR --python $PYTHON conda.recipe || return 1;
-    conda install $EARTHIO_CHANNEL_STR --use-local elm || return 1;
+    conda env list
+    conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
+    conda install $EARTHIO_CHANNEL_STR --use-local elm
+    set +e
 }
 
 build_elm_env && source activate $EARTHIO_TEST_ENV && echo OK
-
-
