@@ -132,7 +132,7 @@ See also the definition of ``BandSpec`` in ``earthio`` showing all the recognize
 
 .. _this rasterio demo: https://sgillies.net//2013/12/21/rasterio-windows-and-masks.html
 
-.. _snippet taken from earthio.util: https://github.com/ContinuumIO/elm/blob/master/earthio/util.py
+.. _snippet taken from earthio.util: https://github.com/ContinuumIO/earthio/blob/master/earthio/util.py
 
 .. code-block:: python
 

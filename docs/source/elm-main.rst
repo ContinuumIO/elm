@@ -11,7 +11,7 @@ The simple use of :doc:`elm-main<elm-main>` is to run one ``yaml`` config:
 
 .. code-block:: bash
 
-   elm-main --config elm-examples/configs/kmeans_hdf4.yaml
+   elm-main --config elmexamples/configs/kmeans_hdf4.yaml
 
 :doc:`elm-main<elm-main>` uses the :doc:`environment variables described here<environment-vars>`, many of which may be overriden by optional arguments to :doc:`elm-main<elm-main>` (see below).
 

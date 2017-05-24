@@ -1,6 +1,6 @@
 Testing ``elm``
 
-.. _elm-examples: http://github.com/ContinuumIO/elm-examples
+.. _elm examples: http://github.com/ContinuumIO/elm/tree/master/examples
 
 ----------
 This page describes how to run the ``py.test`` unit tests and run all or some scripts and configs in `elm-examples`_
@@ -42,6 +42,8 @@ When running ``py.test`` the environment variables related to dask determine whe
 
 Longer Running Tests
 ~~~~~~~~~~~~~~~~~~~~
+
+*Deprecated with `elm-main` temporarily*
 
 The ``elm-run-all-tests`` console entry point can automate running of some or all python scripts and ``yaml`` ``elm-main`` config files in ``elm-examples`` and/or the ``py.test`` unit tests.
 

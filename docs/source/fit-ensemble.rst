@@ -14,7 +14,7 @@ It is helpful to first read the section Data Sources for a :doc:`Pipeline<pipeli
 Define a Sampler
 ----------------
 
-.. _full script can be found here: https://github.com/ContinuumIO/elm-examples/blob/master/scripts/api_example.py
+.. _full script can be found here: https://github.com/ContinuumIO/elm/blob/master/examples/api_example.py
 
 The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The `full script can be found here`_.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (see also :doc:`ElmStore<elm-store>`) to select a subset of bands in ``HDF4`` files.
 

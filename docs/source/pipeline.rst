@@ -26,7 +26,7 @@ Data Sources for a ``Pipeline``
  * To fit to a single sample, use the ``X`` keyword argument, and optionally ``y`` and ``sample_weight`` keyword arguments.
  * To fit to a series of samples, use the ``args_list`` and ``sampler`` keyword arguments.
 
-If ``X`` is given it is assumed to be an :doc:`ElmStore<elm-store>` or `xarray.Dataset``
+If ``X`` is given it is assumed to be an :doc:`ElmStore<elm-store>` or `xarray.Dataset`
 
 If ``sampler`` is given with ``args_list``, then each element of ``args_list`` is unpacked as arguments to the callable ``sampler``.  There is a special case of giving ``sampler`` as ``earthio.band_selection.select_from_file`` which allows using the functions from ``earthio`` for reading common formats and selecting bands from files (the ``band_specs`` argument).  Here is an example that uses ``select_from_file`` to load multi-band ``HDF4`` arrays:
 
