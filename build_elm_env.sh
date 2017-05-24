@@ -14,9 +14,9 @@ build_elm_env(){
     git fetch --all
     echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION
-    set +x
+    set +e
     . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
-    set -x
+    set -e
     cd $ELM_BUILD_DIR
     # End of earthio and test data related section
     if [ "x$PYTHON" = "x" ]; then
