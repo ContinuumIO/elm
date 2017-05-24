@@ -43,18 +43,16 @@ When running ``py.test`` the environment variables related to dask determine whe
 Longer Running Tests
 ~~~~~~~~~~~~~~~~~~~~
 
-*Deprecated with `elm-main` temporarily*
+*Deprecated with elm-main temporarily*
 
-The ``elm-run-all-tests`` console entry point can automate running of some or all python scripts and ``yaml`` ``elm-main`` config files in ``elm-examples`` and/or the ``py.test`` unit tests.
+The ``elm-run-all-tests`` console entry point can automate running of some or all python scripts and ``yaml`` ``elm-main`` config files in ``elm's examples`` and/or the ``py.test`` unit tests.
 
-Here is an example that is run from inside the cloned ``elm`` repository with ``elm-examples`` cloned in the current directory (see the first two arguments: `./` - cloned ``elm`` repo and ``./elm-examples`` - the location of cloned ``elm-examples``)
+Here is an example that is run from inside the cloned ``elm`` repository with ``elm-examples`` cloned in the current directory (see the first two arguments: `./` - cloned ``elm`` repo and ``examples`` - the location of cloned ``elm-examples``)
 
 .. code-block:: bash
 
 
    ELM_LOGGING_LEVEL=DEBUG elm-run-all-tests ./ elm-examples/ --skip-pytest --skip-scripts --dask-clients SERIAL DISTRIBUTED --dask-scheduler 10.0.0.10:8786
-
-Above the arguments ``--skip-scripts`` and ``skip-pytest`` refer to skipping the scripts in ``elm-examples`` and ``py.test``s in ``elm``, respectively, so the command above will run the all configs in ``elm-examples/configs`` once for serial evaluation and once with dask-distributed.
 
 Here is the full help on ``elm-run-all-tests`` entry point:
 
