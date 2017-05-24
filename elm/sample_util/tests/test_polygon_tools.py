@@ -1,6 +1,7 @@
 # set to debug, will plot out polygons etc
 _DEBUG = False
 
+from elm.config.tests.fixtures import *
 from elm.sample_util.polygon_tools import (points_in_polys,
                                            vec_points_in_polys,
                                            plot_poly,

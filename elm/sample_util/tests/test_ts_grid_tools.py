@@ -3,6 +3,7 @@ import pytest
 import xarray as xr
 
 from earthio import ElmStore
+from elm.config.tests.fixtures import *
 from elm.pipeline import steps
 
 def make_3d():

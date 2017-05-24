@@ -119,8 +119,13 @@ def run_many_configs(args=None, sys_argv=None, return_0_if_ok=True,
                 ret_val = max(map(pipe, fnames))
     return ret_val
 
+class ElmMainDeprecation(ValueError):
+    pass
 
 def main(args=None, sys_argv=None, return_0_if_ok=True):
+    raise ElmMainDeprecation('The console entry point elm-main for running '
+                             'yaml configs is temporarily deprecated during '
+                             'refactoring of elm')
     started = datetime.datetime.now()
     args = cli(args=args, sys_argv=sys_argv)
     if args.config_dir is not None and args.config is not None:

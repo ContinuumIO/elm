@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from elm.config import ConfigParser
+from elm.config.tests.fixtures import *
 from elm.model_selection import MODELS_WITH_PREDICT_DICT
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 from elm.config.func_signatures import get_args_kwargs_defaults
@@ -93,6 +94,7 @@ early_stop_conditions = (
 
 pytest_args = tuple(product(n_clusters, n_features, early_stop_conditions))
 @pytest.mark.flaky(3)
+@pytest.mark.xfail # TODO remove this after elm-main is no longer deprecated
 def test_finds_true_num_clusters_fast():
     tst_finds_true_n_clusters_once(*pytest_args[0])
 

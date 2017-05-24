@@ -7,6 +7,7 @@ from sklearn.cluster import MiniBatchKMeans
 import yaml
 
 from elm.config import ConfigParser, ElmConfigError
+from elm.config.tests.fixtures import *
 from elm.model_selection.evolve import (get_param_grid,
                                         ind_to_new_pipe,
                                         _get_evolve_meta,
@@ -16,6 +17,7 @@ from elm.model_selection.evolve import (get_param_grid,
                                         ea_general,
                                         assign_check_fitness)
 from elm.model_selection.tests.evolve_example_config import CONFIG_STR
+
 
 
 def _setup(config=None):
@@ -31,6 +33,7 @@ def _setup(config=None):
     return config, pipe, idx_to_param_grid
 
 
+@pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def test_parse_param_grid():
     '''Tests that param_grid is parsed from config and
     metadata about parameters is extracted'''
@@ -43,6 +46,7 @@ def test_parse_param_grid():
     assert all(isinstance(vi, list) for vi in v.deap_params['choices'])
 
 
+@pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def test_ind_to_new_pipe():
     '''In the evolutionary algo, an individual consists
     of indices which can be used in the param_grid choices
@@ -65,7 +69,7 @@ def test_ind_to_new_pipe():
     assert p['pca__n_components'] == 3
 
 
-
+@pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def tst_evo_setup_evo_init_func(config=None):
     '''Tests that param_grid is parsed and the deap toolbox
     is created ok so that toolbox.population_guess can
@@ -87,6 +91,7 @@ score_weights = [[-1,], [1,], [-1, 1]]
 zipped_tst_args = zip((min_fitnesses, max_fitnesses, min_max_fitnesses),
                       score_weights)
 
+@pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 @pytest.mark.parametrize('fitnesses, score_weights', zipped_tst_args)
 def test_ea_general(fitnesses, score_weights):
     '''This test ensures that ea_general, a general
@@ -162,6 +167,7 @@ tst_params = list(zip(int_keys, not_int)) + list(zip(dict_keys, not_dicts)) + \
              list(zip((control_key,) * len(bad_control), bad_control))
 tst_params = [t for t in tst_params
               if not ('early_stop' in t[0] and not t[1])]
+@pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 @pytest.mark.parametrize('key, value', tst_params)
 def test_bad_param_grid_config(key, value):
     set_key_tst_bad_config_once(key, value)

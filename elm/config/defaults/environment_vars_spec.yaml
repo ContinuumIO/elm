@@ -5,14 +5,14 @@ int_fields_specs:
     required: False}
 str_fields_specs:
  - {name: DASK_CLIENT,
-    default: SERIAL,
+    default: DISTRIBUTED,
     required: False,
     choices: [
     DISTRIBUTED,
     SERIAL,
     THREAD_POOL]}
  - {name: DASK_SCHEDULER,
-    required: True}
+    required: False}
  - {name: ELM_EXAMPLE_DATA_PATH,
     default: ~/elm-data,
     required: False,

@@ -4,6 +4,7 @@ import xarray as xr
 from sklearn.decomposition import PCA
 
 from elm.config import ConfigParser
+from elm.config.tests.fixtures import *
 from elm.pipeline.tests.util import (test_one_config as tst_one_config,
                                      tmp_dirs_context)
 from elm.sample_util.make_blobs import random_elm_store

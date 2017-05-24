@@ -8,6 +8,7 @@ import pytest
 from sklearn.decomposition import IncrementalPCA
 import xarray as xr
 
+from elm.config.tests.fixtures import *
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 import elm.sample_util.sample_pipeline as pipeline
 from elm.pipeline.tests.util import tmp_dirs_context

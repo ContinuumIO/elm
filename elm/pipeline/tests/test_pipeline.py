@@ -21,6 +21,7 @@ import pytest
 
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
+from elm.config.tests.fixtures import *
 from elm.pipeline import Pipeline, steps
 from elm.sample_util.make_blobs import random_elm_store
 

@@ -24,6 +24,7 @@ def process_int_env_var(env_var_name, default='0', required=False):
         val = bool(val)
     return val
 
+
 def process_str_env_var(env_var_name, expanduser=False,
                         default='', required=False, choices=None):
     '''Process a string environment variable that may be a path or have
@@ -44,6 +45,7 @@ def process_str_env_var(env_var_name, expanduser=False,
         val = os.path.expanduser(val)
     return val
 
+
 def parse_env_vars():
     '''Process the environment vars specifications
     in defaults/environment_vars_specs.yaml, making sure
@@ -63,14 +65,10 @@ def parse_env_vars():
                                   required=item.get('required', False))
         elm_env_vars[item['name']] = val
     for item in str_fields_specs:
-        if item['name'] == 'DASK_SCHEDULER':
-            required = elm_env_vars['DASK_CLIENT'] == 'DISTRIBUTED'
-        else:
-            required = item.get('required', False)
         val = process_str_env_var(item['name'],
                                   expanduser=item.get('expanduser', None),
                                   default=item.get('default', None),
-                                  required=required,
+                                  required=item.get('required', False),
                                   choices=item.get('choices', []))
         elm_env_vars[item['name']] = val
     for f in ('DASK_PROCESSES', 'DASK_THREADS'):
