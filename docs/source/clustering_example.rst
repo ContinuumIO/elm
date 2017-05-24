@@ -10,16 +10,14 @@ It demonstrates the common steps of using ``elm`` :
  * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
  * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
 
-.. _elm-examples: http://github.com/ContinuumIO/elm-examples
-
-.. _elm-data: http://github.com/ContinuumIO/elm-data
+.. _elm examples: https://github.com/ContinuumIO/elm/tree/master/conda.recipe
 
 .. AWS S3 LANDSAT bucket here: http://landsat-pds.s3.amazonaws.com/L8/015/033/LC80150332013207LGN00/index.html
 
 LANDSAT
 ~~~~~~~
 
-The LANDSAT classification is notebook from `elm-examples`_ .  This section walks through that notebook, pointing out:
+The LANDSAT classification is notebook from `elm examples`_ .  This section walks through that notebook, pointing out:
 
  * How to use ``earthio`` for scientific data files like GeoTiffs
  * How to set up an ``elm.pipeline.Pipeline`` of transformations

@@ -19,8 +19,7 @@ This installs ``elm`` and ``earthio`` and all common dependencies. The channel a
 Install from Source
 ~~~~~~~~~~~~~~~~~~~
 
-To install elm from `` source
-<https://github.com/ContinuumIO/elm>``_ and quick check the install:
+To install elm from ``source <https://github.com/ContinuumIO/elm>``_ and quick check the install:
 
 .. code-block:: bash
 

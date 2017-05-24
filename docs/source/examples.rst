@@ -9,7 +9,7 @@ Prerequisites for Examples
 
 Follow the instructions for installation of ``elm`` and the ``elm-env`` conda environment ( :doc:`Install<install>` ):
 
-* https://github.com/ContinuumIO/elm-examples/
+* `Elm's ./examples<https://github.com/ContinuumIO/elm/tree/master/examples>`_
 * https://github.com/ContinuumIO/elm-data/
 
 Also, define the environment variable ``ELM_EXAMPLE_DATA_PATH`` to be your full path to local clone of ``elm-data``
@@ -30,6 +30,7 @@ The notebook then goes through how to build true and false color images with an 
 Scripts using ``elm``
 ~~~~~~~~~~~~~~~~~~~~~
 
+ * *Deprecation
  * `api_example.py`_ : A K-Means example with PCA preprocessing in ensemble
  * `api_example_evo.py`_ : A K-Means example with feature selection in NSGA-2
 

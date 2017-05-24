@@ -1,5 +1,7 @@
-:doc:`elm-main<elm-main>` Entry Point
-========================
+:doc:`elm-main<elm-main>` Entry Point *Deprecated Until ca. August 1, 2017*
+============================================================
+
+ *elm-main is deprecated temporarily while ``elm`` and ``earthio`` undergo significant churn and changes in usage patterns.  Around August 1, 2017 ``elm-main`` will be revisited as it provides a ``yaml`` based interface to ``elm`` and may assist in ``elm`` UI contexts or in interoperability.*
 
 .. _read about yaml here: http://yaml.org/spec/
 

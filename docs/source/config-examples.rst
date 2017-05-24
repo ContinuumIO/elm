@@ -7,10 +7,9 @@ Workflows involving ensemble and evolutionary methods and :doc:`predict_many<pre
 
 .. _yaml configuration file format here: http://yaml.org/spec/1.2/spec.html
 
-The repository `elm-examples`_ has a number of example ``yaml`` configuration files for GeoTiff and ``HDF4`` files as input to K-Means or stochastic gradient descent classifiers.
+The repository `elm examples`_ has a number of example ``yaml`` configuration files for GeoTiff and ``HDF4`` files as input to K-Means or stochastic gradient descent classifiers.
 
-.. _elm-examples: http://github.com/ContinuumIO/elm-examples
-.. _elm-data: http://github.com/ContinuumIO/elm-data
+.. _elm examples: https://github.com/ContinuumIO/elm/tree/master/examples
 .. _elm-repo: http://github.com/ContinuumIO/elm
 
 This page walks through each part of a valid ``yaml`` config.
