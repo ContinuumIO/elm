@@ -35,6 +35,7 @@ build_elm_env(){
     conda list
     echo conda "env" list is ------
     conda env list
+    pwd -P
     conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
     conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local elm
     set +e
