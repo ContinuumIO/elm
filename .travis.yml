@@ -31,6 +31,7 @@ install:
 
 script:
   - cd $ELM_BUILD_DIR
+  - . activate $EARTHIO_TEST_ENV
   - echo ELM_EXAMPLE_DATA_PATH is $ELM_EXAMPLE_DATA_PATH
   - py.test -m 'not slow' -v
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*

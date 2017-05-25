@@ -9,7 +9,7 @@ build_elm_env(){
     rm -rf .earthio_tmp
     git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp
     # Temporary fix
-    sed -i 's/PYTHON_TEST_VERSION/PYTHON/g' ./build_earthio_env.sh
+    sed -i.bak 's/PYTHON_TEST_VERSION/PYTHON/g' ./build_earthio_env.sh
     if [ "x$EARTHIO_VERSION" = "x" ]; then
         export EARTHIO_VERSION="master";
     fi
@@ -17,6 +17,8 @@ build_elm_env(){
     echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION
     set +e
+    export PYTHON=${PYTHON:-3.5}
+    export NUMPY=${NUMPY:-1.11}
     IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
     set -e
     cd $ELM_BUILD_DIR
@@ -35,9 +37,8 @@ build_elm_env(){
     conda list
     echo conda "env" list is ------
     conda env list
-    pwd -P
     conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
-    conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local elm
+    conda install $EARTHIO_CHANNEL_STR --use-local elm
     set +e
 }
 
