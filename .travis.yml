@@ -11,15 +11,13 @@ env:
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
     - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
 
-matrix:
-  include:
-    - os: osx
-      env: PYTHON=3.6 NUMPY=1.12
-    - env: PYTHON=3.6 NUMPY=1.12
-    - env: PYTHON=3.5 NUMPY=1.11
-    - env: PYTHON=3.4 NUMPY=1.10
-    - env: PYTHON=2.7 NUMPY=1.9
+  matrix:
+    - PYTHON=3.6 NUMPY=1.12
+    - PYTHON=3.5 NUMPY=1.11
+    - PYTHON=3.4 NUMPY=1.10
+    - PYTHON=2.7 NUMPY=1.9
 
+matrix:
   # Support for these versions of Python is still a work-in-progress
   allow_failures:
     - env: PYTHON=3.6
@@ -56,7 +54,7 @@ notifications:
 deploy:
   - provider: script
     script:
-      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload --token ${BINSTAR_TOKEN} --user elm --label dev
+      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t ${BINSTAR_TOKEN} --user gbrener --label dev
     #on:
     #  tags: true
     skip_cleanup: true
