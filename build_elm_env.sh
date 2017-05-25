@@ -17,7 +17,7 @@ build_elm_env(){
     echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION
     set +e
-    . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
+    IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
     set -e
     cd $ELM_BUILD_DIR
     # End of earthio and test data related section
