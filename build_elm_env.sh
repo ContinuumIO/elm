@@ -8,7 +8,7 @@ build_elm_env(){
     set -e
     rm -rf .earthio_tmp
     git clone http://github.com/ContinuumIO/earthio .earthio_tmp && cd .earthio_tmp
-    # Temporary fix
+    # Temporary fixes
     sed -i.bak 's/PYTHON_TEST_VERSION/PYTHON/g' ./build_earthio_env.sh
     if [ "x$EARTHIO_VERSION" = "x" ]; then
         export EARTHIO_VERSION="master";
