@@ -14,6 +14,15 @@ matrix:
     - env: PYTHON=3.4 NUMPY=1.10
     - env: PYTHON=2.7 NUMPY=1.9
 
+  # Support for these versions of Python is still a work-in-progress
+  allow_failures:
+    - env: PYTHON=3.6
+    - env: PYTHON=3.4
+    - env: PYTHON=2.7
+
+  # The build result is determined as soon as the required builds pass/fail
+  fast_finish: true
+
 branches:
   only:
     - master
