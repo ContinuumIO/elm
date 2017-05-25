@@ -26,14 +26,14 @@ Data Sources for a ``Pipeline``
  * To fit to a single sample, use the ``X`` keyword argument, and optionally ``y`` and ``sample_weight`` keyword arguments.
  * To fit to a series of samples, use the ``args_list`` and ``sampler`` keyword arguments.
 
-If ``X`` is given it is assumed to be an :doc:`ElmStore<elm-store>` or `xarray.Dataset``
+If ``X`` is given it is assumed to be an :doc:`ElmStore<elm-store>` or `xarray.Dataset`
 
-If ``sampler`` is given with ``args_list``, then each element of ``args_list`` is unpacked as arguments to the callable ``sampler``.  There is a special case of giving ``sampler`` as ``elm.readers.band_selection.select_from_file`` which allows using the functions from ``elm.readers`` for reading common formats and selecting bands from files (the ``band_specs`` argument).  Here is an example that uses ``select_from_file`` to load multi-band ``HDF4`` arrays:
+If ``sampler`` is given with ``args_list``, then each element of ``args_list`` is unpacked as arguments to the callable ``sampler``.  There is a special case of giving ``sampler`` as ``earthio.band_selection.select_from_file`` which allows using the functions from ``earthio`` for reading common formats and selecting bands from files (the ``band_specs`` argument).  Here is an example that uses ``select_from_file`` to load multi-band ``HDF4`` arrays:
 
 .. code-block:: python
 
-    from elm.readers import BandSpec
-    from elm.readers.metadata_selection import meta_is_day
+    from earthio import BandSpec
+    from earthio.metadata_selection import meta_is_day
     band_specs = list(map(lambda x: BandSpec(**x),
             [{'search_key': 'long_name', 'search_value': "Band 1 ", 'name': 'band_1'},
              {'search_key': 'long_name', 'search_value': "Band 2 ", 'name': 'band_2'},
@@ -57,8 +57,8 @@ Alternatively, to train on a single HDF4 file, we could have done:
 
 .. code-block:: python
 
-    from elm.readers import load_array
-    from elm.sample_util.metadata_selection import example_meta_is_day
+    from earthio import load_array
+    from earthio.metadata_selection import example_meta_is_day
     HDF4_FILES = [f for f in glob.glob(os.path.join(ELM_EXAMPLE_DATA_PATH, 'hdf4', '*hdf'))
                   if example_meta_is_day(load_hdf4_meta(f))]
     data_source = {'X': load_array(HDF4_FILES[0], band_specs=band_specs)}

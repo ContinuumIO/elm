@@ -1,5 +1,7 @@
-:doc:`elm-main<elm-main>` Entry Point
-========================
+:doc:`elm-main<elm-main>` Entry Point *Deprecated Temporarily*
+============================================================
+
+ *elm-main is deprecated temporarily while ``elm`` and ``earthio`` undergo significant churn and changes in usage patterns.  Around August 1, 2017 ``elm-main`` will be revisited as it provides a ``yaml`` based interface to ``elm`` and may assist in ``elm`` UI contexts or in interoperability.*
 
 .. _read about yaml here: http://yaml.org/spec/
 
@@ -9,7 +11,7 @@ The simple use of :doc:`elm-main<elm-main>` is to run one ``yaml`` config:
 
 .. code-block:: bash
 
-   elm-main --config elm-examples/configs/kmeans_hdf4.yaml
+   elm-main --config elmexamples/configs/kmeans_hdf4.yaml
 
 :doc:`elm-main<elm-main>` uses the :doc:`environment variables described here<environment-vars>`, many of which may be overriden by optional arguments to :doc:`elm-main<elm-main>` (see below).
 

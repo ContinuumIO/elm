@@ -5,29 +5,27 @@ This page walks through a ``Jupyter`` notebook using ``elm`` to ensemble fit K-M
 
 It demonstrates the common steps of using ``elm`` :
 
- * Working with ``elm.readers.load_array`` to read ``NetCDF`` , ``HDF4`` , ``HDF5`` , and GeoTiff files, and controlling how a sample is composed of bands or separate rasters with ``BandSpec`` . See also :ref:`elm-store-from-file`
+ * Working with ``earthio.load_array`` to read ``NetCDF`` , ``HDF4`` , ``HDF5`` , and GeoTiff files, and controlling how a sample is composed of bands or separate rasters with ``BandSpec`` . See also :ref:`elm-store-from-file`
  * Defining a ``Pipeline`` of transformers (e.g. normalization and PCA) and an estimator, where the transformers use classes from ``elm.pipeline.steps`` and the estimator is a model with a ``fit`` / ``predict`` interface.  See also :doc:`Pipeline<pipeline>`
  * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
  * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
 
-.. _elm-examples: http://github.com/ContinuumIO/elm-examples
+.. _elm examples: https://github.com/ContinuumIO/elm/tree/master/examples
 
-.. _elm-data: http://github.com/ContinuumIO/elm-data
-
-.. AWS S3 LANDSAT bucket here: http://landsat-pds.s3.amazonaws.com/L8/015/033/LC80150332013207LGN00/index.html
+.. _AWS S3 LANDSAT bucket here: http://landsat-pds.s3.amazonaws.com/L8/015/033/LC80150332013207LGN00/index.html
 
 LANDSAT
 ~~~~~~~
 
-The LANDSAT classification is notebook from `elm-examples`_ .  This section walks through that notebook, pointing out:
+The LANDSAT classification is notebook from `elm examples`_.  This section walks through that notebook, pointing out:
 
- * How to use ``elm.readers`` for scientific data files like GeoTiffs
+ * How to use ``earthio`` for scientific data files like GeoTiffs
  * How to set up an ``elm.pipeline.Pipeline`` of transformations
  * How to use ``dask`` to ``fit`` a ``Pipeline`` in ensemble and predict from many models
 
 **NOTE** : To follow along, make sure you follow the :ref:`Prerequisites`.  The LANDSAT sample used here can be found in the `AWS S3 LANDSAT bucket here`_.
 
-``elm.readers`` Walk-Through
+``earthio`` Walk-Through
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 First the notebook sets some environment variables related to usage of a ``dask-distributed`` ``Client`` and the path to the GeoTiff example files from `elm-data`_:
@@ -38,7 +36,7 @@ Each GeoTiff file has 1 raster (band of LANDSAT data):
 
 See more inforation on ``ElmStore`` in :doc:`ElmStore<elm-store>`.
 
-``elm.readers.BandSpec``
+``earthio.BandSpec``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Using a list of ``BandSpec`` objects, as shown below, is how one can control which bands, or individual GeoTiff files, become the sample dimensions for learning:
@@ -57,7 +55,7 @@ Check the ``repr`` of the ``BandSpec`` objects to see all possible arguments con
 
 .. image:: img/landsat_004.png
 
-``elm.readers.load_array``
+``earthio.load_array``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ``load_array`` aims to find a file reader for a ``NetCDF``, ``HDF4``, ``HDF5``, or GeoTiff source.

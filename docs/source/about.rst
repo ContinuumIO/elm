@@ -43,7 +43,7 @@ The developers do not promise backwards compatibility with future versions.
 Next steps
 ----------
 
-.. _Try the example notebooks: http://github.com/ContinuumIO/elm-examples
+.. _Try the example notebooks: https://github.com/ContinuumIO/elm/tree/master/examples
 
 * :doc:`Install elm<install>`
 * `Try the example notebooks`_

@@ -14,7 +14,7 @@ It is helpful to first read the section Data Sources for a :doc:`Pipeline<pipeli
 Define a Sampler
 ----------------
 
-.. _full script can be found here: https://github.com/ContinuumIO/elm-examples/blob/master/scripts/api_example.py
+.. _full script can be found here: https://github.com/ContinuumIO/elm/blob/master/examples/api_example.py
 
 The example below uses a ``sampler`` function and ``args_list`` (list of unpackable args to ``sampler``) to fit to many samples.  The `full script can be found here`_.  First the script does some imports and sets up a ``sampler`` function that uses ``band_specs`` (see also :doc:`ElmStore<elm-store>`) to select a subset of bands in ``HDF4`` files.
 
@@ -27,9 +27,9 @@ The example below uses a ``sampler`` function and ``args_list`` (list of unpacka
     from elm.config.dask_settings import client_context
     from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
     from elm.pipeline import steps, Pipeline
-    from elm.readers import *
+    from earthio import *
     from elm.sample_util.band_selection import select_from_file
-    from elm.sample_util.metadata_selection import example_meta_is_day
+    from earthio.metadata_selection import example_meta_is_day
 
     ELM_EXAMPLE_DATA_PATH = os.environ['ELM_EXAMPLE_DATA_PATH']
 
