@@ -27,10 +27,6 @@ matrix:
   # The build result is determined as soon as the required builds pass/fail
   fast_finish: true
 
-branches:
-  only:
-    - master
-
 before_install:
   - mkdir -p $ELM_EXAMPLE_DATA_PATH
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
@@ -45,16 +41,13 @@ script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
-  email: false
-  on_success: change
-  on_failure: always
   flowdock:
     secure: "UschfvG2l4XTIJpCvLKpwzBKb2Pszev65r0Usz4Ft4RahG/Rzx8wn9H8/blpMnvnvA8+2CANgUvUb+GUKZd+sKiWA5QdlYKZMIj8KIVzmwQltpiN0nFzhyrZJw4zuT5eTDpo4/gKrxO/ChhyUnqIANyXncFbAg3YKpngB+sqCfjwoUK2w/2wMpINH0ZVhQX8CnbQtSl5kGyejqBWPORKhtHsVREHsIjP/dWyMUHNX5mUEVF8ORYX3+gHuYbLNwxuA7ilX9iozzJiQkb24tZYFBcVq7YcnvzdgCVTER9fBGc9yWs+OPuKamdK6ngHLkC3o/855S/a65C3/IDKQf31cWcBoavYy5mmn1RMFOIEynyKpgfzSrCE+yrENmoC4CE+Gk4VSQoymdoa0YnndM+1XdXqlJpfmIajbPghIT0+p6TRao/wV10dIN3a6FkzNEZ0RWCITRvWhbs1Wvhy8RtFiL09R3gXm5BhoIek03O0ni82XZTyv6wdVd1Xb5E+7LEeofipNqsisAmK8+HZpvDNsuItbldaaLOv+pe4G2yTNbJDN+JyNHlbp2zhYoL4TbnKGOnRBcZh/cM+B2WtWF+qkBL+AFpnKK/tn+D1b+AlURQz4/zTX/Yz3kLZRB8ZL17fxpwMWgGbG7cf58A1r7cp6ajQpRVA7m2nHlcCnNn9VWA="
 
 deploy:
   - provider: script
     script:
-      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t ${BINSTAR_TOKEN} --user gbrener --label dev
+      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t $BINSTAR_TOKEN --user gbrener --label dev
     #on:
     #  tags: true
     skip_cleanup: true
