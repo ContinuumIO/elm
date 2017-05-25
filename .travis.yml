@@ -2,7 +2,7 @@ language: python
 
 dist: trusty
 
-matrix:
+env:
   global:
     - secure: "W/arbL8Ef3UMu1kTE/IzyLneId69DTtECr6O4GbBH4n4w7jJB/LZqkYJFsUsIbo0yZ48XxHAxkiFIjxiKSKjLW+evOzULu5n+hVNJlH+TFzngNfT2B/eiuWVTBs+aSAQpSO9gGjBoIHy5/2c0pPBecLPVb3dYIkk7AzxXKf/t2ZB+cKQtbZKa8muFjQ8a5cM1iaVc3j/3weAaywRnErV7BS8DdsfpsTLD4tYMHgE/c34YItUBRUqurUdgiETZA8Y+vJ+OzB42p25sTfZPpCJZ3DgR/3FCxo6dhaGs30H5wXX/kwBMF8B2lX6ZIo6MuwxOcSHp689ud6ydQ8s8LpjiFvLAA2Z1ra5J3BnkDcAcFxcnp7RRXSzQEkK4OD+nzLTsI9Ehtbnd8TE0wiUqj1c+4FRXZlm188dZvG3i4+8QPV/XY93xJntCzVgtGN6DsvqKxK86AtpLld7fRcO6+wQ/EwklROhGUYLPncZu9iAKE+J8s1seFSj7UCyMqYwCB8dbSKgRoOD/Py0BL+ou80V3aKRtdeGwOPssLDfGA288NWpU0lFkXwCzuZCzTU75kb2jt5dPXYVkjn/MDYa5GkGG5tP+YaC4Npa5V03aUdLCZ5W0ZI0CI8+j4H/bX3vgdWxrkokSvkDyIcpMRZ29w29rmMDHphbBRrJ84/b2jJHdTE="
     - EARTHIO_VERSION=master
@@ -11,6 +11,7 @@ matrix:
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
     - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
 
+matrix:
   include:
     - os: osx
       env: PYTHON=3.6 NUMPY=1.12
