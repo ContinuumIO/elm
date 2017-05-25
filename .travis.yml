@@ -4,7 +4,6 @@ dist: trusty
 
 env:
   global:
-    - secure: "W/arbL8Ef3UMu1kTE/IzyLneId69DTtECr6O4GbBH4n4w7jJB/LZqkYJFsUsIbo0yZ48XxHAxkiFIjxiKSKjLW+evOzULu5n+hVNJlH+TFzngNfT2B/eiuWVTBs+aSAQpSO9gGjBoIHy5/2c0pPBecLPVb3dYIkk7AzxXKf/t2ZB+cKQtbZKa8muFjQ8a5cM1iaVc3j/3weAaywRnErV7BS8DdsfpsTLD4tYMHgE/c34YItUBRUqurUdgiETZA8Y+vJ+OzB42p25sTfZPpCJZ3DgR/3FCxo6dhaGs30H5wXX/kwBMF8B2lX6ZIo6MuwxOcSHp689ud6ydQ8s8LpjiFvLAA2Z1ra5J3BnkDcAcFxcnp7RRXSzQEkK4OD+nzLTsI9Ehtbnd8TE0wiUqj1c+4FRXZlm188dZvG3i4+8QPV/XY93xJntCzVgtGN6DsvqKxK86AtpLld7fRcO6+wQ/EwklROhGUYLPncZu9iAKE+J8s1seFSj7UCyMqYwCB8dbSKgRoOD/Py0BL+ou80V3aKRtdeGwOPssLDfGA288NWpU0lFkXwCzuZCzTU75kb2jt5dPXYVkjn/MDYa5GkGG5tP+YaC4Npa5V03aUdLCZ5W0ZI0CI8+j4H/bX3vgdWxrkokSvkDyIcpMRZ29w29rmMDHphbBRrJ84/b2jJHdTE="
     - EARTHIO_VERSION=master
     - EARTHIO_INSTALL_METHOD="conda"
     - EARTHIO_TEST_ENV=earth-test-env
@@ -41,13 +40,14 @@ script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
-  flowdock:
-    secure: "UschfvG2l4XTIJpCvLKpwzBKb2Pszev65r0Usz4Ft4RahG/Rzx8wn9H8/blpMnvnvA8+2CANgUvUb+GUKZd+sKiWA5QdlYKZMIj8KIVzmwQltpiN0nFzhyrZJw4zuT5eTDpo4/gKrxO/ChhyUnqIANyXncFbAg3YKpngB+sqCfjwoUK2w/2wMpINH0ZVhQX8CnbQtSl5kGyejqBWPORKhtHsVREHsIjP/dWyMUHNX5mUEVF8ORYX3+gHuYbLNwxuA7ilX9iozzJiQkb24tZYFBcVq7YcnvzdgCVTER9fBGc9yWs+OPuKamdK6ngHLkC3o/855S/a65C3/IDKQf31cWcBoavYy5mmn1RMFOIEynyKpgfzSrCE+yrENmoC4CE+Gk4VSQoymdoa0YnndM+1XdXqlJpfmIajbPghIT0+p6TRao/wV10dIN3a6FkzNEZ0RWCITRvWhbs1Wvhy8RtFiL09R3gXm5BhoIek03O0ni82XZTyv6wdVd1Xb5E+7LEeofipNqsisAmK8+HZpvDNsuItbldaaLOv+pe4G2yTNbJDN+JyNHlbp2zhYoL4TbnKGOnRBcZh/cM+B2WtWF+qkBL+AFpnKK/tn+D1b+AlURQz4/zTX/Yz3kLZRB8ZL17fxpwMWgGbG7cf58A1r7cp6ajQpRVA7m2nHlcCnNn9VWA="
+  flowdock: $FD_TOKEN
+    on_success: change
+    on_failure: always
 
 deploy:
   - provider: script
     script:
-      - conda install --name root anaconda-client && conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t $BINSTAR_TOKEN --user gbrener --label dev
+      - conda install --name root anaconda-client && conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t $ANACONDA_UPLOAD_TOKEN --user $ANACONDA_UPLOAD_USER --label dev
     #on:
     #  tags: true
     edge: true
