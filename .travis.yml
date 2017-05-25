@@ -5,6 +5,11 @@ dist: trusty
 matrix:
   global:
     - secure: "W/arbL8Ef3UMu1kTE/IzyLneId69DTtECr6O4GbBH4n4w7jJB/LZqkYJFsUsIbo0yZ48XxHAxkiFIjxiKSKjLW+evOzULu5n+hVNJlH+TFzngNfT2B/eiuWVTBs+aSAQpSO9gGjBoIHy5/2c0pPBecLPVb3dYIkk7AzxXKf/t2ZB+cKQtbZKa8muFjQ8a5cM1iaVc3j/3weAaywRnErV7BS8DdsfpsTLD4tYMHgE/c34YItUBRUqurUdgiETZA8Y+vJ+OzB42p25sTfZPpCJZ3DgR/3FCxo6dhaGs30H5wXX/kwBMF8B2lX6ZIo6MuwxOcSHp689ud6ydQ8s8LpjiFvLAA2Z1ra5J3BnkDcAcFxcnp7RRXSzQEkK4OD+nzLTsI9Ehtbnd8TE0wiUqj1c+4FRXZlm188dZvG3i4+8QPV/XY93xJntCzVgtGN6DsvqKxK86AtpLld7fRcO6+wQ/EwklROhGUYLPncZu9iAKE+J8s1seFSj7UCyMqYwCB8dbSKgRoOD/Py0BL+ou80V3aKRtdeGwOPssLDfGA288NWpU0lFkXwCzuZCzTU75kb2jt5dPXYVkjn/MDYa5GkGG5tP+YaC4Npa5V03aUdLCZ5W0ZI0CI8+j4H/bX3vgdWxrkokSvkDyIcpMRZ29w29rmMDHphbBRrJ84/b2jJHdTE="
+    - EARTHIO_VERSION=master
+    - EARTHIO_INSTALL_METHOD="conda"
+    - EARTHIO_TEST_ENV=earth-test-env
+    - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
+    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
 
   include:
     - os: osx
@@ -28,12 +33,8 @@ branches:
     - master
 
 before_install:
-  - export EARTHIO_VERSION=master
-  - export EARTHIO_INSTALL_METHOD="conda"
-  - export EARTHIO_TEST_ENV=earth-test-env
-  - export ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-  - export EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
-  - mkdir -p $ELM_EXAMPLE_DATA_PATH; rm -rf $ELM_EXAMPLE_DATA_PATH/*
+  - mkdir -p $ELM_EXAMPLE_DATA_PATH
+  - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 install:
   - MAKE_MINICONDA=1 . build_elm_env.sh
@@ -41,7 +42,6 @@ install:
 script:
   - cd $ELM_BUILD_DIR
   - . activate $EARTHIO_TEST_ENV
-  - echo ELM_EXAMPLE_DATA_PATH is $ELM_EXAMPLE_DATA_PATH
   - py.test -m 'not slow' -v
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
@@ -54,7 +54,8 @@ notifications:
 
 deploy:
   - provider: script
-    script: anaconda upload --token ${BINSTAR_TOKEN} --user elm --label dev $CONDA_PREFIX/../../conda-bld/linux-64/elm-*.tar.bz2
+    script:
+      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload --token ${BINSTAR_TOKEN} --user elm --label dev
     #on:
     #  tags: true
     skip_cleanup: true
