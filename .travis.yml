@@ -40,9 +40,9 @@ script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
+  on_success: change
+  on_failure: always
   flowdock: $FD_TOKEN
-    on_success: change
-    on_failure: always
 
 deploy:
   - provider: script
