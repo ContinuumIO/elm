@@ -14,6 +14,8 @@ Follow the instructions for installation of ``elm`` and the ``elm-env`` conda en
 
 Also, define the environment variable ``ELM_EXAMPLE_DATA_PATH`` to be your full path to local clone of ``elm-data``
 
+.. _notebooks-with-elm:
+
 Jupyter (IPython) Notebooks with ``elm``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

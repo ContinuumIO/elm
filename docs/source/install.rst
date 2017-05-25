@@ -25,7 +25,7 @@ To install ``elm`` from `source <https://github.com/ContinuumIO/elm>`_ and quick
 
     git clone https://github.com/ContinuumIO/elm
     cd elm
-    export ELM_EXAMPLE_DATA_PATH=/home/peter/elm-data
+    export ELM_EXAMPLE_DATA_PATH=~/elm-data
     PYTHON_TEST_VERSION=3.5 EARTHIO_INSTALL_METHOD=conda . build_elm_env.sh
     python -c "from earthio import *;from elm import *"
 
@@ -33,7 +33,7 @@ Add the following ``ELM_EXAMPLE_DATA_PATH`` to your .bashrc or environment to av
 
 .. code-block:: bash
 
-    export ELM_EXAMPLE_DATA_PATH=/home/peter/elm-data
+    export ELM_EXAMPLE_DATA_PATH=~/elm-data
 
 Do the tutorials and examples:
 
