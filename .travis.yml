@@ -4,7 +4,6 @@ dist: trusty
 
 env:
   global:
-    - secure: "W/arbL8Ef3UMu1kTE/IzyLneId69DTtECr6O4GbBH4n4w7jJB/LZqkYJFsUsIbo0yZ48XxHAxkiFIjxiKSKjLW+evOzULu5n+hVNJlH+TFzngNfT2B/eiuWVTBs+aSAQpSO9gGjBoIHy5/2c0pPBecLPVb3dYIkk7AzxXKf/t2ZB+cKQtbZKa8muFjQ8a5cM1iaVc3j/3weAaywRnErV7BS8DdsfpsTLD4tYMHgE/c34YItUBRUqurUdgiETZA8Y+vJ+OzB42p25sTfZPpCJZ3DgR/3FCxo6dhaGs30H5wXX/kwBMF8B2lX6ZIo6MuwxOcSHp689ud6ydQ8s8LpjiFvLAA2Z1ra5J3BnkDcAcFxcnp7RRXSzQEkK4OD+nzLTsI9Ehtbnd8TE0wiUqj1c+4FRXZlm188dZvG3i4+8QPV/XY93xJntCzVgtGN6DsvqKxK86AtpLld7fRcO6+wQ/EwklROhGUYLPncZu9iAKE+J8s1seFSj7UCyMqYwCB8dbSKgRoOD/Py0BL+ou80V3aKRtdeGwOPssLDfGA288NWpU0lFkXwCzuZCzTU75kb2jt5dPXYVkjn/MDYa5GkGG5tP+YaC4Npa5V03aUdLCZ5W0ZI0CI8+j4H/bX3vgdWxrkokSvkDyIcpMRZ29w29rmMDHphbBRrJ84/b2jJHdTE="
     - EARTHIO_VERSION=master
     - EARTHIO_INSTALL_METHOD="conda"
     - EARTHIO_TEST_ENV=earth-test-env
@@ -27,10 +26,6 @@ matrix:
   # The build result is determined as soon as the required builds pass/fail
   fast_finish: true
 
-branches:
-  only:
-    - master
-
 before_install:
   - mkdir -p $ELM_EXAMPLE_DATA_PATH
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
@@ -45,16 +40,15 @@ script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
-  email: false
   on_success: change
   on_failure: always
-  flowdock:
-    secure: "ZWA9YrhDi9SQKSbjgEyl6cx1XgDDGASJz3PDOV+94kMjQpZvpTus+Z913wrpWw1FoerzieX5bDOM0gryszW6qHDrIg3eopFKGI+r9Hpm8pNxAN3PFwZMswpjE54yfVOLLVjW0/e9JbYtTUcn3mIwVIEHmzdiwI8CjPhrXs9B2r9c1YWWFi6iJIscrNvAirmiuTuPqzqxyF/MQK6VLwTJGRy3qmO1v/UfW3ohn4PDL1hUSZQTXcfsJQTmOlc2sJFO8VnzwN/phwck/XbNf8wFVROQm2J//PW9te8siwq/ttNk2ip7RYstvab16z1fQaeenZWiEz6GKEk2G3ZcItyA5SRdALHgObPWvbDAF+TUI42KG+WgiaC3qgxLw0hQNah+sFLUQIbI1salypE3u1lNIMgxj3PMLs0+WU1lQA49JvyOObL2oo62wPZB5p3vmhUBdIWpVjailH2fgpIYe/eZ7WQRPh0oUe8+xek1AER/mV1NyshOWz6MRvUUBT12gLgNM2n2Ogz2ixjP8VXoRECewXYjkLIOKahqxObQYwBGjFZKbNhBm4Adwc3KXXf6paYGpRDcbSyNNxZ7Tv/FyVgxnN2+O+FKKXfFgax9568Pzj1z4oqDLwXLpv2ecUYTVNPOlzjOGFc+IrGDbzr9PKn4SXsrLErc5xZKEXE6hNFywO8="
+  flowdock: $FD_TOKEN
 
 deploy:
   - provider: script
     script:
-      - conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs anaconda upload -t ${BINSTAR_TOKEN} --user gbrener --label dev
-    #on:
-    #  tags: true
+      - conda install --name root anaconda-client python=3.5 conda-build==2.0.4 && conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec anaconda -t $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev {} \+
+    on:
+      tags: false
+      all_branches: true
     skip_cleanup: true
