@@ -7,8 +7,8 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 * :doc:`about`
 * :doc:`install`
 * :doc:`use-cases`
-* :doc:`elm-hello-world.rst`
-* :doc:`clustering_example.rst`
+* :doc:`elm-hello-world`
+* :doc:`clustering_example`
 * :doc:`examples`
 
 .. toctree::
