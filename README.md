@@ -1,4 +1,4 @@
-# NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pipeline
+# NASA SBIR Phase I & II - Open Source Parallel Image Analysis and Machine Learning Pipeline
 
 ## Using the Code
 
