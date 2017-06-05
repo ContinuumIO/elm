@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 
 import pytest
@@ -10,5 +12,4 @@ if bool(int(os.environ.get('IS_TRAVIS', 1))):
 
 else:
     @pytest.fixture(autouse=True)
-    def no_dask_distributed_on_travis(monkeypatch):
-        return
+        return    def no_dask_distributed_on_travis(monkeypatch):

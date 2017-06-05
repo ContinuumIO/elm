@@ -31,6 +31,7 @@ requirements:
     - scipy
     - xarray
     - yaml
+    - six
 
 about:
   home: http://github.com/ContinuumIO/elm

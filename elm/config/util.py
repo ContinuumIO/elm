@@ -1,9 +1,13 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 from pkg_resources import resource_stream, Requirement, resource_filename
 import json
 import os
 import traceback
 import yaml
+
+from six import string_types
 
 
 EXAMPLE_CALLABLE = 'numpy:median'
@@ -46,7 +50,7 @@ def import_callable(func_or_not, required=True, context=''):
     if callable(func_or_not):
         return func_or_not
     context = context + ' -  e' if context else 'E'
-    if func_or_not and (not isinstance(func_or_not, str) or func_or_not.count(':') != 1):
+    if func_or_not and (not isinstance(func_or_not, string_types) or func_or_not.count(':') != 1):
         raise ElmConfigError('{}xpected {} to be an module:callable '
                                'if given, e.g. {}'.format(context, repr(func_or_not), EXAMPLE_CALLABLE))
     if not func_or_not and not required:

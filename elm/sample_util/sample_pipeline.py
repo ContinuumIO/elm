@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 -----------------------------------
 
@@ -31,6 +33,8 @@ try:
     from earthio import load_meta, load_array
 except ImportError:
     load_array = load_meta = None
+
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +85,7 @@ def create_sample_from_data_source(config=None, **data_source):
     if not isinstance(sampler_args, (tuple, list)):
         sampler_args = (sampler_args,)
     reader_name = data_source.get('reader') or None
-    if isinstance(reader_name, str) and reader_name:
+    if isinstance(reader_name, string_types) and reader_name:
         if config and reader_name in config.readers:
             reader = config.readers[reader_name]
         _load_meta = partial(load_meta, reader=reader_name)

@@ -28,6 +28,7 @@ dependencies:
  - tblib
  - xarray
  - yaml
+ - six
  - pip:
    - deap==1.0.1
    - graphviz
