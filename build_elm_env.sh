@@ -28,8 +28,8 @@ build_elm_env(){
         return 1
     fi
     conda config --set always_yes true
-    conda update -n root conda conda-build
-    conda config --set anaconda_upload no
+    conda install -n root conda conda-build==2.0.4
+    CONDA config --set anaconda_upload no
     conda remove elm &> /dev/null
     pip uninstall -y elm &> /dev/null
     cd $ELM_BUILD_DIR
