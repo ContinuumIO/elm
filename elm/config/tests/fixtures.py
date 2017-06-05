@@ -12,4 +12,5 @@ if bool(int(os.environ.get('IS_TRAVIS', 1))):
 
 else:
     @pytest.fixture(autouse=True)
-        return    def no_dask_distributed_on_travis(monkeypatch):
+    def no_dask_distributed_on_travis(monkeypatch):
+        return
