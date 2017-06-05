@@ -17,8 +17,6 @@ build_elm_env(){
     echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION
     set +e
-    export PYTHON=${PYTHON:-3.5}
-    export NUMPY=${NUMPY:-1.11}
     IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
     set -e
     cd $ELM_BUILD_DIR
