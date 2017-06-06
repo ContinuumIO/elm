@@ -60,6 +60,9 @@ def import_callable(func_or_not, required=True, context=''):
                                'e.g. {} but got {}'.format(context, EXAMPLE_CALLABLE, repr(func_or_not)))
     module, func = func_or_not.split(':')
     try:
+        # The import statement in Python 2 expects (decoded) str types instead of unicode strings
+        if six.PY2 and isinstance(func, unicode):
+            func = func.encode('utf-8')
         mod = __import__(module, globals(), locals(), [func], 0)
     except Exception as e:
         tb = traceback.format_exc()
