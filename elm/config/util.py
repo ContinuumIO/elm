@@ -7,7 +7,7 @@ import os
 import traceback
 import yaml
 
-from six import string_types
+from six import string_types, PY2
 
 
 EXAMPLE_CALLABLE = 'numpy:median'
@@ -61,7 +61,7 @@ def import_callable(func_or_not, required=True, context=''):
     module, func = func_or_not.split(':')
     try:
         # The import statement in Python 2 expects (decoded) str types instead of unicode strings
-        if six.PY2 and isinstance(func, unicode):
+        if PY2 and isinstance(func, unicode):
             func = func.encode('utf-8')
         mod = __import__(module, globals(), locals(), [func], 0)
     except Exception as e:
