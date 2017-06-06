@@ -34,7 +34,7 @@ try:
 except ImportError:
     load_array = load_meta = None
 
-from six import string_types, PY2
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -122,10 +122,7 @@ def make_pipeline_steps(config, pipeline):
             step_cls = action
         elif 'feature_selection' in action:
             _feature_selection = copy.deepcopy(config.feature_selection[action['feature_selection']])
-            if PY2:
-                kw = _feature_selection[:]
-            else:
-                kw = _feature_selection.copy()
+            kw = _feature_selection.copy()
             kw.update(action)
             scaler = _feature_selection['method']
             scaler = import_callable(getattr(skfeat, scaler, scaler))
