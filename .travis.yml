@@ -5,7 +5,7 @@ dist: trusty
 env:
   global:
     - EARTHIO_VERSION=master
-    - EARTHIO_INSTALL_METHOD="conda"
+    - EARTHIO_INSTALL_METHOD=""
     - EARTHIO_TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
     - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
@@ -28,7 +28,7 @@ before_install:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 install:
-  - MAKE_MINICONDA=1 . build_elm_env.sh
+  - MAKE_MINICONDA=1 ./build_elm_env.sh
 
 script:
   - cd $ELM_BUILD_DIR
