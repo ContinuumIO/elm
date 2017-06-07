@@ -1,8 +1,8 @@
-name: elm-env-27
+name: elm-env
 channels:
  - conda-forge # essential for rasterio on osx
 dependencies:
- - python=2.7
+ - python
  - attrs
  - bokeh
  - dask
@@ -28,6 +28,7 @@ dependencies:
  - tblib
  - xarray
  - yaml
+ - six
  - pip:
    - deap==1.0.1
    - graphviz

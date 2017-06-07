@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 
 import contextlib
 import copy
@@ -20,6 +22,8 @@ import elm.sample_util.sample_pipeline as pipeline
 import elm.pipeline as elm_pipeline
 import elm.sample_util.transform as elmtransform
 from elm.scripts.main import main as elm_main
+
+from six import string_types
 
 old_ensemble = elm_pipeline.ensemble
 old_predict = elm_pipeline.predict_many
@@ -93,7 +97,7 @@ def example_get_y_func_continuous(flat_sample, **kwargs):
 
 def test_one_config(config=None, cwd=None):
 
-    if not isinstance(config, str):
+    if not isinstance(config, string_types):
         config_str = yaml.dump(config or DEFAULTS)
     else:
         config_str = config
