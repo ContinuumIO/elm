@@ -16,6 +16,10 @@ env:
     - PYTHON=2.7 NUMPY=1.11
 
 matrix:
+  # A conda-build issue prevents Python 3.6 support
+  allow_failures:
+    - env: PYTHON=3.6 NUMPY=1.12
+
   # The build result is determined as soon as the required builds pass/fail
   fast_finish: true
 
