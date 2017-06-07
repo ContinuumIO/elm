@@ -25,7 +25,7 @@ else
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda env create -n $EARTHIO_TEST_ENV -f environment.yml
-    conda install -n $EARTHIO_TEST_ENV -c elm -y earthio
+    conda install -n $EARTHIO_TEST_ENV -c elm $EARTHIO_CHANNEL_STR -y earthio
 fi
 
 source activate $EARTHIO_TEST_ENV
