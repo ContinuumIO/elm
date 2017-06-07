@@ -24,8 +24,11 @@ else
     export PATH="$HOME/miniconda/bin:$PATH"
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
-    conda create -n $EARTHIO_TEST_ENV -c elm $EARTHIO_CHANNEL_STR -y python=$PYTHON numpy=$NUMPY earthio
+    conda env create -n $EARTHIO_TEST_ENV -f environment.yml
+    conda install -n $EARTHIO_TEST_ENV -c elm -y earthio
 fi
+
+source activate $EARTHIO_TEST_ENV
 
 conda config --set always_yes true
 conda config --set anaconda_upload no
@@ -39,7 +42,6 @@ echo conda "env" list is ------
 conda env list
 
 cd $ELM_BUILD_DIR
-source activate $EARTHIO_TEST_ENV
 conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install $EARTHIO_CHANNEL_STR --use-local elm
 
