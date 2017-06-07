@@ -15,7 +15,6 @@ if [ \( "x$EARTHIO_INSTALL_METHOD" = "xconda" \) -o \( "x$EARTHIO_INSTALL_METHOD
 
     set +e
     IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh
-    source activate $EARTHIO_TEST_ENV
     set -e
 else
     if [ ! -d $HOME/miniconda ]; then
@@ -26,20 +25,21 @@ else
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda create -n $EARTHIO_TEST_ENV -c elm $EARTHIO_CHANNEL_STR -y python=$PYTHON numpy=$NUMPY earthio
-    source activate $EARTHIO_TEST_ENV
 fi
 
 conda config --set always_yes true
-conda install -n root conda conda-build
 conda config --set anaconda_upload no
-conda remove elm &> /dev/null
-pip uninstall -y elm &> /dev/null
+conda install -n root conda conda-build
+
+conda remove elm &> /dev/null || true
+pip uninstall -y elm &> /dev/null || true
 echo conda list is ------
 conda list
 echo conda "env" list is ------
 conda env list
 
 cd $ELM_BUILD_DIR
+source activate $EARTHIO_TEST_ENV
 conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install $EARTHIO_CHANNEL_STR --use-local elm
 
