@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import copy
 import os
 import pytest
@@ -9,10 +11,19 @@ from elm.config.config_info import *
 from elm.config import ElmConfigError, ConfigParser
 from elm.config.tests.fixtures import *
 
-NOT_DICT = (2, 'abc', 2.2, [2,])
-NOT_INT = ({2:2}, [2, 2], 'abc', 2.2,)
-NOT_LIST = ({2:2}, 2, 2.2, 'abc')
-NOT_FUNCTION = 'not_an_importable_function:abc'
+from six import PY2
+
+# "Python 2 + unicode_literals" breaks the YAML parser
+if PY2:
+    NOT_DICT = (2, 'abc'.encode('utf-8'), 2.2, [2,])
+    NOT_INT = ({2:2}, [2, 2], 'abc'.encode('utf-8'), 2.2,)
+    NOT_LIST = ({2:2}, 2, 2.2, 'abc'.encode('utf-8'))
+    NOT_FUNCTION = 'not_an_importable_function:abc'.encode('utf-8')
+else:
+    NOT_DICT = (2, 'abc', 2.2, [2,])
+    NOT_INT = ({2:2}, [2, 2], 'abc', 2.2,)
+    NOT_LIST = ({2:2}, 2, 2.2, 'abc')
+    NOT_FUNCTION = 'not_an_importable_function:abc'
 
 def dump_config(config):
     tmp = tempfile.mkdtemp()

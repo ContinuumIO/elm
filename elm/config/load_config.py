@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 This module is used by the command line interface of elm
 to parse yaml ensemble or evolutionary algorithm configs.
@@ -14,6 +16,8 @@ import numpy as np
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre
 import yaml
+
+from six import string_types
 
 try:
     from earthio.util import BandSpec
@@ -136,7 +140,7 @@ class ConfigParser(object):
         if callable(func_or_not):
             return func_or_not
         if func_or_not or (not func_or_not and required):
-            if not isinstance(func_or_not, str):
+            if not isinstance(func_or_not, string_types):
                 raise ElmConfigError('In {} expected {} to be a '
                                        'string'.format(func_or_not, context))
         return import_callable(func_or_not, required=required, context=context)
@@ -168,13 +172,13 @@ class ConfigParser(object):
         if not band_specs or not isinstance(band_specs, (tuple, list)):
             raise ElmConfigError('data_sources:{} gave band_specs which are not a '
                                    'list {}'.format(name, band_specs))
-        if not all(isinstance(bs, (dict, str)) for bs in band_specs):
+        if not all(isinstance(bs, (dict, string_types)) for bs in band_specs):
             raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
 
         new_band_specs = []
         field_names = [x.name for x in attr.fields(BandSpec)]
         for band_spec in band_specs:
-            if isinstance(band_spec, str):
+            if isinstance(band_spec, string_types):
                 new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
                                                 'search_value': band_spec,
                                                 'name': band_spec}))
@@ -188,7 +192,7 @@ class ConfigParser(object):
         '''Validate one data source within "data_sources"
         section of config'''
 
-        if not name or not isinstance(name, str):
+        if not name or not isinstance(name, string_types):
             raise ElmConfigError('Expected a "name" key in {}'.format(d))
         sampler = ds.get('sampler')
         if sampler:

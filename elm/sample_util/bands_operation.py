@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from functools import partial
 
 import xarray as xr
@@ -7,9 +9,13 @@ except:
     ElmStore = None # TODO handle case where earthio is not installed
 from elm.sample_util.change_coords import ModifySample
 
-def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwargs):
+from six import PY2
 
-    bands = X.band_order.copy()
+def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwargs):
+    if PY2:
+        bands = X.band_order[:]
+    else:
+        bands = X.band_order.copy()
     es = {}
     if not spec:
         raise ValueError('Expected "spec" in kwargs, e.g. {"ndvi": ["band_4", "band_3]}')
@@ -28,7 +34,8 @@ def two_bands_operation(method, X, y=None, sample_weight=None, spec=None, **kwar
         es[key] = new
         bands.append(key)
     Xnew = ElmStore(xr.merge([ElmStore(es, add_canvas=False), X]), add_canvas=False)
-    Xnew.attrs.update(X.attrs.copy())
+    xattrs_copy = X.attrs.copy()
+    Xnew.attrs.update(xattrs_copy)
     Xnew.attrs['band_order'] = bands
     return (Xnew, y, sample_weight)
 

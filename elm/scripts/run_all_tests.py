@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 from argparse import Namespace, ArgumentParser
 import contextlib
 import glob
@@ -19,6 +21,7 @@ from elm.pipeline.tests.util import tmp_dirs_context, test_one_config
 from elm.scripts.main import main, cli
 from elm.config.env import parse_env_vars
 
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +46,7 @@ ETIMES = {}
 @contextlib.contextmanager
 def env_patch(**new_env):
     old_env = {k: v for k, v in os.environ.copy().items()
-               if k in new_env if isinstance(k, str)}
+               if k in new_env if isinstance(k, string_types)}
     try:
         os.environ.update({str(k): str(v) for k,v in new_env.items()})
         yield os.environ
@@ -53,7 +56,7 @@ def env_patch(**new_env):
 
 def print_status(s, context):
     global STATUS_COUNTER
-    if isinstance(s, str) and 'XFAIL' in s:
+    if isinstance(s, string_types) and 'XFAIL' in s:
         logger.info('TEST_XFAIL\t{}\t{}'.format(s, context))
         STATUS_COUNTER['xfail'] += 1
     if not s:
