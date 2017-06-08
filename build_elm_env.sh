@@ -25,7 +25,7 @@ else
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda env create -n $EARTHIO_TEST_ENV -f environment.yml
-    conda install -n $EARTHIO_TEST_ENV -c elm $EARTHIO_CHANNEL_STR -y earthio
+    conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -y earthio
 fi
 
 source activate $EARTHIO_TEST_ENV
@@ -42,7 +42,7 @@ echo conda "env" list is ------
 conda env list
 
 cd $ELM_BUILD_DIR
-conda build $EARTHIO_CHANNEL_STR -c elm --python $PYTHON --numpy $NUMPY conda.recipe
+conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install $EARTHIO_CHANNEL_STR --use-local elm
 
 set +e

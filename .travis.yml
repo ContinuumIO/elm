@@ -8,7 +8,7 @@ env:
     - EARTHIO_INSTALL_METHOD=""
     - EARTHIO_TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
+    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev -c bioconda"
 
   matrix:
     - PYTHON=3.6 NUMPY=1.12
@@ -16,10 +16,6 @@ env:
     - PYTHON=2.7 NUMPY=1.11
 
 matrix:
-  # A conda-build issue prevents Python 3.6 support
-  allow_failures:
-    - env: PYTHON=3.6 NUMPY=1.12
-
   # The build result is determined as soon as the required builds pass/fail
   fast_finish: true
 
