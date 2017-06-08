@@ -42,7 +42,7 @@ echo conda "env" list is ------
 conda env list
 
 cd $ELM_BUILD_DIR
-conda build $EARTHIO_CHANNEL_STR -c local --python $PYTHON --numpy $NUMPY conda.recipe
+$HOME/miniconda/envs/$EARTHIO_TEST_ENV/bin/conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install $EARTHIO_CHANNEL_STR --use-local elm
 
 set +e
