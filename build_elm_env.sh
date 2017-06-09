@@ -23,18 +23,21 @@ else
     fi
     export PATH="$HOME/miniconda/bin:$PATH"
     source deactivate
+    conda config --set always_yes true
+    conda config --set anaconda_upload no
+    conda install -n root conda conda-build
+
+    # Create $EARTHIO_TEST_ENV
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda create -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -y python=$PYTHON numpy=$NUMPY earthio
-    conda install -n root conda conda-build
+
+    # Add earthio package to index
     mkdir -p ~/miniconda/conda-bld/linux-64/
     cp -av ~/miniconda/pkgs/earthio*.tar.bz2 ~/miniconda/conda-bld/linux-64/
     cd ~/miniconda/conda-bld
     conda index
     cd -
 fi
-
-conda config --set always_yes true
-conda config --set anaconda_upload no
 
 conda remove -n root elm &> /dev/null || true
 pip uninstall -y elm &> /dev/null || true
