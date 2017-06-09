@@ -25,6 +25,7 @@ else
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda create -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -y python=$PYTHON numpy=$NUMPY earthio
+    mkdir -p ~/miniconda/conda-bld/linux-64/
     cp -av ~/miniconda/pkgs/earthio*.tar.bz2 ~/miniconda/conda-bld/linux-64/
     cd ~/miniconda/conda-bld
     conda index
