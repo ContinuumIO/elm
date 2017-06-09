@@ -116,7 +116,17 @@ class DropNaRows(StepMixin):
         '''
 
     def fit_transform(self, X, y=None, sample_weight=None, **kwargs):
-        return (_drop_na_rows(X), y, sample_weight)
+        check_is_flat(X)
+        if y is not None:
+            if y.size != np.prod(y.shape) or y.size != X.flat.values.shape[0]:
+                msg = 'Found y size ({}) != X.flat.values.shape[0] ({})'
+                raise ValueError(msg.format(y.size, X.flat.values.shape[0]))
+        Xnew = _drop_na_rows(X)
+        if y is not None:
+            y = y[Xnew.flat.space.values]
+        if sample_weight is not None:
+            sample_weight = sample_weight[Xnew.space.values]
+        return (Xnew, y, sample_weight)
 
     transform = fit = fit_transform
 
