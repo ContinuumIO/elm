@@ -28,8 +28,7 @@ install:
 
 script:
   - cd $ELM_BUILD_DIR
-  - . activate $EARTHIO_TEST_ENV
-  - py.test -m 'not slow' -v
+  - ~/miniconda/envs/$EARTHIO_TEST_ENV/bin/py.test -m 'not slow' -v
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
