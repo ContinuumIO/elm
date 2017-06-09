@@ -25,23 +25,22 @@ else
     source deactivate
     conda env remove -n $EARTHIO_TEST_ENV || true
     conda create -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -y python=$PYTHON numpy=$NUMPY earthio
+    cp -av ~/miniconda/pkgs/earthio*.tar.bz2 ~/miniconda/conda-bld/linux-64/
+    cd ~/miniconda/conda-bld
+    conda index
+    cd -
 fi
 
 conda config --set always_yes true
 conda config --set anaconda_upload no
 conda install -n root conda conda-build
 
-source activate $EARTHIO_TEST_ENV
-
-conda remove elm &> /dev/null || true
+conda remove -n root elm &> /dev/null || true
 pip uninstall -y elm &> /dev/null || true
-echo conda list is ------
-conda list
-echo conda "env" list is ------
-conda env list
 
 cd $ELM_BUILD_DIR
-conda build $EARTHIO_CHANNEL_STR -c local --python $PYTHON --numpy $NUMPY conda.recipe
+
+conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local elm
 
 set +e
