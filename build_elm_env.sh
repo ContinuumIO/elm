@@ -45,6 +45,6 @@ pip uninstall -y elm &> /dev/null || true
 cd $ELM_BUILD_DIR
 
 conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
-conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local elm
+conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local python=$PYTHON numpy=$NUMPY elm
 
 set +e
