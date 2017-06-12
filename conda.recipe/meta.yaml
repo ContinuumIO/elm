@@ -31,6 +31,7 @@ requirements:
     - scipy
     - xarray
     - yaml
+    - six
 
 about:
   home: http://github.com/ContinuumIO/elm
@@ -49,4 +50,3 @@ test:
     - elm.pipeline.steps
     - elm.sample_util
     - elm.scripts
-

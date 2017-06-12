@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 import os
 import datetime
 import argparse
@@ -10,7 +12,7 @@ import shutil
 import atexit
 from elm.scripts import run_all_tests
 
-
+from six import string_types
 
 
 def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), examples_dir=os.path.join(os.getcwd())):
@@ -23,7 +25,7 @@ def reconstruct_cmdline(test_cmd, parser, args, elm_dir=os.getcwd(), examples_di
         elif val is not None:
             if isinstance(val, (list, tuple)):
                 val = ' '.join(val)
-            elif isinstance(val, (str,)):
+            elif isinstance(val, string_types):
                 val = '"{}"'.format(val)
             else:
                 raise ValueError('Not sure how to handle argument value of type {}'.format(type(val)))

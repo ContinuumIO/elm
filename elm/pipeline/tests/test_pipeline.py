@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 This tests Pipeline:
  * Ensures pipe.fit_transform always returns X, y, sample_weight tuple,

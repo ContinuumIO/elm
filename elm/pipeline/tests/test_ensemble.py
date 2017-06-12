@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 
 Tests usages like:
@@ -35,6 +37,8 @@ from elm.config.tests.fixtures import *
 from elm.pipeline import Pipeline, steps
 from elm.sample_util.make_blobs import random_elm_store
 from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
+
+from six import string_types
 
 ENSEMBLE_KWARGS = dict(ngen=2, init_ensemble_size=2,
                        saved_ensemble_size=2,
@@ -99,7 +103,7 @@ def _train_asserts(fitted, expected_len):
     ens = fitted.ensemble
     assert all(isinstance(x, tuple) and len(x) == 2 for x in ens)
     assert all(isinstance(x[1], Pipeline) for x in ens)
-    assert all(isinstance(x[0], str) and x[0] for x in ens)
+    assert all(isinstance(x[0], string_types) and x[0] for x in ens)
     assert len(fitted.ensemble) == expected_len
 
 

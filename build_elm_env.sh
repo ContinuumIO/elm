@@ -17,8 +17,6 @@ build_elm_env(){
     echo git checkout $EARTHIO_VERSION
     git checkout $EARTHIO_VERSION
     set +e
-    export PYTHON=${PYTHON:-3.5}
-    export NUMPY=${NUMPY:-1.11}
     IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh && source activate $EARTHIO_TEST_ENV
     set -e
     cd $ELM_BUILD_DIR
@@ -28,7 +26,7 @@ build_elm_env(){
         return 1
     fi
     conda config --set always_yes true
-    conda update -n root conda conda-build
+    conda install -n root conda conda-build
     conda config --set anaconda_upload no
     conda remove elm &> /dev/null
     pip uninstall -y elm &> /dev/null

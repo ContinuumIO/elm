@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 ----------------------
 
@@ -23,6 +25,8 @@ from elm.pipeline.pipeline import Pipeline
 from elm.pipeline.serialize import (serialize_prediction,
                                     serialize_pipe,
                                     load_pipe_from_tag)
+
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +60,7 @@ def config_to_pipeline(config, client=None):
             estimator = cls(**(train.get('model_init_kwargs') or {}))
             pipe_steps.append((step['train'], estimator))
             ensemble_kwargs = train.get('ensemble')
-            if isinstance(ensemble_kwargs, str):
+            if isinstance(ensemble_kwargs, string_types):
                 ensemble_kwargs = config.ensembles[ensemble_kwargs]
             ensemble_kwargs['client'] = client
         data_source = step['data_source']
