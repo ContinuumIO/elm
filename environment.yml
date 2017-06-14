@@ -29,8 +29,8 @@ dependencies:
  - xarray
  - yaml
  - six
+ - bioconda::deap
  - pip:
-   - deap==1.0.1
    - graphviz
    - pysptools
    - pypandoc
