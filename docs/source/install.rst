@@ -1,9 +1,9 @@
-Install ELM
-===========
+Installation
+============
 
 You can install elm with ``conda`` or by installing from source.
 
-Install from Conda
+Install with Conda
 ~~~~~~~~~~~~~~~~~~
 
 To install the latest release of ``elm`` and ``earthio`` do:

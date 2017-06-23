@@ -1,7 +1,16 @@
-About Ensemble Learning Models
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Why Elm?
+~~~~~~~~
 
-Ensemble Learning Models (``elm`` ) is a set of tools for parallel ensemble unsupervised and supervised machine learning, with a focus on data structures useful in climate science and satellite imagery.
+Ensemble Learning Models (elm) is a set of tools for creating multiple unsupervised and supervised machine learning models and training them in parallel on datasets too large to fit into RAM on a single machine, with a focus on applications in climate science, GIS, and satellite imagery.
+
+Some reasons for using elm over scikit-learn alone:
+
+- Parallelize ML pipelines across the cores of a single machine or compute cluster
+- Leverage out-of-core medium-to-large datasets, where data does not fit into RAM all at once
+- Work with N-dimensional climate data, instead of being limited to 2D representations
+- Read data from file formats popular to climate science and GIS, such as netCDF, HDF4, HDF5, Shapefiles, GeoJSON, and GeoTIFF
+
+More use-cases can be found `here <use-cases.html>`_.
 
 .. _dask-distributed: http://distributed.readthedocs.io/en/latest/
 

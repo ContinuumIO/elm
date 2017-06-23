@@ -1,6 +1,6 @@
-=====================================================================================
-NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pipeline
-=====================================================================================
+==========================================================================================
+NASA SBIR Phase I & II - Open Source Parallel Image Analysis and Machine Learning Pipeline
+==========================================================================================
 
 **Getting Started**
 
@@ -24,7 +24,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
    examples.rst
 
 
-**Data Structures**
+**Concepts**
 
 * :doc:`elm-store`
 * :doc:`pipeline`
@@ -33,7 +33,7 @@ NASA SBIR Phase I - Open Source Parallel Image Analysis and Machine Learning Pip
 .. toctree::
    :maxdepth: 1
    :hidden:
-   :caption: Data Structures
+   :caption: Concepts
 
    elm-store.rst
    pipeline.rst
