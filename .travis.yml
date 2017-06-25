@@ -27,7 +27,9 @@ install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
   - cd docs
   - ~/miniconda/bin/conda env update -f environment.yml -n $EARTHIO_TEST_ENV
-  - source activate $EARTHIO_TEST_ENV && make html && if [ "$TEST_DOCS" ]; then make doctest; fi
+  - source ~/miniconda/bin/activate $EARTHIO_TEST_ENV
+  - make html
+  - if [ "$TEST_DOCS" ]; then make doctest; fi
 
 script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
