@@ -1,5 +1,5 @@
-``elm`` Overview / Example
-==========================
+Tutorials
+=========
 
 This page walks through a ``Jupyter`` notebook using ``elm`` to ensemble fit K-Means and predict from all members of the ensemble.
 

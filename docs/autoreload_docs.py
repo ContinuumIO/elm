@@ -34,7 +34,7 @@ def watch_sources():
     file changes.
     """
     # Reuse the argparse instance from watchdog library
-    args = wdparser.parse_args(args=shlex.split('shell-command --patterns="*.rst" --ignore-patterns="build/*" --recursive --command="make html"'))
+    args = wdparser.parse_args(args=shlex.split('shell-command --patterns="*.rst" --ignore-patterns="build/*" --recursive --command="rm -rf build/* && make html"'))
     print('Watching for changes to files matching {} (excludes {})...'.format(args.patterns, args.ignore_patterns))
     # Wait for sources to change; execute `--command` option when they do
     shell_command(args)

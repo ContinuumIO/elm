@@ -1,7 +1,7 @@
-``elm`` Intro
-=============
+Quick Start
+===========
 
-This tutorial is a Hello World example with ``elm``
+The following steps generate a visualization using `elm` on a synthetic dataset. As development on `elm` continues we strive to condense this document into a smaller example. For now, it offers insight into `elm`'s customizability and extensive feature set.
 
 Step 1 - Choose Model(s)
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -61,13 +61,11 @@ Now we can use :doc:`fit_ensemble<fit-ensemble>` to fit to one or more samples a
 
 .. code-block:: python
 
-    with client_context() as client:
-        pipe.fit_ensemble(sampler=sampler,
-                          args_list=args_list,
-                          client=client,
-                          init_ensemble_size=2,
-                          models_share_sample=False,
-                          ngen=1)
+    pipe.fit_ensemble(sampler=sampler,
+                      args_list=args_list,
+                      init_ensemble_size=2,
+                      models_share_sample=False,
+                      ngen=1)
 
 The code block with :doc:`fit_ensemble<fit-ensemble>` above would show the ``repr`` of the ``Pipeline`` object as follows:
 
@@ -103,8 +101,7 @@ Step 4 - Call :doc:`predict_many<predict-many>`
 .. code-block:: python
 
     import matplotlib.pyplot as plt
-    with client_context() as client:
-        preds = pipe.predict_many(sampler=sampler, args_list=args_list, client=client)
+    preds = pipe.predict_many(sampler=sampler, args_list=args_list)
     example = preds[0]
     example.predict.plot.pcolormesh()
     plt.show()
