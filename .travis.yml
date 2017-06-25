@@ -12,7 +12,7 @@ env:
 
   matrix:
     - PYTHON=3.6 NUMPY=1.12
-    - PYTHON=3.5 NUMPY=1.11
+    - PYTHON=3.5 NUMPY=1.11 TEST_DOCS=1
     - PYTHON=2.7 NUMPY=1.11
 
 matrix:
@@ -27,9 +27,7 @@ install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
   - cd docs
   - ~/miniconda/bin/conda env update -f environment.yml -n $EARTHIO_TEST_ENV
-  - source activate $EARTHIO_TEST_ENV
-  - make doctest
-  - make html
+  - source activate $EARTHIO_TEST_ENV && make html && if [ "$TEST_DOCS" ]; then make doctest; fi
 
 script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
