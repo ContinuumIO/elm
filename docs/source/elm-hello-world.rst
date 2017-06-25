@@ -18,6 +18,7 @@ First import model(s) from scikit-learn and ``Pipeline`` and ``steps`` from ``el
     from sklearn.cluster import AffinityPropagation
 
 .. testoutput::
+    :hide:
 
     <BLANKLINE>
 
@@ -124,14 +125,10 @@ Now we can use :doc:`fit_ensemble<fit-ensemble>` to fit to one or more samples a
 
 The code block with :doc:`fit_ensemble<fit-ensemble>` above would show the ``repr`` of the ``Pipeline`` object as follows:
 
-.. testcode:: quick-start
-
-    print(pipe)
-
-.. testoutput:: quick-start
+.. doctest:: quick-start
     :pyversion: == 3.5
-    :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
+    >>> print(pipe)
     <elm.pipeline.Pipeline> with steps:
         flat: <elm.steps.Flatten>:
 
@@ -168,6 +165,7 @@ Step 4 - Call :doc:`predict_many<predict-many>`
 
 .. testoutput:: quick-start
     :pyversion: == 3.5
+    :hide:
     :options: -ELLIPSIS, +NORMALIZE_WHITESPACE
 
     Enter with ['band_1', 'band_2', 'band_3', 'band_4', 'band_5', 'band_6', 'band_7', 'band_8', 'band_9', 'band_10'] None None 60 60
@@ -213,10 +211,15 @@ Step 4 - Call :doc:`predict_many<predict-many>`
 
 .. testcode:: quick-start
     :pyversion: == 3.5
-    :options: +SKIP
+
     import matplotlib.pyplot as plt
     example.predict.plot.pcolormesh()
     plt.show()
+
+.. testoutput:: quick-start
+    :pyversion: == 3.5
+    :hide:
+    :options: +SKIP
 
 -------------
 
