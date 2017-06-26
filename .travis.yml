@@ -12,7 +12,7 @@ env:
 
   matrix:
     - PYTHON=3.6 NUMPY=1.12
-    - PYTHON=3.5 NUMPY=1.11
+    - PYTHON=3.5 NUMPY=1.11 TEST_DOCS=1
     - PYTHON=2.7 NUMPY=1.11
 
 matrix:
@@ -25,6 +25,13 @@ before_install:
 
 install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
+  - pushd docs
+  - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
+  - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
+  - make html
+  - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make doctest; fi
+  - source deactivate
+  - popd
 
 script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*

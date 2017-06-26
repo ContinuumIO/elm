@@ -1,25 +1,56 @@
-Install ELM
-===========
+Installation
+============
 
-You can install elm with ``conda`` or by installing from source.
+There are two options for installing `elm`:
 
-Install from Conda
+    - :ref:`conda-install`
+    - :ref:`source-install`
+
+.. _conda-install:
+
+Install with Conda
 ~~~~~~~~~~~~~~~~~~
 
-To install the latest release of ``elm`` and ``earthio`` do:
+Conda is a package manager backed by `Continuum Analytics, Inc <http://continuum.io>`_. Notable features include first-class support for Python and R software that depends on C extensions, cross-platform support for Windows/Mac OSX/Linux, and standalone packages that are easy to distribute and deploy.
+
+Stable
+------
+
+The "stable" release is more thoroughly tested, but does not include the latest experimental features:
 
 .. code-block:: bash
 
-    conda create -c elm/label/dev -c elm -c conda-forge -c ioam -c conda-forge -c scitools/label/dev --name earth-env-35 python=3.5 elm earthio
+    conda create -c elm -c conda-forge -c ioam -c scitools --name earth-env elm earthio
 
-Note the command above uses the ``elm`` organization on `anaconda.org<http://anaconda.org>`_ and the command uses the ``dev`` label within that organization to get ``elm`` and the default ``main`` label for ``earthio`` .
+The above command creates a conda environment with the latest stable releases of `elm` and `earthio` installed. To begin using, activate the environment:
 
-This installs ``elm`` and ``earthio`` and all common dependencies. The channel arguments shown above may change with build system refactoring over the next few months.  If you encounter any issues with installation of the latest release from ``conda`` or source, then raise a github issue `in the elm repo here <http://github.com/ContinuumIO/elm/issues>`_ or email psteinberg [at] continuum [dot] io.
+.. code-block:: bash
+
+    source activate earth-env
+
+If you encounter any issues with installation of the latest release from ``conda`` or source, then raise a github issue `in the elm repo here <http://github.com/ContinuumIO/elm/issues>`_ or email psteinberg [at] continuum [dot] io.
+
+Development
+-----------
+
+The "development" releases are less stable, but include newer features:
+
+.. code-block:: bash
+
+    conda create -c elm/label/dev -c conda-forge -c ioam -c scitools/label/dev --name earth-env-dev python=3.5 elm earthio
+
+Like for the stable release, activate the environment to begin using `elm`:
+
+.. code-block:: bash
+
+    source activate earth-env-dev
+
+.. _source-install:
 
 Install from Source
 ~~~~~~~~~~~~~~~~~~~
 
-To install ``elm`` from `source <https://github.com/ContinuumIO/elm>`_ and quick check the install:
+Installing `elm` from source is recommended if you want to develop `elm` features and iterate rapidly over your code changes. To install ``elm`` from `source <https://github.com/ContinuumIO/elm>`_:
 
 .. code-block:: bash
 
@@ -27,9 +58,14 @@ To install ``elm`` from `source <https://github.com/ContinuumIO/elm>`_ and quick
     cd elm
     export ELM_EXAMPLE_DATA_PATH=~/elm-data
     PYTHON_TEST_VERSION=3.5 EARTHIO_INSTALL_METHOD=conda . build_elm_env.sh
+
+Verify the install with:
+
+.. code-block:: bash
+
     python -c "from earthio import *;from elm import *"
 
-Add the following ``ELM_EXAMPLE_DATA_PATH`` to your .bashrc or environment to avoid >1 download of the test data and have the test data discovered by ``py.test``:
+You may want to add the following line to your .bashrc (or equivalent shell config) to avoid >1 download of the test data and have the test data discovered by ``py.test``:
 
 .. code-block:: bash
 

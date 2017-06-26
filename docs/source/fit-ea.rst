@@ -1,5 +1,5 @@
-Fit EA
-======
+Multi-Model Fitting II: Evolutionary Algorithms
+===============================================
 
 ``elm`` can use an evolutionary algorithm for hyperparameterization.  This involves using the ``fit_ea`` method of :doc:`Pipeline<pipeline>`.  It is helpful at this point to first read about :doc:`Pipeline<pipeline>` and how to configure a data source for the multi-model approaches in ``elm``.  That page summarizes how :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` may be fit to a single ``X`` matrix (when the keyword ``X`` is given) or a series of samples (when ``sampler`` and ``args_list`` are given).
 

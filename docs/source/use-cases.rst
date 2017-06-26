@@ -14,7 +14,7 @@ Common computational challenges in satellite and weather data machine learning i
 
 To address these challenges ``elm`` draws from existing Python packages:
 
-.. _xarray: http://xarray.pydata.org/
+.. _xarray: http://xarray.pydata.org/en/stable/
 
 .. _scikit-learn: http://scikit-learn.org/stable/
 
@@ -24,12 +24,15 @@ To address these challenges ``elm`` draws from existing Python packages:
 
 .. _deap: https://deap.readthedocs.io/en/master/
 
- * `xarray`_
- * `scikit-learn`_
- * `dask`_
- * `numba`_
- * `deap`_
+.. _dask-distributed: http://distributed.readthedocs.io/en/latest/
 
+.. _estimator interface: http://scikit-learn.org/stable/developers/contributing.html#rolling-your-own-estimator
+
+.. _xarray data structures: http://xarray.pydata.org/en/stable/data-structures.html
+
+* `dask-distributed`_: ``elm`` uses `dask-distributed`_ for parallelism over ensemble fitting and prediction
+* `scikit-learn`_ : ``elm`` can use unsupervised and supervised models, preprocessors, scoring functions, and postprocessors from ``scikit-learn`` or any estimator that follows the `scikit-learn` initialize / fit / predict `estimator interface`_.
+* `xarray`_ : ``elm`` wraps `xarray data structures`_ for n-dimensional arrays, such as 3-dimensional weather cubes, and for collections of 2-D rasters, such as a LANDSAT sample
 
 .. _large-scale-model:
 
@@ -46,14 +49,6 @@ Large-Scale Model Training
 * Custom user-given model selection logic in ensemble approaches to training
 
 ``elm`` can use ``dask`` to parallelize the activities above.
-
-More reading:
-
- * :doc:`Pipeline<pipeline>`
- * :doc:`fit_ensemble<fit-ensemble>`
- * :doc:`fit_ea<fit-ea>`
- * :doc:`predict_many<predict-many>`
- * :doc:`Environment variables<environment-vars>`.
 
 .. _model-uncertainty:
 
@@ -119,8 +114,17 @@ Predicting for Many Large Samples and/or Models
 ``elm`` can use dask-distributed, a dask thread pool, or serial processing for predicting over a group (ensemble) of models and a single sample or series of samples.  ``elm``'s interface for large scale prediction, described here, is via the :doc:`predict_many<predict-many>` method of a ``Pipeline`` instance.
 
 
-``elm`` is a Work in Progress
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-``elm`` is immature and largely for experimental use.
+``elm`` Capabilities
+--------------------
 
-The developers do not promise backwards compatibility with future versions.
+* :doc:`Ensemble learning<fit-ensemble>`
+* :doc:`Large scale prediction<predict-many>`
+* :doc:`Genetic algorithms<fit-ea>`
+* :doc:`Common preprocessing operations for satellite imagery and climate data<pipeline-steps>`
+
+These capabilities are best shown in the
+
+ * :doc:`Elm introduction<elm-hello-world>`
+ * :doc:`Elm clustering introduction<clustering_example>`
+ * :doc:`Other elm examples<examples>`
+ * :doc:`Use cases<use-cases>`

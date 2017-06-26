@@ -1,5 +1,5 @@
-Example with :doc:`predict_many<predict-many>`
-============
+Multi-Model Prediction
+======================
 
 ``elm``'s :doc:`predict_many<predict-many>` predicts for each estimator in a trained ensemble for one or more samples. :doc:`predict_many<predict-many>` takes some of the same data source keyword arguments that :doc:`fit_ea<fit-ea>` and :doc:`fit_ensemble<fit-ensemble>` use.  See also :doc:`Data Sources for a Pipeline<pipeline>` - it discusses using a single sample by giving the keyword arguments ``X`` or giving a ``sampler`` and ``args_list`` (list of unpackable args to the ``sampler`` callable).  The same logic applies for :doc:`predict_many<predict-many>`.
 
