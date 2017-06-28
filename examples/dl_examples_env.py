@@ -45,12 +45,13 @@ def update_env_yml(fpath, tmpdir):
 
     deps_to_add = ['earthio', 'elm']
     deps = env_data['dependencies']
-    found_pip_deps = False
-    for pip_deps_idx, elt in enumerate(deps):
+    pip_deps_idx = None
+    for deps_idx, elt in enumerate(deps):
         if isinstance(elt, dict) and 'pip' in elt:
-            found_pip_deps = True
-            break
-    if found_pip_deps:
+            pip_deps_idx = deps_idx
+        elif elt.startswith('python='):
+            env_data['dependencies'][deps_idx] = 'python=3.5'
+    if pip_deps_idx is not None:
         env_data['dependencies'] = deps[:pip_deps_idx] + deps_to_add + deps[pip_deps_idx:]
     else:
         env_data['dependencies'].extend(deps_to_add)
