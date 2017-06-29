@@ -45,7 +45,7 @@ def update_env_yml(fpath, tmpdir):
     env_data['name'] = 'elm-examples'
     env_data['channels'].extend(['elm', 'elm/label/dev', 'numba'])
 
-    deps_to_add = ['earthio', 'elm']
+    deps_to_add = ['earthio', 'elm','fastparquet', 'pyarrow']
     deps = env_data['dependencies']
     pip_deps_idx = None
     for deps_idx, elt in enumerate(deps):
