@@ -4,6 +4,8 @@
 import sys
 import os
 import requests
+import shutil
+import tempfile
 import yaml
 from collections import OrderedDict
 
@@ -61,19 +63,23 @@ def update_env_yml(fpath, tmpdir):
 
 
 def main(argv):
-    # Download the environment setup files
-    for dst_fpath, url in ENV_SETUP_FILES.items():
-        dl_content(dst_fpath, url, '/tmp')
+    tmpdir = tempfile.mkdtemp()
+    try:
+        # Download the environment setup files
+        for dst_fpath, url in ENV_SETUP_FILES.items():
+            dl_content(dst_fpath, url, tmpdir)
 
-    # Update the environment.yml for elm's examples
-    assert 'environment.yml' in ENV_SETUP_FILES
-    update_env_yml('environment.yml', '/tmp')
-
-    print('Finished downloading. Next steps:\n'
-          '    $ conda env create -f environment.yml\n'
-          '    $ source activate elm-examples\n'
-          '    $ python download_sample_data.py')
-
+        # Update the environment.yml for elm's examples
+        assert 'environment.yml' in ENV_SETUP_FILES
+        update_env_yml('environment.yml', tmpdir)
+        for f in (set(ENV_SETUP_FILES) - set(('environment.yml',))):
+            shutil.copy(os.path.join(tmpdir, f), f)
+        print('Finished downloading. Next steps:\n'
+              '    $ conda env create -f environment.yml\n'
+              '    $ source activate elm-examples\n'
+              '    $ python download_sample_data.py')
+    finally:
+        shutil.rmtree(tmpdir)
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
