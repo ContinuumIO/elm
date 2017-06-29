@@ -186,7 +186,7 @@ class Pipeline(object):
         output = fitter_or_predict(*args, **kwargs)
         if sklearn_method in ('fit', 'partial_fit', 'fit_predict'):
             kw = kwargs.copy()
-            kw.update(self.scoring_kwargs.copy())
+            kw.update((self.scoring_kwargs or {}).copy())
             self._score_estimator(*args, **kw)
             return self
         # transform or fit_transform most likely
@@ -308,12 +308,18 @@ class Pipeline(object):
         to ensure a new unfitted_copy of Pipeline is returned with
         new initialization parameters.
         '''
-        new_steps = []
+        new_steps = {}
         for k, v in params.items():
             step_key, param_key, estimator = self._split_key(k)
             estimator.set_params(**{param_key: v})
-            new_steps.append((step_key, estimator))
-        return Pipeline(new_steps, **self._re_init_args_kwargs[1])
+            new_steps[step_key] =  estimator
+        steps = []
+        for tag, s in self.steps:
+            if tag in new_steps:
+                steps.append((tag, new_steps[tag]))
+            else:
+                steps.append((tag, s))
+        return Pipeline(steps, **self._re_init_args_kwargs[1])
 
     def fit(self, *args, **kwargs):
         return self._run_steps(*args, **dict(sklearn_method='fit', **kwargs))
