@@ -49,6 +49,7 @@ def _predict_one_sample_one_arg(estimator,
     attrs.update(X_final.flat.attrs)
     attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
     attrs['band_order'] = ['predict',]
+    attrs['canvas'] = getattr(X_final.flat, 'canvas', None)
     logger.debug('Predict X shape {} X.flat.dims {} '
                  '- y shape {}'.format(X_final.flat.shape, X_final.flat.dims, prediction.shape))
     prediction = ElmStore({'flat': xr.DataArray(prediction,
@@ -56,9 +57,10 @@ def _predict_one_sample_one_arg(estimator,
                                              ('band', bands)],
                                      dims=('space', 'band'),
                                      attrs=attrs)},
-                             attrs=attrs)
+                             attrs=attrs,
+                             add_canvas=False)
     if to_raster:
-        new_es = inverse_flatten(prediction)
+        new_es = inverse_flatten(prediction, add_canvas=False)
     else:
         new_es = prediction
     if serialize:

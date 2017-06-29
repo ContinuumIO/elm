@@ -24,6 +24,7 @@ from elm.model_selection.metrics import METRICS
 
 def import_scorer(scoring):
     '''Import a scoring function or find it in METRICS'''
+    requires_y = False
     if not hasattr(scoring, 'fit'):
         if scoring in METRICS:
             scoring = import_callable(METRICS[scoring])
@@ -45,10 +46,10 @@ def make_scorer(scoring, **scoring_kwargs):
     elif gb is None:
         raise ValueError('Must provide greater_is_better in this case where score_weights is not given or longer than one element')
     scorer = sk_metrics.make_scorer(scoring,
-                                 greater_is_better=scoring_kwargs.get('greater_is_better', True),
-                                 needs_proba=scoring_kwargs.get('needs_proba', False),
-                                 needs_threshold=scoring_kwargs.get('needs_threshold', False),
-                                 **func_kwargs)
+                                    greater_is_better=scoring_kwargs.get('greater_is_better', True),
+                                    needs_proba=scoring_kwargs.get('needs_proba', False),
+                                    needs_threshold=scoring_kwargs.get('needs_threshold', False),
+                                    **func_kwargs)
     return scorer
 
 
@@ -58,6 +59,23 @@ def _score_one_model_with_y_true(model,
                                 y_true,
                                 sample_weight=None,
                                 **kwargs):
+    '''
+    # TODO - this function needs refactor + docs explanation
+    # It is brittle and difficult to use.
+     1) Unclear how to pass in a custom scorer:
+        a) Do I need to call make_scorer() myself on that function
+        b) If I need to call make_scorer(), do I use the make_scorer
+           above or the make_scorer from sklearn?
+     2) Should a scoring function expect the model to be passed into
+        it, and if so, do should I expect always a Pipeline instance
+        from the elm stack or the Pipeline's _estimator attribute
+        that is typically an sklearn model like LinearRegression()
+     3) Should my scoring function, whether custom or standard like r2_score,
+        expect that X and y are xarray data structures or numpy ones
+        that have been already prepared for use with the final
+        sklearn estimator
+     4)
+    '''
     if scoring is None:
         kw = copy.deepcopy(kwargs)
         kw['sample_weight'] = sample_weight
@@ -69,7 +87,8 @@ def _score_one_model_with_y_true(model,
         scorer = scoring
     # now scorer has signature:
     #__call__(self, estimator, X, y_true, sample_weight=None)
-    return scorer(model, X, y_true, sample_weight=sample_weight)
+    # TODO should we pass model or model._estimator?
+    return scorer(model._estimator, X, y_true, sample_weight=sample_weight)
 
 
 
@@ -111,22 +130,23 @@ def score_one_model(model,
             * :needs_threshold: Estimator needs threshold
 
     '''
-    if scoring is None:
-        if not hasattr(model, 'score') or not callable(model.score):
-            raise ValueError('Cannot score model.  No scoring given and '
-                             'model has no "score" callable attribute')
-        requires_y = False
-    else:
+    y = y if y is not None else kwargs.get('y_true') # TODO this needs diambiguation
+    model_to_pass = model
+    if scoring:
         scoring, requires_y = import_scorer(scoring)
+    else:
+        scoring = model._estimator.score
+        model_to_pass = model._estimator
+    requires_y = True if y is not None else requires_y
     if requires_y:
-        model._score = _score_one_model_with_y_true(model,
+        model._score = _score_one_model_with_y_true(model_to_pass,
                                                     scoring,
                                                     X,
                                                     y_true=y,
-                                                    sample_weight=None,
+                                                    sample_weight=sample_weight,
                                                     **kwargs)
     else:
-        model._score = _score_one_model_no_y_true(model,
+        model._score = _score_one_model_no_y_true(model_to_pass,
                         scoring,
                         X,
                         sample_weight=None,
