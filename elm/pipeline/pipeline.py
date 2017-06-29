@@ -185,7 +185,9 @@ class Pipeline(object):
             return pred
         output = fitter_or_predict(*args, **kwargs)
         if sklearn_method in ('fit', 'partial_fit', 'fit_predict'):
-            self._score_estimator(*args, **kwargs)
+            kw = kwargs.copy()
+            kw.update(self.scoring_kwargs.copy())
+            self._score_estimator(*args, **kw)
             return self
         # transform or fit_transform most likely
         return _split_pipeline_output(output, X, y, sample_weight, 'fit_transform')
@@ -554,14 +556,14 @@ class Pipeline(object):
                  saved_model_tag=saved_model_tag)
 
 
-    def _score_estimator(self, X, y=None, sample_weight=None):
+    def _score_estimator(self, X, y=None, sample_weight=None, **kw):
         '''Run the scoring function with scoring_kwargs that were given in __init__
         '''
         if not self.scoring:
             if self.scoring_kwargs:
                 raise ValueError("scoring_kwargs ignored if scoring is not given")
             return
-        kw = self.scoring_kwargs or {}
+        kw = kw.copy()
         kw['y'] = y
         kw['sample_weight'] = sample_weight
         fit_args = (X,)
