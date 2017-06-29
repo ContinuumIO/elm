@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 -----------------------------------
 
@@ -31,6 +33,8 @@ try:
     from earthio import load_meta, load_array
 except ImportError:
     load_array = load_meta = None
+
+from six import string_types
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +85,7 @@ def create_sample_from_data_source(config=None, **data_source):
     if not isinstance(sampler_args, (tuple, list)):
         sampler_args = (sampler_args,)
     reader_name = data_source.get('reader') or None
-    if isinstance(reader_name, str) and reader_name:
+    if isinstance(reader_name, string_types) and reader_name:
         if config and reader_name in config.readers:
             reader = config.readers[reader_name]
         _load_meta = partial(load_meta, reader=reader_name)
@@ -263,7 +267,7 @@ def final_on_sample_step(fitter,
         logger.debug('X (shape {})'.format(X_values.shape))
     check_array(X_values, "final_on_sample_step - X")
     if has_y:
-        if not y.size == X_values.shape[0]:
+        if y.size != X_values.shape[0]:
             raise ValueError("Bad size for y ({}) - does not match X.shape[0] ({})".format(y.size, X_values.shape[0]))
     if has_sw:
         if not sample_weight.size == X_values.shape[0]:

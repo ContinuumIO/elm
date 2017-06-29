@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 ----------------------------
 
@@ -16,6 +18,8 @@ from deap.tools.emo import selNSGA2
 import numpy as np
 import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
+import xarray as xr
+
 from elm.config.func_signatures import (get_args_kwargs_defaults,
                                         filter_kwargs_to_func)
 
@@ -34,7 +38,10 @@ def kmeans_aic(model, X, **kwargs):
     '''
 
     k, m = model._estimator.cluster_centers_.shape
-    n = X.flat.values.shape[0]
+    if isinstance(X, xr.DataArray):
+        n = X.flat.values.shape[0]
+    else:
+        n = X.shape[0]
     d = model._estimator.inertia_
     aic =  d + 2 * m * k
     delattr(model._estimator, 'labels_')

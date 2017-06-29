@@ -23,7 +23,6 @@ requirements:
     - numba
     - numpy
     - pandas
-    - pytest
     - python
     - requests
     - scikit-image
@@ -31,6 +30,7 @@ requirements:
     - scipy
     - xarray
     - yaml
+    - six
 
 about:
   home: http://github.com/ContinuumIO/elm
@@ -50,3 +50,9 @@ test:
     - elm.sample_util
     - elm.scripts
 
+  requires:
+    - pytest
+
+  commands:
+    - py.test -m 'not slow' -v $SP_DIR/elm  [unix]
+    - py.test -m 'not slow' -v %SP_DIR%/elm  [win]

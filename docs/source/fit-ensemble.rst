@@ -1,5 +1,5 @@
-Fit Ensemble
-===========
+Multi-Model Fitting I: Ensemble Fitting
+=======================================
 
 Ensemble fitting may be helpful in cases where the representative sample is large and/or model parameter or fitting uncertainty should be considered.
 

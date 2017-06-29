@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 --------------------------------
 
@@ -18,6 +20,8 @@ from elm.config import import_callable
 from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.sample_util.step_mixin import StepMixin
 
+from six import string_types
+
 class SklearnBase(StepMixin):
     def __init__(self,  **kwargs):
         cls = getattr(skfeat, self.__class__.__name__, None)
@@ -30,7 +34,7 @@ class SklearnBase(StepMixin):
 
     def _import_score_func(self, **params):
         if 'score_func' in params:
-            if isinstance(params['score_func'], str):
+            if isinstance(params['score_func'], string_types):
                 sf = getattr(skfeat, params['score_func'], None)
                 if not sf:
                     sf = import_callable(params['score_func'])

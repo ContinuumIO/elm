@@ -1,3 +1,5 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
 '''
 ----------------------
 
@@ -133,7 +135,7 @@ class Pipeline(object):
         if y is None:
             y = method_kwargs.get('y')
         if sample_weight is None:
-            sample_weight = method_kwargs.get('y')
+            sample_weight = method_kwargs.get('sample_weight')
         if not 'predict' in sklearn_method:
             prepare_for = 'train'
         else:
@@ -165,7 +167,6 @@ class Pipeline(object):
         if fitter_or_predict is None:
             raise ValueError('Final estimator in Pipeline {} has no method {}'.format(self._estimator, sklearn_method))
         if not isinstance(self._estimator, STEPS.StepMixin):
-
             args, kwargs = self._post_run_pipeline(fitter_or_predict,
                                                    self._estimator,
                                                    X,
@@ -173,8 +174,6 @@ class Pipeline(object):
                                                    prepare_for=prepare_for,
                                                    sample_weight=sample_weight,
                                                    method_kwargs=method_kwargs)
-
-
         else:
             kwargs = {'y': y, 'sample_weight': sample_weight}
             args = (X,)
@@ -184,10 +183,11 @@ class Pipeline(object):
             if return_X:
                 return pred, X
             return pred
-
         output = fitter_or_predict(*args, **kwargs)
         if sklearn_method in ('fit', 'partial_fit', 'fit_predict'):
-            self._score_estimator(X, y=y, sample_weight=sample_weight)
+            kw = kwargs.copy()
+            kw.update((self.scoring_kwargs or {}).copy())
+            self._score_estimator(*args, **kw)
             return self
         # transform or fit_transform most likely
         return _split_pipeline_output(output, X, y, sample_weight, 'fit_transform')
@@ -198,10 +198,12 @@ class Pipeline(object):
         '''Finally convert X ElmStore to X numpy array for
         sklearn estimator in last step'''
         from elm.sample_util.sample_pipeline import final_on_sample_step
+        method_kwargs = method_kwargs or {}
+        y = y if y is not None else method_kwargs.get('y')
         return final_on_sample_step(fitter_or_predict,
                          estimator, X,
-                         method_kwargs or {},
-                         y=y if y is not None else method_kwargs.get('y'),
+                         method_kwargs,
+                         y=y,
                          prepare_for=prepare_for,
                          sample_weight=sample_weight,
                          require_flat=True,
@@ -306,10 +308,18 @@ class Pipeline(object):
         to ensure a new unfitted_copy of Pipeline is returned with
         new initialization parameters.
         '''
+        new_steps = {}
         for k, v in params.items():
             step_key, param_key, estimator = self._split_key(k)
             estimator.set_params(**{param_key: v})
-        return self
+            new_steps[step_key] =  estimator
+        steps = []
+        for tag, s in self.steps:
+            if tag in new_steps:
+                steps.append((tag, new_steps[tag]))
+            else:
+                steps.append((tag, s))
+        return Pipeline(steps, **self._re_init_args_kwargs[1])
 
     def fit(self, *args, **kwargs):
         return self._run_steps(*args, **dict(sklearn_method='fit', **kwargs))
@@ -552,14 +562,14 @@ class Pipeline(object):
                  saved_model_tag=saved_model_tag)
 
 
-    def _score_estimator(self, X, y=None, sample_weight=None):
+    def _score_estimator(self, X, y=None, sample_weight=None, **kw):
         '''Run the scoring function with scoring_kwargs that were given in __init__
         '''
         if not self.scoring:
             if self.scoring_kwargs:
                 raise ValueError("scoring_kwargs ignored if scoring is not given")
             return
-        kw = self.scoring_kwargs or {}
+        kw = kw.copy()
         kw['y'] = y
         kw['sample_weight'] = sample_weight
         fit_args = (X,)
