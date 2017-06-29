@@ -135,7 +135,7 @@ class Pipeline(object):
         if y is None:
             y = method_kwargs.get('y')
         if sample_weight is None:
-            sample_weight = method_kwargs.get('y')
+            sample_weight = method_kwargs.get('sample_weight')
         if not 'predict' in sklearn_method:
             prepare_for = 'train'
         else:
@@ -167,7 +167,6 @@ class Pipeline(object):
         if fitter_or_predict is None:
             raise ValueError('Final estimator in Pipeline {} has no method {}'.format(self._estimator, sklearn_method))
         if not isinstance(self._estimator, STEPS.StepMixin):
-
             args, kwargs = self._post_run_pipeline(fitter_or_predict,
                                                    self._estimator,
                                                    X,
@@ -175,8 +174,6 @@ class Pipeline(object):
                                                    prepare_for=prepare_for,
                                                    sample_weight=sample_weight,
                                                    method_kwargs=method_kwargs)
-
-
         else:
             kwargs = {'y': y, 'sample_weight': sample_weight}
             args = (X,)
@@ -186,10 +183,9 @@ class Pipeline(object):
             if return_X:
                 return pred, X
             return pred
-
         output = fitter_or_predict(*args, **kwargs)
         if sklearn_method in ('fit', 'partial_fit', 'fit_predict'):
-            self._score_estimator(X, y=y, sample_weight=sample_weight)
+            self._score_estimator(*args, **kwargs)
             return self
         # transform or fit_transform most likely
         return _split_pipeline_output(output, X, y, sample_weight, 'fit_transform')
@@ -200,10 +196,12 @@ class Pipeline(object):
         '''Finally convert X ElmStore to X numpy array for
         sklearn estimator in last step'''
         from elm.sample_util.sample_pipeline import final_on_sample_step
+        method_kwargs = method_kwargs or {}
+        y = y if y is not None else method_kwargs.get('y')
         return final_on_sample_step(fitter_or_predict,
                          estimator, X,
-                         method_kwargs or {},
-                         y=y if y is not None else method_kwargs.get('y'),
+                         method_kwargs,
+                         y=y,
                          prepare_for=prepare_for,
                          sample_weight=sample_weight,
                          require_flat=True,
@@ -308,10 +306,12 @@ class Pipeline(object):
         to ensure a new unfitted_copy of Pipeline is returned with
         new initialization parameters.
         '''
+        new_steps = []
         for k, v in params.items():
             step_key, param_key, estimator = self._split_key(k)
             estimator.set_params(**{param_key: v})
-        return self
+            new_steps.append((step_key, estimator))
+        return Pipeline(new_steps, **self._re_init_args_kwargs[1])
 
     def fit(self, *args, **kwargs):
         return self._run_steps(*args, **dict(sklearn_method='fit', **kwargs))

@@ -267,7 +267,7 @@ def final_on_sample_step(fitter,
         logger.debug('X (shape {})'.format(X_values.shape))
     check_array(X_values, "final_on_sample_step - X")
     if has_y:
-        if not y.size == X_values.shape[0]:
+        if y.size != X_values.shape[0]:
             raise ValueError("Bad size for y ({}) - does not match X.shape[0] ({})".format(y.size, X_values.shape[0]))
     if has_sw:
         if not sample_weight.size == X_values.shape[0]:
