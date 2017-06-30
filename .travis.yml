@@ -38,7 +38,7 @@ script:
   # The following ensures the env creation and file download
   # logic in ./examples can be run.  It only needs testing once
   # (not for each Python version of matrix)
-  - if [ "$PYTHON = "3.5" ]; then cd $ELM_BUILD_DIR/examples && conda create --name downloader-env python=3.5 requests yaml && source activate downloader-env && python dl_examples_env.py && conda env create -f environment.yml && conda env remove --name elm-examples; fi
+  - if [ "$PYTHON = "3.5" ]; then cd $ELM_BUILD_DIR/examples && conda create --name downloader-env python=3.5 requests yaml && source activate downloader-env && python dl_examples_env.py && conda env create -f environment.yml && conda env remove --name downloader-env; fi
 
 notifications:
   on_success: change
