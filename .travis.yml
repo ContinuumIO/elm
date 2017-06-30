@@ -25,7 +25,6 @@ before_install:
 
 install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
-  - export ELM_TOP_DIR=`pwd`
   - pushd docs
   - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
   - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
@@ -36,7 +35,10 @@ install:
 
 script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
-  - cd $ELM_TOP_DIR/examples && python dl_examples_env.py && conda env create -f environment.yml && conda env remove --name elm-examples
+  # The following ensures the env creation and file download
+  # logic in ./examples can be run.  It only needs testing once
+  # (not for each Python version of matrix)
+  - if [ "$PYTHON = "3.5" ]; then cd $ELM_BUILD_DIR/examples && conda create --name downloader-env python=3.5 requests yaml && source activate downloader-env && python dl_examples_env.py && conda env create -f environment.yml && conda env remove --name elm-examples; fi
 
 notifications:
   on_success: change
