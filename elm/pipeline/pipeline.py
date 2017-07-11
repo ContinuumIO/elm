@@ -162,6 +162,9 @@ class Pipeline(object):
             if func_out is not None:
                 X, y, sample_weight = _split_pipeline_output(func_out, X, y,
                                                        sample_weight, repr(fit_func))
+
+        if getattr(sample_weight, 'ndim', None) == 2:
+            sample_weight = sample_weight[:, 0]
         check_X_data_type(X)
         fitter_or_predict = getattr(self._estimator, sklearn_method, None)
         if fitter_or_predict is None:
