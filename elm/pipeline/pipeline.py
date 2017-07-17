@@ -182,6 +182,8 @@ class Pipeline(object):
             args = (X,)
         if 'predict' in sklearn_method:
             X = args[0]
+            # Drop sample_weight kwarg, since it's only needed for fitting (not predicting)
+            kwargs.pop('sample_weight', None)
             pred = fitter_or_predict(X.flat.values, **kwargs)
             if return_X:
                 return pred, X
