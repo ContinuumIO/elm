@@ -67,3 +67,8 @@ target/
 # elm logs
 logfile.txt
 elapsed_time_test.txt
+
+# elm data
+examples/[0-9]*
+examples/data
+examples/tif
