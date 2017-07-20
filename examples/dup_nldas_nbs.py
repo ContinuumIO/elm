@@ -34,7 +34,8 @@ first_nb_json = json.load(open(first_nb))
 for url in urls:
     new_nb_name = urlparse(url).path.split(os.sep)[3]
     dest_filename = new_nb_name + '.ipynb'
-    if os.path.isfile(dest_filename) and sys.argv[1] != '-f':
+    if (os.path.isfile(dest_filename) and
+        not (len(sys.argv) > 1 and sys.argv[1] == '-f')):
         print('Skipping {} (already exists)...'.format(dest_filename))
         continue
     new_nb_json = copy.deepcopy(first_nb_json)
