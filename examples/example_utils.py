@@ -15,8 +15,14 @@ from six.moves.urllib.parse import urlparse
 from six.moves import range
 from lxml import etree, html
 from ipywidgets import widgets, Layout
-from IPython.display import display
+from IPython.display import display, Javascript
+from pydap.cas.urs import setup_session
 
+
+session = setup_session(
+    os.environ.get('NLDAS_USERNAME') or raw_input('NLDAS Username: '),
+    os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: ')
+)
 
 def get_request(url):
     import pycurl
@@ -30,12 +36,9 @@ def get_request(url):
     return buffer.getvalue()
 
 def dl_file(url):
-    from pydap.cas.urs import setup_session
     data_fpath = urlparse(url).path.lstrip(os.sep)
     data_dpath = os.path.dirname(data_fpath)
     if not os.path.exists(data_fpath):
-        session = setup_session(os.environ.get('NLDAS_USERNAME') or raw_input('NLDAS Username: '),
-                                os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: '))
         resp = session.get(url)
         if not os.path.isdir(data_dpath):
             os.makedirs(data_dpath)
@@ -117,8 +120,7 @@ class GRBSelector(object):
         if next_url is None: # 'Select...' chosen
             return
         if next_url.endswith('.grb'): # File reached
-            self.selected_url = next_url
-            return
+            return self.select_url(next_url)
         [w.close() for w in self.elts]
         links = self.get_links(next_url,
                                href_filter=(self.dir_and_not_data
@@ -178,3 +180,16 @@ class GRBSelector(object):
 
     def dir_or_grib(self, href):
         return href.endswith(os.sep) or href.endswith('.grb')
+
+    def select_url(self, url):
+        self.selected_url = url
+        display(Javascript("""
+            var run = false, current = $(this)[0];
+            $.each(IPython.notebook.get_cells(), function (idx, cell) {
+                if (!run && (cell.output_area === current)) {
+                    run = true;
+                } else if (cell.cell_type == 'code') {
+                    cell.execute();
+                }
+            });
+        """))
