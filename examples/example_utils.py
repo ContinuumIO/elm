@@ -7,11 +7,41 @@ import copy
 import os
 import sys
 import getpass
+from collections import OrderedDict
+from functools import partial
 
+import requests
 from six.moves.urllib.parse import urlparse
 from six.moves import range
-from lxml import etree
+from lxml import etree, html
+from ipywidgets import widgets, Layout
+from IPython.display import display
 
+
+def get_request(url):
+    import pycurl
+    from io import BytesIO
+    buffer = BytesIO()
+    c = pycurl.Curl()
+    c.setopt(c.URL, url)
+    c.setopt(c.WRITEDATA, buffer)
+    c.perform()
+    c.close()
+    return buffer.getvalue()
+
+def dl_file(url):
+    from pydap.cas.urs import setup_session
+    data_fpath = urlparse(url).path.lstrip(os.sep)
+    data_dpath = os.path.dirname(data_fpath)
+    if not os.path.exists(data_fpath):
+        session = setup_session(os.environ.get('NLDAS_USERNAME') or raw_input('NLDAS Username: '),
+                                os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: '))
+        resp = session.get(url)
+        if not os.path.isdir(data_dpath):
+            os.makedirs(data_dpath)
+        with open(data_fpath, 'w') as outfp:
+            outfp.write(resp.content)
+    return data_fpath
 
 def dups_to_indexes(field_names):
     """Modify field_names list in-place, such that duplicates get assigned
@@ -48,40 +78,103 @@ def get_xml_data(metadata, root, prefix, sep='/'):
         get_xml_data(metadata, child, next_prefix)
     return metadata
 
-if 0:
-    netrc_fpath = os.path.join(os.environ['HOME'], '.netrc')
-    if not os.path.isfile(netrc_fpath):
-        username = os.environ.get('NLDAS_USERNAME', raw_input('NLDAS Username: '))
-        passwd = os.environ.get('NLDAS_PASSWORD', getpass.getpass('Password: '))
-        with open(netrc_fpath, 'w') as fp:
-            fp.write('machine urs.earthdata.nasa.gov login {} password {}'.format(username, passwd))
-        os.chmod(netrc_fpath, 0o600)
-
-from pydap.cas.urs import setup_session
-username = os.environ.get('NLDAS_USERNAME', raw_input('NLDAS Username: '))
-passwd = os.environ.get('NLDAS_PASSWORD', getpass.getpass('Password: '))
-session = setup_session(username, passwd)
-
-def dl_file(url):
-    if 0:
-        import pycurl
-        from io import BytesIO
-        buffer = BytesIO()
-        c = pycurl.Curl()
-        c.setopt(c.URL, 'https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/')
-        c.setopt(c.WRITEDATA, buffer)
-        c.perform()
-        c.close()
-        return buffer.getvalue()
-    return session.get(url).content
-
 def get_metadata(url):
     """Return a dict describing data at URL (which points to XML file).
     """
     print('Downloading {}...'.format(url))
     sys.stdout.flush()
+    #resp = requests.get(url)
     contents = dl_file(url)
     print('Parsing XML...')
     sys.stdout.flush()
-    root = etree.fromstring(contents)
+    root = etree.fromstring(contents) #resp.text)
     return get_xml_data({}, root, root.tag)
+
+class GRBSelector(object):
+    def __init__(self, base_url='https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/', **layout_kwargs):
+        self.base_url = base_url
+        self.selected_url = None
+        if 'min_width' not in layout_kwargs:
+            layout_kwargs['min_width'] = '30%'
+        self.label_layout = Layout(**layout_kwargs)
+
+        dd = widgets.Select(
+            options=self.get_links(
+                base_url,
+                href_filter=self.dir_and_not_data,
+            ),
+            description='', #urlparse(base_url).path,
+        )
+
+        dd.observe(partial(self.on_value_change, url=self.base_url), names='value')
+        lbl = widgets.Label(urlparse(self.base_url).path, layout=self.label_layout)
+        hbox = widgets.HBox([lbl, dd])
+        self.elts = [hbox, lbl, dd]
+        display(hbox)
+
+    def on_value_change(self, change, url):
+        next_url = change['new']
+        if next_url is None: # 'Select...' chosen
+            return
+        if next_url.endswith('.grb'): # File reached
+            self.selected_url = next_url
+            return
+        [w.close() for w in self.elts]
+        links = self.get_links(next_url,
+                               href_filter=(self.dir_and_not_data
+                                            if next_url == self.base_url
+                                            else self.dir_or_grib))
+        if not links:
+            return
+        next_dd = widgets.Select(
+            options=links,
+            description='', #urlparse(url).path,
+        )
+        next_dd.observe(partial(self.on_value_change, url=next_url), names='value')
+        lbl = widgets.Label(urlparse(next_url).path, layout=self.label_layout)
+        hbox = widgets.HBox([lbl, next_dd])
+        self.elts = [hbox, lbl, next_dd]
+        display(hbox)
+
+    def get_links(self, url, href_filter=None):
+        progress = widgets.IntProgress(value=0, min=0, max=10, description='Loading:')
+        display(progress)
+
+        links = OrderedDict()
+        links['Select an endpoint...'] = None
+        if url != self.base_url:
+            up_url = os.path.dirname(url.rstrip(os.sep))
+            up_path = os.path.dirname(urlparse(url).path.rstrip(os.sep))
+            if not up_url.endswith(os.sep):
+                up_url += os.sep
+            links['Up to {}...'.format(up_path)] = up_url
+        if 0:
+            resp = requests.get(url); progress.value += 1
+            root = html.fromstring(resp.text); progress.value += 1
+        else:
+            contents = get_request(url); progress.value += 1
+            root = html.fromstring(contents); progress.value += 1
+        hrefs = root.xpath('body/table//tr/td/a/@href'); progress.value += 1
+        parent_path = os.path.dirname(urlparse(url).path.rstrip(os.sep))
+        for hrefct, href in enumerate(sorted(hrefs)):
+            if hrefct % int(11 - progress.value) == 0:
+                progress.value += 1
+            if ((href_filter is not None and
+                    not href_filter(href)) or
+                urlparse(href).path.rstrip(os.sep).endswith(parent_path)):
+                #print('filtered {} with {}'.format(href, href_filter))
+                continue
+            link_name = urlparse(href).path
+            links[link_name] = url + href
+        if len(links) <= 2:
+            links = OrderedDict()
+
+        progress.close()
+
+        return links
+
+    def dir_and_not_data(self, href):
+        return href.endswith(os.sep) and not href.endswith('data/')
+
+    def dir_or_grib(self, href):
+        return href.endswith(os.sep) or href.endswith('.grb')
