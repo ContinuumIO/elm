@@ -25,7 +25,7 @@ else
     source deactivate
     conda config --set always_yes true
     conda config --set anaconda_upload no
-    conda install -n root conda==4.3.22 conda-build==2.0.4
+    conda install -n root conda conda-build==2.0.4
 
     # Create $EARTHIO_TEST_ENV
     conda env remove -n $EARTHIO_TEST_ENV || true
