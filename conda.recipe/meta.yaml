@@ -23,7 +23,6 @@ requirements:
     - numba
     - numpy
     - pandas
-    - pytest
     - python
     - requests
     - scikit-image
@@ -50,3 +49,10 @@ test:
     - elm.pipeline.steps
     - elm.sample_util
     - elm.scripts
+
+  requires:
+    - pytest
+
+  commands:
+    - py.test -m 'not slow' -v $SP_DIR/elm  [unix]
+    - py.test -m 'not slow' -v %SP_DIR%/elm  [win]

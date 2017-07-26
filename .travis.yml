@@ -8,18 +8,14 @@ env:
     - EARTHIO_INSTALL_METHOD="conda"
     - EARTHIO_TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev "
+    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev -c bioconda"
 
   matrix:
     - PYTHON=3.6 NUMPY=1.12
-    - PYTHON=3.5 NUMPY=1.11
+    - PYTHON=3.5 NUMPY=1.11 TEST_DOCS=1
     - PYTHON=2.7 NUMPY=1.11
 
 matrix:
-  # A conda-build issue prevents Python 3.6 support
-  allow_failures:
-    - env: PYTHON=3.6 NUMPY=1.12
-
   # The build result is determined as soon as the required builds pass/fail
   fast_finish: true
 
@@ -28,12 +24,16 @@ before_install:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 install:
-  - MAKE_MINICONDA=1 . build_elm_env.sh
+  - MAKE_MINICONDA=1 ./build_elm_env.sh
+  - pushd docs
+  - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
+  - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
+  - make html
+  - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make doctest; fi
+  - source deactivate
+  - popd
 
 script:
-  - cd $ELM_BUILD_DIR
-  - . activate $EARTHIO_TEST_ENV
-  - py.test -m 'not slow' -v
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 notifications:
@@ -44,7 +44,7 @@ notifications:
 deploy:
   - provider: script
     script:
-      - conda install --name root anaconda-client python=3.5 conda-build==2.0.4 && conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec anaconda -t $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev {} \+
+      - /bin/bash -c "~/miniconda/bin/conda install --name root anaconda-client python=3.5 conda-build==2.0.4 && ~/miniconda/bin/conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs ~/miniconda/bin/conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec ~/miniconda/bin/anaconda -t $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev {} \+"
     on:
       tags: false
       all_branches: true

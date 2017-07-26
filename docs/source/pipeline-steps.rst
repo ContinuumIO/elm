@@ -1,5 +1,5 @@
-``elm.pipeline.steps``
-======================
+Customizable Pipeline Steps
+===========================
 
 The examples below assume you have created a random :doc:`ElmStore<elm-store>` as follows:
 
