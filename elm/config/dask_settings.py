@@ -11,7 +11,7 @@ from concurrent.futures import as_completed
 from multiprocessing.pool import ThreadPool
 from multiprocessing import Pool
 from dask.threaded import get as dask_threaded_get
-from dask.async import get_sync
+from dask.local import get_sync
 
 from dask import delayed as dask_delayed
 from toolz import curry

@@ -68,7 +68,7 @@ target/
 logfile.txt
 elapsed_time_test.txt
 
-examples/download_sample_data.py
-examples/datasets.yml
-examples/environment.yml
+# elm data
+examples/[0-9]*
 examples/data
+examples/tif
