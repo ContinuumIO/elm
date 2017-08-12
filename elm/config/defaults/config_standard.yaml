@@ -1,7 +1,7 @@
 data_sources: {
  hdf5_precip_hourly: {
    reader: hdf5,
-   sampler: "elm.sample_util.band_selection:select_from_file",
+   sampler: "earthio.filters.band_selection:select_from_file",
    band_specs: [{search_key: sub_dataset_name,
                  search_value: /precipitation,
                  name: band_1,
@@ -15,7 +15,7 @@ data_sources: {
   },
  NPP_DSRF1KD_L2GD: {
   reader: hdf4,
-  sampler: "elm.sample_util.band_selection:select_from_file",
+  sampler: "earthio.filters.band_selection:select_from_file",
   band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
   {search_key: long_name, search_value: "Band 2 ", name: band_2},
   {search_key: long_name, search_value: "Band 3 ", name: band_3},
@@ -36,7 +36,7 @@ data_sources: {
   top_dir: "env:ELM_EXAMPLE_DATA_PATH",
   file_pattern: ".TIF",
   reader: tif,
-  sampler: "elm.sample_util.band_selection:select_from_file",
+  sampler: "earthio.filters.band_selection:select_from_file",
   band_specs: [
   {search_key: name, search_value: "_B1.TIF", name: band_1},
   {search_key: name, search_value: "_B2.TIF", name: band_2},
@@ -127,7 +127,7 @@ sklearn_preprocessing: {
   },
   require_positive: {
     method: FunctionTransformer,
-    func: "elm.sample_util.preproc_scale:require_positive",
+    func: "earthio.filters.preproc_scale:require_positive",
     func_kwargs: {small_num: 0.0001},
   },
 }

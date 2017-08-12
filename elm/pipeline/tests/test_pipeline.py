@@ -25,7 +25,7 @@ import pytest
 # classes which can be used for Pipeline steps
 from elm.config.tests.fixtures import *
 from elm.pipeline import Pipeline, steps
-from elm.sample_util.make_blobs import random_elm_store
+from earthio.filters.make_blobs import random_elm_store
 
 data_source = {'sampler': random_elm_store}
 

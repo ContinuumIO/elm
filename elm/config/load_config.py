@@ -481,7 +481,7 @@ class ConfigParser(object):
 
     def _validate_pipelines(self):
         '''Validate the "pipelines" section of config'''
-        from elm.sample_util.change_coords import CHANGE_COORDS_ACTIONS
+        from earthio.filters.change_coords import CHANGE_COORDS_ACTIONS
         self.pipelines = self.config.get('pipelines') or {}
         self._validate_type(self.pipelines, 'pipelines', dict)
         for k, v in self.pipelines.items():

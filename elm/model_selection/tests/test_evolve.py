@@ -24,7 +24,7 @@ from elm.model_selection.tests.evolve_example_config import CONFIG_STR
 
 def _setup(config=None):
     '''Return the config above and the param_grid'''
-    from elm.sample_util.sample_pipeline import make_pipeline_steps
+    from earthio.filters.sample_pipeline import make_pipeline_steps
     from elm.pipeline import Pipeline
     if not config:
         config = ConfigParser(config=yaml.load(CONFIG_STR))
@@ -35,6 +35,7 @@ def _setup(config=None):
     return config, pipe, idx_to_param_grid
 
 
+@pytest.mark.skip('Relies on elm.sample_util.sample_pipeline.make_pipeline_steps')
 @pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def test_parse_param_grid():
     '''Tests that param_grid is parsed from config and
@@ -48,6 +49,7 @@ def test_parse_param_grid():
     assert all(isinstance(vi, list) for vi in v.deap_params['choices'])
 
 
+@pytest.mark.skip('Relies on elm.sample_util.sample_pipeline.make_pipeline_steps')
 @pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def test_ind_to_new_pipe():
     '''In the evolutionary algo, an individual consists
@@ -71,6 +73,7 @@ def test_ind_to_new_pipe():
     assert p['pca__n_components'] == 3
 
 
+@pytest.mark.skip('Relies on elm.sample_util.sample_pipeline.make_pipeline_steps')
 @pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 def tst_evo_setup_evo_init_func(config=None):
     '''Tests that param_grid is parsed and the deap toolbox
@@ -83,8 +86,6 @@ def tst_evo_setup_evo_init_func(config=None):
     return config, evo_params
 
 
-test_evo_setup_evo_init_func = tst_evo_setup_evo_init_func
-
 # The following are test data to test_ea_general
 min_fitnesses = [(50,), (0,)] + [(100,)] * 22
 max_fitnesses = [(50,), (1000,)] + [(100,)] * 22
@@ -93,6 +94,7 @@ score_weights = [[-1,], [1,], [-1, 1]]
 zipped_tst_args = zip((min_fitnesses, max_fitnesses, min_max_fitnesses),
                       score_weights)
 
+@pytest.mark.skip('Relies on elm.sample_util.sample_pipeline.make_pipeline_steps')
 @pytest.mark.xfail # TODO - when elm-main is not deprecated, remove this decorator
 @pytest.mark.parametrize('fitnesses, score_weights', zipped_tst_args)
 def test_ea_general(fitnesses, score_weights):

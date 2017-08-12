@@ -18,9 +18,9 @@ from sklearn.datasets import make_blobs
 
 from elm.config import DEFAULTS, DEFAULT_TRAIN, ConfigParser
 from elm.config.func_signatures import filter_kwargs_to_func
-import elm.sample_util.sample_pipeline as pipeline
+import earthio.filters.sample_pipeline as pipeline
 import elm.pipeline as elm_pipeline
-import elm.sample_util.transform as elmtransform
+import earthio.filters.transform as elmtransform
 from elm.scripts.main import main as elm_main
 
 from six import string_types
