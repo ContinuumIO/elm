@@ -8,7 +8,7 @@ dependencies:
  - datashader
  - dill
  - distributed
- - gdal ==2.1.*
+ - gdal =2.1.*
  - jupyter
  - krb5
  - matplotlib
