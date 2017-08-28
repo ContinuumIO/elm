@@ -19,6 +19,7 @@ requirements:
     - dill
     - distributed
     - earthio
+    - gdal ==2.1.*
     - networkx
     - numba
     - numpy
