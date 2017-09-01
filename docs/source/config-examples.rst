@@ -45,7 +45,7 @@ This examples creates ``ds_example`` which selects from files to get bands 1 thr
 
     data_sources: {
      ds_example: {
-      sampler: "elm.sample_util.band_selection:select_from_file",
+      sampler: "earthio.filters.band_selection:select_from_file",
       band_specs: [{search_key: long_name, search_value: "Band 1 ", name: band_1},
       {search_key: long_name, search_value: "Band 2 ", name: band_2},
       {search_key: long_name, search_value: "Band 3 ", name: band_3},

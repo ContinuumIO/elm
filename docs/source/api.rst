@@ -114,14 +114,14 @@ The packages include:
 
 .. _sample-util-api:
 
-``elm.sample_util``
+``earthio.filters``
 ~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: elm.sample_util.band_selection
+.. automodule:: earthio.filters.band_selection
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.change_coords
+.. automodule:: earthio.filters.change_coords
    :members:
    :undoc-members:
 
@@ -129,22 +129,22 @@ The packages include:
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.preproc_scale
+.. automodule:: earthio.filters.preproc_scale
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.sample_pipeline
+.. automodule:: earthio.filters.sample_pipeline
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.samplers
+.. automodule:: earthio.filters.samplers
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.step_mixin
+.. automodule:: earthio.filters.step_mixin
    :members:
    :undoc-members:
 
-.. automodule:: elm.sample_util.transform
+.. automodule:: earthio.filters.transform
    :members:
    :undoc-members:

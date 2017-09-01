@@ -5,7 +5,7 @@ The examples below assume you have created a random :doc:`ElmStore<elm-store>` a
 
 .. code-block:: python
 
-    from elm.sample_util.make_blobs import random_elm_store
+    from earthio.filters.make_blobs import random_elm_store
     X = random_elm_store()
 
 Operations to reshape an :doc:`ElmStore<elm-store>`
