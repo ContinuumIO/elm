@@ -26,8 +26,10 @@ before_install:
 install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
   - pushd docs
-  - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}
-  - if [ "$TEST_DOCS" ]; then ~/miniconda/bin/conda env update -n ${EARTHIO_TEST_ENV} -f environment.yml && make html && conda install --use-local elm earthio && make doctest; fi
+  - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
+  - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
+  - make html
+  - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make doctest; fi
   - source deactivate
   - popd
 
