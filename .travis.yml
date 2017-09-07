@@ -28,7 +28,7 @@ install:
   - pushd docs
   - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
   - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
-  #- if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make html && make doctest; fi
+  # - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make html && make doctest; fi
   - source deactivate
   - popd
 
