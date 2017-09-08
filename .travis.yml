@@ -24,6 +24,7 @@ before_install:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*
 
 install:
+  - exit 1
   - MAKE_MINICONDA=1 ./build_elm_env.sh
   - pushd docs
   - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
