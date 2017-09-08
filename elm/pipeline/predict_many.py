@@ -18,7 +18,7 @@ import xarray as xr
 
 
 from elm.config import import_callable, parse_env_vars
-from elm.sample_util.samplers import make_samples_dask
+from earthio.filters.samplers import make_samples_dask
 from elm.pipeline.util import _next_name
 
 logger = logging.getLogger(__name__)

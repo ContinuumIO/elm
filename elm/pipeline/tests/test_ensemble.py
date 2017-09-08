@@ -35,7 +35,7 @@ from elm.config.tests.fixtures import *
 # Below "steps" is a module of all the
 # classes which can be used for Pipeline steps
 from elm.pipeline import Pipeline, steps
-from elm.sample_util.make_blobs import random_elm_store
+from earthio.filters.make_blobs import random_elm_store
 from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
 
 from six import string_types

@@ -130,7 +130,7 @@ class Pipeline(object):
                   **data_source):
         '''Evaluate each fit/transform step in self.steps.  Used
         by fit, transform, predict and related methods'''
-        from elm.sample_util.sample_pipeline import _split_pipeline_output
+        from earthio.filters.sample_pipeline import _split_pipeline_output
         method_kwargs = method_kwargs or {}
         if y is None:
             y = method_kwargs.get('y')
@@ -202,7 +202,7 @@ class Pipeline(object):
                            method_kwargs=None):
         '''Finally convert X ElmStore to X numpy array for
         sklearn estimator in last step'''
-        from elm.sample_util.sample_pipeline import final_on_sample_step
+        from earthio.filters.sample_pipeline import final_on_sample_step
         method_kwargs = method_kwargs or {}
         y = y if y is not None else method_kwargs.get('y')
         return final_on_sample_step(fitter_or_predict,
@@ -238,8 +238,8 @@ class Pipeline(object):
                 in which case, this function just passes them through.  See
                 usage in ensemble
         '''
-        from elm.sample_util.sample_pipeline import create_sample_from_data_source
-        from elm.sample_util.sample_pipeline import _split_pipeline_output
+        from earthio.filters.sample_pipeline import create_sample_from_data_source
+        from earthio.filters.sample_pipeline import _split_pipeline_output
         X = data_source.get("X", None)
         y = data_source.get('y', None)
         logger.info('Call create_sample')

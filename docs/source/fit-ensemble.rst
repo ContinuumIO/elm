@@ -28,7 +28,7 @@ The example below uses a ``sampler`` function and ``args_list`` (list of unpacka
     from elm.model_selection.kmeans import kmeans_model_averaging, kmeans_aic
     from elm.pipeline import steps, Pipeline
     from earthio import *
-    from elm.sample_util.band_selection import select_from_file
+    from earthio.filters.band_selection import select_from_file
     from earthio.metadata_selection import example_meta_is_day
 
     ELM_EXAMPLE_DATA_PATH = os.environ['ELM_EXAMPLE_DATA_PATH']

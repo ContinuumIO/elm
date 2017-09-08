@@ -27,7 +27,7 @@ sklearn_preprocessing: {
   },
   require_positive: {
     method: FunctionTransformer,
-    func: "elm.sample_util.preproc_scale:require_positive",
+    func: "earthio.filters.preproc_scale:require_positive",
     func_kwargs: {small_num: 0.0001},
   },
 }
@@ -57,7 +57,7 @@ param_grids: {
 
 data_sources: {
   synthetic: {
-    sampler: 'elm.sample_util.make_blobs:random_elm_store',
+    sampler: 'earthio.filters.make_blobs:random_elm_store',
     sampler_args: [[["band_1", "band_2", "band_3", "band_4", "band_5"]]],
   }
 }

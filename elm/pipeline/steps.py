@@ -13,7 +13,7 @@ Example:
 
     from sklearn.cluster import MiniBatchKMeans
     from sklearn.decomposition import IncrementalPCA
-    from elm.sample_util.make_blobs import random_elm_store
+    from earthio.filters.make_blobs import random_elm_store
     from elm.pipeline import Pipeline, steps
 
     X = random_elm_store()
@@ -30,9 +30,9 @@ Example:
 
 '''
 
-from elm.sample_util.preproc_scale import *
-from elm.sample_util.step_mixin import StepMixin
-from elm.sample_util.transform import Transform
-from elm.sample_util.change_coords import *
-from elm.sample_util.bands_operation import *
-from elm.sample_util.ts_grid_tools import *
+from earthio.filters.preproc_scale import *
+from earthio.filters.step_mixin import StepMixin
+from earthio.filters.transform import Transform
+from earthio.filters.change_coords import *
+from earthio.filters.bands_operation import *
+from earthio.filters.ts_grid_tools import *

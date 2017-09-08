@@ -13,7 +13,7 @@ from elm.config import import_callable
 from elm.config.dask_settings import _find_get_func_for_client
 from elm.pipeline.util import (_run_model_selection,
                                _next_name)
-from elm.sample_util.samplers import make_samples_dask
+from earthio.filters.samplers import make_samples_dask
 
 logger = logging.getLogger(__name__)
 

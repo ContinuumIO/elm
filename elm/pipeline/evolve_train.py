@@ -18,7 +18,7 @@ from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.pipeline.util import _validate_ensemble_members
 from elm.pipeline.ensemble import _one_generation_dask_graph, ensemble
 from elm.pipeline.serialize import serialize_pipe
-from elm.sample_util.samplers import make_samples_dask
+from earthio.filters.samplers import make_samples_dask
 
 __all__ = ['evolve_train']
 

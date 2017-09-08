@@ -3,11 +3,14 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 '''
 ----------------------------
 
-``elm.config.func_signatures``
+``earthio.filters.config.func_signatures``
+
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 '''
 import inspect
 import sys
+
+__all__ = ['get_args_kwargs_defaults', 'filter_kwargs_to_func']
 
 def get_args_kwargs_defaults(func):
     '''Get the required args, defaults, and var keywords of func
@@ -38,21 +41,6 @@ def get_args_kwargs_defaults(func):
         if v.kind == 4:
             #<_ParameterKind.VAR_KEYWORD: 4>
             takes_variable_keywords = k
-
-        '''sig = inspect.getargpsec(func) # Python 2
-        args = sig.args
-        kwargs = sig.keywords
-        called = None
-        for x in range(100):
-            test_args = (func,) + tuple(range(x))
-            try:
-                called = inspect.getcallargs(*test_args)
-                break
-            except:
-                pass
-        if called is None:
-            raise
-        '''
     return args, kwargs, takes_variable_keywords
 
 def filter_kwargs_to_func(func, **kwargs):
@@ -66,5 +54,3 @@ def filter_kwargs_to_func(func, **kwargs):
         new[takes_variable_keywords] = {k: v for k,v in kwargs.items()
                                         if not k in new}
     return new
-
-__all__ = ['get_args_kwargs_defaults', 'filter_kwargs_to_func']

@@ -7,5 +7,3 @@ from elm.config.util import (ElmConfigError,
                              import_callable)
 from elm.config.func_signatures import *
 import elm.config.logging_config
-
-

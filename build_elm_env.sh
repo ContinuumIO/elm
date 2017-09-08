@@ -5,7 +5,7 @@ set -e
 export ELM_BUILD_DIR=`pwd -P`
 export EARTHIO_VERSION="${EARTHIO_VERSION:-master}"
 
-if [ \( "x$EARTHIO_INSTALL_METHOD" = "xconda" \) -o \( "x$EARTHIO_INSTALL_METHOD" = "xgit" \) ]; then
+if [ \( "$EARTHIO_INSTALL_METHOD" = "conda" \) -o \( "$EARTHIO_INSTALL_METHOD" = "git" \) ]; then
     rm -rf .earthio_tmp
     git clone http://github.com/ContinuumIO/earthio .earthio_tmp
     cd .earthio_tmp
@@ -17,7 +17,7 @@ if [ \( "x$EARTHIO_INSTALL_METHOD" = "xconda" \) -o \( "x$EARTHIO_INSTALL_METHOD
     IGNORE_ELM_DATA_DOWNLOAD=1 . build_earthio_env.sh
     set -e
 else
-    if [ ! -d $HOME/miniconda ]; then
+    if [ ! -d "$HOME/miniconda" ]; then
         wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
         bash miniconda.sh -b -p $HOME/miniconda
     fi
