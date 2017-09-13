@@ -19,7 +19,7 @@ except:
     load_array = load_array = None # TODO handle cases where load_* = None
 
 from elm.config import ConfigParser, import_callable
-from elm.model_selection.evolve import ea_setup
+#from elm.model_selection.evolve import ea_setup
 from elm.pipeline.ensemble import ensemble
 from elm.pipeline.pipeline import Pipeline
 from elm.pipeline.serialize import (serialize_prediction,

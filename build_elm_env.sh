@@ -46,5 +46,8 @@ cd $ELM_BUILD_DIR
 
 conda build $EARTHIO_CHANNEL_STR --python $PYTHON --numpy $NUMPY conda.recipe
 conda install -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR --use-local python=$PYTHON numpy=$NUMPY elm
-
+for repo in "dask-glm" "dask-searchv";do
+    # TODO improve with packaging later for ^^ dask packages
+    git clone "https://github.com/dask/${repo}" && cd $repo && python setup.py install;
+done
 set +e

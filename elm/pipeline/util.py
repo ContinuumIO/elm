@@ -17,7 +17,7 @@ except:
     ElmStore = None # TODO this module needs to handle where ElmStore is None
 import xarray as xr
 
-from elm.model_selection.evolve import ea_setup
+#from elm.model_selection.evolve import ea_setup
 from elm.config import import_callable
 from elm.model_selection.base import base_selection
 from elm.model_selection.sorting import pareto_front
