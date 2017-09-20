@@ -7,7 +7,8 @@ RUN apt-get update && \
             --shell /bin/bash \
             --user-group \
             elm && \
-    echo 'elm:elm' | chpasswd
+    echo 'elm:elm' | chpasswd && \
+    apt-get clean -y
 
 # Add files used for development
 ADD . /home/elm/elm
@@ -25,19 +26,19 @@ RUN wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh &
     echo 'export PATH="/home/elm/miniconda/bin:${PATH}"' >> ~/.bashrc
 ENV PATH="/home/elm/miniconda/bin:${PATH}"
 
-# Clone down repos
+# Clone down repos, create unified conda environment
 RUN git clone https://github.com/ContinuumIO/earthio.git && \
-    git clone https://github.com/ContinuumIO/xarray_filters.git
-
-# Create unified conda environment
-RUN conda create -n elm-env -y python=3.5 && \
-    conda env update -n elm-env -f earthio/environment.yml
-RUN conda env update -n elm-env -f elm/environment.yml
-
-# Install libraries into new environment
-RUN cd xarray_filters && ~/miniconda/envs/elm-env/bin/python setup.py develop --no-deps && cd - && \
+    git clone https://github.com/ContinuumIO/xarray_filters.git && \
+    conda create -n elm-env -y python=3.5 && \
+    conda env update -n elm-env -f earthio/environment.yml && \
+    conda env update -n elm-env -f elm/environment.yml && \
+    cd xarray_filters && ~/miniconda/envs/elm-env/bin/python setup.py develop --no-deps && cd - && \
     cd earthio && ~/miniconda/envs/elm-env/bin/python setup.py develop --no-deps && cd - && \
     cd elm && ~/miniconda/envs/elm-env/bin/python setup.py develop --no-deps && cd -
 
 # Expose port for Jupyter
 EXPOSE 8888
+
+# Free up space
+RUN conda clean --all -y && \
+    rm -rf /home/elm/earthio /home/elm/xarray_filters /tmp/* /var/tmp/* /var/lib/apt/lists/*
