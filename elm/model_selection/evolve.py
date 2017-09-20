@@ -16,11 +16,11 @@ import random
 import logging
 import warnings
 
-import attr
 from deap import base
 from deap import creator
 from deap import tools
 import numpy as np
+from sklearn.model_selection import ParameterGrid
 
 from elm.config.func_signatures import get_args_kwargs_defaults
 from elm.config import (import_callable,
@@ -38,14 +38,6 @@ EVO_FIELDS = ['toolbox',
               'score_weights',
               'early_stop']
 
-@attr.s
-class EvoParams(object):
-    toolbox = attr.ib()
-    deap_params = attr.ib()
-    param_grid_name = attr.ib()
-    history_file = attr.ib()
-    score_weights = attr.ib()
-    early_stop = attr.ib()
 
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
@@ -102,29 +94,8 @@ def assign_names(pop, names=None):
         ind.name = name
 
 
-def get_param_grid(config, step):
-    '''Get the metadata for one config step that has a param_grid or return None'''
-    param_grid_name = step.get('param_grid') or None
-    if not param_grid_name:
-        return None
-    train_step_name = step.get('train')
-    if train_step_name:
-        train_config = config.train[train_step_name]
-    else:
-        raise ElmConfigError('Expected param_grid to be used with a "train" '
-                         'step of a pipeline, but found param_grid '
-                         'was used in step {}'.format(step))
-    param_grid = config.param_grids[param_grid_name]
-    return check_format_param_grid(param_grid, param_grid_name)
-
-
-def check_format_param_grid(param_grid, param_grid_name='param_grid_0', control=None):
+def check_format_param_grid(param_grid, control, param_grid_name='param_grid_0'):
     '''Run validations on a param_grid'''
-    if not isinstance(param_grid, dict):
-        raise ElmConfigError('Expected param_grids: {} to be a dict '
-                             'but found {}'.format(param_grid_name, param_grid))
-    if control is None:
-        control = param_grid.get('control') or {}
     if not isinstance(control, dict):
         raise ElmConfigError("Expected 'control' as dict")
     early_stop = control.get('early_stop') or None
@@ -139,34 +110,43 @@ def check_format_param_grid(param_grid, param_grid_name='param_grid_0', control=
             raise ElmConfigError('Expected params_grids:{} '
                                  '"control" to have key {} with '
                                  'type {}'.format(param_grid_name, required_key, typ))
-    param_grid['control'] = control
-    return _to_param_meta(param_grid)
+    return _to_param_meta(param_grid, control)
 
 
-def _to_param_meta(param_grid):
+def _to_param_meta(param_grid, control):
     '''Acquire parameter metadata such as bounds that are useful for sampling'''
-    low = []
-    up = []
-    is_int = []
-    choices = []
-    param_grid['control']['param_order'] = tuple(sorted(set(param_grid) - set(('control',))))
-    for key in param_grid['control']['param_order']:
-        values = param_grid[key]
-        if not isinstance(values, Sequence) or not values:
-            raise ValueError('param_grid: {} has a value that is not a '
-                             'Sequence with non-zero length: {}'.format(key, values))
-        is_int.append(all(isinstance(v, numbers.Integral) for v in values))
-        low.append(min(values))
-        up.append(max(values))
-        choices.append(values)
-    param_meta = {
-                  'is_int':      is_int,
-                  'low':         low,
-                  'up':          up,
-                  'choices':     choices,
-                  'control':     param_grid['control'],
-                  'param_order': param_grid['control']['param_order'],
-                  }
+    pg_list = list(ParameterGrid(param_grid))
+    choices, low, high, param_order, is_int = [], [], [], [], []
+    is_continuous = lambda v: isinstance(v, numbers.Real)
+    while len(pg_list):
+        pg2 = pg_list.pop(0)
+        for k, v in pg2.items():
+            if k in param_order:
+                idx = param_order.index(k)
+            else:
+                idx = len(param_order)
+                param_order.append(k)
+                low.append(v)
+                high.append(v)
+                choices.append([v])
+                is_int.append(not is_continuous(v))
+                continue
+            if v not in choices[idx]:
+                choices[idx].append(v)
+            if is_continuous(v):
+                is_int[idx] = False
+                if v < low[idx]:
+                    low[idx] = v
+                if v > high[idx]:
+                    high[idx] = v
+            else:
+                is_int[idx] = True
+                low[idx] = high[idx] = v
+
+
+    param_meta = dict(control=control, high=high, low=low,
+                      choices=choices, is_int=is_int,
+                      param_order=param_order)
     return param_meta
 
 
@@ -193,9 +173,12 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
 
     '''
     kwargs = copy.deepcopy(kwargs)
-    mut = getattr(tools, method, None)
-    if not mut:
-        raise ValueError('In wrap_mutate, method - {} is not in deap.tools'.format(method))
+    if not callable(method):
+        mut = getattr(tools, method, None)
+        if not mut:
+            raise ValueError('In wrap_mutate, method - {} is not in deap.tools'.format(method))
+    else:
+        mut = method
     required_args, _, _ = get_args_kwargs_defaults(mut)
     args = [individual]
     if len(required_args) > 1:
@@ -245,9 +228,13 @@ def crossover(toolbox, method, ind1, ind2, **kwargs):
 
     '''
     child1, child2 = [toolbox.clone(ind) for ind in (ind1, ind2)]
-    cx = getattr(tools, method, None)
-    if not cx:
-        raise ValueError('{} method (crossover) is not in deap.tools'.format(method))
+
+    if not callable(method):
+        cx = getattr(tools, method, None)
+        if cx is None:
+            raise ValueError('{} method (crossover) is not in deap.tools'.format(method))
+    else:
+        cx = method
     required_args, _, _ = get_args_kwargs_defaults(cx)
     args = [child1, child2]
     if len(required_args) > 2:
@@ -277,9 +264,13 @@ def wrap_select(method, individuals, k, **kwargs):
             * :tournsize:      with method selTournament
 
     '''
-    sel = getattr(tools, method, None)
-    if not sel:
-        raise ValueError('Expected {} to be an attribute of deap.tools'.format(method))
+
+    if not callable(method):
+        sel = getattr(tools, method, None)
+        if sel is None:
+            raise ValueError('Expected {} to be an attribute of deap.tools'.format(method))
+    else:
+        sel = method
     required_args, _, _ = get_args_kwargs_defaults(sel)
     args = [individuals, k]
     if len(required_args) > 2:
@@ -305,7 +296,7 @@ def ind_to_new_params(deap_params, ind):
     choices
 
     Parameters:
-        :deap_params: deap_params field from EvoParams object
+        :deap_params: deap parameters
         :ind:         Individual (list of indices into deap_params /
                       in same order as deap_params['param_order'])
     Returns:
@@ -389,10 +380,13 @@ def fit_ea(score_weights,
            param_grid_name='param_grid',
            early_stop=None,
            toolbox=None):
+    if score_weights is None:
+        score_weights = (1,)
     control_defaults = {k: v for k, v in copy.deepcopy(DEFAULT_CONTROL).items()
                         if control.get(k, None) is None}
     control.update(control_defaults)
-    deap_params = check_format_param_grid(param_grid, control=control)
+    deap_params = check_format_param_grid(param_grid, control)
+    print('deap_params.keys', deap_params.keys())
     if toolbox is None:
         toolbox = base.Toolbox()
 
@@ -417,7 +411,7 @@ def fit_ea(score_weights,
 
 
 def evo_init_func(evo_params):
-    '''From parsed EvoParams return the initial population'''
+    '''From ea parameters return the initial population'''
     toolbox = evo_params['toolbox']
     pop = toolbox.population_guess()
     logger.info('Initialize population of {} solutions (param_grid: '
@@ -513,7 +507,7 @@ def eval_stop_wrapper(evo_params, original_fitness):
          * :early_stop: {threshold: [10], agg: any}
 
     Parameters:
-        :evo_params: EvoParams namedtuple
+        :evo_params: EA parameters
 
     Returns:
         :decorator: Evaluates stop on each EA iteration

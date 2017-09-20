@@ -11,7 +11,6 @@ import numbers
 import os
 import traceback
 
-import attr
 import numpy as np
 import sklearn.feature_selection as skfeat
 import sklearn.preprocessing as skpre

@@ -12,7 +12,6 @@ import os
 import pickle
 import re
 
-import attr
 import dill
 import numpy as np
 

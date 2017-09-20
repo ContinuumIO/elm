@@ -6,6 +6,7 @@ from dask_searchcv.model_selection import DaskBaseSearchCV, _DOC_TEMPLATE
 from deap import base
 from deap import creator
 from deap import tools
+import dill
 import numpy as np
 from sklearn.model_selection._search import _check_param_grid
 from elm.model_selection.evolve import (fit_ea, DEFAULT_CONTROL,
@@ -60,9 +61,13 @@ class EaSearchCV(DaskBaseSearchCV):
                                    example=_ea_example)
 
     def __init__(self, estimator, param_grid,
-                 score_weights, k=16, mu=32,
+                 score_weights=None, k=32, mu=32,
                  ngen=3, cxpb=0.3, indpb=0.5, mutpb=0.9, eta=20,
                  param_grid_name='param_grid',
+                 select_method='selNSGA2',
+                 crossover_method='cxTwoPoint',
+                 mutate_method='mutUniformInt',
+                 init_pop='random',
                  early_stop=None, toolbox=None, scoring=None,
                  refit=True, cv=None, error_score='raise', iid=True,
                  return_train_score=True, scheduler=None, n_jobs=-1,
@@ -87,13 +92,20 @@ class EaSearchCV(DaskBaseSearchCV):
         self.select_with_test = select_with_test
         self.toolbox = toolbox
         self.cv_results_all_gen_ = {}
+        self.select_method = select_method
+        self.crossover_method = crossover_method
+        self.mutate_method = mutate_method
+
         _check_param_grid(self.param_grid)
-        out = fit_ea(self.score_weights,
-                     self._make_control_kw(),
-                     self.param_grid,
-                     early_stop=self.early_stop,
-                     toolbox=toolbox)
-        self._pop, self._toolbox, self._ea_gen, self._evo_params = out
+
+    def _close(self):
+        self.cv_results_ = getattr(self, 'cv_results_all_gen_', self.cv_results_)
+        to_del = ('_ea_gen', 'cv_results_all_gen_',
+                  '_invalid_ind', '_pop', '_evo_params',
+                  '_toolbox')
+        for attr in to_del:
+            if hasattr(self, attr):
+                delattr(self, attr)
 
     def _make_control_kw(self):
         control = {}
@@ -110,20 +122,40 @@ class EaSearchCV(DaskBaseSearchCV):
         for idx, ind in enumerate(invalid_ind):
             yield ind_to_new_params(deap_params, ind)
 
-    def _concat_cv_results(self, cv1, cv2):
+    def _concat_cv_results(self, cv1, cv2, gen=0):
         cv_results = {}
-        if not cv1:
-            return cv2
-        for k, v2 in cv2.items():
-            v1 = cv1[k]
-            if isinstance(v1, list):
+        for k in cv2:
+            if k in cv1:
+                v1 = cv1[k]
+            else:
+                v1 = None
+            v2 = cv2[k]
+            if v1 is None:
+                v = v2
+            elif isinstance(v1, list):
                 v = v1 + v2
             elif isinstance(v1, np.ndarray):
                 v = np.concatenate((v1, v2)).squeeze()
             else:
                 raise NotImplementedError('{} not handled ({})'.format(k, v1))
             cv_results[k] = v
+            lenn = len(v2)
+        gen_arr = cv1.get('gen', None)
+        this_gen_arr = np.ones((lenn,)) * gen
+        if gen_arr is None:
+            cv_results['gen'] = this_gen_arr
+        else:
+            cv_results['gen'] = np.concatenate((gen_arr, this_gen_arr))
+
+        self.cv_results_all_gen_ = cv_results
         return cv_results
+
+    def _fitnesses_to_deap(self, fitnesses):
+        if isinstance(fitnesses, np.ndarray) and fitnesses.squeeze().ndim == 1:
+            fitnesses = [(x,) for x in fitnesses]
+        else:
+            raise NotImplementedError('Multi-objective optimization would require a few changes to cv_results?')
+        return fitnesses
 
     def _get_cv_scores(self):
         cv_results = getattr(self, 'cv_results_', None)
@@ -133,24 +165,45 @@ class EaSearchCV(DaskBaseSearchCV):
             score_field = 'mean_test_score'
         else:
             score_field = 'mean_train_score'
-        return cv_results[score_field]
+        return self._fitnesses_to_deap(cv_results[score_field])
+
+    def _open(self):
+        out = fit_ea(self.score_weights,
+                     self._make_control_kw(),
+                     self.param_grid,
+                     early_stop=self.early_stop,
+                     toolbox=self.toolbox)
+        self._pop, self._toolbox, self._ea_gen, self._evo_params = out
 
     def fit(self, X, y=None, groups=None, **fit_params):
-        for gen in range(self.ngen):
-            self.gen = gen
+        self._open()
+        for self._gen in range(self.ngen):
+            print('gen', self._gen)
             super(EaSearchCV, self).fit(X, y, groups, **fit_params)
             fitnesses = self._get_cv_scores()
-            if isinstance(fitnesses, np.ndarray) and fitnesses.squeeze().ndim == 1:
-                fitnesses = [(x,) for x in fitnesses]
-            else:
-                raise NotImplementedError('Multi-objective optimization would require a few changes to cv_results?')
             out = self._ea_gen.send(fitnesses)
             self._pop, self._invalid_ind, self._param_history = out
-            cv1, cv2 = self.cv_results_all_gen_, self.cv_results_
-            self.cv_results_all_gen_ = self._concat_cv_results(cv1, cv2)
+            self._concat_cv_results(self.cv_results_all_gen_,
+                                    self.cv_results_,
+                                    gen=self._gen)
             if not self._invalid_ind:
                 break
-        self.cv_results_ = self.cv_results_all_gen_
+        self._close()
 
     def _get_param_iterator(self):
-        return self._within_gen_param_iter(gen=self.gen)
+        if hasattr(self, '_invalid_ind') and not self._invalid_ind:
+            return iter(())
+        return self._within_gen_param_iter(gen=self._gen)
+
+    def dumps(self, protocol=None, byref=None, fmode=None, recurse=None):
+        '''pickle (dill) an object to a string
+        '''
+        self._close()
+        return dill.dumps(self, protocol=protocol,
+                          byref=byref, fmode=fmode, recurse=recurse)
+
+    def dump(self, file, protocol=None, byref=None, fmode=None, recurse=None):
+        '''pickle (dill) an object to a file'''
+        self._close()
+        return dill.dump(self, file, protocol=protocol,
+                         byref=byref, fmode=fmode, recurse=recurse)
