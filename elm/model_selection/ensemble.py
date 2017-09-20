@@ -53,7 +53,6 @@ class EnsembleCV(EaSearchCV, BaseEnsemble):
                 scoring=scoring, iid=iid, refit=refit, cv=cv,
                 error_score=error_score, return_train_score=return_train_score,
                 scheduler=scheduler, n_jobs=n_jobs, cache_cv=cache_cv)
-        self._switch_scheduler(self.estimator)
         self.ngen = ngen
         self.random_state = random_state
         self.param_grid = param_grid
@@ -65,10 +64,6 @@ class EnsembleCV(EaSearchCV, BaseEnsemble):
         self.sort_fitness = sort_fitness or pareto_front
         self.cv_results_all_gen_ = {}
         self._split_random_params()
-
-    def _switch_scheduler(self, estimator):
-        estimator.set_params(scheduler=self.scheduler)
-
 
     def _split_random_params(self):
         callable_params = {}

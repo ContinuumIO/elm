@@ -54,6 +54,7 @@ EaSearchCV(cache_cv=..., cv=..., error_score=...,
 """
 
 class EaSearchCV(DaskBaseSearchCV):
+
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,
                                    description=_ea_description,
@@ -68,10 +69,11 @@ class EaSearchCV(DaskBaseSearchCV):
                  crossover_method='cxTwoPoint',
                  mutate_method='mutUniformInt',
                  init_pop='random',
+                 select_with_test=True,
                  early_stop=None, toolbox=None, scoring=None,
                  refit=True, cv=None, error_score='raise', iid=True,
                  return_train_score=True, scheduler=None, n_jobs=-1,
-                 cache_cv=True, select_with_test=True):
+                 cache_cv=True):
         super(EaSearchCV, self).__init__(estimator=estimator,
                 scoring=scoring, iid=iid, refit=refit, cv=cv,
                 error_score=error_score, return_train_score=return_train_score,
