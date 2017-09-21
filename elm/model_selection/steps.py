@@ -24,12 +24,10 @@ SKIP = ('SearchCV', 'ParameterGrid', 'ParameterSampler',
 
 def get_module_classes(m):
     module =  import_module('sklearn.{}'.format(m))
-    #print('modd', module)
     attrs = tuple(_ for _ in dir(module)
                   if not _.startswith('_')
                   and _[0].isupper()
                   and not any(s in _ for s in SKIP))
-    print('attr', attrs)
     return {attr: getattr(module, attr) for attr in attrs}
 
 
