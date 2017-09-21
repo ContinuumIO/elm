@@ -52,7 +52,6 @@ def patch_cls(cls):
 _all = []
 for m in MODULES:
     for cls in get_module_classes(m).values():
-        print('c', cls)
         w = patch_cls(cls)
         globals()[cls.__name__] = w
         _all.append(cls.__name__)
