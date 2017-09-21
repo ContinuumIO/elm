@@ -48,7 +48,7 @@ class MultiLayer(SklearnMixin, BaseEstimator):
         self.estimators = estimators
 
     def _concat_features(self, X, y=None, **kw):
-        X, y = self._to_np(X, y)
+        X, y, row_idx = self._to_np(X, y)
         predicts = (getattr(est, 'predict') for est in self.estimators)
         preds = [pred(X) for pred in predicts]
         X2 = np.array(preds).T
