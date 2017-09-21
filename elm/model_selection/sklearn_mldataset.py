@@ -22,8 +22,6 @@ def to_np(method, cls=None):
         if _cls.__name__ == 'Pipeline':
             func = getattr(self._final_estimator, method, None)
         a, k, defaults = get_args_kwargs_defaults(func)
-        print('a',a,k)
-        print('self', self, cls)
         if func is None:
             raise ValueError('{} is not an attribute of {}'.format(method, _cls))
         if hasattr(X, 'to_array'):
@@ -31,7 +29,6 @@ def to_np(method, cls=None):
         args = (self, X)
         if not 'self' in a:
             args = args[1:]
-        print('ags', len(args))
         if 'predict' in method:
             return func(*args)
         return func(*args, y=y, **kw)
