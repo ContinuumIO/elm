@@ -3,9 +3,9 @@ from collections import OrderedDict
 import copy
 from itertools import product
 
-from dask_searchcv.model_selection import (GridSearchCV,
-                                           _DOC_TEMPLATE,
-                                           DaskBaseSearchCV)
+from dask_searchcv.model_selection import (_DOC_TEMPLATE,
+                                           DaskBaseSearchCV,
+                                           RandomizedSearchCV)
 from deap import base
 from deap import creator
 from deap import tools
@@ -18,6 +18,7 @@ from elm.model_selection.evolve import (fit_ea, DEFAULT_CONTROL,
                                         ind_to_new_params)
 from elm.model_selection.ea_searchcv import EaSearchCV
 from elm.model_selection.sorting import pareto_front
+from xarray_filters.func_signatures import filter_kw_and_run_init
 
 _ens_oneliner = '' # See GridSearchCV for ideas here - TODO
 _ens_description = '' #TODO
@@ -25,34 +26,36 @@ _ens_parameters = ''#TODO
 _ens_example = ''#TODO
 
 
-class EnsembleCV(EaSearchCV, BaseEnsemble):
+class EnsembleCV(RandomizedSearchCV, BaseEnsemble):
     __doc__ = _DOC_TEMPLATE.format(name="EnsembleCV",
                                    oneliner=_ens_oneliner,
                                    description=_ens_description,
                                    parameters=_ens_parameters,
                                    example=_ens_example)
 
-    def __init__(self, estimator, estimators=None, n_estimators=10,
-                 param_grid=None, ngen=3, estimator_params=tuple(),
+    def __init__(self, estimator, param_grid=None, estimators=None, n_estimators=10,
+                 ngen=3, estimator_params=tuple(),
                  score_weights=None, selection_func=None,
+                 n_iter=None,
                  keep_n=None, init_n=None, sort_fitness=None, random_state=None,
                  scoring=None, refit=True, cv=None, error_score='raise',
                  iid=True, return_train_score=True, scheduler=None, n_jobs=-1,
                  cache_cv=True, select_with_test=True):
 
+        if not param_grid:
+            raise ValueError('TODO')
+        param_distributions = param_grid
+        base_estimator = estimator
         if estimators:
-            self.init_params_list = [est.get_params() for est in estimators]
+            self.init_params_list = [(est.get_params() if hasattr(est, 'get_params') else est)
+                                      for est in estimators]
             if n_estimators < len(self.init_params_list):
                 n_estimators = len(self.init_params_list)
         else:
             self.init_params_list = []
-        BaseEnsemble.__init__(self, base_estimator=estimator,
-                              n_estimators=n_estimators,
-                              estimator_params=tuple())
-        DaskBaseSearchCV.__init__(self, estimator=estimator,
-                scoring=scoring, iid=iid, refit=refit, cv=cv,
-                error_score=error_score, return_train_score=return_train_score,
-                scheduler=scheduler, n_jobs=n_jobs, cache_cv=cache_cv)
+        #filter_kw_and_run_init(BaseEnsemble.__init__, **locals())
+        filter_kw_and_run_init(DaskBaseSearchCV.__init__, **locals())
+
         self.ngen = ngen
         self.random_state = random_state
         self.param_grid = param_grid
@@ -63,7 +66,8 @@ class EnsembleCV(EaSearchCV, BaseEnsemble):
         self.select_with_test = select_with_test
         self.sort_fitness = sort_fitness or pareto_front
         self.cv_results_all_gen_ = {}
-        self._split_random_params()
+        self.n_iter = n_iter
+
 
     def _split_random_params(self):
         callable_params = {}
@@ -115,7 +119,6 @@ class EnsembleCV(EaSearchCV, BaseEnsemble):
 
     def fit(self, X, y=None, groups=None, **fit_params):
         for self._gen in range(self.ngen):
-            print('gen', self._gen)
             DaskBaseSearchCV.fit(self, X, y, groups, **fit_params)
             fitnesses = EaSearchCV._get_cv_scores(self)
             self.next_params_ = self._model_selection(fitnesses)
@@ -130,11 +133,10 @@ class EnsembleCV(EaSearchCV, BaseEnsemble):
         """Return ParameterGrid instance for the given param_grid"""
         return model_selection.ParameterGrid(self.choice_params_)
 
-    def _get_param_iterator_dist(self, n_estimators=None):
+    def _get_param_iterator_dist(self):
         """Return ParameterGrid instance for the given param_grid"""
-        n_estimators = n_estimators or self.n_estimators
         return model_selection.ParameterSampler(self.callable_params_,
-                n_estimators, random_state=self.random_state)
+                self.n_iter, random_state=self.random_state)
 
     def _within_gen_param_iter(self, gen=0, n_estimators=None):
         grid = self._get_param_iterator_grid()

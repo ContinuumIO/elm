@@ -1,38 +1,61 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from importlib import import_module
+import sklearn
+from sklearn.base import BaseEstimator
 
-'''
-----------------------
+from elm.model_selection.sklearn_mldataset import SklearnMixin
 
-``elm.pipeline.steps``
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+MODULES = ['calibration', 'cluster', 'cluster.bicluster',
+           'covariance', 'cross_decomposition',
+           'decomposition', 'discriminant_analysis',
+           'dummy', 'ensemble',
+           'feature_extraction', 'feature_selection',
+           'gaussian_process', 'isotonic',
+           'kernel_approximation', 'kernel_ridge',
+           'linear_model', 'manifold', 'model_selection',
+           'mixture', 'model_selection',
+           'multiclass', 'multioutput',
+           'naive_bayes', 'neighbors',
+           'neural_network', 'pipeline',
+           'preprocessing', 'random_projection',
+           'semi_supervised', 'svm', 'tree']
 
-elm.pipeline.steps contains classes for use in elm.pipeline.Pipeline
-steps.
+SKIP = ('SearchCV', 'ParameterGrid', 'ParameterSampler',
+        'BaseEstimator', 'KERNEL_PARAMS', 'Pipeline')
 
-Example:
+def get_module_classes(m):
+    module =  import_module('sklearn.{}'.format(m))
+    attrs = tuple(_ for _ in dir(module)
+                  if not _.startswith('_')
+                  and _[0].isupper()
+                  and not any(s in _ for s in SKIP))
+    return {attr: getattr(module, attr) for attr in attrs}
 
-    from sklearn.cluster import MiniBatchKMeans
-    from sklearn.decomposition import IncrementalPCA
-    from earthio.filters.make_blobs import random_elm_store
-    from elm.pipeline import Pipeline, steps
 
-    X = random_elm_store()
+DELEGATES = ('_final_estimator', 'best_estimator_')
 
-    bands_to_flat = steps.Flatten()
-    pca_partial_fit = steps.Transform(IncrementalPCA(n_components=3), partial_fit_batches=2)
+def patch_cls(cls):
 
-    pipe = Pipeline([bands_to_flat,
-                     pca_partial_fit,
-                     MiniBatchKMeans(n_clusters=5)])
+    class Wrapped(SklearnMixin, cls):
+        _cls = cls
+        __init__ = cls.__init__
+        __name__ = cls.__name__
+        '''if hasattr(cls, '_final_estimator'):
+            _final_estimator = cls._final_estimator
+        if hasattr(cls, 'best_estimator_'):
+            cls.best_estimator_ = cls.best_estimator_'''
+    return Wrapped
 
-    y = pipe.fit_ensemble(X, partial_fit_batches=4).predict_many(X)
-    # y is a list of ElmStores from the ensemble
 
-'''
 
-from earthio.filters.preproc_scale import *
-from earthio.filters.step_mixin import StepMixin
-from earthio.filters.transform import Transform
-from earthio.filters.change_coords import *
-from earthio.filters.bands_operation import *
-from earthio.filters.ts_grid_tools import *
+
+
+_all = []
+for m in MODULES:
+    for cls in get_module_classes(m).values():
+        w = patch_cls(cls)
+        if any(s in cls.__name__ for s in SKIP):
+            continue
+        globals()[cls.__name__] = w
+        _all.append(cls.__name__)
+
+__all__ = [ 'patch_cls'] + _all

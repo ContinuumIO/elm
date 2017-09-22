@@ -386,7 +386,6 @@ def fit_ea(score_weights,
                         if control.get(k, None) is None}
     control.update(control_defaults)
     deap_params = check_format_param_grid(param_grid, control)
-    print('deap_params.keys', deap_params.keys())
     if toolbox is None:
         toolbox = base.Toolbox()
 

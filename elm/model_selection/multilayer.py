@@ -11,7 +11,7 @@ import xarray as xr
 
 from dask_searchcv.model_selection import DaskBaseSearchCV, _DOC_TEMPLATE
 from elm.model_selection.ensemble import EnsembleCV
-from elm.model_selection.sklearn_mldataset import to_np
+from elm.model_selection.sklearn_mldataset import _call_sk_method
 from elm.model_selection.sklearn_mldataset import SklearnMixin
 
 _hi_oneliner = """TODO
@@ -48,7 +48,7 @@ class MultiLayer(SklearnMixin, BaseEstimator):
         self.estimators = estimators
 
     def _concat_features(self, X, y=None, **kw):
-        X, y, row_idx = self._to_np(X, y)
+        X, y, row_idx = self._as_numpy_arrs(X, y)
         predicts = (getattr(est, 'predict') for est in self.estimators)
         preds = [pred(X) for pred in predicts]
         X2 = np.array(preds).T
