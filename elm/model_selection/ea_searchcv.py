@@ -2,15 +2,45 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import OrderedDict
 import copy
 
-from dask_searchcv.model_selection import DaskBaseSearchCV, _DOC_TEMPLATE
-from deap import base
-from deap import creator
-from deap import tools
-import dill
+from dask_searchcv.model_selection import (_DOC_TEMPLATE,
+                                           RandomizedSearchCV)
 import numpy as np
-from sklearn.model_selection._search import _check_param_grid
-from elm.model_selection.evolve import (fit_ea, DEFAULT_CONTROL,
-                                        ind_to_new_params)
+from elm.model_selection.evolve import (fit_ea,
+                                        DEFAULT_CONTROL,
+                                        ind_to_new_params,
+                                        DEFAULT_EVO_PARAMS,)
+from elm.model_selection.mixins import SerializeEstimator
+from elm.model_selection.sorting import pareto_front
+from elm.model_selection.base import base_selection
+from xarray_filters.func_signatures import filter_kw_and_run_init
+
+
+def _concat_cv_results(cv1, cv2, gen=0):
+    cv_results = {}
+    for k in cv2:
+        if k in cv1:
+            v1 = cv1[k]
+        else:
+            v1 = None
+        v2 = cv2[k]
+        if v1 is None:
+            v = v2
+        elif isinstance(v1, list):
+            v = v1 + v2
+        elif isinstance(v1, np.ndarray):
+            v = np.concatenate((v1, v2)).squeeze()
+        else:
+            raise NotImplementedError('{} not handled ({})'.format(k, v1))
+        cv_results[k] = v
+        lenn = len(v2)
+    gen_arr = cv1.get('gen', None)
+    this_gen_arr = np.ones((lenn,)) * gen
+    if gen_arr is None:
+        cv_results['gen'] = this_gen_arr
+    else:
+        cv_results['gen'] = np.concatenate((gen_arr, this_gen_arr))
+
+    return cv_results
 
 _ea_oneliner = """\
 Exhaustive search over specified parameter values for an estimator.\
@@ -20,12 +50,6 @@ The parameters of the estimator used to apply these methods are optimized
 by cross-validated evolutionary algorithm search over a parameter grid.\
 """
 _ea_parameters = """\
-param_grid : dict or list of dictionaries
-    Dictionary with parameters names (string) as keys and lists of
-    parameter settings to try as values, or a list of such
-    dictionaries, in which case the grids spanned by each dictionary
-    in the list are explored. This enables searching over any sequence
-    of parameter settings.\
 TODO : DESCRIBE OTHER PARAMETERS FOR EaSearchCV
 """
 _ea_example = """\
@@ -42,7 +66,7 @@ EaSearchCV(cache_cv=..., cv=..., error_score=...,
                       kernel=..., max_iter=-1, probability=False,
                       random_state=..., shrinking=..., tol=...,
                       verbose=...),
-        iid=..., n_jobs=..., param_grid=..., refit=..., return_train_score=...,
+        iid=..., n_jobs=..., param_distributions=..., refit=..., return_train_score=...,
         scheduler=..., scoring=...)
 >>> sorted(clf.cv_results_.keys())  # doctest: +NORMALIZE_WHITESPACE +ELLIPSIS
 ['mean_fit_time', 'mean_score_time', 'mean_test_score',...
@@ -53,7 +77,7 @@ EaSearchCV(cache_cv=..., cv=..., error_score=...,
  'std_fit_time', 'std_score_time', 'std_test_score', 'std_train_score'...]\
 """
 
-class EaSearchCV(DaskBaseSearchCV):
+class EaSearchCV(RandomizedSearchCV, SerializeEstimator):
 
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,
@@ -61,44 +85,24 @@ class EaSearchCV(DaskBaseSearchCV):
                                    parameters=_ea_parameters,
                                    example=_ea_example)
 
-    def __init__(self, estimator, param_grid,
-                 score_weights=None, k=32, mu=32,
-                 ngen=3, cxpb=0.3, indpb=0.5, mutpb=0.9, eta=20,
-                 param_grid_name='param_grid',
-                 select_method='selNSGA2',
-                 crossover_method='cxTwoPoint',
-                 mutate_method='mutUniformInt',
-                 init_pop='random',
+    def __init__(self, estimator, param_distributions, n_iter=10, ngen=3,
+                 random_state=None,
+                 scoring=None,
+                 score_weights=None, model_selection=None,
+                 sort_fitness=pareto_front,
+                 model_selection_kwargs=None,
                  select_with_test=True,
-                 early_stop=None, toolbox=None, scoring=None,
-                 refit=True, cv=None, error_score='raise', iid=True,
-                 return_train_score=True, scheduler=None, n_jobs=-1,
-                 cache_cv=True):
-        super(EaSearchCV, self).__init__(estimator=estimator,
-                scoring=scoring, iid=iid, refit=refit, cv=cv,
-                error_score=error_score, return_train_score=return_train_score,
-                scheduler=scheduler, n_jobs=n_jobs, cache_cv=cache_cv)
-
-
-        self.param_grid = param_grid
-        self.estimator = estimator
-        self.score_weights = score_weights
-        self.k = k
-        self.mu = mu
-        self.indpb = indpb
-        self.eta = eta
+                 avoid_repeated_params=True,
+                 iid=True, refit=True,
+                 cv=None, error_score='raise', return_train_score=True,
+                 scheduler=None, n_jobs=-1, cache_cv=True):
+        filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
         self.ngen = ngen
-        self.cxpb = cxpb
-        self.early_stop = early_stop
-        self.param_grid_name = param_grid_name
         self.select_with_test = select_with_test
-        self.toolbox = toolbox
+        self.model_selection = model_selection
+        self.score_weights = score_weights
+        self.avoid_repeated_params = avoid_repeated_params
         self.cv_results_all_gen_ = {}
-        self.select_method = select_method
-        self.crossover_method = crossover_method
-        self.mutate_method = mutate_method
-
-        _check_param_grid(self.param_grid)
 
     def _close(self):
         self.cv_results_ = getattr(self, 'cv_results_all_gen_', self.cv_results_)
@@ -109,13 +113,40 @@ class EaSearchCV(DaskBaseSearchCV):
             if hasattr(self, attr):
                 delattr(self, attr)
 
-    def _make_control_kw(self):
-        control = {}
-        for k, v in DEFAULT_CONTROL.items():
-            control[k] = getattr(self, k, v)
-        return control
+    @property
+    def _is_ea(self):
+        model_selection = self.get_params()['model_selection']
+        if not model_selection or isinstance(model_selection, dict):
+            return True
+        return False
+
+    @property
+    def _model_selection(self):
+        params = self.get_params()
+        model_selection = params['model_selection']
+        if not model_selection:
+            model_selection = {}
+        if isinstance(model_selection, dict):
+            model_selection = model_selection.copy()
+            for k, v in DEFAULT_EVO_PARAMS.items():
+                if k not in model_selection:
+                    model_selection[k] = v
+            return model_selection
+        kw = params['model_selection_kwargs'] or {}
+        sort_fitness = params['sort_fitness'] or pareto_front
+        score_weights = params.get('score_weights', (1,))
+        selector = partial(base_selection,
+                           model_selection=model_selection,
+                           sort_fitness=sort_fitness,
+                           score_weights=score_weights,
+                           **kw)
+        return selector
 
     def _within_gen_param_iter(self, gen=0):
+        if not self._is_ea:
+            for params in getattr(self, 'next_params_', []):
+                yield params
+            return
         deap_params = self._evo_params['deap_params']
         if gen == 0:
             invalid_ind = self._pop
@@ -123,34 +154,6 @@ class EaSearchCV(DaskBaseSearchCV):
             invalid_ind = self._invalid_ind
         for idx, ind in enumerate(invalid_ind):
             yield ind_to_new_params(deap_params, ind)
-
-    def _concat_cv_results(self, cv1, cv2, gen=0):
-        cv_results = {}
-        for k in cv2:
-            if k in cv1:
-                v1 = cv1[k]
-            else:
-                v1 = None
-            v2 = cv2[k]
-            if v1 is None:
-                v = v2
-            elif isinstance(v1, list):
-                v = v1 + v2
-            elif isinstance(v1, np.ndarray):
-                v = np.concatenate((v1, v2)).squeeze()
-            else:
-                raise NotImplementedError('{} not handled ({})'.format(k, v1))
-            cv_results[k] = v
-            lenn = len(v2)
-        gen_arr = cv1.get('gen', None)
-        this_gen_arr = np.ones((lenn,)) * gen
-        if gen_arr is None:
-            cv_results['gen'] = this_gen_arr
-        else:
-            cv_results['gen'] = np.concatenate((gen_arr, this_gen_arr))
-
-        self.cv_results_all_gen_ = cv_results
-        return cv_results
 
     def _fitnesses_to_deap(self, fitnesses):
         if isinstance(fitnesses, np.ndarray) and fitnesses.squeeze().ndim == 1:
@@ -171,10 +174,10 @@ class EaSearchCV(DaskBaseSearchCV):
 
     def _open(self):
         out = fit_ea(self.score_weights,
-                     self._make_control_kw(),
-                     self.param_grid,
-                     early_stop=self.early_stop,
-                     toolbox=self.toolbox)
+                     self._model_selection,
+                     self.param_distributions,
+                     early_stop=self._model_selection['early_stop'],
+                     toolbox=self._model_selection['toolbox'])
         self._pop, self._toolbox, self._ea_gen, self._evo_params = out
 
     def fit(self, X, y=None, groups=None, **fit_params):
@@ -183,29 +186,23 @@ class EaSearchCV(DaskBaseSearchCV):
             print('gen', self._gen)
             super(EaSearchCV, self).fit(X, y, groups, **fit_params)
             fitnesses = self._get_cv_scores()
-            out = self._ea_gen.send(fitnesses)
-            self._pop, self._invalid_ind, self._param_history = out
-            self._concat_cv_results(self.cv_results_all_gen_,
-                                    self.cv_results_,
-                                    gen=self._gen)
-            if not self._invalid_ind:
-                break
+            self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,
+                                                          self.cv_results_,
+                                                          gen=self._gen)
+            if self._is_ea:
+                out = self._ea_gen.send(fitnesses)
+                self._pop, self._invalid_ind, self._param_history = out
+                if not self._invalid_ind:
+                    break
+            else:
+                self.next_params_ = self._model_selection(self.cv_results_all_gen_, X, y)
+                if not self.next_params_:
+                    break
         self._close()
+        return self
 
     def _get_param_iterator(self):
         if hasattr(self, '_invalid_ind') and not self._invalid_ind:
             return iter(())
         return self._within_gen_param_iter(gen=self._gen)
 
-    def dumps(self, protocol=None, byref=None, fmode=None, recurse=None):
-        '''pickle (dill) an object to a string
-        '''
-        self._close()
-        return dill.dumps(self, protocol=protocol,
-                          byref=byref, fmode=fmode, recurse=recurse)
-
-    def dump(self, file, protocol=None, byref=None, fmode=None, recurse=None):
-        '''pickle (dill) an object to a file'''
-        self._close()
-        return dill.dump(self, file, protocol=protocol,
-                         byref=byref, fmode=fmode, recurse=recurse)

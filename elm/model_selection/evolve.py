@@ -22,7 +22,7 @@ from deap import tools
 import numpy as np
 from sklearn.model_selection import ParameterGrid
 
-from elm.config.func_signatures import get_args_kwargs_defaults
+from xarray_filters.func_signatures import get_args_kwargs_defaults
 from elm.config import (import_callable,
                         ElmConfigError,
                         ConfigParser)
@@ -75,6 +75,19 @@ REQUIRED_CONTROL_KEYS_TYPES = {
     'k':     int,
 }
 EARLY_STOP_KEYS = ['abs_change', 'percent_change', 'threshold']
+
+DEFAULT_EVO_PARAMS = dict(
+    k=32,
+    mu=32,
+    ngen=3, cxpb=0.3, indpb=0.5, mutpb=0.9, eta=20,
+    param_grid_name='param_grid',
+    select_method='selNSGA2',
+    crossover_method='cxTwoPoint',
+    mutate_method='mutUniformInt',
+    init_pop='random',
+    early_stop=None,
+    toolbox=None
+)
 
 def _random_choice(choices):
     '''Random choice among indices'''
@@ -344,10 +357,12 @@ def avoid_repeated_params(max_param_retries):
     return partial(dec, hashed_params)
 
 
-def _configure_toolbox(toolbox, deap_params, **kwargs):
+def _configure_toolbox(deap_params, **kwargs):
     '''Configure a deap toolbox for mate, mutate, select, Individual init, and population init methods'''
+    kwargs = kwargs.copy()
     control = deap_params['control']
     kwargs.update({k: v for k, v in control.items() if k not in kwargs})
+    toolbox = kwargs.pop('toolbox')
     max_param_retries = kwargs.get('max_param_retries', DEFAULT_MAX_PARAM_RETRIES)
     dec = avoid_repeated_params(max_param_retries)
     toolbox.register('mate', dec(partial(crossover, toolbox,
@@ -387,7 +402,7 @@ def fit_ea(score_weights,
     control.update(control_defaults)
     deap_params = check_format_param_grid(param_grid, control)
     if toolbox is None:
-        toolbox = base.Toolbox()
+        control['toolbox'] = toolbox = base.Toolbox()
 
     creator.create('FitnessMulti', base.Fitness, weights=tuple(score_weights))
     creator.create('Individual', list, fitness=creator.FitnessMulti)
@@ -396,13 +411,12 @@ def fit_ea(score_weights,
                      toolbox.indices)
     toolbox.register('population', tools.initRepeat, list, toolbox.individual)
     evo_params = dict(
-        toolbox=_configure_toolbox(toolbox, deap_params,
-                                   **control),
+        toolbox=_configure_toolbox(deap_params, **control),
         deap_params=deap_params,
         param_grid_name=param_grid_name,
         history_file='{}.csv'.format(param_grid_name),
         score_weights=score_weights,
-        early_stop=None,
+        early_stop=early_stop,
     )
     ea_gen = ea_general(evo_params, **control)
     pop, _, _ = next(ea_gen)

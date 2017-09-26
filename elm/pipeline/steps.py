@@ -1,8 +1,9 @@
+from argparse import Namespace
 from importlib import import_module
 import sklearn
 from sklearn.base import BaseEstimator
 
-from elm.model_selection.sklearn_mldataset import SklearnMixin
+from elm.mldataset.wrap_sklearn import SklearnMixin
 
 MODULES = ['calibration', 'cluster', 'cluster.bicluster',
            'covariance', 'cross_decomposition',
@@ -20,7 +21,10 @@ MODULES = ['calibration', 'cluster', 'cluster.bicluster',
            'semi_supervised', 'svm', 'tree']
 
 SKIP = ('SearchCV', 'ParameterGrid', 'ParameterSampler',
-        'BaseEstimator', 'KERNEL_PARAMS', 'Pipeline')
+        'BaseEstimator', 'KERNEL_PARAMS', 'Pipeline',
+        'Parallel', 'RegressorMixin', 'ClassifierMixin', 'ABCMeta',
+        'TransformerMixin', 'VBGMM', 'RandomizedPCA', 'GMM',
+        'MultiOutputEstimator')
 
 def get_module_classes(m):
     module =  import_module('sklearn.{}'.format(m))
@@ -31,31 +35,39 @@ def get_module_classes(m):
     return {attr: getattr(module, attr) for attr in attrs}
 
 
-DELEGATES = ('_final_estimator', 'best_estimator_')
-
 def patch_cls(cls):
 
     class Wrapped(SklearnMixin, cls):
         _cls = cls
         __init__ = cls.__init__
         __name__ = cls.__name__
-        '''if hasattr(cls, '_final_estimator'):
-            _final_estimator = cls._final_estimator
-        if hasattr(cls, 'best_estimator_'):
-            cls.best_estimator_ = cls.best_estimator_'''
     return Wrapped
 
 
-
-
-
 _all = []
+_seen = set()
 for m in MODULES:
+    this_module = dict()
     for cls in get_module_classes(m).values():
+        if cls.__name__ in _seen:
+            continue
+        _seen.add(cls.__name__)
         w = patch_cls(cls)
         if any(s in cls.__name__ for s in SKIP):
             continue
-        globals()[cls.__name__] = w
-        _all.append(cls.__name__)
+        this_module[cls.__name__] = w
 
+    this_module = Namespace(**this_module)
+    if m == 'cluster.bicluster':
+        bicluster = this_module # special case (dotted name)
+        continue
+    globals()[m] = this_module
+    _all.append(m)
+
+vars(cluster)['bicluster'] = bicluster
 __all__ = [ 'patch_cls'] + _all
+del _all
+del m
+del this_module
+del w
+del _seen

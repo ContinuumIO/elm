@@ -32,9 +32,9 @@ If ``sampler`` is given with ``args_list``, then each element of ``args_list`` i
 
 .. code-block:: python
 
-    from earthio import BandSpec
+    from earthio import LayerSpec
     from earthio.metadata_selection import meta_is_day
-    band_specs = list(map(lambda x: BandSpec(**x),
+    band_specs = list(map(lambda x: LayerSpec(**x),
             [{'search_key': 'long_name', 'search_value': "Band 1 ", 'name': 'band_1'},
              {'search_key': 'long_name', 'search_value': "Band 2 ", 'name': 'band_2'},
              {'search_key': 'long_name', 'search_value': "Band 3 ", 'name': 'band_3'},

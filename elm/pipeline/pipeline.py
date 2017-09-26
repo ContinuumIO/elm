@@ -23,13 +23,17 @@ from sklearn.utils import tosequence
 from sklearn.utils.metaestimators import if_delegate_has_method
 from sklearn.utils import Bunch
 
-from sklearn.pipeline import Pipeline as sk_Pipeline
-from elm.model_selection.sklearn_mldataset import (_call_sk_method,
-                                                   _as_numpy_arrs,
-                                                   _from_numpy_arrs,
-                                                   get_row_index)
+from sklearn.pipeline import (Pipeline as sk_Pipeline,
+                              _fit_transform_one,
+                              _transform_one,
+                              _fit_one_transformer,)
+from elm.mldataset.wrap_sklearn import (_as_numpy_arrs,
+                                        _from_numpy_arrs,
+                                        get_row_index)
 
 from sklearn.utils.metaestimators import _BaseComposition
+from xarray_filters.pipeline import Step
+from xarray_filters.func_signatures import filter_args_kwargs
 
 __all__ = ['Pipeline', 'FeatureUnion']
 
@@ -44,9 +48,64 @@ class Pipeline(sk_Pipeline):
     _as_numpy_arrs = _as_numpy_arrs
     _from_numpy_arrs = _from_numpy_arrs
 
+    def _astype(self, step, X, y=None):
+        astype = 'numpy'
+        if not isinstance(step, Step):
+            print('Numpy')
+            X, y, row_idx = self._as_numpy_arrs(X, y)
+            if row_idx is not None:
+                self.row_idx = row_idx
+        return X, y
+
+    def _validate_steps(self):
+        return True
+
     def _fit(self, X, y=None, **fit_params):
-        X, y, self.row_idx = self._as_numpy_arrs(X, y=y)
-        return self._sk_method('_fit')(X, y=y, **fit_params)
+
+        self._validate_steps()
+        # Setup the memory
+        memory = self.memory
+        if memory is None:
+            memory = Memory(cachedir=None, verbose=0)
+        elif isinstance(memory, six.string_types):
+            memory = Memory(cachedir=memory, verbose=0)
+        elif not isinstance(memory, Memory):
+            raise ValueError("'memory' should either be a string or"
+                             " a joblib.Memory instance, got"
+                             " 'memory={!r}' instead.".format(memory))
+
+        fit_transform_one_cached = memory.cache(_fit_transform_one)
+
+        fit_params_steps = dict((name, {}) for name, step in self.steps
+                                if step is not None)
+        for pname, pval in six.iteritems(fit_params):
+            step, param = pname.split('__', 1)
+            fit_params_steps[step][param] = pval
+        Xt = X
+        for step_idx, (name, transformer) in enumerate(self.steps[:-1]):
+            Xt, y = self._astype(transformer, Xt, y=y)
+            print('Types', step_idx, [type(_) for _ in (Xt, y)])
+            if transformer is None:
+                pass
+            else:
+                if memory.cachedir is None:
+                    # we do not clone when caching is disabled to preserve
+                    # backward compatibility
+                    cloned_transformer = transformer
+                else:
+                    cloned_transformer = clone(transformer)
+                # Fit or load from cache the current transfomer
+                Xt, fitted_transformer = fit_transform_one_cached(
+                    cloned_transformer, None, Xt, y,
+                    **fit_params_steps[name])
+                # Replace the transformer of the step with the fitted
+                # transformer. This is necessary when loading the transformer
+                # from the cache.
+                self.steps[step_idx] = (name, fitted_transformer)
+        if self._final_estimator is None:
+            return Xt, {}
+        fit_params = fit_params_steps[self.steps[-1][0]]
+        return Xt, fit_params
 
     def fit(self, X, y=None, **fit_params):
         """Fit the model
@@ -76,8 +135,34 @@ class Pipeline(sk_Pipeline):
         """
 
         Xt, fit_params = self._fit(X, y, **fit_params)
-        return self._sk_method('_fit')(Xt)
+        if self._final_estimator is not None:
+            Xt, y = self._astype(self._final_estimator, Xt, y=y)
+            self._final_estimator.fit(Xt, y, **fit_params)
+        return self
 
+    def _as_dataset(self, as_dataset, y, row_idx, features_layer=None):
+
+        if as_dataset:
+            return self._from_numpy_arrs(y, row_idx, features_layer=features_layer)
+        return y
+
+    def _before_predict(self, method, X, y=None, **fit_params):
+
+        Xt = X
+        for name, transform in self.steps[:-1]:
+            if transform is not None:
+                Xt, y = self._astype(transform, Xt, y=y)
+                Xt = transform.transform(Xt)
+        final_estimator = self.steps[-1][-1]
+        fit_params = dict(row_idx=self.row_idx, **fit_params)
+        if y is not None:
+            fit_params['y'] = y
+        if hasattr(self, 'row_idx'):
+            fit_params['row_idx'] = self.row_idx
+        fit_params = filter_args_kwargs(getattr(self._final_estimator, method),
+                                        Xt,
+                                        **fit_params)
+        return Xt, y, fit_params, final_estimator
 
     @if_delegate_has_method(delegate='_final_estimator')
     def predict(self, X, as_dataset=True):
@@ -93,18 +178,10 @@ class Pipeline(sk_Pipeline):
         -------
         y_pred : array-like
         """
-        Xt, _, row_idx = self._as_numpy_arrs(X)
-        for name, transform in self.steps[:-1]:
-            if transform is not None:
-                Xt = transform.transform(Xt)
-                Xt, _, row_idx = self._as_numpy_arrs(Xt)
-        y = self.steps[-1][-1].predict(Xt)
-
-    def _as_dataset(self, as_dataset, X, y, row_idx, features_layer=None):
-
-        if as_dataset:
-            _, y, _ = _from_numpy_arrs(X, y, row_idx, features_layer=features_layer)
-        return y
+        Xt, _, fit_params, final_estimator = self._before_predict('predict',
+                                                                  X, y=None)
+        y = final_estimator.predict(**fit_params)
+        return self._as_dataset(as_dataset, y, self.row_idx, features_layer='predict')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def fit_predict(self, X, y=None, as_dataset=True, **fit_params):
@@ -133,12 +210,11 @@ class Pipeline(sk_Pipeline):
         -------
         y_pred : array-like
         """
-        Xt, fit_params = self._fit(X, y, **fit_params)
-        row_idx = getattr(self, 'row_idx', None)
-        if row_idx is None:
-            self.row_idx = get_row_index(X)
-        y = self.steps[-1][-1].fit_predict(Xt, y, **fit_params)
-        return self._as_dataset(as_dataset, X, y, self.row_idx)
+        Xt, y, fit_params, final_estimator = self._before_predict('fit_predict',
+                                                                  X, y=y,
+                                                                  **fit_params)
+        y = final_estimator.fit_predict(**fit_params)
+        return self._as_dataset(as_dataset, y, self.row_idx, features_layer='predict')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def predict_proba(self, X):
@@ -154,13 +230,11 @@ class Pipeline(sk_Pipeline):
         -------
         y_proba : array-like, shape = [n_samples, n_classes]
         """
-        Xt, _, _ = self._as_numpy_arrs(X)
-        for name, transform in self.steps[:-1]:
-            if transform is not None:
-                Xt = transform.transform(Xt)
-                Xt, _, _ = self._as_numpy_arrs(Xt)
-        prob_a = self.steps[-1][-1].predict_proba(Xt)
-        return self._as_dataset(as_dataset, X, prob_a, self.row_idx)
+        Xt, _, fit_params, final_estimator = self._before_predict('predict_proba',
+                                                                  X, y=None,
+                                                                  **fit_params)
+        prob_a = final_estimator.predict_proba(**fit_params)
+        return self._as_dataset(as_dataset, prob_a, self.row_idx, features_layer='proba')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def decision_function(self, X):
@@ -176,9 +250,11 @@ class Pipeline(sk_Pipeline):
         -------
         y_score : array-like, shape = [n_samples, n_classes]
         """
-        Xt, _, _ = self._as_numpy_arrs(X)
-        d = self._sk_method('decision_function')(Xt)
-        return self._as_dataset(as_dataset, X, d, self.row_idx)
+        Xt, _, fit_params, final_estimator = self._before_predict('decision_function',
+                                                                  X, y=None,
+                                                                  **fit_params)
+        d = final_estimator.decision_function(**fit_params)
+        return self._as_dataset(as_dataset, d, self.row_idx, features_layer='decision')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def predict_log_proba(self, X):
@@ -194,14 +270,11 @@ class Pipeline(sk_Pipeline):
         -------
         y_score : array-like, shape = [n_samples, n_classes]
         """
-        Xt, _, row_idx = self._as_numpy_arrs(X)
-        for name, transform in self.steps[:-1]:
-            if transform is not None:
-                Xt = transform.transform(Xt)
-                Xt, _, row_idx = self._as_numpy_arrs(Xt)
-        log_proba = self.steps[-1][-1].predict_log_proba(Xt)
-        row_idx = getattr(self, 'row_idx', None)
-        return self._as_dataset(as_dataset, X, log_proba, row_idx)
+        Xt, y, fit_params, final_estimator = self._before_predict('predict_log_proba',
+                                                                  X, y=y,
+                                                                  **fit_params)
+        log_proba = final_estimator.predict_log_proba(**fit_params)
+        return self._as_dataset(as_dataset, log_proba, self.row_idx, features_layer='log_proba')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def score(self, X, y=None, sample_weight=None):
@@ -225,8 +298,13 @@ class Pipeline(sk_Pipeline):
         -------
         score : float
         """
-        Xt, _, row_idx = self._as_numpy_arrs(X)
-        return self._sk_method('score')(Xt)
+        Xt, y, fit_params, final_estimator = self._before_predict('score',
+                                                                  X, y=y,
+                                                                  **fit_params)
+        score_params = {}
+        if sample_weight is not None:
+            score_params['sample_weight'] = sample_weight
+        return final_estimator.score(Xt, y, **score_params)
 
 
 

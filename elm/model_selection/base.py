@@ -44,7 +44,7 @@ from elm.model_selection.sorting import pareto_front
 logger = logging.getLogger(__name__)
 
 
-def base_selection(models,
+def base_selection(models, fitnesses,
                    model_selection=None,
                    sort_fitness=pareto_front,
                    score_weights=None,
@@ -79,19 +79,18 @@ def base_selection(models,
     if score_weights is not None:
         if score_weights is None or not hasattr(score_weights, '__len__'):
             raise ValueError('Expected score_weights keyword arg (array of '
-                            '-1 for minmize, 1 for maximize for each scoring matrix column)')
+                            '1 for minmize, -1 for maximize for each '
+                            'scoring matrix column)')
         # scoring has signature: scoring(y, y_pred, **kwargs).
-        scores = [model._score for name, model in models]
-        scores = np.atleast_2d(np.array(scores))
-        if scores.shape[1] == len(models) and scores.shape[0] != len(models):
-            scores = scores.T
-        if scores.shape[0] != len(models) or len(scores.shape) != 2:
+        if fitnesses.shape[1] == len(models) and fitnesses.shape[0] != len(models):
+            fitnesses = fitnesses.T
+        if fitnesses.shape[0] != len(models) or len(fitnesses.shape) != 2:
             raise ValueError('Expected scorer to return a scalar or 1-d array. '
-                             'Found shape: {}'.format(scores.shape))
-        if scores.shape[1] != len(score_weights):
+                             'Found shape: {}'.format(fitnesses.shape))
+        if fitnesses.shape[1] != len(score_weights):
             raise ValueError('Length of score_weights {} does '
-                             'not match scores.shape[1] {}'.format(scores.shape[1], len(score_weights)))
-        best_idxes = sort_fitness(score_weights, scores)
+                             'not match fitnesses.shape[1] {}'.format(fitnesses.shape[1], len(score_weights)))
+        best_idxes = sort_fitness(score_weights, fitnesses)
         models = model_selection(models, best_idxes, **model_selection_kwargs)
     else:
         models = model_selection(models, **model_selection_kwargs)

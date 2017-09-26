@@ -10,9 +10,7 @@ import xarray as xr
 
 
 from dask_searchcv.model_selection import DaskBaseSearchCV, _DOC_TEMPLATE
-from elm.model_selection.ensemble import EnsembleCV
-from elm.model_selection.sklearn_mldataset import _call_sk_method
-from elm.model_selection.sklearn_mldataset import SklearnMixin
+from elm.mldataset.wrap_sklearn import SklearnMixin
 
 _hi_oneliner = """TODO
 """
@@ -24,8 +22,7 @@ _hi_example = """TODO
 """
 
 
-def concat_features(method, preproc=None, postproc=None):
-    #@if_delegate_has_method(delegate=attr)
+def concat_features(method):
     def new_func(self, X, y=None, **kw):
         nonlocal method
         X, y = MultiLayer._concat_features(self, X, y=y)

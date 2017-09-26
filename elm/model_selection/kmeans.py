@@ -20,8 +20,8 @@ import pandas as pd
 from sklearn.cluster import KMeans, MiniBatchKMeans
 import xarray as xr
 
-from elm.config.func_signatures import (get_args_kwargs_defaults,
-                                        filter_kwargs_to_func)
+from xarray_filters.func_signatures import (get_args_kwargs_defaults,
+                                            filter_args_kwargs)
 
 
 def kmeans_aic(model, X, **kwargs):

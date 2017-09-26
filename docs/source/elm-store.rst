@@ -28,7 +28,7 @@ For GeoTiffs the argument is a directory name rather than a file name and each b
 
 .. code-block:: python
 
-    In [1]: from earthio import BandSpec, load_array
+    In [1]: from earthio import LayerSpec, load_array
 
     In [2]: ls
     LC80150332013207LGN00_B1.TIF  LC80150332013207LGN00_B5.TIF
@@ -90,13 +90,13 @@ With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff
     load_array(dir_of_tifs, band_specs=["B1.TIF", "B2.TIF","B3.TIF"])
 
 
-``band_specs`` can be given as a list of ``earthio.BandSpec`` objects.  The following shows an example of loading 4 bands from an ``HDF4`` file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
+``band_specs`` can be given as a list of ``earthio.LayerSpec`` objects.  The following shows an example of loading 4 bands from an ``HDF4`` file where the band name, such as ``"Band 1 "`` is found in the ``long_name`` key/value of the subdataset (band) metadata and the band names are standardized to lower case with no spaces.
 
 .. code-block:: python
 
-    In [1]: from earthio import BandSpec, load_array
+    In [1]: from earthio import LayerSpec, load_array
 
-    In [2]: band_specs = list(map(lambda x: BandSpec(**x),
+    In [2]: band_specs = list(map(lambda x: LayerSpec(**x),
        [{'search_key': 'long_name', 'search_value': "Band 1 ", 'name': 'band_1'},
        {'search_key': 'long_name', 'search_value': "Band 2 ", 'name': 'band_2'},
        {'search_key': 'long_name', 'search_value': "Band 3 ", 'name': 'band_3'},
@@ -114,21 +114,21 @@ With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff
         band_3   (y, x) uint16 1023 1023 880 781 1115 1141 1141 1082 1155 1154 ...
         band_4   (y, x) uint16 1258 1258 1100 1009 1374 1423 1423 1341 1408 1405 ...
 
-Note the ``BandSpec`` objects could have also used the keyword arguments ``key_re_flags`` and ``value_re_flags`` with a list of flags passed to `re` for regular expression matching.
+Note the ``LayerSpec`` objects could have also used the keyword arguments ``key_re_flags`` and ``value_re_flags`` with a list of flags passed to `re` for regular expression matching.
 
 .. _bandspec-file-reading-control:
 
-``BandSpec`` - File Reading Control
+``LayerSpec`` - File Reading Control
 -----------------------------------
 
-Here are a few more things a ``BandSpec`` can do:
+Here are a few more things a ``LayerSpec`` can do:
 
- * A ``BandSpec`` can control the resolution at which a file is read (and improve loading speed).  To control resolution when loading rasters, provide ``buf_xsize`` and ``buf_ysize`` keyword arguments (integers) to ``BandSpec``.
- * A ``BandSpec`` can provide a ``window`` that subsets the file.  See `this rasterio demo`_ that shows how ``window`` is effectively interpreted in ``load_array``.
- * A ``BandSpec`` with a ``meta_to_geotransform`` callable attribute can be used to construct a ``geo_transform`` array from band metadata (e.g. when GDAL fails to detect the ``geo_transform`` accurately)
- * A ``BandSpec`` can control whether a raster is loaded with `("y", "x")`  pixel order (the default behavior that suits most top-left-corner based rasters) or `("x", "y")` pixel order.
+ * A ``LayerSpec`` can control the resolution at which a file is read (and improve loading speed).  To control resolution when loading rasters, provide ``buf_xsize`` and ``buf_ysize`` keyword arguments (integers) to ``LayerSpec``.
+ * A ``LayerSpec`` can provide a ``window`` that subsets the file.  See `this rasterio demo`_ that shows how ``window`` is effectively interpreted in ``load_array``.
+ * A ``LayerSpec`` with a ``meta_to_geotransform`` callable attribute can be used to construct a ``geo_transform`` array from band metadata (e.g. when GDAL fails to detect the ``geo_transform`` accurately)
+ * A ``LayerSpec`` can control whether a raster is loaded with `("y", "x")`  pixel order (the default behavior that suits most top-left-corner based rasters) or `("x", "y")` pixel order.
 
-See also the definition of ``BandSpec`` in ``earthio`` showing all the recognized fields (`snippet taken from earthio.util`_).
+See also the definition of ``LayerSpec`` in ``earthio`` showing all the recognized fields (`snippet taken from earthio.util`_).
 
 .. _this rasterio demo: https://sgillies.net//2013/12/21/rasterio-windows-and-masks.html
 
@@ -137,7 +137,7 @@ See also the definition of ``BandSpec`` in ``earthio`` showing all the recognize
 .. code-block:: python
 
     @attr.s
-    class BandSpec(object):
+    class LayerSpec(object):
         search_key = attr.ib()
         search_value = attr.ib()
         name = attr.ib()

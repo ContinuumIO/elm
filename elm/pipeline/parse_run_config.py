@@ -18,7 +18,7 @@ try:
 except:
     load_array = load_array = None # TODO handle cases where load_* = None
 
-from elm.config import ConfigParser, import_callable
+from earthio.config import ConfigParser, import_callable
 #from elm.model_selection.evolve import ea_setup
 from elm.pipeline.ensemble import ensemble
 from elm.pipeline.pipeline import Pipeline
@@ -35,6 +35,7 @@ def _makedirs(config):
         if d and not os.path.exists(d):
             os.makedirs(d)
 
+
 def config_to_pipeline(config, client=None):
     '''
     Run the elm config's train and predict "run"
@@ -47,7 +48,6 @@ def config_to_pipeline(config, client=None):
         :config: elm.config.ConfigParser instance
         :client: dask client or None
     '''
-    from earthio.filters.sample_pipeline import make_pipeline_steps
 
     _makedirs(config)
     idx_to_evo_params = ea_setup(config)

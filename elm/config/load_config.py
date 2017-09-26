@@ -19,14 +19,14 @@ import yaml
 from six import string_types
 
 try:
-    from earthio.util import BandSpec
+    from earthio.util import LayerSpec
 except:
-    BandSpec = None # TODO handle cases where BandSpec is None
+    LayerSpec = None # TODO handle cases where LayerSpec is None
 
 from elm.config.env import parse_env_vars, ENVIRONMENT_VARS_SPEC
 from elm.config.util import (ElmConfigError,
                                import_callable)
-from elm.config.func_signatures import get_args_kwargs_defaults
+from xarray_filters.func_signatures import get_args_kwargs_defaults
 from elm.config.config_info import CONFIG_KEYS
 
 logger = logging.getLogger(__name__)
@@ -162,30 +162,30 @@ class ConfigParser(object):
             self.readers[k] = v
 
 
-    def _validate_band_specs(self, band_specs, name):
-        '''Validate "band_specs"'''
+    def _validate_layer_specs(self, layer_specs, name):
+        '''Validate "layer_specs"'''
 
 
-        if all(isinstance(bs, BandSpec) for bs in band_specs):
-            return band_specs
-        if not band_specs or not isinstance(band_specs, (tuple, list)):
-            raise ElmConfigError('data_sources:{} gave band_specs which are not a '
-                                   'list {}'.format(name, band_specs))
-        if not all(isinstance(bs, (dict, string_types)) for bs in band_specs):
-            raise ElmConfigError('Expected "band_specs" to be a list of dicts or list of strings')
+        if all(isinstance(bs, LayerSpec) for bs in layer_specs):
+            return layer_specs
+        if not layer_specs or not isinstance(layer_specs, (tuple, list)):
+            raise ElmConfigError('data_sources:{} gave layer_specs which are not a '
+                                   'list {}'.format(name, layer_specs))
+        if not all(isinstance(bs, (dict, string_types)) for bs in layer_specs):
+            raise ElmConfigError('Expected "layer_specs" to be a list of dicts or list of strings')
 
-        new_band_specs = []
-        field_names = [x.name for x in attr.fields(BandSpec)]
-        for band_spec in band_specs:
-            if isinstance(band_spec, string_types):
-                new_band_specs.append(BandSpec(**{'search_key': 'sub_dataset_name',
-                                                'search_value': band_spec,
-                                                'name': band_spec}))
-            elif not all(k in field_names for k in band_spec):
-                raise ElmConfigError("band_spec {} did not have keys: {}".format(band_spec, field_names))
+        new_layer_specs = []
+        field_names = [x.name for x in attr.fields(LayerSpec)]
+        for layer_spec in layer_specs:
+            if isinstance(layer_spec, string_types):
+                new_layer_specs.append(LayerSpec(**{'search_key': 'sub_dataset_name',
+                                                'search_value': layer_spec,
+                                                'name': layer_spec}))
+            elif not all(k in field_names for k in layer_spec):
+                raise ElmConfigError("layer_spec {} did not have keys: {}".format(layer_spec, field_names))
             else:
-                new_band_specs.append(BandSpec(**band_spec))
-        return new_band_specs
+                new_layer_specs.append(LayerSpec(**layer_spec))
+        return new_layer_specs
 
     def _validate_one_data_source(self, name, ds):
         '''Validate one data source within "data_sources"
@@ -198,8 +198,8 @@ class ConfigParser(object):
             self._validate_custom_callable(sampler,
                                     True,
                                     'train:{} sampler'.format(name))
-        if 'band_specs' in ds:
-            ds['band_specs'] = self._validate_band_specs(ds.get('band_specs'), name)
+        if 'layer_specs' in ds:
+            ds['layer_specs'] = self._validate_layer_specs(ds.get('layer_specs'), name)
         reader = ds.get('reader')
         reader_words = ('hdf4', 'hdf5', 'tif', 'netcdf')
         if not reader:
@@ -480,7 +480,7 @@ class ConfigParser(object):
 
     def _validate_pipelines(self):
         '''Validate the "pipelines" section of config'''
-        from earthio.filters.change_coords import CHANGE_COORDS_ACTIONS
+        from xarray_filters.change_coords import CHANGE_COORDS_ACTIONS
         self.pipelines = self.config.get('pipelines') or {}
         self._validate_type(self.pipelines, 'pipelines', dict)
         for k, v in self.pipelines.items():
