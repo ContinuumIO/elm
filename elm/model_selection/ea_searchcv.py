@@ -9,7 +9,8 @@ from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_CONTROL,
                                         ind_to_new_params,
                                         DEFAULT_EVO_PARAMS,)
-from elm.model_selection.mixins import SerializeEstimator
+from elm.mldataset.serialize_mixin import SerializeEstimator
+from elm.mldataset.wrap_sklearn import SklearnMixin
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
 from xarray_filters.func_signatures import filter_kw_and_run_init
@@ -77,7 +78,7 @@ EaSearchCV(cache_cv=..., cv=..., error_score=...,
  'std_fit_time', 'std_score_time', 'std_test_score', 'std_train_score'...]\
 """
 
-class EaSearchCV(RandomizedSearchCV, SerializeEstimator):
+class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeEstimator):
 
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,

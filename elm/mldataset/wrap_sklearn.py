@@ -1,5 +1,9 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
 from collections import OrderedDict
 from functools import partial
+from importlib import import_module
+import os
+
 import numpy as np
 from sklearn.base import BaseEstimator
 from dask.utils import derived_from # May be useful here?
@@ -9,6 +13,7 @@ from xarray_filters.mldataset import MLDataset
 from xarray_filters.func_signatures import filter_args_kwargs
 from xarray_filters.constants import FEATURES_LAYER_DIMS, FEATURES_LAYER
 import xarray as xr
+import yaml
 
 
 def get_row_index(X, features_layer=None):
@@ -61,11 +66,10 @@ class SklearnMixin:
         if func is None:
             raise ValueError('{} is not an attribute of {}'.format(sk_method, _cls))
         X, y, _ = self._as_numpy_arrs(X, y=y)
-        args = (self, X)
+        kw.update(dict(self=self, X=X))
         if y is not None:
-            args = args + (y,)
-        kw = filter_args_kwargs(func, *args, **kw)
-        kw.pop('params', None)
+            kw['y'] = y
+        kw = filter_args_kwargs(func, **kw)
         return func(**kw)
 
     def _predict_steps(self, X, row_idx=None, sk_method=None, **kw):
@@ -97,26 +101,29 @@ class SklearnMixin:
                                          **kw)
         return d
 
-    def fit(self, *args, **kw):
-        self._call_sk_method('fit', *args, **kw)
+    def fit(self, X, y=None, **kw):
+        self._call_sk_method('fit', X, y=y, **kw)
         return self
 
-    def _fit(self, *args, **kw):
-        if not hasattr(self._cls, '_fit'):
-            raise ValueError('')
-        return self._call_sk_method('_fit', *args, **kw)
+    def _fit(self, X, y=None, **kw):
+        return self._call_sk_method('_fit', X, y=y, **kw)
 
     def transform(self, X, y=None, **kw):
-        return self._call_sk_method('transform', X, y=y, **kw)
+        if hasattr(self._cls, 'transform'):
+            return self._call_sk_method('transform', X, y=y, **kw)
+        if hasattr(self._cls, 'fit_transform'):
+            return self._call_sk_method('fit_transform', X, y=y, **kw)
+        raise ValueError('Estimator {} has no "transform" or '
+                         '"fit_transform" methods'.format(self))
 
     def fit_transform(self, X, y=None, **kw):
         args = (X,)
         if y is not None:
             args = args + (y,)
-        #if hasattr(self._cls, 'fit_transform'):
-        #    return _call_sk_method('fit_transform', cls=self._cls)(self, *args, **kw)
+        if hasattr(self._cls, 'fit_transform'):
+            return self._call_sk_method('fit_transform', *args, **kw)
         self.fit(*args, **kw)
-        return self.transform(X, **kw)
+        return self._call_sk_method('transform', *args, **kw)
 
     def __repr__(self):
         return self._cls.__repr__(self)
@@ -126,3 +133,4 @@ class SklearnMixin:
 
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
+

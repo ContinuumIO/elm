@@ -1,3 +1,4 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
 from argparse import Namespace
 from importlib import import_module
 import sklearn
@@ -46,6 +47,7 @@ def patch_cls(cls):
 
 _all = []
 _seen = set()
+ALL_STEPS = {}
 for m in MODULES:
     this_module = dict()
     for cls in get_module_classes(m).values():
@@ -56,13 +58,15 @@ for m in MODULES:
         if any(s in cls.__name__ for s in SKIP):
             continue
         this_module[cls.__name__] = w
-
+        ALL_STEPS[(m, cls.__name__)] = w
     this_module = Namespace(**this_module)
     if m == 'cluster.bicluster':
         bicluster = this_module # special case (dotted name)
         continue
     globals()[m] = this_module
     _all.append(m)
+    for name, estimator in vars(this_module).items():
+        ALL_STEPS[(m, name)] = estimator
 
 vars(cluster)['bicluster'] = bicluster
 __all__ = [ 'patch_cls'] + _all

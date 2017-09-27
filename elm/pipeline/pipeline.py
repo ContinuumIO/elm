@@ -1,17 +1,8 @@
-"""
-The :mod:`sklearn.pipeline` module implements utilities to build a composite
-estimator, as a chain of transforms and estimators.
-"""
-# Author: Edouard Duchesnay
-#         Gael Varoquaux
-#         Virgile Fritsch
-#         Alexandre Gramfort
-#         Lars Buitinck
-# License: BSD
-
-from collections import defaultdict
+from __future__ import absolute_import, division, print_function, unicode_literals
 
 from abc import ABCMeta, abstractmethod
+from collections import defaultdict
+import os
 
 import numpy as np
 from scipy import sparse
@@ -29,7 +20,8 @@ from sklearn.pipeline import (Pipeline as sk_Pipeline,
                               _fit_one_transformer,)
 from elm.mldataset.wrap_sklearn import (_as_numpy_arrs,
                                         _from_numpy_arrs,
-                                        get_row_index)
+                                        get_row_index,
+                                        SklearnMixin)
 
 from sklearn.utils.metaestimators import _BaseComposition
 from xarray_filters.pipeline import Step
@@ -305,6 +297,4 @@ class Pipeline(sk_Pipeline):
         if sample_weight is not None:
             score_params['sample_weight'] = sample_weight
         return final_estimator.score(Xt, y, **score_params)
-
-
 
