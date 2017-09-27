@@ -44,6 +44,7 @@ extra:
 test:
   imports:
     - elm.config
+    - elm.mldataset
     - elm.model_selection
     - elm.pipeline.pipeline
     - elm.pipeline.steps
@@ -53,5 +54,5 @@ test:
     - pytest
 
   commands:
-    - py.test -m 'not slow' -v $SP_DIR/elm  [unix]
-    - py.test -m 'not slow' -v %SP_DIR%/elm  [win]
+    - py.test -m 'not slow' -v $SP_DIR/elm/tests  [unix]
+    - py.test -m 'not slow' -v %SP_DIR%/elm/tests  [win]
