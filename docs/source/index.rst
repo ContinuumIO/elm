@@ -10,6 +10,7 @@ NASA SBIR Phase I & II - Open Source Parallel Image Analysis and Machine Learnin
 * :doc:`elm-hello-world`
 * :doc:`clustering_example`
 * :doc:`examples`
+* :doc:`one_year_plan`
 
 .. toctree::
    :maxdepth: 1
@@ -22,6 +23,7 @@ NASA SBIR Phase I & II - Open Source Parallel Image Analysis and Machine Learnin
    elm-hello-world.rst
    clustering_example.rst
    examples.rst
+   one_year_plan.rst
 
 
 **User Guide**
