@@ -34,6 +34,7 @@ class Pipeline(sk_Pipeline):
 
     # Estimator interface
 
+
     def _sk_method(self, method):
         return getattr(super(Pipeline, self), method)
 
@@ -49,8 +50,40 @@ class Pipeline(sk_Pipeline):
                 self.row_idx = row_idx
         return X, y
 
-    def _validate_steps(self):
-        return True
+    #def _validate_steps(self):
+     #   return True
+
+    def _do_this_step(self, step_idx):
+        name, est = self.steps[step_idx]
+        self._generic = {}
+        for name, est in self.steps:
+            if isinstance(est, Step):
+                self._generic[name] = True
+            else:
+                self._generic[name] = False
+        print('GEn', self._generic, name)
+        do_step = True
+        if getattr(self, '_run_generic_only', None) is None:
+            pass
+        else:
+            if self._run_generic_only and not name in self._generic:
+                do_step = False
+        if getattr(self, '_skip_generic', None) is None:
+            pass
+        else:
+            if self._skip_generic and name in self._generic:
+                do_step = False
+        print('do_step', name, do_step)
+        return do_step
+
+    def _fit_generic_only(self, X, y, **fit_params):
+        self._generic = {}
+        for name, est in self.steps:
+            if isinstance(est, Step):
+                self._generic[name] = True
+            else:
+                self._generic[name] = False
+
 
     def _fit(self, X, y=None, **fit_params):
 
@@ -75,6 +108,7 @@ class Pipeline(sk_Pipeline):
             fit_params_steps[step][param] = pval
         Xt = X
         for step_idx, (name, transformer) in enumerate(self.steps[:-1]):
+            #if self._do_this_step(step_idx):
             Xt, y = self._astype(transformer, Xt, y=y)
             print('Types', step_idx, [type(_) for _ in (Xt, y)])
             if transformer is None:
@@ -97,7 +131,7 @@ class Pipeline(sk_Pipeline):
         if self._final_estimator is None:
             return Xt, {}
         fit_params = fit_params_steps[self.steps[-1][0]]
-        return Xt, fit_params
+        return Xt, y, fit_params
 
     def fit(self, X, y=None, **fit_params):
         """Fit the model
@@ -126,7 +160,7 @@ class Pipeline(sk_Pipeline):
             This estimator
         """
 
-        Xt, fit_params = self._fit(X, y, **fit_params)
+        Xt, y, fit_params = self._fit(X, y, **fit_params)
         if self._final_estimator is not None:
             Xt, y = self._astype(self._final_estimator, Xt, y=y)
             self._final_estimator.fit(Xt, y, **fit_params)
@@ -141,8 +175,10 @@ class Pipeline(sk_Pipeline):
     def _before_predict(self, method, X, y=None, **fit_params):
 
         Xt = X
-        for name, transform in self.steps[:-1]:
+        for step_idx, (name, transform) in enumerate(self.steps[:-1]):
             if transform is not None:
+                #if not self._do_this_step(step_idx):
+                 #   continue
                 Xt, y = self._astype(transform, Xt, y=y)
                 Xt = transform.transform(Xt)
         final_estimator = self.steps[-1][-1]
@@ -297,4 +333,47 @@ class Pipeline(sk_Pipeline):
         if sample_weight is not None:
             score_params['sample_weight'] = sample_weight
         return final_estimator.score(Xt, y, **score_params)
+
+    def fit_transform(self, X, y=None, **fit_params):
+        """Fit the model and transform with the final estimator
+
+        Fits all the transforms one after the other and transforms the
+        data, then uses fit_transform on transformed data with the final
+        estimator.
+
+        Parameters
+        ----------
+        X : iterable
+            Training data. Must fulfill input requirements of first step of the
+            pipeline.
+
+        y : iterable, default=None
+            Training targets. Must fulfill label requirements for all steps of
+            the pipeline.
+
+        **fit_params : dict of string -> object
+            Parameters passed to the ``fit`` method of each step, where
+            each parameter name is prefixed such that parameter ``p`` for step
+            ``s`` has key ``s__p``.
+
+        Returns
+        -------
+        Xt : array-like, shape = [n_samples, n_transformed_features]
+            Transformed samples
+        """
+        last_step = self._final_estimator
+        Xt, y, fit_params = self._fit(X, y, **fit_params)
+        if hasattr(last_step, '_cls'):
+            has_ft = hasattr(last_step._cls, 'fit_transform')
+        else:
+            has_ft = hasattr(last_step, 'fit_transform')
+        #skip = getattr(self, '_run_generic_only', False)
+        #if skip:
+        #    return X, y
+        if last_step is None:
+            return Xt
+        elif has_ft:
+            return last_step.fit_transform(Xt, y, **fit_params)
+        else:
+            return last_step.fit(Xt, y, **fit_params).transform(Xt)
 

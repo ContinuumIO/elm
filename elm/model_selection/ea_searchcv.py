@@ -2,8 +2,10 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 from collections import OrderedDict
 import copy
 
+import dask.array as da
 from dask_searchcv.model_selection import (_DOC_TEMPLATE,
-                                           RandomizedSearchCV)
+                                           RandomizedSearchCV,
+                                           DaskBaseSearchCV)
 import numpy as np
 from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_CONTROL,
@@ -13,7 +15,11 @@ from elm.mldataset.serialize_mixin import SerializeEstimator
 from elm.mldataset.wrap_sklearn import SklearnMixin
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
+from elm.pipeline import Pipeline
 from xarray_filters.func_signatures import filter_kw_and_run_init
+from xarray_filters.constants import DASK_CHUNK_N
+from xarray_filters import MLDataset
+import xarray as xr
 
 
 def _concat_cv_results(cv1, cv2, gen=0):
@@ -113,6 +119,10 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeEstimator):
         for attr in to_del:
             if hasattr(self, attr):
                 delattr(self, attr)
+        to_del_est = ('_skip_generic', '_run_generic_only')
+        for attr in to_del:
+            if hasattr(self.estimator, attr):
+                delattr(self.estimator, attr)
 
     @property
     def _is_ea(self):
@@ -181,11 +191,34 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeEstimator):
                      toolbox=self._model_selection['toolbox'])
         self._pop, self._toolbox, self._ea_gen, self._evo_params = out
 
+    def _as_dask_array(self, X, y=None, **kw):
+        #if isinstance(self.estimator, Pipeline):
+         #   self.estimator._run_generic_only = True
+          #  X, y = self.estimator.fit_transform(X, y)
+           # delattr(self.estimator, '_run_generic_only')
+            #self.estimator._skip_generic = True
+        if isinstance(X, (xr.Dataset, MLDataset)):
+            X = MLDataset(X)
+            if not X.has_features(raise_err=False):
+                X = X.to_features()
+        row_idx = getattr(X.features, X.features.dims[0])
+        self.estimator._temp_row_idx = row_idx
+        if isinstance(X, MLDataset):
+            chunks = (int(DASK_CHUNK_N / X.features.shape[1]), 1)
+            val = X.features.values
+        else:
+            chunks = (int(DASK_CHUNK_N / X.shape[1]), 1)
+            val = X
+        X = da.from_array(val, chunks=chunks)
+        y = da.from_array(y, chunks=chunks[0]) # TODO
+        return X, y
+
     def fit(self, X, y=None, groups=None, **fit_params):
         self._open()
+        X, y = self._as_dask_array(X, y=y)
         for self._gen in range(self.ngen):
             print('gen', self._gen)
-            super(EaSearchCV, self).fit(X, y, groups, **fit_params)
+            DaskBaseSearchCV.fit(self, X, y, groups, **fit_params)
             fitnesses = self._get_cv_scores()
             self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,
                                                           self.cv_results_,
@@ -206,4 +239,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeEstimator):
         if hasattr(self, '_invalid_ind') and not self._invalid_ind:
             return iter(())
         return self._within_gen_param_iter(gen=self._gen)
+
+    set_params = RandomizedSearchCV.set_params
+    get_params = RandomizedSearchCV.get_params
 

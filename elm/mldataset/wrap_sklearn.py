@@ -5,7 +5,7 @@ from importlib import import_module
 import os
 
 import numpy as np
-from sklearn.base import BaseEstimator
+from sklearn.base import BaseEstimator, _pprint
 from dask.utils import derived_from # May be useful here?
 from sklearn.utils.metaestimators import if_delegate_has_method # May be useful here?
 from sklearn.linear_model import LinearRegression as skLinearRegression
@@ -23,7 +23,9 @@ def get_row_index(X, features_layer=None):
         arr = X[features_layer]
         return getattr(arr, arr.dims[0])
 
-def _as_numpy_arrs(self, X, y=None, **kw) :
+def _as_numpy_arrs(self, X, y=None, **kw):
+    if isinstance(X, np.ndarray):
+        return X, y, None
     if isinstance(X, xr.Dataset):
         X = MLDataset(X)
     if hasattr(X, 'has_features'):
@@ -40,6 +42,7 @@ def _as_numpy_arrs(self, X, y=None, **kw) :
 
 
 def _from_numpy_arrs(self, y, row_idx, features_layer=None):
+    print('y.si', getattr(y, 'size', y), row_idx, features_layer)
     if isinstance(y, MLDataset):
         return y
     features_layer = features_layer or FEATURES_LAYER
@@ -58,14 +61,16 @@ class SklearnMixin:
     _as_numpy_arrs = _as_numpy_arrs
     _from_numpy_arrs = _from_numpy_arrs
 
-    def _call_sk_method(self, sk_method, X, y=None, **kw):
+    def _call_sk_method(self, sk_method, X=None, y=None, **kw):
         _cls = self._cls
         if _cls is None:
             raise ValueError('Define .cls as a scikit-learn estimator')
         func = getattr(_cls, sk_method, None)
         if func is None:
             raise ValueError('{} is not an attribute of {}'.format(sk_method, _cls))
-        X, y, _ = self._as_numpy_arrs(X, y=y)
+        X, y, row_idx = self._as_numpy_arrs(X, y=y)
+        if row_idx is not None:
+            self._temp_row_idx = row_idx
         kw.update(dict(self=self, X=X))
         if y is not None:
             kw['y'] = y
@@ -74,14 +79,19 @@ class SklearnMixin:
 
     def _predict_steps(self, X, row_idx=None, sk_method=None, **kw):
         X2, _, temp_row_idx = self._as_numpy_arrs(X, y=None)
-        if temp_row_idx is not None:
+        if temp_row_idx is None:
             row_idx = temp_row_idx
+        if row_idx is None:
+            row_idx = getattr(self, '_temp_row_idx', None)
         y3 = self._call_sk_method(sk_method, X2, **kw)
         return y3, row_idx
 
     def predict(self, X, row_idx=None, **kw):
+
         y, row_idx = self._predict_steps(X, row_idx=row_idx,
                                          sk_method='predict', **kw)
+        if row_idx is None:
+            return y
         return self._from_numpy_arrs(y, row_idx)
 
     def predict_proba(self, X, row_idx=None, **kw):
@@ -126,11 +136,16 @@ class SklearnMixin:
         return self._call_sk_method('transform', *args, **kw)
 
     def __repr__(self):
-        return self._cls.__repr__(self)
-
-    def __str__(self):
-        return self._cls.__str__(self)
+        class_name = getattr(self, '_cls_name', self._cls.__class__.__name__)
+        return '%s(%s)' % (class_name, _pprint(self.get_params(deep=False),
+                                               offset=len(class_name),),)
 
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
+
+    #def get_params(self, deep=True):
+     #   return self._cls.get_params(self, deep=deep)
+
+    #def set_params(self, **params):
+     #   return self._cls.set_params(self, **params)
 

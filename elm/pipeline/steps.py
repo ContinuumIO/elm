@@ -41,8 +41,10 @@ def patch_cls(cls):
     class Wrapped(SklearnMixin, cls):
         _cls = cls
         __init__ = cls.__init__
-        __name__ = cls.__name__
-    return Wrapped
+        _cls_name = cls.__name__
+    name = 'Elm{}'.format(cls.__name__)
+    globals()[name] = Wrapped
+    return globals()[name]
 
 
 _all = []

@@ -18,8 +18,8 @@ from elm.pipeline import Pipeline
 from elm.pipeline.steps import (linear_model as lm,
                                 preprocessing as pre,
                                 decomposition as decomp)
-from elm.tests.test_pipeline import pipeline_xfail, new_pipeline, modules_names
-from elm.tests.util import TRANSFORMERS, TESTED
+from elm.tests.test_pipeline import new_pipeline, modules_names
+from elm.tests.util import TRANSFORMERS, TESTED, catch_warnings, pipeline_skip
 
 param_distribution_poly = dict(step_1__degree=list(range(1, 3)),
                                step_1__interaction_only=[True, False])
@@ -27,7 +27,7 @@ param_distribution_pca = dict(step_1__n_components=list(range(1, 12)),
                               step_1__whiten=[True, False])
 
 param_distribution_sgd = dict(step_2__penalty=['l1', 'l2', 'elasticnet'],
-                           step_2__alpha=np.logspace(-4, 1, 5))
+                           step_2__alpha=np.logspace(-1, 1, 5))
 
 model_selection = dict(mu=16,       # Population size
                        ngen=3,      # Number of generations
@@ -36,25 +36,6 @@ model_selection = dict(mu=16,       # Population size
                        param_grid_name='example_1') # CSV based name for parameter / objectives history
 
 
-
-def fit_est(param_distribution, est, X, y, astype):
-
-    ea = EaSearchCV(estimator=est,
-                    param_distributions=param_distribution,
-                    score_weights=[1],
-                    model_selection=model_selection,
-                    refit=True,
-                    cv=3,
-                    error_score='raise',
-                    return_train_score=True,
-                    scheduler=None,
-                    n_jobs=-1,
-                    cache_cv=True)
-    if astype == 'numpy':
-        # TODO convert to numpy and test that way
-        #pytest.xfail('')
-        X = X.to_features().features.values
-    return ea.fit(X, y=y)
 
 def make_choice(ea):
     num = np.random.randint(1, len(ea) + 1)
@@ -67,17 +48,29 @@ zipped = product((pre.PolynomialFeatures, decomp.PCA),
                  ('numpy', 'mldataset'))
 tested_pipes = [(trans, estimator, typ)
                 for trans, estimator, typ in zipped]
-
+@catch_warnings
 @pytest.mark.parametrize('trans, estimator, astype', tested_pipes)
 def test_ea_search(trans, estimator, astype):
     if astype == 'numpy':
-        pytest.xfail('numpy in pipeline / EA search')
-    pipe, X, y = new_pipeline(trans, estimator)
+        pytest.skip('numpy in pipeline / EA search')
+    pipe, X, y = new_pipeline(trans, estimator, flatten_first=False)
+    X = X.to_features()
     param_distribution = param_distribution_sgd.copy()
-    if 'PCA' in estimator.__name__:
+    if 'PCA' in trans._cls.__name__:
         param_distribution.update(param_distribution_pca)
     else:
         param_distribution.update(param_distribution_poly)
-    ea = fit_est(param_distribution, pipe, X, y, astype)
+    ea = EaSearchCV(estimator=pipe,
+                        param_distributions=param_distribution,
+                        score_weights=[1],
+                        model_selection=model_selection,
+                        refit=True,
+                        cv=3,
+                        error_score='raise',
+                        return_train_score=True,
+                        scheduler=None,
+                        n_jobs=-1,
+                        cache_cv=True)
+    ea.fit(X,y)
     assert isinstance(ea.predict(X), MLDataset)
 

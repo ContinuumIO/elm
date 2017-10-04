@@ -5,6 +5,7 @@ from functools import wraps
 import os
 import warnings
 
+import pytest
 from sklearn.base import ClassifierMixin
 from sklearn.base import clone
 from sklearn.base import ClusterMixin
@@ -30,7 +31,7 @@ ALL_STEPS = steps.ALL_STEPS
 
 REQUIRES_1D = ['IsotonicRegression']
 
-XFAIL = TEST_CONFIG['XFAIL']
+SKIP = TEST_CONFIG['SKIP']
 TESTED = OrderedDict(sorted((k, v) for k, v in ALL_STEPS.items()
                      if hasattr(v, '_cls') and
                      'fit' in dir(v._cls) and
@@ -50,7 +51,7 @@ def catch_warnings(func):
     @wraps(func)
     def new_func(*args, **kw):
         with warnings.catch_warnings():
-            warnings.simplefilter(action="ignore", category=(FutureWarning, DeprecationWarning, ConvergenceWarning))
+            warnings.simplefilter(action="ignore", category=(FutureWarning, UserWarning, DeprecationWarning, ConvergenceWarning))
             return func(*args, **kw)
     return new_func
 
@@ -75,6 +76,10 @@ def make_X_y(astype='MLDataset', as_1d=False, is_classifier=False,
     if as_1d:
         X = _as_1d(X)
     if uses_counts:
+        # Since small data sets are used for unit test,
+        # prevent classes who have sample counts of <3
+        # (this prevents covariance failure that
+        #  arises when a class membership is 1)
         for arr in X.data_vars.values():
             val = arr.values
             val[:] = np.round(np.abs(val)).astype(np.int32)
@@ -122,3 +127,33 @@ def get_params_for_est(estimator, name):
     X, y = make_X_y(**kw)
     return X, y, params, kw
 
+
+def pipeline_skip(m1, n1, m2, n2):
+    if m1 == m2:
+        return
+    skip = False
+    if m2 in PREPROC:
+        skip = True
+    if m2 == 'ensemble': # Needs a regressor/classifier not a preproc
+        skip = True
+    for item in (m1, n1, m2, n2):
+        if item in SKIP:
+            skip = True
+    if n1 == 'NMF' and n2 == 'RadiusNeighborsClassifier':
+        skip = True
+    elif n1 == 'MDS' and n2 == 'RadiusNeighborsClassifier':
+        skip = True
+    elif n1 == 'SpectralEmbedding' and n2 == 'GaussianProcess':
+        skip = True
+    elif n1 == 'TSNE' and n2 == 'GaussianProcess':
+        skip = True
+    elif n1 == 'TSNE' and n2 == 'RadiusNeighborsClassifier':
+        skip = True
+    elif n1 =='KernelCenterer' or n1 == 'MultiLabelBinarizer':
+        skip = True
+    elif n1 == 'Binarizer' and n2 == 'GaussianProcess':
+        skip = True
+    elif m1 in ('manifold', 'preprocessing', 'feature_selection', 'decomposition') and 'ensemble' == m2:
+        skip = True
+    if skip:
+        pytest.skip('{} - {}'.format(n1, n2))
