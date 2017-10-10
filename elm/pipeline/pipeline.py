@@ -181,12 +181,14 @@ class Pipeline(sk_Pipeline):
                  #   continue
                 Xt, y = self._astype(transform, Xt, y=y)
                 Xt = transform.transform(Xt)
+            row_idx = self.row_idx
+        else:
+            row_idx = getattr(self, 'row_idx', None)
         final_estimator = self.steps[-1][-1]
-        fit_params = dict(row_idx=self.row_idx, **fit_params)
+        fit_params = dict(row_idx=row_idx, **fit_params)
         if y is not None:
             fit_params['y'] = y
-        if hasattr(self, 'row_idx'):
-            fit_params['row_idx'] = self.row_idx
+        fit_params['row_idx'] = row_idx
         fit_params = filter_args_kwargs(getattr(self._final_estimator, method),
                                         Xt,
                                         **fit_params)
@@ -209,7 +211,8 @@ class Pipeline(sk_Pipeline):
         Xt, _, fit_params, final_estimator = self._before_predict('predict',
                                                                   X, y=None)
         y = final_estimator.predict(**fit_params)
-        return self._as_dataset(as_dataset, y, self.row_idx, features_layer='predict')
+        row_idx = getattr(self, 'row_idx', None)
+        return self._as_dataset(as_dataset, y, row_idx, features_layer='predict')
 
     @if_delegate_has_method(delegate='_final_estimator')
     def fit_predict(self, X, y=None, as_dataset=True, **fit_params):

@@ -89,9 +89,26 @@ DEFAULT_EVO_PARAMS = dict(
     toolbox=None
 )
 
+def _call_rvs(choice):
+    param = choice.rvs()
+    if param.dtype.kind == 'f':
+        param = float(param)
+    else:
+        param = int(param)
+    return param
+
+
 def _random_choice(choices):
     '''Random choice among indices'''
-    return [int(np.random.choice(range(len(choice)))) for choice in choices]
+    params = []
+    for choice in choices:
+        if hasattr(choice, 'rvs'):
+            param = _call_rvs(choice)
+        else:
+            param = int(np.random.choice(range(len(choice))))
+        params.append(param)
+    return params
+
 
 def next_model_tag():
     '''Gives names like tag_0, tag_1, tag_2 sequentially'''
@@ -128,7 +145,11 @@ def check_format_param_grid(param_grid, control, param_grid_name='param_grid_0')
 
 def _to_param_meta(param_grid, control):
     '''Acquire parameter metadata such as bounds that are useful for sampling'''
-    pg_list = list(ParameterGrid(param_grid))
+    choice_params = {k: v for k, v in param_grid.items()
+                     if not hasattr(v, 'rvs')}
+    distributions = {k: v for k, v in param_grid.items()
+                     if k not in choice_params}
+    pg_list = list(ParameterGrid(choice_params))
     choices, low, high, param_order, is_int = [], [], [], [], []
     is_continuous = lambda v: isinstance(v, numbers.Real)
     while len(pg_list):
@@ -156,7 +177,12 @@ def _to_param_meta(param_grid, control):
                 is_int[idx] = True
                 low[idx] = high[idx] = v
 
-
+    for k, v in distributions.items():
+        choices.append(v)
+        low.append(None)
+        high.append(None)
+        is_int.append(False)
+        param_order.append(k)
     param_meta = dict(control=control, high=high, low=low,
                       choices=choices, is_int=is_int,
                       param_order=param_order)
@@ -166,6 +192,8 @@ def _to_param_meta(param_grid, control):
 def out_of_bounds(params, choices):
     '''Check boudns on indices into choices lists'''
     for p, choice in zip(params, choices):
+        if hasattr(choice, 'rvs'):
+            continue
         if p < 0 or p >= len(choice):
             return True
     return False
@@ -199,11 +227,21 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
             if a == 'low':
                 args.append([0] * len(choices))
             elif a == 'up':
-                args.append([len(choice) - 1 for choice in choices])
+                args.append([(2 ** 32 if hasattr(choice, 'rvs') else len(choice) - 1)
+                             for choice in choices])
             else:
                 args.append(kwargs[a])
     for retries in range(max_param_retries):
         params = mut(*args)
+        params2 = []
+        for idx, (p, choice) in enumerate(zip(params[0], choices)):
+            if hasattr(choice, 'rvs'):
+                p = choice.rvs()
+            if callable(choice):
+                p = choice()
+            params2.append(p)
+        for idx in range(len(params2)):
+            params[0][idx] = params2[idx]
         if not out_of_bounds(params[0], choices):
             return params
     raise ValueError('wrap_mutate could not find a set of parameters that is within the given choices for the param_grid')
@@ -321,7 +359,10 @@ def ind_to_new_params(deap_params, ind):
                  ind)
     new_params = {}
     for key, choices, idx in zipped:
-        new_params[key] = choices[idx]
+        if hasattr(choices, 'rvs'):
+            new_params[key] = idx
+        else:
+            new_params[key] = choices[idx]
     return new_params
 
 
@@ -439,6 +480,7 @@ def check_fitnesses(fitnesses, score_weights):
                          for fitness in fitnesses):
         raise ValueError('Invalid fitnesses sent to evo_general (not Sequence of numbers or not equal len with score_weights {}): {}'.format(fitnesses, score_weights))
 
+
 def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_weights):
     '''Assign fitness to each individual in invalid_ind, record parameter history
 
@@ -456,7 +498,8 @@ def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_w
     for ind, fit in zip(invalid_ind, fitnesses):
         fit = list(fit) if isinstance(fit, Sequence) else [fit]
         ind.fitness.values = fit
-        ind_for_history = [choice[i] for i, choice in zip(ind, choices)]
+        ind_for_history = [(i if hasattr(choice, 'rvs') else choice[i])
+                           for i, choice in zip(ind, choices)]
         param_history.append(list(ind_for_history) + list(fit))
 
 
@@ -620,6 +663,7 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
                 if random.random() < mutpb:
                     toolbox.mutate(ind2)
                 del ind1.fitness.values, ind2.fitness.values
+
         except ParamsSamplingError:
             logger.info('Evolutionary algorithm exited early (cannot find parameter set that has not been tried yet)')
             break
@@ -627,7 +671,7 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
 
         # Expect the fitnesses to be sent here
         # with ea_gen.send(fitnesses)
-        if not isinstance(invalid_ind, list) or not invalid_ind or not invalid_ind[0] or not all(isinstance(p, int) for p in invalid_ind[0]):
+        if not isinstance(invalid_ind, list) or not invalid_ind or not invalid_ind[0]:
             raise ValueError('Expected .send to be called with a list of tuples/lists of ints {}'.format(invalid_ind[0] if invalid_ind else invalid_ind))
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         assign_names(invalid_ind)
