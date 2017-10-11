@@ -1,3 +1,10 @@
+# TODO update predict_many for Elm PR 192 changes and connect to
+# elm.model_selection.* and dask_searchcv.model_selection.*
+# estimators like EaSearchCV so they can call
+# grid.fit(X, y).predict_many(X) predicting from all
+# or a subset of the final generation of estimators
+# from EA search process.
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from functools import partial
@@ -19,11 +26,19 @@ import xarray as xr
 
 
 from elm.config import import_callable, parse_env_vars
-from elm.pipeline.util import _next_name
 
 logger = logging.getLogger(__name__)
 
 __all__ = ['predict_many',]
+
+_next_idx = -1
+
+def _next_name(token):
+    '''name in a dask graph'''
+    global _next_idx
+    n = '{}-{}'.format(token, _next_idx)
+    _next_idx += 1
+    return n
 
 
 def _predict_one_sample_one_arg(estimator,

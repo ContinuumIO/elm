@@ -318,7 +318,10 @@ class ConfigParser(object):
 
     def _validate_one_model_scoring(self, key, value):
         '''Validate one model_scoring key-value (one scoring configuration)'''
-        from elm.model_selection.metrics import METRICS
+        # TODO Note PR 192 deleted the elm.model_selection.metrics
+        # module - this section needs to be fixed for the
+        # missing import and other Elm PR 192 changes
+        # from elm.model_selection.metrics import METRICS
         scoring = value.get('scoring')
         if scoring in METRICS:
             context = 'model_scoring:{}'.format(key)

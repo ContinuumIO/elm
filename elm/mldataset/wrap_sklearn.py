@@ -17,6 +17,7 @@ import yaml
 
 
 def get_row_index(X, features_layer=None):
+    '''Get the row index of a Dataset/MLDataset with a .features DataArray'''
     if features_layer is None:
         features_layer = FEATURES_LAYER
     if isinstance(X, MLDataset):
@@ -24,6 +25,8 @@ def get_row_index(X, features_layer=None):
         return getattr(arr, arr.dims[0])
 
 def _as_numpy_arrs(self, X, y=None, **kw):
+    '''Convert X, y for a scikit-learn method numpy.ndarrays
+    '''
     if isinstance(X, np.ndarray):
         return X, y, None
     if isinstance(X, xr.Dataset):
@@ -42,7 +45,7 @@ def _as_numpy_arrs(self, X, y=None, **kw):
 
 
 def _from_numpy_arrs(self, y, row_idx, features_layer=None):
-    print('y.si', getattr(y, 'size', y), row_idx, features_layer)
+    '''Convert a 1D prediction to ND using the row_idx MultiIndex'''
     if isinstance(y, MLDataset):
         return y
     features_layer = features_layer or FEATURES_LAYER
@@ -62,9 +65,12 @@ class SklearnMixin:
     _from_numpy_arrs = _from_numpy_arrs
 
     def _call_sk_method(self, sk_method, X=None, y=None, **kw):
+        '''Call a method of ._cls, typically an sklearn class,
+        for a method that requires numpy arrays'''
         _cls = self._cls
         if _cls is None:
             raise ValueError('Define .cls as a scikit-learn estimator')
+        # Get the method of the class instance
         func = getattr(_cls, sk_method, None)
         if func is None:
             raise ValueError('{} is not an attribute of {}'.format(sk_method, _cls))
@@ -78,6 +84,9 @@ class SklearnMixin:
         return func(**kw)
 
     def _predict_steps(self, X, row_idx=None, sk_method=None, **kw):
+        '''Call a prediction-related method, e.g. predict, score,
+        but extract the row index of X, if it exists, so that
+        y '''
         X2, _, temp_row_idx = self._as_numpy_arrs(X, y=None)
         if temp_row_idx is None:
             row_idx = temp_row_idx
@@ -87,7 +96,26 @@ class SklearnMixin:
         return y3, row_idx
 
     def predict(self, X, row_idx=None, **kw):
+        '''Predict from MLDataset X and return an MLDataset with
+        DataArray called "predict" that has the dimensions of
+        X's MultiIndex.  That MultiIndex typically comes from
+        having called X = X.to_features() before this method. If
+        X does not have a .features DataArray then X.to_features()
+        is called.
 
+        TODO - docstrings / consistency on the following methods:
+            predict
+            predict_proba
+            predict_log_proba
+            decision_function
+            fit_predict
+            (any other prediction-related methods I may have forgotten?)
+
+        TODO - Note in most cases the documentation on all the methods
+        should be taken from the corresponding methods of the ._cls, with
+        a note about Dataset/MLDataset input/output as X, y being the
+        difference.
+        '''
         y, row_idx = self._predict_steps(X, row_idx=row_idx,
                                          sk_method='predict', **kw)
         if row_idx is None:
@@ -116,6 +144,8 @@ class SklearnMixin:
         return self
 
     def _fit(self, X, y=None, **kw):
+        '''This private method is expected by some sklearn
+        models and must take X, y as numpy arrays'''
         return self._call_sk_method('_fit', X, y=y, **kw)
 
     def transform(self, X, y=None, **kw):
@@ -142,10 +172,4 @@ class SklearnMixin:
 
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
-
-    #def get_params(self, deep=True):
-     #   return self._cls.get_params(self, deep=deep)
-
-    #def set_params(self, **params):
-     #   return self._cls.set_params(self, **params)
 

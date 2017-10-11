@@ -26,8 +26,8 @@ from elm.pipeline.steps import (linear_model as lm,
                                 decomposition as elm_decomp,
                                 svm as elm_svm,)
 from elm.tests.test_pipeline import new_pipeline, modules_names
-from elm.tests.util import (TRANSFORMERS, TESTED,
-                            catch_warnings, pipeline_skip,
+from elm.tests.util import (TRANSFORMERS, TESTED_ESTIMATORS,
+                            catch_warnings, skip_transformer_estimator_combo,
                             make_X_y)
 
 param_distribution_poly = dict(step_1__degree=list(range(1, 3)),
@@ -50,15 +50,16 @@ def make_choice(ea):
 
 
 zipped = product((elm_pre.PolynomialFeatures, elm_decomp.PCA),
-                 (lm.SGDRegressor,),
-                 ('numpy', 'mldataset'))
-tested_pipes = [(trans, estimator, typ)
-                for trans, estimator, typ in zipped]
+                 (lm.SGDRegressor,),)
+tested_pipes = [(trans, estimator)
+                for trans, estimator in zipped]
 @catch_warnings
-@pytest.mark.parametrize('trans, estimator, astype', tested_pipes)
-def test_ea_search(trans, estimator, astype):
-    if astype == 'numpy':
-        pytest.skip('numpy in pipeline / EA search')
+@pytest.mark.parametrize('trans, estimator', tested_pipes)
+def test_cv_splitting_ea_search_mldataset(trans, estimator):
+    '''Test that an Elm Pipeline using MLDataset X feature
+    matrix input can be split into cross validation train / test
+    samples as in scikit-learn for numpy.  (As of PR 192 this test
+    is failing)'''
     pipe, X, y = new_pipeline(trans, estimator, flatten_first=False)
     X = X.to_features()
     param_distribution = param_distribution_sgd.copy()
@@ -67,16 +68,16 @@ def test_ea_search(trans, estimator, astype):
     else:
         param_distribution.update(param_distribution_poly)
     ea = EaSearchCV(estimator=pipe,
-                        param_distributions=param_distribution,
-                        score_weights=[1],
-                        model_selection=model_selection,
-                        refit=True,
-                        cv=3,
-                        error_score='raise',
-                        return_train_score=True,
-                        scheduler=None,
-                        n_jobs=-1,
-                        cache_cv=True)
+                    param_distributions=param_distribution,
+                    score_weights=[1],
+                    model_selection=model_selection,
+                    refit=True,
+                    cv=3,
+                    error_score='raise',
+                    return_train_score=True,
+                    scheduler=None,
+                    n_jobs=-1,
+                    cache_cv=True)
     ea.fit(X,y)
     assert isinstance(ea.predict(X), MLDataset)
 
@@ -92,7 +93,8 @@ def make_dataset(flatten_first=True):
     return xr.Dataset(X), y
 
 def make_mldataset(flatten_first=True):
-    X, y = make_X_y(astype='MLDataset', is_classifier=True, flatten_first=flatten_first)
+    X, y = make_X_y(astype='MLDataset', is_classifier=True,
+                    flatten_first=flatten_first)
     return X, y
 
 def make_dataframe():
@@ -140,6 +142,9 @@ for label, make_data in data_structure_trials:
 
 @pytest.mark.parametrize('label, do_predict', product(args, (True, False)))
 def test_ea_search_sklearn_elm_steps(label, do_predict):
+    '''Test that EaSearchCV can work with numpy, dask.array,
+    pandas.DataFrame, xarray.Dataset, xarray_filters.MLDataset
+    '''
     from scipy.stats import lognorm
     est, make_data, sel, kw = args[label]
     parameters = {'kernel': ['linear', 'rbf'],

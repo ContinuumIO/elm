@@ -1,5 +1,7 @@
+from __future__ import (absolute_import, division, print_function, unicode_literals,)
 import dill
-class SerializeEstimator:
+class SerializeMixin:
+    '''A mixin for serialization of estimators via dill'''
     def dumps(self, protocol=None, byref=None, fmode=None, recurse=None):
         '''pickle (dill) an object to a string
         '''

@@ -29,14 +29,38 @@ def base_selection(params_list,
                    model_selection,
                    sort_fitness=pareto_front,
                    score_weights=None,
-                   cv_results=None, X=None, y=None,
-                   **model_selection_kwargs):
-    logger.debug('base_selection with kwargs: {}'.format(model_selection_kwargs))
+                   cv_results=None,
+                   **kwargs):
+
+    '''
+    Select next parameters based on previous params_list, model_selection
+    function and fitnesses.
+
+    Parameters
+    ----------
+    params_list: list of dictionary of estimator parameter dicts
+    fitnesses: 2D numpy array with columns as different objectives
+    model_selection: callable.  If sort_fitness is given then the signature
+        is expected:
+            model_selection(params_list, best_idxes, **kwargs)
+
+        otherwise the signature should be:
+
+            model_selection(params_list, **kwargs)
+    sort_fitness: defaults to pareto_front from deap
+    score_weights: None for single objective optimization or a sequence for
+        multiobjective, e.g. [1, -1, 1] for mminimize, maximize, minimize
+    cv_results: cross validation results (from generations 0 - current).
+        Typically the .cv_results_ attribute of EaSearchCV instance or similar
+    **kwargs:  passed to model_selection
+
+    '''
+    logger.debug('base_selection with kwargs: {}'.format(kwargs))
     if sort_fitness == 'pareto_front':
         sort_fitness = pareto_front
     if not model_selection:
         return params_list
-    model_selection_kwargs = model_selection_kwargs or {}
+    kwargs = kwargs or {}
     if score_weights is None:
         score_weights = (1,)
     if sort_fitness is not None:
@@ -49,7 +73,7 @@ def base_selection(params_list,
             raise ValueError('Length of score_weights {} does '
                              'not match fitnesses.shape[1] {}'.format(fitnesses.shape[1], len(score_weights)))
         best_idxes = sort_fitness(score_weights, fitnesses)
-        params_list = model_selection(params_list, best_idxes, **model_selection_kwargs)
+        params_list = model_selection(params_list, best_idxes, **kwargs)
     else:
-        params_list = model_selection(params_list, **model_selection_kwargs)
+        params_list = model_selection(params_list, **kwargs)
     return params_list

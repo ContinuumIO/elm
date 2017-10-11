@@ -1,3 +1,16 @@
+'''
+elm.multilayer - Hierarchical modeling.  Fit a model to the predictions
+from a group of similar already-fitted models.
+
+elm.multilayer.MultiLayer is similar idea to the sklearn.ensemble
+subpackage and may benefit from using those class(es) as bases or
+other approaches, but sklearn.ensemble generally (always?) involves
+fitting the estimators rather than using arbitrary already-fit estimators.
+Documentation is needed on similarities / differences / limitations.
+
+TODO: docs / tests / docstrings
+'''
+from __future__ import absolute_import, division, print_function, unicode_literals
 from functools import partial
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -23,6 +36,8 @@ _hi_example = """TODO
 
 
 def concat_features(method):
+    '''Decorator to run an estimator method on
+    predictions of estimators'''
     def new_func(self, X, y=None, **kw):
         nonlocal method
         X, y = MultiLayer._concat_features(self, X, y=y)
