@@ -29,6 +29,7 @@ requirements:
     - scikit-learn
     - scipy
     - xarray
+    - xarray_filters
     - yaml
     - six
 
