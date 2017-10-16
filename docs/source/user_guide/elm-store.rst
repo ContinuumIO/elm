@@ -16,7 +16,7 @@ See also :doc:`API docs<api>`.
 
 Creating an ``ElmStore`` from File
 ----------------------------------
-An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with ``load_array`` from ``earthio``.  The simple case is to load all bands or subdatasets from an HDF or NetCDF file:
+An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with ``load_array`` from ``earthio``.  The simple case is to load all layers or subdatasets from an HDF or NetCDF file:
 
 .. code-block:: python
 
@@ -24,7 +24,7 @@ An ``ElmStore`` can be created from ``HDF4`` / ``HDF5`` or ``NetCDF`` file with 
     filename = '3B-HHR-E.MS.MRG.3IMERG.20160708-S153000-E155959.0930.V03E.HDF5.nc'
     es = load_array(filename)
 
-For GeoTiffs the argument is a directory name rather than a file name and each band is formed from individual GeoTiff files in the directory.  The following is an example with LANDSAT GeoTiffs for bands 1 through 7:
+For GeoTiffs the argument is a directory name rather than a file name and each band is formed from individual GeoTiff files in the directory.  The following is an example with LANDSAT GeoTiffs for layers 1 through 7:
 
 .. code-block:: python
 
@@ -49,15 +49,15 @@ For GeoTiffs the argument is a directory name rather than a file name and each b
         band_6   (y, x
 
 
-The example above for GeoTiffs loaded the correct bands, but labeled them in a way that may be confusing downstream in the analysis.  The following section shows how to control which bands are loaded and what they are named.
+The example above for GeoTiffs loaded the correct layers, but labeled them in a way that may be confusing downstream in the analysis.  The following section shows how to control which layers are loaded and what they are named.
 
-Controlling Which Bands Are Loaded
+Controlling Which Layers Are Loaded
 ----------------------------------
 
 Use the ``band_specs`` keyword to ``load_array`` to
 
- * Control which subdatasets, or bands typically, are loaded into the ``ElmStore`` and/or
- * To standardize the names of the bands (``DataArrays``) in the ``ElmStore``.
+ * Control which subdatasets, or layers typically, are loaded into the ``ElmStore`` and/or
+ * To standardize the names of the layers (``DataArrays``) in the ``ElmStore``.
 
  The ``band_specs`` work slightly differently for each file type:
 
@@ -81,7 +81,7 @@ In simple cases ``band_specs`` can be a list of strings to match a ``NetCDF`` va
     Data variables:
         HQobservationTime  (lon, lat) timedelta64[ns] NaT NaT NaT NaT NaT NaT ...
 
-With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff files (bands) by testing if each string is ``in`` a GeoTiff file name of the directory.  Here is an example:
+With GeoTiffs, giving a list of strings as ``band_specs`` finds matching GeoTiff files (layers) by testing if each string is ``in`` a GeoTiff file name of the directory.  Here is an example:
 
 .. code-block:: python
 
@@ -167,13 +167,13 @@ Here is an example of creating an ``ElmStore`` from ``numpy`` arrays and ``xarra
     rand_array = lambda: np.random.normal(0, 1, 1000000).reshape(-1,10)
 
     def sampler(**kwargs):
-        bands = ['b1', 'b2', 'b3', 'b4']
+        layers = ['b1', 'b2', 'b3', 'b4']
         es_data = OrderedDict()
-        for band in bands:
+        for layer in layers:
             arr = rand_array()
             y = np.arange(arr.shape[0])
             x = np.arange(arr.shape[1])
-            es_data[band] = xr.DataArray(arr, coords=[('y', y), ('x', x)], dims=('y', 'x'), attrs={})
+            es_data[layer] = xr.DataArray(arr, coords=[('y', y), ('x', x)], dims=('y', 'x'), attrs={})
         return ElmStore(es_data, add_canvas=False)
 
 Calling ``sampler`` above gives:
@@ -194,7 +194,7 @@ Calling ``sampler`` above gives:
         _dummy_canvas: True
         band_order: ['b1', 'b2', 'b3', 'b4']
 
-``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the band metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See `the GDAL data model for more information on geo transforms`_.  In the example above each ``DataArray`` did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` described further below)
+``ElmStore`` has the initialization keyword argument ``add_canvas`` that differs from ``xarray.Dataset``.  If ``add_canvas`` is True (default), it expected that the layer metadata in the ``DataArrays`` each contain a ``geo_transform`` key with a value that is a sequence of length 6.  See `the GDAL data model for more information on geo transforms`_.  In the example above each ``DataArray`` did not have a ``geo_transform`` in ``attrs`` so ``add_canvas`` was set to ``False``.  The limitation of not having a ``canvas`` attribute is inability to use some spatial reindexing transformations (e.g. ``elm.pipeline.steps.SelectCanvas`` described further below)
 
 .. _the GDAL data model for more information on geo transforms: http://www.gdal.org/classGDALDataset.html#a5101119705f5fa2bc1344ab26f66fd1d
 
@@ -203,7 +203,7 @@ Calling ``sampler`` above gives:
 Attributes of an ``ElmStore``
 -----------------------------
 
-If an ``ElmStore`` was initialized with ``add_canvas`` (the behavior in ``load_array``), then it is expected each band, or ``DataArray``, will have a ``geo_transform`` in its metadata.  The ``geo_transform`` information, in combination with the array dimensions and shape, create the ``ElmStore``'s ``canvas`` attribute.
+If an ``ElmStore`` was initialized with ``add_canvas`` (the behavior in ``load_array``), then it is expected each layer, or ``DataArray``, will have a ``geo_transform`` in its metadata.  The ``geo_transform`` information, in combination with the array dimensions and shape, create the ``ElmStore``'s ``canvas`` attribute.
 
 .. code-block:: python
 
@@ -211,9 +211,9 @@ If an ``ElmStore`` was initialized with ``add_canvas`` (the behavior in ``load_a
 
     Out[5]: Canvas(geo_transform=(-180.0, 0.1, 0, -90.0, 0, 0.1), buf_xsize=3600, buf_ysize=1800, dims=('lon', 'lat'), ravel_order='C', zbounds=None, tbounds=None, zsize=None, tsize=None, bounds=BoundingBox(left=-180.0, bottom=-90.0, right=179.90000000000003, top=89.9))
 
-The ``canvas`` is used in the ``Pipeline`` for transformations like ``elm.pipeline.steps.SelectCanvas`` which can be used to reindex all bands onto coordinates of one of the band's in the ``ElmStore``.
+The ``canvas`` is used in the ``Pipeline`` for transformations like ``elm.pipeline.steps.SelectCanvas`` which can be used to reindex all layers onto coordinates of one of the layer's in the ``ElmStore``.
 
-An ``ElmStore`` has a ``data_vars`` attribute (inherited from ``xarray.Dataset`` - `described here`_), and also has an attribute ``band_order``.  When ``elm.pipeline.steps.Flatten`` flattens the separate bands of an ``ElmStore``, ``band_order`` becomes the order of the bands in the single flattened 2-D array.
+An ``ElmStore`` has a ``data_vars`` attribute (inherited from ``xarray.Dataset`` - `described here`_), and also has an attribute ``band_order``.  When ``elm.pipeline.steps.Flatten`` flattens the separate layers of an ``ElmStore``, ``band_order`` becomes the order of the layers in the single flattened 2-D array.
 
 .. _described here: http://xarray.pydata.org/en/stable/generated/xarray.Dataset.data_vars.html
 
@@ -241,9 +241,9 @@ Common ``ElmStore`` Transformations
 
 **Flatten**
 
-``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in bands (each band as a ``DataArray`` ) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on an ``ElmStore``, where the scikit-learn transforms expect a 2-D array.
+``elm.pipeline.steps.Flatten`` will convert an ``ElmStore`` of 2-D rasters in layers (each layer as a ``DataArray`` ) to an ``ElmStore`` with a single ``DataArray`` called ``flat``.  *Note: ``elm.pipeline.steps.Flatten()`` must be included in a ``Pipeline`` before scikit-learn based transforms on an ``ElmStore``, where the scikit-learn transforms expect a 2-D array.
 
-Here is an example of ``Flatten`` that continues the example above that defined ``sampler``, a function returning a random ``ElmStore`` of 2-D ``DataArray`` bands:
+Here is an example of ``Flatten`` that continues the example above that defined ``sampler``, a function returning a random ``ElmStore`` of 2-D ``DataArray`` layers:
 
 .. code-block:: python
 
@@ -275,7 +275,7 @@ Here is an example of ``Flatten`` that continues the example above that defined 
 
 **InverseFlatten**
 
-``elm.pipeline.steps.InverseFlatten`` converts an ``ElmStore`` that is flattened (typically the output of :ref:`transform-flatten` above) back to separate 2-D raster bands.
+``elm.pipeline.steps.InverseFlatten`` converts an ``ElmStore`` that is flattened (typically the output of :ref:`transform-flatten` above) back to separate 2-D raster layers.
 
 .. code-block:: python
 

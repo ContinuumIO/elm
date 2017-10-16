@@ -59,7 +59,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'elm'
-copyright = u'2016, Continuum Analytics'
+copyright = u'2017, Anaconda'
 author = u'elm contributors'
 
 # The version info for the project you're documenting, acts as replacement for

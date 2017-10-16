@@ -39,9 +39,9 @@ If fitting more than one sample, then define a ``sampler`` function to pass to :
 
     from functools import partial
     N_SAMPLES = 2
-    bands = ['band_{}'.format(idx + 1) for idx in range(10)]
+    layers = ['band_{}'.format(idx + 1) for idx in range(10)]
     sampler = partial(random_elm_store,
-                      bands=bands,
+                      bands=layers,
                       width=60,
                       height=60)
     args_list = [(),] * N_SAMPLES

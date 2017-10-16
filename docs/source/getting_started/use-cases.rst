@@ -1,7 +1,7 @@
 Use Cases
 =========
 
-``elm`` (**Ensemble Learning Models**) is a versatile set of tools for ensemble and evolutionary algorithm approaches to training and selecting machine learning models and large scale prediction from trained models.  ``elm`` has a focus on data structures that are common in satellite and weather data analysis, such as rasters representing bands of satellite data or cubes of weather model output.
+``elm`` (**Ensemble Learning Models**) is a versatile set of tools for ensemble and evolutionary algorithm approaches to training and selecting machine learning models and large scale prediction from trained models.  ``elm`` has a focus on data structures that are common in satellite and weather data analysis, such as rasters representing layers of satellite data or cubes of weather model output.
 
 Common computational challenges in satellite and weather data machine learning include:
 

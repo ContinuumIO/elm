@@ -37,9 +37,13 @@ The dicts in ``data_sources`` create a named ``sampler`` with their keyword argu
 
 In the config, ``args_list`` can be a callable.  In this case, it is ``iter_files_recursively`` a function which takes ``top_dir`` and ``file_pattern`` as arguments.  The filenames returned by ``iter_files_recursively`` will be filtered by ``example_meta_is_day`` an example function for detecting whether a satellite data file is night or day based on its metadata.  If ``args_list`` is callable, it should take a variable number of keyword arguments (``**kwargs``).
 
-This examples creates ``ds_example`` which selects from files to get bands 1 through 6, iterating recursively over ``.hdf`` files in ``ELM_EXAMPLE_DATA_PATH`` from the environment (``env:SOMETHING`` means take ``SOMETHING`` from environment variables).
+This examples creates ``ds_example`` which selects from files to get layers 1 through 6, iterating recursively over ``.hdf`` files in ``ELM_EXAMPLE_DATA_PATH`` from the environment (``env:SOMETHING`` means take ``SOMETHING`` from environment variables).
 
+<<<<<<< HEAD:docs/source/config-examples.rst
 ``band_specs`` in the data source are passed to ``earthio.LayerSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
+=======
+``band_specs`` in the data source are passed to ``earthio.BandSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which layers (subdatasets in this HDF4 case) to include in a sample.
+>>>>>>> Update docs:docs/source/user_guide/config-examples.rst
 
 .. code-block:: yaml
 

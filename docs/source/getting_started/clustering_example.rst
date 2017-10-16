@@ -32,7 +32,7 @@ First the notebook sets some environment variables related to usage of a ``dask-
 
 Each GeoTiff file has 1 raster (band of LANDSAT data):
 
-.. image:: img/landsat_001.png
+.. image:: _images/landsat_001.png
 
 See more inforation on ``ElmStore`` in :doc:`ElmStore<elm-store>`.
 
@@ -49,11 +49,11 @@ Using a list of ``LayerSpec`` objects, as shown below, is how one can control wh
 
 We are using ``buf_xsize`` and ``buf_ysize`` below to downsample.
 
-.. image:: img/landsat_003.png
+.. image:: _images/landsat_003.png
 
-Check the ``repr`` of the ``LayerSpec`` objects to see all possible arguments controlling reading of bands:
+Check the ``repr`` of the ``BandSpec`` objects to see all possible arguments controlling reading of layers:
 
-.. image:: img/landsat_004.png
+.. image:: _images/landsat_004.png
 
 ``earthio.load_array``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -62,11 +62,11 @@ Check the ``repr`` of the ``LayerSpec`` objects to see all possible arguments co
 
 The first argument to ``load_array`` is a directory if reading GeoTiff files and it is assumed that the directory contains GeoTiff files each with a 1-band raster.
 
-For ``NetCDF``, ``HDF4``, and ``HDF5`` the first argument is a single filename, and the bands are taken from the ``variables`` (``NetCDF``) or ``subdatasets`` (``HDF4`` / ``HDF5``).
+For ``NetCDF``, ``HDF4``, and ``HDF5`` the first argument is a single filename, and the layers are taken from the ``variables`` (``NetCDF``) or ``subdatasets`` (``HDF4`` / ``HDF5``).
 
-``band_specs`` (list of ``LayerSpec`` objects) is passed in to ``load_array`` (the list of ``LayerSpec`` objects from above) to control which bands are read from the directory of GeoTiffs.
+``band_specs`` (list of ``BandSpec`` objects) is passed in to ``load_array`` (the list of ``BandSpec`` objects from above) to control which layers are read from the directory of GeoTiffs.
 
-.. image:: img/landsat_005.png
+.. image:: _images/landsat_005.png
 
 Using an ``ElmStore`` like an (xarray.Dataset)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -74,7 +74,7 @@ See also `xarray docs on Dataset`_
 
 .. _xarray docs on Dataset: http://xarray.pydata.org/en/stable/data-structures.html#dataset
 
-.. image:: img/landsat_006.png
+.. image:: _images/landsat_006.png
 
 .. _xarray.DataArray: http://xarray.pydata.org/en/stable/generated/xarray.DataArray.html
 
@@ -86,7 +86,7 @@ The notebook then goes through a number of examples similar to:
  * ``X.band_1.plot.pcolormesh()`` - The code uses names like ``band_1``, ``band_2``.  These are named ``DataArray`` objects in the ``ElmStore`` ``X`` because of the ``name`` argument to the ``LayerSpec`` objects above.  The ``plot.pcolormesh()`` comes from the data viz tools with `xarray.DataArray`_ .
  * The output of ``X.band_1.plot.pcolormesh()``
 
-.. image:: img/landsat_007.png
+.. image:: _images/landsat_007.png
 
 Building a ``Pipeline``
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -109,42 +109,42 @@ The notebook shows how to specify a several-step `Pipeline` of
 
 This cell show typical import statments for working with a ``elm.pipeline.steps`` that become part of a ``Pipeline``, including importing a transformer and estimator from scikit-learn:
 
-.. image:: img/landsat_009.png
+.. image:: _images/landsat_009.png
 
 Steps - ``Flatten``
 ~~~~~~~~~~~~~~~~~~~
 
 This :ref:`transform-flatten` step is essentially ``.ravel`` on each ``DataArray`` in ``X`` to create a single 2-D ``DataArray`` :
 
-.. image:: img/landsat_010.png
+.. image:: _images/landsat_010.png
 
 Steps - ``ModifySample`` - ``set_nans``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The next step uses ``elm.pipeline.steps.ModifySample`` to run a custom callable in a ``Pipeline`` of transformations.  This function sets ``NaN`` for the no-data perimeters of the rasters:
 
-.. image:: img/landsat_011.png
+.. image:: _images/landsat_011.png
 
 Steps - ``DropNaRows`` - Drop Null / NaN Rows
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The :ref:`transform-dropnarows` is a transformer to remove the ``NaN`` values from the ``DataArray`` ``flat`` (the flattened (``ravel``) rasters as a single 2-D ``DataArray`` )
 
-.. image:: img/landsat_012.png
+.. image:: _images/landsat_012.png
 
 Steps - ``ModifySample`` - Log Transform (or pass through)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This usage of ``ModifySample`` will allow the ``Pipeline`` to use log transformation or not (see usage of ``set_params`` several screenshots later)
 
-.. image:: img/landsat_013.png
+.. image:: _images/landsat_013.png
 
 Feature engineering in a ``Pipeline``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Define a function that can do normalized differences between bands (raster or ``DataArray`` ), adding the normalized differences to what will be the ``X`` data in the ``Pipeline`` of transformations.
+Define a function that can do normalized differences between layers (raster or ``DataArray`` ), adding the normalized differences to what will be the ``X`` data in the ``Pipeline`` of transformations.
 
-.. image:: img/landsat_014.png
+.. image:: _images/landsat_014.png
 
 Feature engineering - ``ModifySample`` with arguments
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -162,40 +162,40 @@ We are calculating:
 * ``NBR`` : *Normalized Burn Ratio*
   * ``(band_4 - band_7) / (band_7 + band_4)``
 
-.. image:: img/landsat_015.png
+.. image:: _images/landsat_015.png
 
-**Using pcolormesh on normalized differences of bands**
+**Using pcolormesh on normalized differences of layers**
 
 Here are the ``NDWI`` and ``NDVI`` plotted with the `xarray-pcolormesh`_ method of the ``predict`` ``DataArray``
 
-.. image:: img/landsat_016.png
+.. image:: _images/landsat_016.png
 
-**False Color with normalized differences of bands**
+**False Color with normalized differences of layers**
 
 The image below has an RGB (red, green, blue) matrix made up of the ``NBR`` , ``NDSI`` , ``NDWI`` normalized differences:
 
-.. image:: img/landsat_017.png
+.. image:: _images/landsat_017.png
 
 Normalization and Adding Polynomial Terms
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The following snippets show how to use a class from ``sklearn.preprocessing`` or ``sklearn.feature_selection`` with ``Pipeline`` :
 
-.. image:: img/landsat_018.png
-.. image:: img/landsat_019.png
+.. image:: _images/landsat_018.png
+.. image:: _images/landsat_019.png
 
 **Custom Feature Selection**
 
 By defining the function below, we will be able to choose among random combinations of the original data or normalized differences
 
-.. image:: img/landsat_020.png
+.. image:: _images/landsat_020.png
 
 PCA
 ~~~
 
 Use ``steps.Transform`` to wrap ``PCA`` or another method from ``sklearn.decomposition`` for ``elm.pipeline.Pipeline`` .
 
-.. image:: img/landsat_021.png
+.. image:: _images/landsat_021.png
 
 .. _more on sklearn.decomposition models here: http://scikit-learn.org/stable/modules/classes.html#module-sklearn.decomposition
 
@@ -207,7 +207,7 @@ Use an estimator from ``scikit-learn``
 
 Use a model with a ``fit`` / ``predict`` interface, such as ``KMeans``.
 
-.. image:: img/landsat_022.png
+.. image:: _images/landsat_022.png
 
 Most `scikit-learn models described here`_ are supported.
 
@@ -220,7 +220,7 @@ The following uses all the steps we have created in sequence of tuples and confi
 
 .. _Akaike Information Criterion: https://en.wikipedia.org/wiki/Akaike_information_criterion
 
-.. image:: img/landsat_023.png
+.. image:: _images/landsat_023.png
 
 The next steps deal with controlling :doc:`fit_ensemble<fit-ensemble>` (fitting with a group of models of different parameters)
 
@@ -231,7 +231,7 @@ See more info on :doc:`Pipeline here<pipeline>`.
 
 This is an example ``ensemble_init_func`` to pass to :doc:`fit_ensemble<fit-ensemble>`, using ``pipe.new_with_params(**new_params)`` to create a new unfitted ``Pipeline`` instance with new parameters.
 
-.. image:: img/landsat_024.png
+.. image:: _images/landsat_024.png
 
 The :doc:`fit_ensemble docs<fit-ensemble>` also show an example of an ``ensemble_init_func``.
 
@@ -240,15 +240,15 @@ More ``fit_ensemble`` control
 
 The following sets the number of generations ( ``ngen`` ) and the ``model_selection`` callable after each generation.
 
-.. image:: img/landsat_025.png
+.. image:: _images/landsat_025.png
 
 Parallelism with ``dask-distributed``
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 :doc:`fit_ensemble<fit-ensemble>` , to fit a group of models in generations with model selection after each generation, and :doc:`predict_many<predict-many>` each take a ``client`` keyword as a dask ``Client`` (dask).  :doc:`predict_many<predict-many>` parallelizes over multiple models and samples, though here only one sample is used.
 
-.. image:: img/landsat_026.png
-.. image:: img/landsat_027.png
+.. image:: _images/landsat_026.png
+.. image:: _images/landsat_027.png
 
 Using an ``ElmStore`` from :doc:`predict_many<predict-many>`
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -257,11 +257,11 @@ Using an ``ElmStore`` from :doc:`predict_many<predict-many>`
 
 Using the `xarray's pcolormesh`_ on the ``predict`` attribute ( ``DataArray`` ) of an ``ElmStore`` returned by :doc:`predict_many<predict-many>` :
 
-.. image:: img/landsat_028.png
+.. image:: _images/landsat_028.png
 
 
 The best prediction in terms of ``AIC`` :
 
-.. image:: img/landsat_029.png
+.. image:: _images/landsat_029.png
 
 .. _xarray's pcolormesh: http://xarray.pydata.org/en/stable/generated/xarray.plot.pcolormesh.html
