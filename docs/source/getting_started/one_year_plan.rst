@@ -7,7 +7,7 @@
 
 One-Year Plan
 ~~~~~~~~~~~~~
-One-Year Plan for Elm and Related Innovation
+One-Year Plan for Elm and Related Innovation (Work-In-Progress)
 
 :ref:`elm` supports workflows of unsupervised or supervised learning models, including clustering algorithms, classification, and regression, including common spatial or statistical preprocessing methods that may be run in a pipeline of transformers with adjustable parameters. :ref:`elm` follows conventions of popular Python machine learning tools, e.g. `scikit-learn`_
 
