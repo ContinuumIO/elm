@@ -61,11 +61,15 @@ DEFAULT_CONTROL = {
       # alternatively 'early_stop': {'threshold': [10], 'agg': any}
     }
 
+try:
+    strings = (str, unicode)
+except:
+    strings = (str,)
 REQUIRED_CONTROL_KEYS_TYPES = {
-    'select_method': str,
-    'crossover_method': str,
-    'mutate_method': str,
-    'init_pop': str,
+    'select_method': strings,
+    'crossover_method': strings,
+    'mutate_method': strings,
+    'init_pop': strings,
     'indpb': float,
     'mutpb': float,
     'cxpb':  float,

@@ -55,6 +55,8 @@ for m in MODULES:
     for cls in get_module_classes(m).values():
         if cls.__name__ in _seen:
             continue
+        if not m in cls.__module__:
+            continue
         _seen.add(cls.__name__)
         w = patch_cls(cls)
         if any(s in cls.__name__ for s in SKIP):

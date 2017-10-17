@@ -15,6 +15,7 @@ from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_EVO_PARAMS,)
 from elm.mldataset.serialize_mixin import SerializeMixin
 from elm.mldataset.wrap_sklearn import SklearnMixin
+from elm.mldataset.cv_cache import cv_split as _cv_split
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
 from elm.pipeline import Pipeline
@@ -84,12 +85,15 @@ model_selection : A callable that is called after each generation [TODO docs],
       'mu':    4,
       'k':     4,
       'early_stop': None
-
     }
 model_selection_kwargs : Keyword arguments passed to the model selection
     callable (if given) otherwise ignored
 select_with_test : Select / sort models based on test batch scores(True is default)
 avoid_repeated_params : Avoid repeated parameters (True by default)
+post_param_select: Callable taking a parameter dict and returning a parameter
+    dict or None/False.  If None/False, post_param_select is called
+    on a new parameter dict (and so on), to allow skipping invalid
+    parameter dicts with the logic in post_param_select
 """
 _ea_example = """\
 >>> from sklearn import svm, datasets
@@ -125,7 +129,7 @@ EaSearchCV(avoid_repeated_params=True, cache_cv=True, cv=None,
 """
 
 class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
-
+    _max_retries = 100
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,
                                    description=_ea_description,
@@ -140,11 +144,27 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                  model_selection_kwargs=None,
                  select_with_test=True,
                  avoid_repeated_params=True,
+                 post_param_select=None,
                  scoring=None,
                  iid=True, refit=True,
                  cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=True):
-        filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
+                 scheduler=None, n_jobs=-1, cache_cv=True,
+                 cv_split=None):
+
+        param = dict(estimator=estimator,
+                     param_distributions=param_distributions,
+                     n_iter=n_iter,
+                     random_state=random_state,
+                     scoring=scoring,
+                     iid=iid,
+                     refit=refit,
+                     cv=cv, error_score=error_score,
+                     return_train_score=return_train_score,
+                     scheduler=scheduler,
+                     n_jobs=n_jobs,
+                     cache_cv=cache_cv)
+        self.cv_split = cv_split
+        RandomizedSearchCV.__init__(self, **param)
         self.ngen = ngen
         self.select_with_test = select_with_test
         self.model_selection = model_selection
@@ -152,6 +172,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         self.score_weights = score_weights
         self.avoid_repeated_params = avoid_repeated_params
         self.cv_results_all_gen_ = {}
+        self.post_param_select = post_param_select
 
     def _close(self):
         self.cv_results_ = getattr(self, 'cv_results_all_gen_', self.cv_results_)
@@ -259,7 +280,8 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
             chunks = (int(DASK_CHUNK_N / X.shape[1]), 1)
             val = X
         X = da.from_array(val, chunks=chunks)
-        y = da.from_array(y, chunks=chunks[0]) # TODO
+        if y is not None:
+            y = da.from_array(y, chunks=chunks[0]) # TODO
         return X, y
 
     def fit(self, X, y=None, groups=None, **fit_params):
@@ -288,12 +310,28 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         self._close()
         return self
 
+    def _post_param_select(self, params_iter):
+        new_params = []
+        for params in params_iter:
+            if not self.post_param_select:
+                yield params
+            else:
+                for repeat in range(self._max_retries):
+                    new_params = self.post_param_select(params)
+                    if new_params:
+                        break
+                if not new_params:
+                    raise ValueError('Max retries {} and no valid parameters '
+                                     'when given {}'.format(self._max_retries, params))
+                yield new_params
+
     def _get_param_iterator(self):
         if self._is_ea and not getattr(self, '_invalid_ind', None):
             return iter(())
         if not self._is_ea and self._gen == 0:
             self.next_params_ = tuple(RandomizedSearchCV._get_param_iterator(self))
-        return self._within_gen_param_iter(gen=self._gen)
+        param_iter = self._within_gen_param_iter(gen=self._gen)
+        return self._post_param_select(param_iter)
 
     set_params = RandomizedSearchCV.set_params
     get_params = RandomizedSearchCV.get_params

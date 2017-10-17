@@ -22,6 +22,7 @@ from elm.mldataset.wrap_sklearn import (_as_numpy_arrs,
                                         _from_numpy_arrs,
                                         get_row_index,
                                         SklearnMixin)
+from elm.mldataset.spec_mixins import SpecMixinBaseEstimator
 
 from sklearn.utils.metaestimators import _BaseComposition
 from xarray_filters.pipeline import Step
@@ -30,7 +31,7 @@ from xarray_filters.func_signatures import filter_args_kwargs
 __all__ = ['Pipeline', 'FeatureUnion']
 
 
-class Pipeline(sk_Pipeline):
+class Pipeline(sk_Pipeline, SpecMixinBaseEstimator):
 
     # Estimator interface
 
@@ -129,7 +130,7 @@ class Pipeline(sk_Pipeline):
                 # from the cache.
                 self.steps[step_idx] = (name, fitted_transformer)
         if self._final_estimator is None:
-            return Xt, {}
+            return Xt, {}, fit_params
         fit_params = fit_params_steps[self.steps[-1][0]]
         return Xt, y, fit_params
 
