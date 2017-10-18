@@ -38,3 +38,5 @@ dependencies:
    - descartes
    - zict
    - pytest-rerunfailures
+   - dask-glm
+   - dask-searchcv

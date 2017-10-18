@@ -5,7 +5,7 @@ This page walks through a ``Jupyter`` notebook using ``elm`` to ensemble fit K-M
 
 It demonstrates the common steps of using ``elm`` :
 
- * Working with ``earthio.load_array`` to read ``NetCDF`` , ``HDF4`` , ``HDF5`` , and GeoTiff files, and controlling how a sample is composed of bands or separate rasters with ``BandSpec`` . See also :ref:`elm-store-from-file`
+ * Working with ``earthio.load_array`` to read ``NetCDF`` , ``HDF4`` , ``HDF5`` , and GeoTiff files, and controlling how a sample is composed of bands or separate rasters with ``LayerSpec`` . See also :ref:`elm-store-from-file`
  * Defining a ``Pipeline`` of transformers (e.g. normalization and PCA) and an estimator, where the transformers use classes from ``elm.pipeline.steps`` and the estimator is a model with a ``fit`` / ``predict`` interface.  See also :doc:`Pipeline<pipeline>`
  * Calling :doc:`fit_ensemble<fit-ensemble>` to train the :doc:`Pipeline<pipeline>` under varying parameters with one or more input samples
  * Calling :doc:`predict_many<predict-many>` to predict from all trained ensemble members to one or more input samples
@@ -36,10 +36,10 @@ Each GeoTiff file has 1 raster (band of LANDSAT data):
 
 See more inforation on ``ElmStore`` in :doc:`ElmStore<elm-store>`.
 
-``earthio.BandSpec``
+``earthio.LayerSpec``
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Using a list of ``BandSpec`` objects, as shown below, is how one can control which bands, or individual GeoTiff files, become the sample dimensions for learning:
+Using a list of ``LayerSpec`` objects, as shown below, is how one can control which bands, or individual GeoTiff files, become the sample dimensions for learning:
 
  * ``buf_xsize``: The size of the output raster horizontal dimension
  * ``buf_ysize``: The size of the output raster vertical dimension
@@ -51,7 +51,7 @@ We are using ``buf_xsize`` and ``buf_ysize`` below to downsample.
 
 .. image:: img/landsat_003.png
 
-Check the ``repr`` of the ``BandSpec`` objects to see all possible arguments controlling reading of bands:
+Check the ``repr`` of the ``LayerSpec`` objects to see all possible arguments controlling reading of bands:
 
 .. image:: img/landsat_004.png
 
@@ -64,7 +64,7 @@ The first argument to ``load_array`` is a directory if reading GeoTiff files and
 
 For ``NetCDF``, ``HDF4``, and ``HDF5`` the first argument is a single filename, and the bands are taken from the ``variables`` (``NetCDF``) or ``subdatasets`` (``HDF4`` / ``HDF5``).
 
-``band_specs`` (list of ``BandSpec`` objects) is passed in to ``load_array`` (the list of ``BandSpec`` objects from above) to control which bands are read from the directory of GeoTiffs.
+``band_specs`` (list of ``LayerSpec`` objects) is passed in to ``load_array`` (the list of ``LayerSpec`` objects from above) to control which bands are read from the directory of GeoTiffs.
 
 .. image:: img/landsat_005.png
 
@@ -83,7 +83,7 @@ Visualization with ``ElmStore``
 
 The notebook then goes through a number of examples similar to:
 
- * ``X.band_1.plot.pcolormesh()`` - The code uses names like ``band_1``, ``band_2``.  These are named ``DataArray`` objects in the ``ElmStore`` ``X`` because of the ``name`` argument to the ``BandSpec`` objects above.  The ``plot.pcolormesh()`` comes from the data viz tools with `xarray.DataArray`_ .
+ * ``X.band_1.plot.pcolormesh()`` - The code uses names like ``band_1``, ``band_2``.  These are named ``DataArray`` objects in the ``ElmStore`` ``X`` because of the ``name`` argument to the ``LayerSpec`` objects above.  The ``plot.pcolormesh()`` comes from the data viz tools with `xarray.DataArray`_ .
  * The output of ``X.band_1.plot.pcolormesh()``
 
 .. image:: img/landsat_007.png

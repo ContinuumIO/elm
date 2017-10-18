@@ -33,7 +33,7 @@ The example below uses a ``sampler`` function and ``args_list`` (list of unpacka
 
     ELM_EXAMPLE_DATA_PATH = os.environ['ELM_EXAMPLE_DATA_PATH']
 
-    band_specs = list(map(lambda x: BandSpec(**x),
+    band_specs = list(map(lambda x: LayerSpec(**x),
             [{'search_key': 'long_name', 'search_value': "Band 1 ", 'name': 'band_1'},
              {'search_key': 'long_name', 'search_value': "Band 2 ", 'name': 'band_2'},
              {'search_key': 'long_name', 'search_value': "Band 3 ", 'name': 'band_3'},

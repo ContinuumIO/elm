@@ -16,13 +16,13 @@ import random
 import logging
 import warnings
 
-import attr
 from deap import base
 from deap import creator
 from deap import tools
 import numpy as np
+from sklearn.model_selection import ParameterGrid
 
-from elm.config.func_signatures import get_args_kwargs_defaults
+from xarray_filters.func_signatures import get_args_kwargs_defaults
 from elm.config import (import_callable,
                         ElmConfigError,
                         ConfigParser)
@@ -38,18 +38,28 @@ EVO_FIELDS = ['toolbox',
               'score_weights',
               'early_stop']
 
-@attr.s
-class EvoParams(object):
-    toolbox = attr.ib()
-    deap_params = attr.ib()
-    param_grid_name = attr.ib()
-    history_file = attr.ib()
-    score_weights = attr.ib()
-    early_stop = attr.ib()
 
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
 LAST_TAG_IDX = 0
+
+DEFAULT_CONTROL = {
+      'select_method': 'selNSGA2',
+      'crossover_method': 'cxTwoPoint',
+      'mutate_method': 'mutUniformInt',
+      'init_pop': 'random',
+      'indpb': 0.5,
+      'mutpb': 0.9,
+      'cxpb':  0.3,
+      'eta':   20,
+      'ngen':  2,
+      'mu':    4,
+      'k':     4,
+      'early_stop': None
+      # {'abs_change': [10], 'agg': all},
+      # alternatively 'early_stop': {'percent_change': [10], 'agg': all}
+      # alternatively 'early_stop': {'threshold': [10], 'agg': any}
+    }
 
 REQUIRED_CONTROL_KEYS_TYPES = {
     'select_method': str,
@@ -66,6 +76,40 @@ REQUIRED_CONTROL_KEYS_TYPES = {
 }
 EARLY_STOP_KEYS = ['abs_change', 'percent_change', 'threshold']
 
+DEFAULT_EVO_PARAMS = dict(
+    k=32,
+    mu=32,
+    ngen=3, cxpb=0.3, indpb=0.5, mutpb=0.9, eta=20,
+    param_grid_name='param_grid',
+    select_method='selNSGA2',
+    crossover_method='cxTwoPoint',
+    mutate_method='mutUniformInt',
+    init_pop='random',
+    early_stop=None,
+    toolbox=None
+)
+
+def _call_rvs(choice):
+    param = choice.rvs()
+    if param.dtype.kind == 'f':
+        param = float(param)
+    else:
+        param = int(param)
+    return param
+
+
+def _random_choice(choices):
+    '''Random choice among indices'''
+    params = []
+    for choice in choices:
+        if hasattr(choice, 'rvs'):
+            param = _call_rvs(choice)
+        else:
+            param = int(np.random.choice(range(len(choice))))
+        params.append(param)
+    return params
+
+
 def next_model_tag():
     '''Gives names like tag_0, tag_1, tag_2 sequentially'''
     global LAST_TAG_IDX
@@ -80,28 +124,8 @@ def assign_names(pop, names=None):
         ind.name = name
 
 
-def get_param_grid(config, step):
-    '''Get the metadata for one config step that has a param_grid or return None'''
-    param_grid_name = step.get('param_grid') or None
-    if not param_grid_name:
-        return None
-    train_step_name = step.get('train')
-    if train_step_name:
-        train_config = config.train[train_step_name]
-    else:
-        raise ElmConfigError('Expected param_grid to be used with a "train" '
-                         'step of a pipeline, but found param_grid '
-                         'was used in step {}'.format(step))
-    param_grid = config.param_grids[param_grid_name]
-    return check_format_param_grid(param_grid, param_grid_name)
-
-
-def check_format_param_grid(param_grid, param_grid_name):
+def check_format_param_grid(param_grid, control, param_grid_name='param_grid_0'):
     '''Run validations on a param_grid'''
-    if not isinstance(param_grid, dict):
-        raise ElmConfigError('Expected param_grids: {} to be a dict '
-                             'but found {}'.format(param_grid_name, param_grid))
-    control = param_grid.get('control') or {}
     if not isinstance(control, dict):
         raise ElmConfigError("Expected 'control' as dict")
     early_stop = control.get('early_stop') or None
@@ -116,39 +140,60 @@ def check_format_param_grid(param_grid, param_grid_name):
             raise ElmConfigError('Expected params_grids:{} '
                                  '"control" to have key {} with '
                                  'type {}'.format(param_grid_name, required_key, typ))
-    return _to_param_meta(param_grid)
+    return _to_param_meta(param_grid, control)
 
 
-def _to_param_meta(param_grid):
+def _to_param_meta(param_grid, control):
     '''Acquire parameter metadata such as bounds that are useful for sampling'''
-    low = []
-    up = []
-    is_int = []
-    choices = []
-    param_grid['control']['param_order'] = tuple(sorted(set(param_grid) - set(('control',))))
-    for key in param_grid['control']['param_order']:
-        values = param_grid[key]
-        if not isinstance(values, Sequence) or not values:
-            raise ValueError('param_grid: {} has a value that is not a '
-                             'Sequence with non-zero length: {}'.format(key, values))
-        is_int.append(all(isinstance(v, numbers.Integral) for v in values))
-        low.append(min(values))
-        up.append(max(values))
-        choices.append(values)
-    param_meta = {
-                  'is_int':      is_int,
-                  'low':         low,
-                  'up':          up,
-                  'choices':     choices,
-                  'control':     param_grid['control'],
-                  'param_order': param_grid['control']['param_order'],
-                  }
+    choice_params = {k: v for k, v in param_grid.items()
+                     if not hasattr(v, 'rvs')}
+    distributions = {k: v for k, v in param_grid.items()
+                     if k not in choice_params}
+    pg_list = list(ParameterGrid(choice_params))
+    choices, low, high, param_order, is_int = [], [], [], [], []
+    is_continuous = lambda v: isinstance(v, numbers.Real)
+    while len(pg_list):
+        pg2 = pg_list.pop(0)
+        for k, v in pg2.items():
+            if k in param_order:
+                idx = param_order.index(k)
+            else:
+                idx = len(param_order)
+                param_order.append(k)
+                low.append(v)
+                high.append(v)
+                choices.append([v])
+                is_int.append(not is_continuous(v))
+                continue
+            if v not in choices[idx]:
+                choices[idx].append(v)
+            if is_continuous(v):
+                is_int[idx] = False
+                if v < low[idx]:
+                    low[idx] = v
+                if v > high[idx]:
+                    high[idx] = v
+            else:
+                is_int[idx] = True
+                low[idx] = high[idx] = v
+
+    for k, v in distributions.items():
+        choices.append(v)
+        low.append(None)
+        high.append(None)
+        is_int.append(False)
+        param_order.append(k)
+    param_meta = dict(control=control, high=high, low=low,
+                      choices=choices, is_int=is_int,
+                      param_order=param_order)
     return param_meta
 
 
 def out_of_bounds(params, choices):
     '''Check boudns on indices into choices lists'''
     for p, choice in zip(params, choices):
+        if hasattr(choice, 'rvs'):
+            continue
         if p < 0 or p >= len(choice):
             return True
     return False
@@ -169,9 +214,12 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
 
     '''
     kwargs = copy.deepcopy(kwargs)
-    mut = getattr(tools, method, None)
-    if not mut:
-        raise ValueError('In wrap_mutate, method - {} is not in deap.tools'.format(method))
+    if not callable(method):
+        mut = getattr(tools, method, None)
+        if not mut:
+            raise ValueError('In wrap_mutate, method - {} is not in deap.tools'.format(method))
+    else:
+        mut = method
     required_args, _, _ = get_args_kwargs_defaults(mut)
     args = [individual]
     if len(required_args) > 1:
@@ -179,11 +227,21 @@ def wrap_mutate(method, choices, max_param_retries, individual, **kwargs):
             if a == 'low':
                 args.append([0] * len(choices))
             elif a == 'up':
-                args.append([len(choice) - 1 for choice in choices])
+                args.append([(2 ** 32 if hasattr(choice, 'rvs') else len(choice) - 1)
+                             for choice in choices])
             else:
                 args.append(kwargs[a])
     for retries in range(max_param_retries):
         params = mut(*args)
+        params2 = []
+        for idx, (p, choice) in enumerate(zip(params[0], choices)):
+            if hasattr(choice, 'rvs'):
+                p = choice.rvs()
+            if callable(choice):
+                p = choice()
+            params2.append(p)
+        for idx in range(len(params2)):
+            params[0][idx] = params2[idx]
         if not out_of_bounds(params[0], choices):
             return params
     raise ValueError('wrap_mutate could not find a set of parameters that is within the given choices for the param_grid')
@@ -221,9 +279,13 @@ def crossover(toolbox, method, ind1, ind2, **kwargs):
 
     '''
     child1, child2 = [toolbox.clone(ind) for ind in (ind1, ind2)]
-    cx = getattr(tools, method, None)
-    if not cx:
-        raise ValueError('{} method (crossover) is not in deap.tools'.format(method))
+
+    if not callable(method):
+        cx = getattr(tools, method, None)
+        if cx is None:
+            raise ValueError('{} method (crossover) is not in deap.tools'.format(method))
+    else:
+        cx = method
     required_args, _, _ = get_args_kwargs_defaults(cx)
     args = [child1, child2]
     if len(required_args) > 2:
@@ -253,9 +315,13 @@ def wrap_select(method, individuals, k, **kwargs):
             * :tournsize:      with method selTournament
 
     '''
-    sel = getattr(tools, method, None)
-    if not sel:
-        raise ValueError('Expected {} to be an attribute of deap.tools'.format(method))
+
+    if not callable(method):
+        sel = getattr(tools, method, None)
+        if sel is None:
+            raise ValueError('Expected {} to be an attribute of deap.tools'.format(method))
+    else:
+        sel = method
     required_args, _, _ = get_args_kwargs_defaults(sel)
     args = [individuals, k]
     if len(required_args) > 2:
@@ -276,26 +342,28 @@ def _set_from_keys(config_dict, keys, value):
     d[keys[-1]] = value
 
 
-def ind_to_new_pipe(pipe, deap_params, ind):
-    '''Take an Individual (ind), return new elm.config.ConfigParser instance
+def ind_to_new_params(deap_params, ind):
+    '''Use deap_params' info to map ind's indices to parameter
+    choices
 
     Parameters:
-        :pipe:         an existing elm.pipeline.Pipeline instance
-        :deap_params:  deap_params field from EvoParams object
-        :ind:          Individual (list of indices into deap_params /
+        :deap_params: deap parameters
+        :ind:         Individual (list of indices into deap_params /
                       in same order as deap_params['param_order'])
     Returns:
-        :new_pipe:     Unfitted copy of original elm.pipeline.Pipeline /
+        :new_params:  Unfitted copy of original elm.pipeline.Pipeline /
                       with parameter replacements
     '''
-    logger.debug('ind_to_new_pipe ind: {}'.format(ind))
     zipped = zip(deap_params['param_order'],
                  deap_params['choices'],
                  ind)
     new_params = {}
     for key, choices, idx in zipped:
-        new_params[key] = choices[idx]
-    return pipe.new_with_params(**new_params)
+        if hasattr(choices, 'rvs'):
+            new_params[key] = idx
+        else:
+            new_params[key] = choices[idx]
+    return new_params
 
 
 class ParamsSamplingError(ValueError):
@@ -330,20 +398,24 @@ def avoid_repeated_params(max_param_retries):
     return partial(dec, hashed_params)
 
 
-def _configure_toolbox(toolbox, deap_params, config, **kwargs):
+def _configure_toolbox(deap_params, **kwargs):
     '''Configure a deap toolbox for mate, mutate, select, Individual init, and population init methods'''
-    max_param_retries = getattr(config, 'MAX_PARAM_RETRIES', DEFAULT_MAX_PARAM_RETRIES)
+    kwargs = kwargs.copy()
+    control = deap_params['control']
+    kwargs.update({k: v for k, v in control.items() if k not in kwargs})
+    toolbox = kwargs.pop('toolbox')
+    max_param_retries = kwargs.get('max_param_retries', DEFAULT_MAX_PARAM_RETRIES)
     dec = avoid_repeated_params(max_param_retries)
     toolbox.register('mate', dec(partial(crossover, toolbox,
-                                 kwargs['crossover_method'],
+                                 control['crossover_method'],
                                  **kwargs)))
     toolbox.register('mutate', dec(partial(wrap_mutate,
-                                   kwargs['mutate_method'],
+                                   control['mutate_method'],
                                    deap_params['choices'],
                                    max_param_retries,
                                    **kwargs)))
     toolbox.register('select', partial(wrap_select,
-                                       kwargs['select_method'],
+                                       control['select_method'],
                                        **{k:v for k, v in kwargs.items()
                                           if not k == 'k'}))
     toolbox.register('individual_guess',
@@ -354,92 +426,50 @@ def _configure_toolbox(toolbox, deap_params, config, **kwargs):
                      list,
                      toolbox.individual_guess,
                      toolbox.individual,
-                     kwargs['mu'])
+                     control['mu'])
     return toolbox
 
 
-def _random_choice(choices):
-    '''Random choice among indices'''
-    return [random.choice(range(len(choice))) for choice in choices]
+def fit_ea(score_weights,
+           control,
+           param_grid,
+           param_grid_name='param_grid',
+           early_stop=None,
+           toolbox=None):
+    if score_weights is None:
+        score_weights = (1,)
+    control_defaults = {k: v for k, v in copy.deepcopy(DEFAULT_CONTROL).items()
+                        if control.get(k, None) is None}
+    control.update(control_defaults)
+    deap_params = check_format_param_grid(param_grid, control)
+    if toolbox is None:
+        control['toolbox'] = toolbox = base.Toolbox()
 
-
-def _get_evolve_meta(config):
-    '''Returns parsed param_grids info or None if not used'''
-    idx_to_param_grid = {}
-    for idx, step in enumerate(config.run):
-        pg = get_param_grid(config, step)
-        if pg:
-            idx_to_param_grid[idx] = pg
-    return idx_to_param_grid
-
-def ea_setup(config=None, param_grid=None, param_grid_name=None,
-             score_weights=None):
-    '''ea_setup parses a yaml config or param_grid dictionary to create an EvoParams instance with fields needed for algorithm
-
-    Parameters:
-        :config:         elm.config.ConfigParser instance or None
-        :param_grid:     param_grid dictionary if not giving config
-        :param_grid_name: name of param_grid, if not giving config
-        :score_weights:  list of weights, -1 or 1, for each objective, ignored if config is not None
-
-    Returns:
-
-        * if config was given dict of `EvoParams` for each step in config's "run" list (integers as key, EvoParams instances as values)
-        * elif config was None `EvoParams` instance
-
-    '''
-    if config and not param_grid:
-        idx_to_param_grid = _get_evolve_meta(config)
-        items = tuple(idx_to_param_grid.items())
-    elif param_grid and not config:
-        items = ((0, check_format_param_grid(param_grid, param_grid_name)),)
-    else:
-        raise ValueError('Expected config or param_grid but not both')
-    if not items:
-        return {}
-    evo_params_dict = {}
-    for (idx, deap_params) in items:
-        if config:
-            param_grid_name = config.run[idx]['train']
-        kwargs = copy.deepcopy(deap_params['control'])
-        toolbox = base.Toolbox()
-        if config and score_weights is None:
-            train = config.train[param_grid_name]
-            if 'model_scoring' in train:
-                ms = config.model_scoring[train['model_scoring']]
-                if 'score_weights' in ms:
-                    score_weights = ms['score_weights']
-        if score_weights is None:
-            raise ElmConfigError('Cannot continue EA '
-                                 'when score_weights is None (train section of config: '
-                                 '{})'.format(step_name))
-        creator.create('FitnessMulti', base.Fitness, weights=tuple(score_weights))
-        creator.create('Individual', list, fitness=creator.FitnessMulti)
-        toolbox.register('indices', _random_choice, deap_params['choices'])
-        toolbox.register('individual', tools.initIterate, creator.Individual,
-                         toolbox.indices)
-        toolbox.register('population', tools.initRepeat, list, toolbox.individual)
-        early_stop = deap_params['control'].get('early_stop') or None
-        evo_params =  EvoParams(
-               toolbox=_configure_toolbox(toolbox, deap_params, config, **kwargs),
-               deap_params=deap_params,
-               param_grid_name=param_grid_name,
-               history_file='{}.csv'.format(param_grid_name),
-               score_weights=score_weights,
-               early_stop=early_stop,
-        )
-        if not config:
-            return evo_params
-        evo_params_dict[idx] = evo_params
-    return evo_params_dict
+    creator.create('FitnessMulti', base.Fitness, weights=tuple(score_weights))
+    creator.create('Individual', list, fitness=creator.FitnessMulti)
+    toolbox.register('indices', _random_choice, deap_params['choices'])
+    toolbox.register('individual', tools.initIterate, creator.Individual,
+                     toolbox.indices)
+    toolbox.register('population', tools.initRepeat, list, toolbox.individual)
+    evo_params = dict(
+        toolbox=_configure_toolbox(deap_params, **control),
+        deap_params=deap_params,
+        param_grid_name=param_grid_name,
+        history_file='{}.csv'.format(param_grid_name),
+        score_weights=score_weights,
+        early_stop=early_stop,
+    )
+    ea_gen = ea_general(evo_params, **control)
+    pop, _, _ = next(ea_gen)
+    return pop, toolbox, ea_gen, evo_params
 
 
 def evo_init_func(evo_params):
-    '''From parsed EvoParams return the initial population'''
-    toolbox = evo_params.toolbox
+    '''From ea parameters return the initial population'''
+    toolbox = evo_params['toolbox']
     pop = toolbox.population_guess()
     logger.info('Initialize population of {} solutions (param_grid: '
-                '{})'.format(len(pop), evo_params.param_grid_name))
+                '{})'.format(len(pop), evo_params['param_grid_name']))
     return pop
 
 
@@ -449,6 +479,7 @@ def check_fitnesses(fitnesses, score_weights):
     if not is_seq or not all(len(fitness) == len(score_weights) and all(isinstance(f, numbers.Number) for f in fitness)
                          for fitness in fitnesses):
         raise ValueError('Invalid fitnesses sent to evo_general (not Sequence of numbers or not equal len with score_weights {}): {}'.format(fitnesses, score_weights))
+
 
 def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_weights):
     '''Assign fitness to each individual in invalid_ind, record parameter history
@@ -467,7 +498,8 @@ def assign_check_fitness(invalid_ind, fitnesses, param_history, choices, score_w
     for ind, fit in zip(invalid_ind, fitnesses):
         fit = list(fit) if isinstance(fit, Sequence) else [fit]
         ind.fitness.values = fit
-        ind_for_history = [choice[i] for i, choice in zip(ind, choices)]
+        ind_for_history = [(i if hasattr(choice, 'rvs') else choice[i])
+                           for i, choice in zip(ind, choices)]
         param_history.append(list(ind_for_history) + list(fit))
 
 
@@ -531,15 +563,15 @@ def eval_stop_wrapper(evo_params, original_fitness):
          * :early_stop: {threshold: [10], agg: any}
 
     Parameters:
-        :evo_params: EvoParams namedtuple
+        :evo_params: EA parameters
 
     Returns:
         :decorator: Evaluates stop on each EA iteration
     '''
-    early_stop = evo_params.early_stop
+    early_stop = evo_params['early_stop']
     if not early_stop:
         # If not early_stop, this is a do-nothing function
-        value = [-1,] * len(evo_params.score_weights)
+        value = [-1,] * len(evo_params['score_weights'])
         func = _no_stop
     elif 'percent_change' in early_stop:
         typ = 'percent_change'
@@ -561,45 +593,49 @@ def eval_stop_wrapper(evo_params, original_fitness):
                          'key in ("abs_change", "percent_change", "threshold")'.format(early_stop))
     if not isinstance(value, Sequence):
         raise ElmConfigError('Expected early_stop:{} to be a Sequence'.format(value))
-    if not len(evo_params.score_weights) == len(value) == len(original_fitness):
+    if not len(evo_params['score_weights']) == len(value) == len(original_fitness):
         raise ElmConfigError('Expected score_weights {}, early_stop: {} ({}) '
                              'and fitness {} to all have same '
-                             'len()'.format(evo_params.score_weights,
+                             'len()'.format(evo_params['score_weights'],
                                             typ, value, original_fitness))
+    if not early_stop:
+        agg = all
+    else:
+        early_stop.get('agg', all)
     eval_stop = partial(func,
-                        early_stop.get('agg', all),
-                        evo_params.score_weights,
+                        agg,
+                        evo_params['score_weights'],
                         value,
                         original_fitness)
     return eval_stop
 
 
-def ea_general(evo_params, cxpb, mutpb, ngen, k):
+def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
     '''This is a general EA based on an NSGA2 example from deap: /
         https://github.com/DEAP/deap/blob/master/examples/ga/nsga2.py
 
     Parameters:
-        :toolbox: deap toolbox with select, mate, mutate methods
+        :evo_params: TODO docs (has toolbox and deap_params)
         :pop:     population from toolbox.population_guess() or similar
         :cxpb:    crossover prob (float 0 < cxpb < 1)
         :mutpb:   mutation prob (float 0 < cxpb < 1)
         :ngen:    number of generations (int) /
                      (Note: the loop here starts at generation 1 not zero)
-        :mu:      population size
+        :k:       number to select
     '''
-    toolbox = evo_params.toolbox
+    toolbox = evo_params['toolbox']
     param_history = []
     # This is just to assign the crowding distance to the individuals
     # no actual selection is done
     pop = invalid_ind = evo_init_func(evo_params)
 
-    deap_params = evo_params.deap_params
+    deap_params = evo_params['deap_params']
 
     assign_names(pop)
     fitnesses = (yield (pop, invalid_ind, param_history))
     assign_check_fitness(invalid_ind, fitnesses,
                      param_history, deap_params['choices'],
-                     evo_params.score_weights)
+                     evo_params['score_weights'])
     # Forces assignment of crowding distance for
     # NSGA2 - no selection is done here
     pop = toolbox.select(pop, len(pop))
@@ -627,6 +663,7 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
                 if random.random() < mutpb:
                     toolbox.mutate(ind2)
                 del ind1.fitness.values, ind2.fitness.values
+
         except ParamsSamplingError:
             logger.info('Evolutionary algorithm exited early (cannot find parameter set that has not been tried yet)')
             break
@@ -634,8 +671,8 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
 
         # Expect the fitnesses to be sent here
         # with ea_gen.send(fitnesses)
-        if not isinstance(invalid_ind, list) or not invalid_ind or not invalid_ind[0] or not all(isinstance(p, int) for p in invalid_ind[0]):
-            raise ValueError('Expected .send to be called with a list of tuples/lists of ints')
+        if not isinstance(invalid_ind, list) or not invalid_ind or not invalid_ind[0]:
+            raise ValueError('Expected .send to be called with a list of tuples/lists of ints {}'.format(invalid_ind[0] if invalid_ind else invalid_ind))
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         assign_names(invalid_ind)
         fitnesses = (yield (pop, invalid_ind, param_history))
@@ -643,11 +680,11 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k):
         # evaluated
         assign_check_fitness(invalid_ind, fitnesses,
                          param_history, deap_params['choices'],
-                         evo_params.score_weights)
+                         evo_params['score_weights'])
         break_outer = False
         for fitness in fitnesses:
             if eval_stop(fitness):
-                logger.info('Stopping: early_stop: {}'.format(evo_params.early_stop))
+                logger.info('Stopping: early_stop: {}'.format(evo_params['early_stop']))
                 break_outer = True
                 break
         if break_outer:

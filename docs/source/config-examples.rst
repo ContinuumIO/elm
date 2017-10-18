@@ -39,7 +39,7 @@ In the config, ``args_list`` can be a callable.  In this case, it is ``iter_file
 
 This examples creates ``ds_example`` which selects from files to get bands 1 through 6, iterating recursively over ``.hdf`` files in ``ELM_EXAMPLE_DATA_PATH`` from the environment (``env:SOMETHING`` means take ``SOMETHING`` from environment variables).
 
-``band_specs`` in the data source are passed to ``earthio.BandSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
+``band_specs`` in the data source are passed to ``earthio.LayerSpec`` (See also :doc:`ElmStore<elm-store>` and :doc:`LANDSAT Example<clustering_example>` ) and determine which bands (subdatasets in this HDF4 case) to include in a sample.
 
 .. code-block:: yaml
 

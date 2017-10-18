@@ -1,3 +1,4 @@
+# TODO - how does this Phase I module relate to sklearn.mldataset.serialize_mixin
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 '''
@@ -12,7 +13,6 @@ import os
 import pickle
 import re
 
-import attr
 import dill
 import numpy as np
 
@@ -99,8 +99,8 @@ def serialize_prediction(config, y, X, tag, **kwargs):
         :config:  elm.config.ConfigParser instance or None
                   if elm_predict_path in kwargs or ELM_PREDICT_PATH
                   in environment variables
-        :y:       y prediction ElmStore
-        :X:       X ElmStore that predicted y
+        :y:       y prediction MLDataset
+        :X:       X MLDataset that predicted y
         :tag:     unique tag based on sample, estimator, ensemble
         :kwargs:  keywords may contain:
                   elm_predict_path: defaulting
@@ -121,10 +121,10 @@ def serialize_prediction(config, y, X, tag, **kwargs):
             root = parse_env_vars()['ELM_PREDICT_PATH']
     else:
         root = config.ELM_PREDICT_PATH
-    for band in X.data_vars:
-        band_arr = getattr(X, band)
+    for layer in X.data_vars:
+        layer_arr = getattr(X, layer)
         fname = predict_file_name(root,
                                   tag,
-                                  getattr(band_arr, 'canvas', getattr(X, 'canvas')).bounds)
+                                  getattr(layer_arr, 'canvas', getattr(X, 'canvas')).bounds)
         predict_to_pickle(y, fname)
     return True

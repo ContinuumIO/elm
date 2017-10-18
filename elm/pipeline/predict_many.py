@@ -1,3 +1,10 @@
+# TODO update predict_many for Elm PR 192 changes and connect to
+# elm.model_selection.* and dask_searchcv.model_selection.*
+# estimators like EaSearchCV so they can call
+# grid.fit(X, y).predict_many(X) predicting from all
+# or a subset of the final generation of estimators
+# from EA search process.
+
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 from functools import partial
@@ -9,21 +16,29 @@ import os
 
 import dask
 try:
-    from earthio import check_X_data_type, ElmStore
+    from earthio import check_X_data_type
     from earthio.reshape import inverse_flatten
+    from xarray_filters import MLDataset
 except:
-    inverse_flatten = check_X_data_type = ElmStore = None # TODO handle case where earthio not installed
+    inverse_flatten = check_X_data_type = MLDataset = None # TODO handle case where earthio not installed
 import numpy as np
 import xarray as xr
 
 
 from elm.config import import_callable, parse_env_vars
-from earthio.filters.samplers import make_samples_dask
-from elm.pipeline.util import _next_name
 
 logger = logging.getLogger(__name__)
 
 __all__ = ['predict_many',]
+
+_next_idx = -1
+
+def _next_name(token):
+    '''name in a dask graph'''
+    global _next_idx
+    n = '{}-{}'.format(token, _next_idx)
+    _next_idx += 1
+    return n
 
 
 def _predict_one_sample_one_arg(estimator,
@@ -44,18 +59,18 @@ def _predict_one_sample_one_arg(estimator,
     else:
         raise ValueError('Expected 1- or 2-d output of model.predict but found ndim of prediction: {}'.format(prediction.ndim))
 
-    bands = ['predict']
+    layers = ['predict']
     attrs = X_final.attrs
     attrs.update(X_final.flat.attrs)
     attrs['elm_predict_date'] = datetime.datetime.utcnow().isoformat()
-    attrs['band_order'] = ['predict',]
+    attrs['layer_order'] = ['predict',]
     attrs['canvas'] = getattr(X_final.flat, 'canvas', None)
     logger.debug('Predict X shape {} X.flat.dims {} '
                  '- y shape {}'.format(X_final.flat.shape, X_final.flat.dims, prediction.shape))
-    prediction = ElmStore({'flat': xr.DataArray(prediction,
+    prediction = MLDataset({'flat': xr.DataArray(prediction,
                                      coords=[('space', X_final.flat.space),
-                                             ('band', bands)],
-                                     dims=('space', 'band'),
+                                             ('layer', layers)],
+                                     dims=('space', 'layer'),
                                      attrs=attrs)},
                              attrs=attrs,
                              add_canvas=False)
