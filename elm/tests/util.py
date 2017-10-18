@@ -21,7 +21,7 @@ import yaml
 
 from elm.pipeline import steps
 
-YAML_TEST_CONFIG = os.path.join(os.getcwd(), 'test_config.yaml')
+YAML_TEST_CONFIG = os.path.join(os.path.dirname(__file__), 'test_config.yaml')
 
 with open(YAML_TEST_CONFIG) as f:
     contents = f.read()
