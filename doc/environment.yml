@@ -1,0 +1,11 @@
+name: elm-docs
+channels:
+  - conda-forge
+dependencies:
+  - python>=3
+  - sphinx
+  - sphinx_rtd_theme
+  - numpydoc
+  - watchdog
+  - pip:
+    - recommonmark
