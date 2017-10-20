@@ -26,10 +26,12 @@ dependencies:
  - shapely
  - statsmodels
  - tblib
- - xarray
  - yaml
  - six
  - bioconda::deap
+ - sphinx # for docs
+ - sphinx_rtd_theme # for docs
+ - numpydoc # for docs
  - pip:
    - graphviz
    - pysptools
@@ -40,3 +42,8 @@ dependencies:
    - pytest-rerunfailures
    - dask-glm
    - dask-searchcv
+   - recommonmark # for docs
+   - sphinx-view # for docs
+   - git+https://github.com/pydata/xarray.git
+   - git+https://github.com/ContinuumIO/earthio.git # for docs
+   - git+https://github.com/ContinuumIO/xarray_filters.git # for docs
