@@ -15,6 +15,7 @@ from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_EVO_PARAMS,)
 from elm.mldataset.serialize_mixin import SerializeMixin
 from elm.mldataset.wrap_sklearn import SklearnMixin
+from elm.mldataset.cv_cache import CVCacheSampleId
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
 from elm.pipeline import Pipeline
@@ -143,7 +144,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                  scoring=None,
                  iid=True, refit=True,
                  cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=True):
+                 scheduler=None, n_jobs=-1, cache_cv=CVCacheSampleId):
         filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
         self.ngen = ngen
         self.select_with_test = select_with_test
