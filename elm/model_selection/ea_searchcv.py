@@ -296,7 +296,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         return self
 
     def _get_param_iterator(self):
-        if self._is_ea and not getattr(self, '_invalid_ind', None):
+        if self._gen != 0 and self._is_ea and not getattr(self, '_invalid_ind', None):
             return iter(())
         if not self._is_ea and self._gen == 0:
             self.next_params_ = tuple(RandomizedSearchCV._get_param_iterator(self))

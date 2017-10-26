@@ -36,17 +36,6 @@ def get_module_classes(m):
     return {attr: getattr(module, attr) for attr in attrs}
 
 
-def patch_cls(cls):
-
-    class Wrapped(SklearnMixin, cls):
-        _cls = cls
-        __init__ = cls.__init__
-        _cls_name = cls.__name__
-    name = 'Elm{}'.format(cls.__name__)
-    globals()[name] = Wrapped
-    return globals()[name]
-
-
 _all = []
 _seen = set()
 ALL_STEPS = {}
@@ -58,11 +47,17 @@ for m in MODULES:
         if not m in cls.__module__:
             continue
         _seen.add(cls.__name__)
-        w = patch_cls(cls)
-        if any(s in cls.__name__ for s in SKIP):
+        name = cls.__name__
+        if any(s in name for s in SKIP):
             continue
-        this_module[cls.__name__] = w
-        ALL_STEPS[(m, cls.__name__)] = w
+        class Wrapped(SklearnMixin, cls):
+            _cls = cls
+            __init__ = cls.__init__
+            _cls_name = name
+
+        globals()[name] = Wrapped
+        this_module[cls.__name__] = globals()[name]
+        ALL_STEPS[(m, cls.__name__)] = globals()[name]
     this_module = Namespace(**this_module)
     if m == 'cluster.bicluster':
         bicluster = this_module # special case (dotted name)
@@ -77,5 +72,4 @@ __all__ = [ 'patch_cls'] + _all
 del _all
 del m
 del this_module
-del w
 del _seen
