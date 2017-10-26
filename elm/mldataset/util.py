@@ -1,3 +1,5 @@
+import numpy as np
+import dask.array as da
 
 
 def is_mldataset(arr, raise_err=False):
@@ -17,3 +19,8 @@ def is_mldataset(arr, raise_err=False):
         # used
         raise ValueError('Cannot use cross validation for xarray Dataset without xarray_filters')
     return MLDataset and isinstance(arr, (MLDataset, Dataset))
+
+
+def is_arr(arr, raise_err=False):
+    is_ml = is_mldataset(arr, raise_err=raise_err)
+    return is_ml or isinstance(arr, (np.ndarray, da.Array))
