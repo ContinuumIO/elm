@@ -274,7 +274,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
             X, y = self._as_dask_array(X, y=y)
         for self._gen in range(self.ngen):
             print('Generation', self._gen)
-            RandomizedSearchCV.fit(self, X, y, groups, **fit_params)
+            RandomizedSearchCV.fit(self, X, y, groups=groups, **fit_params)
             fitnesses = self._get_cv_scores()
             self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,
                                                           self.cv_results_,
