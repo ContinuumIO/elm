@@ -69,7 +69,7 @@ class SklearnMixin:
         for a method that requires numpy arrays'''
         _cls = self._cls
         if _cls is None:
-            raise ValueError('Define .cls as a scikit-learn estimator')
+            raise ValueError('Define ._cls as a scikit-learn estimator')
         # Get the method of the class instance
         func = getattr(_cls, sk_method, None)
         if func is None:
@@ -173,3 +173,5 @@ class SklearnMixin:
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
 
+    def score(self, X, y=None, **kw):
+        return self._call_sk_method('score', X, y=y, **kw)
