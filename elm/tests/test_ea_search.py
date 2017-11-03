@@ -9,6 +9,7 @@ import os
 from dask_glm.datasets import make_classification
 from sklearn import decomposition as sk_decomp
 from sklearn import svm as sk_svm
+from sklearn.model_selection import KFold
 from sklearn.pipeline import Pipeline as sk_Pipeline
 from xarray_filters import MLDataset
 from xarray_filters.datasets import _make_base
@@ -24,7 +25,6 @@ from elm.mldataset.wrap_sklearn import (_as_numpy_arrs,
                                         _from_numpy_arrs)
 from elm.model_selection.ea_searchcv import EaSearchCV
 from elm.model_selection.multilayer import MultiLayer
-from elm.mldataset.cross_validation import KFold
 from elm.pipeline import Pipeline
 from elm.pipeline.steps import (linear_model as lm,
                                 preprocessing as elm_pre,

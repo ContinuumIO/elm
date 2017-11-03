@@ -15,13 +15,12 @@ import numpy as np
 import pytest
 
 
-from elm.mldataset import CV_CLASSES
 from elm.model_selection import EaSearchCV
 from elm.model_selection.sorting import pareto_front
 from elm.pipeline import Pipeline
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline.steps import linear_model, cluster, decomposition
-import elm.mldataset.cross_validation as cross_validation
+import sklearn.model_selection as sk_model_selection
 from elm.tests.util import SKIP_CV
 
 START_DATE = datetime.datetime(2000, 1, 1, 0, 0, 0)
@@ -30,6 +29,11 @@ DATES = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(MAX_TIME_STEPS)])
 DATE_GROUPS = np.linspace(0, 5, DATES.size).astype(np.int32)
 
+CV_CLASSES = dict([(k, getattr(sk_model_selection, k)) for k in dir(sk_model_selection)
+              if isinstance(getattr(sk_model_selection, k), type) and
+              issubclass(getattr(sk_model_selection, k),
+                         sk_model_selection._split.BaseCrossValidator)])
+CV_CLASSES.pop('BaseCrossValidator')
 
 model_selection = {
     'select_method': 'selNSGA2',
@@ -144,7 +148,7 @@ def test_each_cv(cls, config_key, refit):
         kw['p'] = 2
     elif cls == 'PredefinedSplit':
         kw['test_fold'] = DATES > DATES[DATES.size // 2]
-    cv = getattr(cross_validation, cls)(**kw)
+    cv = CV_CLASSES[cls](**kw)
     ea = EaSearchCV(pipe,
                     param_distributions=param_distributions,
                     sampler=Sampler(),
