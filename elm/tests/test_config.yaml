@@ -2,3 +2,4 @@ SKIP: [label_propagation, semi_supervised, multiclass, multioutput, ensemble, ke
   covariance, naive_bayes, calibration, cross_decomposition, IsotonicRegression, MultiTaskLassoCV,
   MultiTaskLasso, MultiTaskElasticNetCV, MultiTaskElasticNet, RANSACRegressor, OneHotEncoder,
   RFE, RFECV, Birch, SparseCoder, OrthogonalMatchingPursuitCV]
+SKIP_CV: [LeavePGroupsOut, StratifiedKFold, StratifiedShuffleSplit]

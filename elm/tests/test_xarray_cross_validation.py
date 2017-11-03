@@ -1,7 +1,10 @@
 from __future__ import print_function, unicode_literals, division
+import dask
+dask.set_options(get=dask.local.get_sync)
 
 from collections import OrderedDict
 import datetime
+from itertools import product
 
 from sklearn.metrics import r2_score, mean_squared_error, make_scorer
 from sklearn.model_selection import StratifiedShuffleSplit
@@ -17,27 +20,16 @@ from elm.model_selection import EaSearchCV
 from elm.model_selection.sorting import pareto_front
 from elm.pipeline import Pipeline
 from elm.pipeline.predict_many import predict_many
-from elm.pipeline.steps import linear_model,cluster
+from elm.pipeline.steps import linear_model, cluster, decomposition
 import elm.mldataset.cross_validation as cross_validation
+from elm.tests.util import SKIP_CV
 
 START_DATE = datetime.datetime(2000, 1, 1, 0, 0, 0)
-MAX_TIME_STEPS = 144
+MAX_TIME_STEPS = 8
 DATES = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(MAX_TIME_STEPS)])
 DATE_GROUPS = np.linspace(0, 5, DATES.size).astype(np.int32)
 
-
-# TODO - also test regressors
-param_distributions = {
-    'estimator__fit_intercept': [True, False],
-}
-
-param_distributions = {
-    'estimator__n_clusters': [4,5,6,7,8, 10, 12],
-    'estimator__init': ['k-means++', 'random'],
-    'estimator__copy_x': [False],
-    'estimator__algorithm': ["auto", "full", "auto"],
-}
 
 model_selection = {
     'select_method': 'selNSGA2',
@@ -55,49 +47,111 @@ model_selection = {
 }
 
 def example_function(date):
-    dset = make_regression()
+    dset = make_regression(n_samples=400,
+                           layers=['layer_{}'.format(idx) for idx in range(5)])
     dset.attrs['example_function_argument'] = date
-    # TODO - this is not really testing
-    # MLDataset as X because of .features.values below
-    return dset.to_features(keep_attrs=True).features.values
+    return dset
 
+def debug_log_types(label):
+    def dec(func):
+        def new_func(*a, **kw):
+            out = func(*a, **kw)
+            return out
+        return new_func
+    return dec
 
 class Sampler(Step):
+    @debug_log_types('Sampler')
     def transform(self, X, y=None, **kw):
         return example_function(X)
 
 
 class GetY(Step):
     layer = 'y'
+    @debug_log_types('GetY')
     def transform(self, X, y=None, **kw):
         layer = self.get_params()['layer']
         y = getattr(X, layer).values.ravel()
         X = MLDataset(OrderedDict([(k, v) for k, v in X.data_vars.items()
                                     if k != layer])).to_features()
         return X.features.values, y
+    fit_transform = transform
 
-pipe = Pipeline([ # TODO see note above about supervised models
+
+# TODO - also test regressors
+regress_distributions = {
+    'estimator__fit_intercept': [True, False],
+    'estimator__normalize': [True, False],
+}
+
+kmeans_distributions = {
+    'estimator__n_clusters': list(range(4, 12)),
+    'estimator__init': ['k-means++', 'random'],
+    'estimator__copy_x': [False],
+    'estimator__algorithm': ["auto", "full", "auto"],
+}
+pca_distributions = {
+    'pca__n_components': list(range(2, 4)),
+    'pca__whiten': [True, False],
+}
+
+regress = Pipeline([
     ('get_y', GetY()),
-    ('estimator', linear_model.LinearRegression(n_jobs=-1)),
+    ('estimator', linear_model.Ridge()),
 ])
 
-pipe = Pipeline([
-    #('get_y', GetY()),  # TODO this wasn't working but should
-    ('estimator', cluster.KMeans(n_jobs=1)),
+pca_regress = Pipeline([
+    ('get_y', GetY()),
+    ('pca', decomposition.PCA()),
+    ('estimator', linear_model.Ridge()),
 ])
 
-@pytest.mark.parametrize('cls', CV_CLASSES)
-def test_each_cv(cls):
-    cv = getattr(cross_validation, cls)()
+kmeans = Pipeline([
+    ('estimator', cluster.KMeans()),
+])
+
+configs = {'one_step_unsupervised': kmeans,
+           'get_y_supervised':  regress,
+           'get_y_pca_then_regress': pca_regress,}
+
+dists = {'one_step_unsupervised': kmeans_distributions,
+         'get_y_supervised': regress_distributions.copy(),
+         'get_y_pca_then_regress': pca_distributions.copy(),}
+dists['get_y_pca_then_regress'].update(regress_distributions)
+refit_options = (False,) # TODO - refit is not working because
+                         # it is passing sampler arguments not
+                         # sampler output to the refitting
+                         # of best model logic.  We need
+                         # to make separate issue to figure
+                         # out what "refit" means in a fitting
+                         # operation of many samples - not
+                         # as obvious what that should be
+                         # when not CV-splitting a large matrix
+                         # but rather CV-splitting input file
+                         # names or other sampler arguments
+test_args = product(CV_CLASSES, configs, refit_options)
+get_marks = lambda cls: [pytest.mark.slow] if cls.startswith(('Leave', 'Repeated')) else []
+test_args = [pytest.param(c, key, refit, marks=get_marks(c))
+             for c, key, refit in test_args]
+@pytest.mark.parametrize('cls, config_key, refit', test_args)
+def test_each_cv(cls, config_key, refit):
+    if cls in SKIP_CV:
+        pytest.skip('sklearn.model_selection cross validator {} is not yet supported'.format(cls))
+    pipe = configs[config_key]
+    param_distributions = dists[config_key]
+    kw = dict()
+    if cls.startswith('LeaveP'):
+        kw['p'] = 2
+    elif cls == 'PredefinedSplit':
+        kw['test_fold'] = DATES > DATES[DATES.size // 2]
+    cv = getattr(cross_validation, cls)(**kw)
     ea = EaSearchCV(pipe,
                     param_distributions=param_distributions,
                     sampler=Sampler(),
                     ngen=2,
                     model_selection=model_selection,
                     cv=cv,
-                    refit=False) # TODO refit = True
-
-    print(ea.get_params())
+                    refit=refit) # TODO refit = True
     ea.fit(DATES, groups=DATE_GROUPS)
     results = getattr(ea, 'cv_results_', None)
     assert isinstance(results, dict) and 'gen' in results and all(getattr(v,'size',v) for v in results.values())

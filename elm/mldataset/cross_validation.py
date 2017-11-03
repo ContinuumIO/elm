@@ -10,11 +10,11 @@ from sklearn.model_selection import LeaveOneOut as _LeaveOneOut
 from sklearn.model_selection import LeavePOut as _LeavePOut
 from sklearn.model_selection import PredefinedSplit as _PredefinedSplit
 from sklearn.model_selection import RepeatedKFold as _RepeatedKFold
-from sklearn.model_selection import RepeatedStratifiedKFold as _RepeatedStratifiedKFold
 from sklearn.model_selection import ShuffleSplit as _ShuffleSplit
 from sklearn.model_selection import StratifiedKFold as _StratifiedKFold
 from sklearn.model_selection import StratifiedShuffleSplit as _StratifiedShuffleSplit
 from sklearn.model_selection import TimeSeriesSplit as _TimeSeriesSplit
+# TODO Add support for sklearn.model_selection.RepeatedStratifiedKFold
 
 CV_CLASSES = [
     'GroupKFold',
@@ -24,91 +24,73 @@ CV_CLASSES = [
     'LeavePGroupsOut',
     'LeaveOneOut',
     'LeavePOut',
-    'PredefinedSplƒit',
+    'PredefinedSplit',
     'RepeatedKFold',
-    'RepeatedStratifiedKFold',
     'ShuffleSplit',
     'StratifiedKFold',
     'StratifiedShuffleSplit',
     'TimeSeriesSplit',
-    'MLDatasetMixin',
-    'CVCacheSampleId',
 ]
 
-__all__ = CV_CLASSES + ['CVCacheSampleId', 'MLDatasetMixin', 'CV_CLASSES']
-
-class CVCacheSampleId(CVCache):
-    def __init__(self, sampler, splits, pairwise=False, cache=True):
-        self.sampler = sampler
-        super(CVCacheSampleId, self).__init__(splits, pairwise=pairwise,
-                                              cache=cache)
-
-    def _post_splits(self, X, y=None, n=None, is_x=True, is_train=False):
-        if y is not None:
-            raise ValueError('Expected y to be None (returned by Sampler() instance or similar.')
-        return self.sampler.fit_transform(X)
+__all__ = CV_CLASSES + ['MLDatasetMixin', 'CV_CLASSES']
 
 
 class MLDatasetMixin:
-    def split(self, *args, **kw):
-        for test, train in super(cls, self).split(*args, **kw):
-            for a, b in zip(test, train):
-                yield a, b
+    #def split(self, *args, **kw):
+     #   for test, train in super().split(*args, **kw):
+      #      for a, b in zip(test, train):
+       #         yield a, b
+    pass
 
-
-class GroupKFold(_GroupKFold, MLDatasetMixin):
+class GroupKFold(MLDatasetMixin, _GroupKFold):
     pass
 
 
-class GroupShuffleSplit(_GroupShuffleSplit, MLDatasetMixin):
+class GroupShuffleSplit(MLDatasetMixin, _GroupShuffleSplit):
     pass
 
 
-class KFold(_KFold, MLDatasetMixin):
+class KFold(MLDatasetMixin, _KFold):
     pass
 
 
-class LeaveOneGroupOut(_LeaveOneGroupOut, MLDatasetMixin):
+class LeaveOneGroupOut(MLDatasetMixin, _LeaveOneGroupOut):
     pass
 
 
-class LeavePGroupsOut(_LeavePGroupsOut, MLDatasetMixin):
+class LeavePGroupsOut(MLDatasetMixin, _LeavePGroupsOut):
     pass
 
 
-class LeaveOneOut(_LeaveOneOut, MLDatasetMixin):
+class LeaveOneOut(MLDatasetMixin, _LeaveOneOut):
     pass
 
 
-class LeavePOut(_LeavePOut, MLDatasetMixin):
+class LeavePOut(MLDatasetMixin, _LeavePOut):
     pass
 
 
-class PredefinedSplƒit(_PredefinedSplit, MLDatasetMixin):
+class PredefinedSplit(MLDatasetMixin, _PredefinedSplit):
     pass
 
 
-class RepeatedKFold(_RepeatedKFold, MLDatasetMixin):
+class RepeatedKFold(MLDatasetMixin, _RepeatedKFold):
     pass
 
 
-class RepeatedStratifiedKFold(_RepeatedStratifiedKFold, MLDatasetMixin):
+class ShuffleSplit(MLDatasetMixin, _ShuffleSplit):
     pass
 
 
-class ShuffleSplit(_ShuffleSplit, MLDatasetMixin):
+class StratifiedKFold(MLDatasetMixin, _StratifiedKFold):
     pass
 
 
-class StratifiedKFold(_StratifiedKFold, MLDatasetMixin):
+class StratifiedShuffleSplit(MLDatasetMixin, _StratifiedShuffleSplit):
     pass
 
 
-class StratifiedShuffleSplit(_StratifiedShuffleSplit, MLDatasetMixin):
-    pass
-
-
-class TimeSeriesSplit(_TimeSeriesSplit, MLDatasetMixin):
+class TimeSeriesSplit(MLDatasetMixin, _TimeSeriesSplit):
     pass
 
 

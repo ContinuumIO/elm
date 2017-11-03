@@ -9,9 +9,11 @@ from sklearn.base import BaseEstimator, _pprint
 from dask.utils import derived_from # May be useful here?
 from sklearn.utils.metaestimators import if_delegate_has_method # May be useful here?
 from sklearn.linear_model import LinearRegression as skLinearRegression
+from sklearn.metrics import r2_score, accuracy_score
 from xarray_filters.mldataset import MLDataset
 from xarray_filters.func_signatures import filter_args_kwargs
 from xarray_filters.constants import FEATURES_LAYER_DIMS, FEATURES_LAYER
+from elm.mldataset.util import _split_transformer_result
 import xarray as xr
 import yaml
 
@@ -27,6 +29,7 @@ def get_row_index(X, features_layer=None):
 def _as_numpy_arrs(self, X, y=None, **kw):
     '''Convert X, y for a scikit-learn method numpy.ndarrays
     '''
+    X, y = _split_transformer_result(X, y)
     if isinstance(X, np.ndarray):
         return X, y, None
     if isinstance(X, xr.Dataset):
@@ -46,7 +49,7 @@ def _as_numpy_arrs(self, X, y=None, **kw):
 
 def _from_numpy_arrs(self, y, row_idx, features_layer=None):
     '''Convert a 1D prediction to ND using the row_idx MultiIndex'''
-    if isinstance(y, MLDataset):
+    if isinstance(y, MLDataset) or row_idx is None:
         return y
     features_layer = features_layer or FEATURES_LAYER
     coords = [row_idx,
@@ -64,7 +67,7 @@ class SklearnMixin:
     _as_numpy_arrs = _as_numpy_arrs
     _from_numpy_arrs = _from_numpy_arrs
 
-    def _call_sk_method(self, sk_method, X=None, y=None, **kw):
+    def _call_sk_method(self, sk_method, X=None, y=None, do_split=True, **kw):
         '''Call a method of ._cls, typically an sklearn class,
         for a method that requires numpy arrays'''
         _cls = self._cls
@@ -75,27 +78,35 @@ class SklearnMixin:
         if func is None:
             raise ValueError('{} is not an attribute of {}'.format(sk_method, _cls))
         X, y, row_idx = self._as_numpy_arrs(X, y=y)
+        if do_split:
+            X, y = _split_transformer_result(X, y)
         if row_idx is not None:
             self._temp_row_idx = row_idx
         kw.update(dict(self=self, X=X))
         if y is not None:
             kw['y'] = y
         kw = filter_args_kwargs(func, **kw)
-        return func(**kw)
+        Xt = func(**kw)
+        if do_split:
+            Xt, y = _split_transformer_result(Xt, y)
+            return Xt, y
+        return Xt
 
-    def _predict_steps(self, X, row_idx=None, sk_method=None, **kw):
+    def _predict_steps(self, X, y=None, row_idx=None, sk_method=None, **kw):
         '''Call a prediction-related method, e.g. predict, score,
         but extract the row index of X, if it exists, so that
         y '''
-        X2, _, temp_row_idx = self._as_numpy_arrs(X, y=None)
+        X2, y, temp_row_idx = self._as_numpy_arrs(X, y=y)
         if temp_row_idx is None:
             row_idx = temp_row_idx
         if row_idx is None:
             row_idx = getattr(self, '_temp_row_idx', None)
-        y3 = self._call_sk_method(sk_method, X2, **kw)
+        if y is not None:
+            kw['y'] = y
+        y3 = self._call_sk_method(sk_method, X2, do_split=False, **kw)
         return y3, row_idx
 
-    def predict(self, X, row_idx=None, **kw):
+    def predict(self, X, row_idx=None, as_mldataset=True, **kw):
         '''Predict from MLDataset X and return an MLDataset with
         DataArray called "predict" that has the dimensions of
         X's MultiIndex.  That MultiIndex typically comes from
@@ -146,7 +157,7 @@ class SklearnMixin:
     def _fit(self, X, y=None, **kw):
         '''This private method is expected by some sklearn
         models and must take X, y as numpy arrays'''
-        return self._call_sk_method('_fit', X, y=y, **kw)
+        return self._call_sk_method('_fit', X, y=y, do_split=False, **kw)
 
     def transform(self, X, y=None, **kw):
         if hasattr(self._cls, 'transform'):
@@ -173,5 +184,33 @@ class SklearnMixin:
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
 
-    def score(self, X, y=None, **kw):
-        return self._call_sk_method('score', X, y=y, **kw)
+    def _regressor_default_score(self, X, y, sample_weight=None, row_idx=None, **kw):
+        X, y = _split_transformer_result(X, y)
+        y_pred, row_idx = self._predict_steps(X, row_idx=row_idx, y=y,
+                                              sk_method='predict',
+                                              **kw)
+        return r2_score(y, y_pred, sample_weight=sample_weight,
+                        multioutput='variance_weighted')
+
+    def _classifier_default_score(self, X, y=None, sample_weight=None, row_idx=None, **kw):
+        X, y = _split_transformer_result(X, y)
+        y_pred, row_idx = self._predict_steps(X, row_idx=row_idx, y=y,
+                                              sk_method='predict',
+                                              **kw)
+        return accuracy_score(y, y_pred, sample_weight=sample_weight)
+
+    def score(self, X, y=None, sample_weight=None, row_idx=None, **kw):
+
+        if self._cls._estimator_type == 'regressor':
+            func = self._regressor_default_score
+        elif self._cls._estimator_type == 'classifier':
+            func = self._classifier_default_score
+        else:
+            func = None
+        if func:
+            return func(X, y, sample_weight=sample_weight, row_idx=row_idx, **kw)
+        score, row_idx = self._predict_steps(X, row_idx=row_idx, y=y,
+                                              sk_method='score',
+                                              **kw)
+        return score
+

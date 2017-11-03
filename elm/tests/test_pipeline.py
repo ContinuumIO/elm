@@ -64,7 +64,8 @@ def test_pipeline_combos(module1, cls_name1, module2, cls_name2):
     '''Test a combo of steps, e.g. decompostion, PCA, cluster, KMeans
     as arguments.  Assert a Pipeline of those two steps takes
     X as an MLDataset and y as a numpy array'''
-    skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2)
+    if skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
+        return
     transformer = TRANSFORMERS[(module1, cls_name1)]
     estimator = TESTED_ESTIMATORS[(module2, cls_name2)]
     pipe, X, y = new_pipeline(transformer, estimator)
