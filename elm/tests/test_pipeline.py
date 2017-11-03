@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 
-def new_pipeline(*args, flatten_first=True):
+def new_pipeline(args, flatten_first=True):
     trans = []
     for idx, model in enumerate(args):
         parts = model._cls.__name__.split('.')
@@ -68,7 +68,7 @@ def test_pipeline_combos(module1, cls_name1, module2, cls_name2):
         return
     transformer = TRANSFORMERS[(module1, cls_name1)]
     estimator = TESTED_ESTIMATORS[(module2, cls_name2)]
-    pipe, X, y = new_pipeline(transformer, estimator)
+    pipe, X, y = new_pipeline((transformer, estimator))
     pipe.fit(X, y)
     pred = pipe.predict(X)
     assert isinstance(pred, MLDataset)
