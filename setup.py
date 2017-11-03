@@ -7,6 +7,7 @@ import versioneer
 version = versioneer.get_version()
 cmdclass = versioneer.get_cmdclass()
 yamls = glob.glob(os.path.join('elm', 'config', 'defaults', '*'))
+yamls += [os.path.join('elm', 'tests', 'test_config.yaml')]
 yamls = [os.path.relpath(y, os.path.join('elm')) for y in yamls]
 setup(name='elm',
       version=version,
