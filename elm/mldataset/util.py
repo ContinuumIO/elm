@@ -31,7 +31,6 @@ def is_arr(arr, raise_err=False):
 def _split_transformer_result(Xt, y):
     if isinstance(Xt, Sequence) and len(Xt) == 2 and is_arr(Xt[1]):
         Xt, new_y = Xt
-        print('was Sequence', type(Xt), type(new_y), getattr(Xt, 'shape', 'noshape'), getattr(y, 'size', y))
     else:
         new_y = y
     if y is None and new_y is not None:
