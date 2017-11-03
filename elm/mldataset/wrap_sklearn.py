@@ -31,7 +31,7 @@ def _as_numpy_arrs(self, X, y=None, **kw):
     '''
     X, y = _split_transformer_result(X, y)
     if isinstance(X, np.ndarray):
-        return X, y, None
+        return X, y, kw.get('row_idx', None)
     if isinstance(X, xr.Dataset):
         X = MLDataset(X)
     if hasattr(X, 'has_features'):
@@ -42,8 +42,8 @@ def _as_numpy_arrs(self, X, y=None, **kw):
     row_idx = get_row_index(X)
     if hasattr(X, 'to_array') and not isinstance(X, np.ndarray):
         X, y = X.to_array(y=y)
-        # TODO what about row_idx now?
-    # TODO - if y is not numpy array, then the above lines are needed for y
+    if row_idx is not None:
+        self._temp_row_idx = row_idx
     return X, y, row_idx
 
 
@@ -106,7 +106,7 @@ class SklearnMixin:
         y3 = self._call_sk_method(sk_method, X2, do_split=False, **kw)
         return y3, row_idx
 
-    def predict(self, X, row_idx=None, as_mldataset=True, **kw):
+    def predict(self, X, row_idx=None, **kw):
         '''Predict from MLDataset X and return an MLDataset with
         DataArray called "predict" that has the dimensions of
         X's MultiIndex.  That MultiIndex typically comes from

@@ -8,7 +8,6 @@ def is_mldataset(arr, raise_err=False):
     try:
         from xarray_filters import MLDataset
         from xarray import Dataset
-        return True
     except Exception as e:
         MLDataset = Dataset = None
         if not raise_err:
@@ -20,16 +19,19 @@ def is_mldataset(arr, raise_err=False):
         # is installed, xarray.Dataset can be
         # used
         raise ValueError('Cannot use cross validation for xarray Dataset without xarray_filters')
-    return MLDataset and isinstance(arr, (MLDataset, Dataset))
+    return MLDataset and Dataset and isinstance(arr, (MLDataset, Dataset))
 
 
 def is_arr(arr, raise_err=False):
     is_ml = is_mldataset(arr, raise_err=raise_err)
-    return is_ml or isinstance(arr, (np.ndarray, da.Array))
+    _is_arr = is_ml or isinstance(arr, (np.ndarray, da.Array))
+    if not _is_arr and raise_err:
+        raise ValueError('Expected MLDataset, Dataset or Dask/Numpy array')
+    return _is_arr
 
 
 def _split_transformer_result(Xt, y):
-    if isinstance(Xt, Sequence) and len(Xt) == 2 and is_arr(Xt[1]):
+    if isinstance(Xt, Sequence) and len(Xt) == 2 and (Xt[1] is None or is_arr(Xt[1])):
         Xt, new_y = Xt
     else:
         new_y = y

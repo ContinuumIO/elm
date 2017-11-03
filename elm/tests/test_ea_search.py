@@ -93,8 +93,9 @@ for label, make_data in data_structure_trials:
             for sel, kw in zip(model_sel, model_sel_kwargs):
                 args[label + '-' + label2.format(word)] = (est, make_data, sel, kw)
 
-
-test_args = product(args, ('predict', None))
+test_args = product(args, (None,))
+# test_args = product(args, ('predict', None)) # TODO - This would test "refit"=True
+                                               #         and "predict"
 @pytest.mark.parametrize('label, do_predict', test_args)
 def test_ea_search_sklearn_elm_steps(label, do_predict):
     '''Test that EaSearchCV can work with numpy, dask.array,
