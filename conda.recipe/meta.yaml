@@ -46,7 +46,7 @@ test:
   imports:
     - elm.config
     - elm.mldataset
-    - elm.model_selection
+    #- elm.model_selection
     - elm.pipeline.pipeline
     - elm.pipeline.steps
     - elm.scripts
