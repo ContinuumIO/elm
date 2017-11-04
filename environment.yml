@@ -8,6 +8,7 @@ dependencies:
  - attrs
  - bokeh
  - dask
+ - dask-searchcv
  - datashader
  - dill
  - distributed

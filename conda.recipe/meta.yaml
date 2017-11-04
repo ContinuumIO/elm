@@ -16,6 +16,8 @@ requirements:
   run:
     - attrs
     - deap
+    - dask
+    - dask-searchcv
     - dill
     - distributed
     - earthio
