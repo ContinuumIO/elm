@@ -29,7 +29,7 @@ else
 
     # Create $EARTHIO_TEST_ENV
     conda env remove -n $EARTHIO_TEST_ENV || true
-    conda create -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -y python=$PYTHON numpy=$NUMPY earthio
+    conda create -n $EARTHIO_TEST_ENV $EARTHIO_CHANNEL_STR -c elm -c elm/label/dev -y python=$PYTHON numpy=$NUMPY earthio
 
     # Add earthio package to index
     mkdir -p ~/miniconda/conda-bld/linux-64/
