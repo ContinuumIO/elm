@@ -1,6 +1,4 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
-import dask
-dask.set_options(get=dask.local.get_sync)
 
 from collections import OrderedDict
 from itertools import product
@@ -32,8 +30,7 @@ from elm.pipeline.steps import (linear_model as lm,
                                 svm as elm_svm,)
 from elm.tests.test_pipeline import new_pipeline, modules_names
 from elm.tests.util import (TRANSFORMERS, TESTED_ESTIMATORS,
-                            catch_warnings, skip_transformer_estimator_combo,
-                            make_X_y)
+                            catch_warnings, make_X_y)
 
 
 def make_dask_arrs():

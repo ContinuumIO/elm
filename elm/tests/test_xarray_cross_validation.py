@@ -1,6 +1,4 @@
 from __future__ import print_function, unicode_literals, division
-import dask
-dask.set_options(get=dask.local.get_sync)
 
 from collections import OrderedDict
 import datetime

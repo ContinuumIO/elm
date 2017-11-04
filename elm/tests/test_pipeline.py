@@ -26,10 +26,12 @@ def new_pipeline(args, flatten_first=True):
             X, y, params, data_kw = out
         else:
             _, _, params, data_kw = out
-        if 'score_func' in params: # some estimators require "score_func"
-                                   # as an argument (and hence y in cases
+        if 'score_func' in params: # Some estimators require "score_func"
+                                   # as an argument (and hence y for the
+                                   # score_func, even in cases
                                    # where y may not be required by
-                                   # other estimators in Pipeline instance)
+                                   # other transformers/estimator steps in the
+                                   # Pipeline instance)
             if y is None:
                 val = X.to_features().features.values
                 y = val.dot(np.random.uniform(0, 1, val.shape[1]))
@@ -51,12 +53,14 @@ def new_pipeline(args, flatten_first=True):
     pipe = Pipeline(trans)
     return pipe, X, y
 
+
 pipe_combos = product(TRANSFORMERS.keys(), TESTED_ESTIMATORS.keys())
 modules_names = [(k1, v1, k2, v2)
                  for (k1, v1), (k2, v2) in pipe_combos]
 modules_names_marked = [(item if not any(s in item for s in SLOW) else pytest.mark.slow(item))
                         for item in modules_names
-                        if not item[1] in PREPROC]
+                        if not item[1] in PREPROC and
+                        not skip_transformer_estimator_combo(*item)]
 
 @catch_warnings
 @pytest.mark.parametrize('module1, cls_name1, module2, cls_name2', modules_names_marked)
@@ -64,8 +68,6 @@ def test_pipeline_combos(module1, cls_name1, module2, cls_name2):
     '''Test a combo of steps, e.g. decompostion, PCA, cluster, KMeans
     as arguments.  Assert a Pipeline of those two steps takes
     X as an MLDataset and y as a numpy array'''
-    if skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
-        return
     transformer = TRANSFORMERS[(module1, cls_name1)]
     estimator = TESTED_ESTIMATORS[(module2, cls_name2)]
     pipe, X, y = new_pipeline((transformer, estimator))
