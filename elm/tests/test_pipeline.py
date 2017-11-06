@@ -62,9 +62,7 @@ modules_names_marked = [(item if not any(s in item for s in SLOW) else pytest.ma
                         if not item[1] in PREPROC and
                         not skip_transformer_estimator_combo(*item)]
 
-@catch_warnings
-@pytest.mark.parametrize('module1, cls_name1, module2, cls_name2', modules_names_marked)
-def test_pipeline_combos(module1, cls_name1, module2, cls_name2):
+def tst_pipeline_combos(module1, cls_name1, module2, cls_name2):
     '''Test a combo of steps, e.g. decompostion, PCA, cluster, KMeans
     as arguments.  Assert a Pipeline of those two steps takes
     X as an MLDataset and y as a numpy array'''
@@ -74,6 +72,21 @@ def test_pipeline_combos(module1, cls_name1, module2, cls_name2):
     pipe.fit(X, y)
     pred = pipe.predict(X)
     assert isinstance(pred, MLDataset)
+
+@catch_warnings
+@pytest.mark.slow # each test is fast but all of them (~2000) are slow together
+@pytest.mark.parametrize('module1, cls_name1, module2, cls_name2', modules_names_marked)
+def test_all_pipeline_combos(module1, cls_name1, module2, cls_name2):
+    tst_pipeline_combos(module1, cls_name1, module2, cls_name2)
+
+
+subset = sorted((m for m in modules_names_marked if isinstance(m, tuple)), key=lambda x: hash(x))[:80]
+
+@catch_warnings
+@pytest.mark.parametrize('module1, cls_name1, module2, cls_name2', subset)
+def test_subset_of_pipeline_combos(module1, cls_name1, module2, cls_name2):
+    tst_pipeline_combos(module1, cls_name1, module2, cls_name2)
+
 
 
 

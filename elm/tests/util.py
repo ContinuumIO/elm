@@ -54,7 +54,8 @@ def catch_warnings(func):
     @wraps(func)
     def new_func(*args, **kw):
         skipped_warnings = (FutureWarning, UserWarning,
-                            DeprecationWarning, ConvergenceWarning)
+                            DeprecationWarning, ConvergenceWarning,
+                            RuntimeWarning)
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore",
                                   category=skipped_warnings)
