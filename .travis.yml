@@ -4,11 +4,11 @@ dist: trusty
 
 env:
   global:
-    - EARTHIO_VERSION=master
+    - EARTHIO_VERSION=0.0.2
     - EARTHIO_INSTALL_METHOD="conda"
     - EARTHIO_TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev -c bioconda"
+    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev -c bioconda -c elm -c elm/label/dev "
 
   matrix:
     - PYTHON=3.6 NUMPY=1.12
