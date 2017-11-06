@@ -27,5 +27,5 @@ conda remove -n root elm &> /dev/null || true
 pip uninstall -y elm &> /dev/null || true
 
 conda build $INSTALL_CHANNELS --python $PYTHON --numpy $NUMPY conda.recipe
-conda install -n $TEST_ENV $INSTALL_CHANNELS --use-local python=$PYTHON numpy=$NUMPY elm
+conda create -n $TEST_ENV $INSTALL_CHANNELS --use-local python=$PYTHON numpy=$NUMPY elm
 set +e

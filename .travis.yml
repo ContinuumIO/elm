@@ -23,12 +23,12 @@ before_install:
 
 install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
-  - pushd docs
-  - ~/miniconda/bin/conda env create -f environment.yml -n ${TEST_ENV}-docs
-  - source ~/miniconda/bin/activate ${TEST_ENV}-docs
+  #- pushd docs
+  #- ~/miniconda/bin/conda env create -f environment.yml -n ${TEST_ENV}-docs
+  #- source ~/miniconda/bin/activate ${TEST_ENV}-docs
   # - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make html && make doctest; fi
-  - source deactivate
-  - popd
+  #- source deactivate
+  #- popd
 
 script:
   - rm -rf $ELM_EXAMPLE_DATA_PATH/*

@@ -2,15 +2,6 @@ package:
   name: elm
   version: {{ environ.get('GIT_DESCRIBE_TAG', 'notag') }}
 
-extras:
-  channels:
-    - elm/label/dev
-    - elm
-    - ioam
-    - conda-forge
-    - scitools/label/dev
-    - bioconda
-
 source:
   path: ..
 
@@ -38,7 +29,7 @@ requirements:
     - scikit-learn
     - scipy
     - xarray
-    - xarray_filters 0.0.2
+    - xarray_filters
     - yaml
     - six
 
