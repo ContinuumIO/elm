@@ -8,7 +8,7 @@ env:
     - EARTHIO_INSTALL_METHOD="conda"
     - EARTHIO_TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-    - EARTHIO_CHANNEL_STR=" -c ioam -c conda-forge -c scitools/label/dev -c bioconda -c elm -c elm/label/dev "
+    - EARTHIO_CHANNEL_STR="  -c elm -c elm/label/dev -c ioam -c conda-forge -c scitools/label/dev -c bioconda"
     - ANACONDA_UPLOAD_USER=elm
   matrix:
     - PYTHON=3.6 NUMPY=1.12
