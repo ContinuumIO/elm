@@ -2,6 +2,15 @@ package:
   name: elm
   version: {{ environ.get('GIT_DESCRIBE_TAG', 'notag') }}
 
+extras:
+  channels:
+    - elm/label/dev
+    - elm
+    - ioam
+    - conda-forge
+    - scitools/label/dev
+    - bioconda
+
 source:
   path: ..
 
@@ -11,27 +20,25 @@ build:
 requirements:
   build:
     - python
+    - numpy
     - setuptools
 
   run:
-    - attrs
     - deap
     - dask
     - dask-searchcv
     - dill
     - distributed
-    - earthio
     - networkx
     - numba
     - numpy
     - pandas
     - python
-    - requests
     - scikit-image
     - scikit-learn
     - scipy
     - xarray
-    - xarray_filters
+    - xarray_filters 0.0.2
     - yaml
     - six
 

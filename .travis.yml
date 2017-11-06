@@ -4,11 +4,9 @@ dist: trusty
 
 env:
   global:
-    - EARTHIO_VERSION=0.0.2
-    - EARTHIO_INSTALL_METHOD="conda"
-    - EARTHIO_TEST_ENV=earth-test-env
+    - TEST_ENV=earth-test-env
     - ELM_EXAMPLE_DATA_PATH=/tmp/elm-data
-    - EARTHIO_CHANNEL_STR=" -c elm -c elm/label/dev -c ioam -c conda-forge -c scitools/label/dev -c bioconda "
+    - INSTALL_CHANNELS=" -c elm -c elm/label/dev -c ioam -c conda-forge -c scitools/label/dev -c bioconda "
     - ANACONDA_UPLOAD_USER=elm
   matrix:
     - PYTHON=3.6 NUMPY=1.12
@@ -26,8 +24,8 @@ before_install:
 install:
   - MAKE_MINICONDA=1 ./build_elm_env.sh
   - pushd docs
-  - ~/miniconda/bin/conda env create -f environment.yml -n ${EARTHIO_TEST_ENV}-docs
-  - source ~/miniconda/bin/activate ${EARTHIO_TEST_ENV}-docs
+  - ~/miniconda/bin/conda env create -f environment.yml -n ${TEST_ENV}-docs
+  - source ~/miniconda/bin/activate ${TEST_ENV}-docs
   # - if [ "$TEST_DOCS" ]; then conda install -c conda-forge -c ioam -c scitools --use-local elm earthio && make html && make doctest; fi
   - source deactivate
   - popd
@@ -43,8 +41,8 @@ notifications:
 deploy:
   - provider: script
     script:
-      - echo "Will run - ~/miniconda/bin/conda install --name root anaconda-client && ~/miniconda/bin/conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs ~/miniconda/bin/conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec ~/miniconda/bin/anaconda --token $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev --force {} \+"
-      - ~/miniconda/bin/conda install --name root anaconda-client && ~/miniconda/bin/conda build $EARTHIO_CHANNEL_STR --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs ~/miniconda/bin/conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec ~/miniconda/bin/anaconda --token $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev --force {} \+
+      - echo "Will run - ~/miniconda/bin/conda install --name root anaconda-client && ~/miniconda/bin/conda build $INSTALL_CHANNELS --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs ~/miniconda/bin/conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec ~/miniconda/bin/anaconda --token $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev --force {} \+"
+      - ~/miniconda/bin/conda install --name root anaconda-client && ~/miniconda/bin/conda build $INSTALL_CHANNELS --output --python $PYTHON --numpy $NUMPY conda.recipe | xargs ~/miniconda/bin/conda convert -p all -o _pkgs && find _pkgs -type f -name "*.tar.bz2" -exec ~/miniconda/bin/anaconda --token $ANACONDA_UPLOAD_TOKEN upload --user $ANACONDA_UPLOAD_USER --label dev --force {} \+
     on:
       tags: false
       all_branches: true
