@@ -32,6 +32,7 @@ ALL_STEPS = steps.ALL_STEPS
 REQUIRES_1D = ['IsotonicRegression']
 
 SKIP = TEST_CONFIG['SKIP'] # TODO - See related skip_transformer_estimator_combo notes
+SKIP_CV = TEST_CONFIG['SKIP_CV']
 TESTED_ESTIMATORS = OrderedDict(sorted((k, v) for k, v in ALL_STEPS.items()
                      if hasattr(v, '_cls') and
                      'fit' in dir(v._cls) and
@@ -53,7 +54,8 @@ def catch_warnings(func):
     @wraps(func)
     def new_func(*args, **kw):
         skipped_warnings = (FutureWarning, UserWarning,
-                            DeprecationWarning, ConvergenceWarning)
+                            DeprecationWarning, ConvergenceWarning,
+                            RuntimeWarning)
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore",
                                   category=skipped_warnings)
@@ -152,7 +154,7 @@ def skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
     Returns
     -------
 
-    None or raises pytest.skip - TODO - Note we need to review each combo
+    Returns True/False - TODO - Note we need to review each combo
     of transformer / estimator being skipped here and see if that is
     1) elm/xarray_filters library code deficiency,
     2) a test harness problem, e.g. the transformer needs an initalization
@@ -191,5 +193,4 @@ def skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
         skip = True
     elif module1 in ('manifold', 'preprocessing', 'feature_selection', 'decomposition') and 'ensemble' == module2:
         skip = True
-    if skip:
-        pytest.skip('{} - {}'.format(cls_name1, cls_name2))
+    return skip

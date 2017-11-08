@@ -8,6 +8,7 @@ from dask_searchcv.model_selection import (_DOC_TEMPLATE,
                                            RandomizedSearchCV,
                                            DaskBaseSearchCV,
                                            _randomized_parameters)
+from dask_searchcv.utils import is_pipeline
 import numpy as np
 from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_CONTROL,
@@ -15,6 +16,7 @@ from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_EVO_PARAMS,)
 from elm.mldataset.serialize_mixin import SerializeMixin
 from elm.mldataset.wrap_sklearn import SklearnMixin
+from elm.mldataset.util import is_arr
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
 from elm.pipeline import Pipeline
@@ -132,7 +134,8 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                                    parameters=_ea_parameters,
                                    example=_ea_example)
 
-    def __init__(self, estimator, param_distributions, n_iter=10,
+    def __init__(self, estimator, param_distributions,
+                 n_iter=10,
                  random_state=None,
                  ngen=3, score_weights=None,
                  sort_fitness=pareto_front,
@@ -143,7 +146,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                  scoring=None,
                  iid=True, refit=True,
                  cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=True):
+                 scheduler=None, n_jobs=-1, cache_cv=None):
         filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
         self.ngen = ngen
         self.select_with_test = select_with_test
@@ -264,10 +267,11 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
 
     def fit(self, X, y=None, groups=None, **fit_params):
         self._open()
-        X, y = self._as_dask_array(X, y=y)
+        if not self.get_params('sampler'):
+            X, y = self._as_dask_array(X, y=y)
         for self._gen in range(self.ngen):
             print('Generation', self._gen)
-            RandomizedSearchCV.fit(self, X, y, groups, **fit_params)
+            RandomizedSearchCV.fit(self, X, y, groups=groups, **fit_params)
             fitnesses = self._get_cv_scores()
             self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,
                                                           self.cv_results_,
@@ -289,7 +293,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         return self
 
     def _get_param_iterator(self):
-        if self._is_ea and not getattr(self, '_invalid_ind', None):
+        if self._gen != 0 and self._is_ea and not getattr(self, '_invalid_ind', None):
             return iter(())
         if not self._is_ea and self._gen == 0:
             self.next_params_ = tuple(RandomizedSearchCV._get_param_iterator(self))

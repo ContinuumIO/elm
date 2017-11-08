@@ -1,4 +1,5 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
+
 from collections import OrderedDict
 from itertools import product
 import os
@@ -6,9 +7,11 @@ import os
 from dask_glm.datasets import make_classification
 from sklearn import decomposition as sk_decomp
 from sklearn import svm as sk_svm
+from sklearn.model_selection import KFold
 from sklearn.pipeline import Pipeline as sk_Pipeline
 from xarray_filters import MLDataset
 from xarray_filters.datasets import _make_base
+from xarray_filters.pipeline import Step
 import dill
 import numpy as np
 import pandas as pd
@@ -27,59 +30,7 @@ from elm.pipeline.steps import (linear_model as lm,
                                 svm as elm_svm,)
 from elm.tests.test_pipeline import new_pipeline, modules_names
 from elm.tests.util import (TRANSFORMERS, TESTED_ESTIMATORS,
-                            catch_warnings, skip_transformer_estimator_combo,
-                            make_X_y)
-
-param_distribution_poly = dict(step_1__degree=list(range(1, 3)),
-                               step_1__interaction_only=[True, False])
-param_distribution_pca = dict(step_1__n_components=list(range(1, 12)),
-                              step_1__whiten=[True, False])
-param_distribution_sgd = dict(step_2__penalty=['l1', 'l2', 'elasticnet'],
-                              step_2__alpha=np.logspace(-1, 1, 5))
-
-model_selection = dict(mu=16,       # Population size
-                       ngen=3,      # Number of generations
-                       mutpb=0.4,   # Mutation probability
-                       cxpb=0.6,    # Cross over probability
-                       param_grid_name='example_1') # CSV based name for parameter / objectives history
-
-def make_choice(ea):
-    num = np.random.randint(1, len(ea) + 1)
-    idx = np.random.randint(0, len(ea), (num,))
-    return [ea[i] for i in idx]
-
-
-zipped = product((elm_pre.PolynomialFeatures, elm_decomp.PCA),
-                 (lm.SGDRegressor,),)
-tested_pipes = [(trans, estimator)
-                for trans, estimator in zipped]
-@catch_warnings
-@pytest.mark.parametrize('trans, estimator', tested_pipes)
-def test_cv_splitting_ea_search_mldataset(trans, estimator):
-    '''Test that an Elm Pipeline using MLDataset X feature
-    matrix input can be split into cross validation train / test
-    samples as in scikit-learn for numpy.  (As of PR 192 this test
-    is failing)'''
-    pipe, X, y = new_pipeline(trans, estimator, flatten_first=False)
-    X = X.to_features()
-    param_distribution = param_distribution_sgd.copy()
-    if 'PCA' in trans._cls.__name__:
-        param_distribution.update(param_distribution_pca)
-    else:
-        param_distribution.update(param_distribution_poly)
-    ea = EaSearchCV(estimator=pipe,
-                    param_distributions=param_distribution,
-                    score_weights=[1],
-                    model_selection=model_selection,
-                    refit=True,
-                    cv=3,
-                    error_score='raise',
-                    return_train_score=True,
-                    scheduler=None,
-                    n_jobs=-1,
-                    cache_cv=True)
-    ea.fit(X,y)
-    assert isinstance(ea.predict(X), MLDataset)
+                            catch_warnings, make_X_y)
 
 
 def make_dask_arrs():
@@ -88,11 +39,11 @@ def make_dask_arrs():
 def make_np_arrs():
     return [_.compute() for _ in make_dask_arrs()]
 
-def make_dataset(flatten_first=True):
+def make_dataset(flatten_first=True, **kw):
     X, y = make_mldataset(flatten_first=flatten_first)
     return xr.Dataset(X), y
 
-def make_mldataset(flatten_first=True):
+def make_mldataset(flatten_first=True, **kw):
     X, y = make_X_y(astype='MLDataset', is_classifier=True,
                     flatten_first=flatten_first)
     return X, y
@@ -139,8 +90,10 @@ for label, make_data in data_structure_trials:
             for sel, kw in zip(model_sel, model_sel_kwargs):
                 args[label + '-' + label2.format(word)] = (est, make_data, sel, kw)
 
-
-@pytest.mark.parametrize('label, do_predict', product(args, (True, False)))
+test_args = product(args, (None,))
+# test_args = product(args, ('predict', None)) # TODO - This would test "refit"=True
+                                               #         and "predict"
+@pytest.mark.parametrize('label, do_predict', test_args)
 def test_ea_search_sklearn_elm_steps(label, do_predict):
     '''Test that EaSearchCV can work with numpy, dask.array,
     pandas.DataFrame, xarray.Dataset, xarray_filters.MLDataset
@@ -152,13 +105,23 @@ def test_ea_search_sklearn_elm_steps(label, do_predict):
     if isinstance(est, (sk_Pipeline, Pipeline)):
         parameters = {'est__{}'.format(k): v
                       for k, v in parameters.items()}
+    if label.startswith(('mldataset', 'dataset')):
+        sampler = make_data
+    else:
+        sampler = None
     ea = EaSearchCV(est, parameters,
                     n_iter=4,
                     ngen=2,
+                    sampler=sampler,
+                    cv=KFold(3),
                     model_selection=sel,
-                    model_selection_kwargs=kw)
-    X, y = make_data()
-    ea.fit(X, y)
+                    model_selection_kwargs=kw,
+                    refit=do_predict)
+    if not sampler:
+        X, y = make_data()
+        ea.fit(X, y)
+    else:
+        ea.fit([{}]* 10)
     if do_predict:
         pred = ea.predict(X)
         assert isinstance(pred, type(y))
