@@ -8,7 +8,6 @@ from dask_searchcv.model_selection import (_DOC_TEMPLATE,
                                            RandomizedSearchCV,
                                            DaskBaseSearchCV,
                                            _randomized_parameters)
-from dask_searchcv.utils import is_pipeline
 import numpy as np
 from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_CONTROL,
