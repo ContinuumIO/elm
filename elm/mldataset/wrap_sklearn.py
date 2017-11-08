@@ -176,11 +176,6 @@ class SklearnMixin:
         self.fit(*args, **kw)
         return self._call_sk_method('transform', *args, **kw)
 
-    '''def __repr__(self):
-        class_name = getattr(self, '_cls_name', self._cls.__class__.__name__)
-        return '%s(%s)' % (class_name, _pprint(self.get_params(deep=False),
-                                               offset=len(class_name),),)
-'''
     def fit_predict(self, X, y=None, **kw):
         return self.fit(X, y=y, **kw).predict(X)
 
