@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.kernel_approximation
 
 Wraps sklearn.kernel_approximation for usage with xarray.Dataset / xarray_filters.MLDataset
 

@@ -1,10 +1,11 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.cluster
 
 Wraps sklearn.cluster for usage with xarray.Dataset / xarray_filters.MLDataset
 
 See:
  * http://scikit-learn.org/stable/modules/classes.html#module-sklearn.cluster
+ * http://scikit-learn.org/stable/modules/classes.html#module-sklearn.cluster.bicluster
 '''
 
 from elm.mldataset.wrap_sklearn import SklearnMixin
@@ -19,7 +20,7 @@ from sklearn.cluster import MiniBatchKMeans as _MiniBatchKMeans
 from sklearn.cluster import SpectralBiclustering as _SpectralBiclustering
 from sklearn.cluster import SpectralClustering as _SpectralClustering
 from sklearn.cluster import SpectralCoclustering as _SpectralCoclustering
-
+from sklearn.cluster.bicluster import BaseSpectral as _BaseSpectral
 
 
 class AffinityPropagation(SklearnMixin, _AffinityPropagation):
@@ -85,4 +86,10 @@ class SpectralClustering(SklearnMixin, _SpectralClustering):
 class SpectralCoclustering(SklearnMixin, _SpectralCoclustering):
     _cls = _SpectralCoclustering
     __init__ = _SpectralCoclustering.__init__
+
+
+
+class BaseSpectral(SklearnMixin, _BaseSpectral):
+    _cls = _BaseSpectral
+    __init__ = _BaseSpectral.__init__
 

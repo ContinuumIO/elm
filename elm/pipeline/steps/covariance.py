@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.covariance
 
 Wraps sklearn.covariance for usage with xarray.Dataset / xarray_filters.MLDataset
 

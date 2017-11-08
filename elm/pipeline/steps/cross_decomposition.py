@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.cross_decomposition
 
 Wraps sklearn.cross_decomposition for usage with xarray.Dataset / xarray_filters.MLDataset
 

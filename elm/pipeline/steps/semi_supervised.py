@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.semi_supervised
 
 Wraps sklearn.semi_supervised for usage with xarray.Dataset / xarray_filters.MLDataset
 

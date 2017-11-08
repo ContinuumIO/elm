@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.feature_extraction
 
 Wraps sklearn.feature_extraction for usage with xarray.Dataset / xarray_filters.MLDataset
 

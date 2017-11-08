@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.naive_bayes
 
 Wraps sklearn.naive_bayes for usage with xarray.Dataset / xarray_filters.MLDataset
 

@@ -8,6 +8,7 @@ from dask_glm.datasets import make_classification
 from sklearn import decomposition as sk_decomp
 from sklearn import svm as sk_svm
 from sklearn.model_selection import KFold
+from elm.model_selection import CVCacheSampler
 from sklearn.pipeline import Pipeline as sk_Pipeline
 from xarray_filters import MLDataset
 from xarray_filters.datasets import _make_base
@@ -107,16 +108,18 @@ def test_ea_search_sklearn_elm_steps(label, do_predict):
                       for k, v in parameters.items()}
     if label.startswith(('mldataset', 'dataset')):
         sampler = make_data
+        cache_cv = CVCacheSampler(sampler)
     else:
         sampler = None
+        cache_cv = True
     ea = EaSearchCV(est, parameters,
                     n_iter=4,
                     ngen=2,
-                    sampler=sampler,
                     cv=KFold(3),
                     model_selection=sel,
                     model_selection_kwargs=kw,
-                    refit=do_predict)
+                    refit=do_predict,
+                    cache_cv=cache_cv)
     if not sampler:
         X, y = make_data()
         ea.fit(X, y)

@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.neural_network
 
 Wraps sklearn.neural_network for usage with xarray.Dataset / xarray_filters.MLDataset
 

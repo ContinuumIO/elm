@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.ensemble
 
 Wraps sklearn.ensemble for usage with xarray.Dataset / xarray_filters.MLDataset
 

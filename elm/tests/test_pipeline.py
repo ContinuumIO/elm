@@ -4,7 +4,7 @@ from itertools import product
 
 from elm.pipeline import steps, Pipeline
 from elm.tests.util import (catch_warnings, make_X_y, TESTED_ESTIMATORS,
-                            TRANSFORMERS, ALL_STEPS, SLOW,
+                            TRANSFORMERS, SLOW,
                             SKIP, REQUIRES_1D, get_params_for_est,
                             PREPROC, skip_transformer_estimator_combo)
 from xarray_filters import MLDataset

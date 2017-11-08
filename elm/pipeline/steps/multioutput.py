@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.multioutput
 
 Wraps sklearn.multioutput for usage with xarray.Dataset / xarray_filters.MLDataset
 

@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.kernel_ridge
 
 Wraps sklearn.kernel_ridge for usage with xarray.Dataset / xarray_filters.MLDataset
 

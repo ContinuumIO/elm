@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.calibration
 
 Wraps sklearn.calibration for usage with xarray.Dataset / xarray_filters.MLDataset
 

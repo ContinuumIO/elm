@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.random_projection
 
 Wraps sklearn.random_projection for usage with xarray.Dataset / xarray_filters.MLDataset
 

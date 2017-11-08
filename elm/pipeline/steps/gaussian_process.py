@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.gaussian_process
 
 Wraps sklearn.gaussian_process for usage with xarray.Dataset / xarray_filters.MLDataset
 

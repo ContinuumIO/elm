@@ -16,6 +16,7 @@ import pytest
 from elm.model_selection import EaSearchCV
 from elm.model_selection.sorting import pareto_front
 from elm.pipeline import Pipeline
+from elm.model_selection import CVCacheSampler
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline.steps import linear_model, cluster, decomposition
 import sklearn.model_selection as sk_model_selection
@@ -137,13 +138,14 @@ def test_each_cv(cls, config_key, refit):
     elif cls == 'PredefinedSplit':
         kw['test_fold'] = DATES > DATES[DATES.size // 2]
     cv = CV_CLASSES[cls](**kw)
+    cache_cv = CVCacheSampler(Sampler())
     ea = EaSearchCV(pipe,
                     param_distributions=param_distributions,
-                    sampler=Sampler(),
                     ngen=2,
                     model_selection=model_selection,
                     cv=cv,
-                    refit=refit) # TODO refit = True
+                    refit=refit,
+                    cache_cv=cache_cv) # TODO refit = True
     ea.fit(DATES, groups=DATE_GROUPS)
     results = getattr(ea, 'cv_results_', None)
     assert isinstance(results, dict) and 'gen' in results and all(getattr(v,'size',v) for v in results.values())

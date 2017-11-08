@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.multiclass
 
 Wraps sklearn.multiclass for usage with xarray.Dataset / xarray_filters.MLDataset
 

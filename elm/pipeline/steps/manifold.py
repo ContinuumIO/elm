@@ -1,5 +1,5 @@
 '''
-elm.pipeline.steps.linear_model
+elm.pipeline.steps.manifold
 
 Wraps sklearn.manifold for usage with xarray.Dataset / xarray_filters.MLDataset
 

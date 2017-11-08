@@ -26,8 +26,15 @@ YAML_TEST_CONFIG = os.path.join(os.path.dirname(__file__), 'test_config.yaml')
 with open(YAML_TEST_CONFIG) as f:
     contents = f.read()
 TEST_CONFIG = yaml.safe_load(contents)
-
-ALL_STEPS = steps.ALL_STEPS
+SKIP = ('SearchCV', 'ParameterGrid', 'ParameterSampler',
+        'BaseEstimator', 'KERNEL_PARAMS', 'Pipeline',
+        'Parallel', 'RegressorMixin', 'ClassifierMixin', 'ABCMeta',
+        'TransformerMixin', 'VBGMM', 'RandomizedPCA', 'GMM',
+        'MultiOutputEstimator','SklearnMixin')
+ALL_STEPS = {(m, a): getattr(getattr(steps, m), a)
+             for m in dir(steps) if m[0] != '_'
+             for a in dir(getattr(steps, m)) if a[0].isupper()
+             if m not in SKIP and a not in SKIP}
 
 REQUIRES_1D = ['IsotonicRegression']
 
