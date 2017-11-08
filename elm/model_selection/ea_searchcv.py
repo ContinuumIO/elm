@@ -16,7 +16,6 @@ from elm.model_selection.evolve import (fit_ea,
                                         DEFAULT_EVO_PARAMS,)
 from elm.mldataset.serialize_mixin import SerializeMixin
 from elm.mldataset.wrap_sklearn import SklearnMixin
-from dask_searchcv.methods import CVCacheSampler
 from elm.mldataset.util import is_arr
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
@@ -137,7 +136,6 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
 
     def __init__(self, estimator, param_distributions,
                  n_iter=10,
-                 sampler=None,
                  random_state=None,
                  ngen=3, score_weights=None,
                  sort_fitness=pareto_front,
@@ -148,10 +146,9 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                  scoring=None,
                  iid=True, refit=True,
                  cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=CVCacheSampler):
+                 scheduler=None, n_jobs=-1, cache_cv=None):
         filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
         self.ngen = ngen
-        self.sampler = sampler
         self.select_with_test = select_with_test
         self.model_selection = model_selection
         self.model_selection_kwargs = model_selection_kwargs

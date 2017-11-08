@@ -54,23 +54,13 @@ def example_function(date):
     dset.attrs['example_function_argument'] = date
     return dset
 
-def debug_log_types(label):
-    def dec(func):
-        def new_func(*a, **kw):
-            out = func(*a, **kw)
-            return out
-        return new_func
-    return dec
-
 class Sampler(Step):
-    @debug_log_types('Sampler')
     def transform(self, X, y=None, **kw):
         return example_function(X)
 
 
 class GetY(Step):
     layer = 'y'
-    @debug_log_types('GetY')
     def transform(self, X, y=None, **kw):
         layer = self.get_params()['layer']
         y = getattr(X, layer).values.ravel()

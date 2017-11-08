@@ -23,8 +23,7 @@ import numpy as np
 from sklearn.model_selection import ParameterGrid
 
 from xarray_filters.func_signatures import get_args_kwargs_defaults
-from elm.config import (import_callable,
-                        ElmConfigError,
+from elm.config import (ElmConfigError,
                         ConfigParser)
 
 logger = logging.getLogger(__name__)
