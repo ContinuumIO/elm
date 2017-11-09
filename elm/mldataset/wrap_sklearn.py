@@ -23,6 +23,7 @@ def get_row_index(X, features_layer=None):
         arr = X[features_layer]
         return getattr(arr, arr.dims[0])
 
+
 def _as_numpy_arrs(self, X, y=None, **kw):
     '''Convert X, y for a scikit-learn method numpy.ndarrays
     '''
