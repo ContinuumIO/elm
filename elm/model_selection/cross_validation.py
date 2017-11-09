@@ -6,6 +6,7 @@ class CVCacheSampler(BaseEstimator, CVCache):
     def __init__(self, sampler, splits=None, pairwise=None, cache=True):
         self.sampler = sampler
         CVCache.__init__(self, splits, pairwise=pairwise, cache=cache)
+        print('self.get_params()', self.get_params())
 
     def _call_sampler(self, X, y=None, n=None, is_x=True, is_train=False):
         if self.splits is None:
@@ -28,7 +29,11 @@ class CVCacheSampler(BaseEstimator, CVCache):
         if self.cache in (None, False):
             raise ValueError('Must set cache_cv=True with _call_sampler')
         result = self._call_sampler(np.array(X)[inds])
-        self.cache[n, True, is_train] = result
+        if isinstance(result, tuple) and len(result):
+            (self.cache[n, True, is_train],
+             self.cache[n, False, is_train]) = result
+        else:
+            self.cache[n, True, is_train] = result
         return result
 
     def _extract_pairwise(self, X, y, n, is_train=True):
@@ -41,7 +46,6 @@ class CVCacheSampler(BaseEstimator, CVCache):
         if X.shape[0] != X.shape[1]:
             raise ValueError("X should be a square kernel matrix")
         train, test = self.splits[n]
-        post_splits = getattr(self, '_call_sampler', None)
         result = X[np.ix_(train if is_train else test, train)]
         result = self._call_sampler(result)
         if _is_xy_tuple(result):
@@ -51,3 +55,11 @@ class CVCacheSampler(BaseEstimator, CVCache):
         elif self.cache is not None:
             self.cache[n, True, is_train] = result
         return result
+
+    def extract(self, X, y, n, is_x=True, is_train=True):
+        if is_x:
+            if self.pairwise:
+                return self._extract_pairwise(X, y, n, is_train=is_train)
+            return self._extract(X, y, n, is_x=True, is_train=is_train)
+        return self._extract(X, y, n, is_x=False, is_train=is_train)
+

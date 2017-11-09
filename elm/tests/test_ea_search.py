@@ -40,11 +40,11 @@ def make_dask_arrs():
 def make_np_arrs():
     return [_.compute() for _ in make_dask_arrs()]
 
-def make_dataset(flatten_first=True, **kw):
+def make_dataset(flatten_first=False, **kw):
     X, y = make_mldataset(flatten_first=flatten_first)
     return xr.Dataset(X), y
 
-def make_mldataset(flatten_first=True, **kw):
+def make_mldataset(flatten_first=False, **kw):
     X, y = make_X_y(astype='MLDataset', is_classifier=True,
                     flatten_first=flatten_first)
     return X, y
@@ -76,20 +76,21 @@ for label, make_data in data_structure_trials:
     if label in ('numpy', 'pandas', 'dask.dataframe'):
         est = sk_svm.SVC()
         trans = sk_decomp.PCA(n_components=2)
+        cls = sk_Pipeline
+        word = 'sklearn.pipeline'
     else:
         est = elm_svm.SVC()
         trans = elm_decomp.PCA(n_components=2)
+        cls = Pipeline
+        word = 'elm.pipeline'
     for s in ([('trans', trans), ('est', est)], [('est', est,),], []):
-        pipe_cls = sk_Pipeline, Pipeline
-        pipe_word = 'sklearn.pipeline', 'elm.pipeline'
-        for cls, word in zip(pipe_cls, pipe_word):
-            if s:
-                est = cls(s)
-                label2 = 'PCA-SVC-{}'
-            else:
-                label2 = 'SVC-{}'
-            for sel, kw in zip(model_sel, model_sel_kwargs):
-                args[label + '-' + label2.format(word)] = (est, make_data, sel, kw)
+        if s:
+            est = cls(s)
+            label2 = 'PCA-SVC-{}'
+        else:
+            label2 = 'SVC-{}'
+        for sel, kw in zip(model_sel, model_sel_kwargs):
+            args[label + '-' + label2.format(word)] = (est, make_data, sel, kw)
 
 test_args = product(args, (None,))
 # test_args = product(args, ('predict', None)) # TODO - This would test "refit"=True
@@ -124,7 +125,7 @@ def test_ea_search_sklearn_elm_steps(label, do_predict):
         X, y = make_data()
         ea.fit(X, y)
     else:
-        ea.fit([{}]* 10)
+        ea.fit([{}] * 10)
     if do_predict:
         pred = ea.predict(X)
         assert isinstance(pred, type(y))

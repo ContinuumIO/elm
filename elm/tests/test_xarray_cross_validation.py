@@ -1,5 +1,6 @@
 from __future__ import print_function, unicode_literals, division
-
+import dask
+dask.set_options(get=dask.local.get_sync)
 from collections import OrderedDict
 import datetime
 from itertools import product
@@ -15,7 +16,7 @@ import pytest
 
 from elm.model_selection import EaSearchCV
 from elm.model_selection.sorting import pareto_front
-from elm.pipeline import Pipeline
+from sklearn.pipeline import Pipeline
 from elm.model_selection import CVCacheSampler
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline.steps import linear_model, cluster, decomposition
@@ -136,7 +137,7 @@ def test_each_cv(cls, config_key, refit):
     if cls.startswith('LeaveP'):
         kw['p'] = 2
     elif cls == 'PredefinedSplit':
-        kw['test_fold'] = DATES > DATES[DATES.size // 2]
+        kw['test_fold'] = (DATES > DATES[DATES.size // 2]).astype(np.int32)
     cv = CV_CLASSES[cls](**kw)
     cache_cv = CVCacheSampler(Sampler())
     ea = EaSearchCV(pipe,
