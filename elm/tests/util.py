@@ -51,7 +51,7 @@ PREPROC = ['decomposition',
 
 TRANSFORMERS = OrderedDict(sorted((k,v) for k, v in ALL_STEPS.items() if k[0] in PREPROC))
 
-SLOW = ('DictionaryLearning', 'MiniBatchDictionaryLearning')
+SLOW = ('DictionaryLearning', 'MiniBatchDictionaryLearning', 'TheilSenRegressor')
 
 USES_COUNTS = ('LatentDirichletAllocation', 'NMF')
 

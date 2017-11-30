@@ -16,25 +16,26 @@ import pytest
 
 from elm.model_selection import EaSearchCV
 from elm.model_selection.sorting import pareto_front
-from sklearn.pipeline import Pipeline
+from elm.pipeline import Pipeline
 from elm.model_selection import CVCacheSampler
 from elm.pipeline.predict_many import predict_many
 from elm.pipeline.steps import linear_model, cluster, decomposition
 import sklearn.model_selection as sk_model_selection
-from elm.tests.util import SKIP_CV
+from elm.tests.util import SKIP_CV, catch_warnings
 
 START_DATE = datetime.datetime(2000, 1, 1, 0, 0, 0)
 MAX_TIME_STEPS = 8
 DATES = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(MAX_TIME_STEPS)])
 DATE_GROUPS = np.linspace(0, 5, DATES.size).astype(np.int32)
-
+'''
 CV_CLASSES = dict([(k, getattr(sk_model_selection, k)) for k in dir(sk_model_selection)
               if isinstance(getattr(sk_model_selection, k), type) and
               issubclass(getattr(sk_model_selection, k),
                          sk_model_selection._split.BaseCrossValidator)])
 CV_CLASSES.pop('BaseCrossValidator')
-
+'''
+CV_CLASSES = {'KFold': sk_model_selection.KFold}
 model_selection = {
     'select_method': 'selNSGA2',
     'crossover_method': 'cxTwoPoint',
@@ -112,21 +113,12 @@ dists = {'one_step_unsupervised': kmeans_distributions,
          'get_y_supervised': regress_distributions.copy(),
          'get_y_pca_then_regress': pca_distributions.copy(),}
 dists['get_y_pca_then_regress'].update(regress_distributions)
-refit_options = (False,) # TODO - refit is not working because
-                         # it is passing sampler arguments not
-                         # sampler output to the refitting
-                         # of best model logic.  We need
-                         # to make separate issue to figure
-                         # out what "refit" means in a fitting
-                         # operation of many samples - not
-                         # as obvious what that should be
-                         # when not CV-splitting a large matrix
-                         # but rather CV-splitting input file
-                         # names or other sampler arguments
+refit_options = (False, True)
 test_args = product(CV_CLASSES, configs, refit_options)
 get_marks = lambda cls: [pytest.mark.slow] if cls.startswith(('Leave', 'Repeated')) else []
 test_args = [pytest.param(c, key, refit, marks=get_marks(c))
              for c, key, refit in test_args]
+@catch_warnings
 @pytest.mark.parametrize('cls, config_key, refit', test_args)
 def test_each_cv(cls, config_key, refit):
     if cls in SKIP_CV:
@@ -139,15 +131,19 @@ def test_each_cv(cls, config_key, refit):
     elif cls == 'PredefinedSplit':
         kw['test_fold'] = (DATES > DATES[DATES.size // 2]).astype(np.int32)
     cv = CV_CLASSES[cls](**kw)
-    cache_cv = CVCacheSampler(Sampler())
+    sampler = Sampler()
+    refit_Xy = sampler.fit_transform([datetime.datetime(2000, 1, 1)])
+    refit = True
     ea = EaSearchCV(pipe,
                     param_distributions=param_distributions,
+                    sampler=sampler,
                     ngen=2,
                     model_selection=model_selection,
                     cv=cv,
                     refit=refit,
-                    cache_cv=cache_cv) # TODO refit = True
-    ea.fit(DATES, groups=DATE_GROUPS)
+                    refit_Xy=refit_Xy)
+    ea.fit(DATES) # TODO test that y is passed as a cv grouping variable
     results = getattr(ea, 'cv_results_', None)
-    assert isinstance(results, dict) and 'gen' in results and all(getattr(v,'size',v) for v in results.values())
+    assert isinstance(results, dict) and 'gen' in results
+    assert np.unique([getattr(v, 'size', len(v)) for v in results.values()]).size == 1
 

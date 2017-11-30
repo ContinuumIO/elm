@@ -1,12 +1,11 @@
 from dask_searchcv.methods import CVCache
-from sklearn.base import BaseEstimator
 import numpy as np
 
-class CVCacheSampler(BaseEstimator, CVCache):
+class CVCacheSampler(CVCache):
     def __init__(self, sampler, splits=None, pairwise=None, cache=True):
         self.sampler = sampler
-        CVCache.__init__(self, splits, pairwise=pairwise, cache=cache)
-        print('self.get_params()', self.get_params())
+        assert cache is True
+        CVCache.__init__(self, splits, pairwise=pairwise, cache=True)
 
     def _call_sampler(self, X, y=None, n=None, is_x=True, is_train=False):
         if self.splits is None:
@@ -18,7 +17,8 @@ class CVCacheSampler(BaseEstimator, CVCache):
             func = getattr(self.sampler, 'transform', self.sampler)
         if not callable(func):
             raise ValueError('Expected "sampler" to be callable or have fit_transform/transform methods')
-        return func(X, y=y, is_x=is_x, is_train=is_train)
+        out = func(X, y=y, is_x=is_x, is_train=is_train)
+        return out
 
     def _extract(self, X, y, n, is_x=True, is_train=True):
         if self.cache is not None and (n, is_x, is_train) in self.cache:
@@ -29,7 +29,7 @@ class CVCacheSampler(BaseEstimator, CVCache):
         if self.cache in (None, False):
             raise ValueError('Must set cache_cv=True with _call_sampler')
         result = self._call_sampler(np.array(X)[inds])
-        if isinstance(result, tuple) and len(result):
+        if isinstance(result, tuple) and len(result) == 2:
             (self.cache[n, True, is_train],
              self.cache[n, False, is_train]) = result
         else:
@@ -60,6 +60,11 @@ class CVCacheSampler(BaseEstimator, CVCache):
         if is_x:
             if self.pairwise:
                 return self._extract_pairwise(X, y, n, is_train=is_train)
-            return self._extract(X, y, n, is_x=True, is_train=is_train)
-        return self._extract(X, y, n, is_x=False, is_train=is_train)
+        return self._extract(X, y, n, is_x=is_x, is_train=is_train)
 
+
+def cv_split_sampler(sampler, cv, X, y, groups, is_pairwise, cache):
+    return CVCacheSampler(sampler=sampler,
+                          splits=list(cv.split(X, y, groups)),
+                          pairwise=is_pairwise,
+                          cache=cache)

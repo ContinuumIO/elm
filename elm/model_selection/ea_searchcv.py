@@ -18,7 +18,9 @@ from elm.mldataset.wrap_sklearn import SklearnMixin
 from elm.mldataset.util import is_arr
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
+from elm.model_selection.cross_validation import cv_split_sampler
 from elm.pipeline import Pipeline
+#from sklearn.pipeline import Pipeline
 from xarray_filters.func_signatures import filter_kw_and_run_init
 from xarray_filters.constants import DASK_CHUNK_N
 from xarray_filters import MLDataset
@@ -61,8 +63,11 @@ The parameters of the estimator used to apply these methods are optimized
 by cross-validated evolutionary algorithm search over a parameter grid.\
 """
 _ea_parameters = _randomized_parameters + """\
-ngen : Number of generations (each generation uses
-    dask_searchcv.model_selection.RandomizedSearchCV)
+
+sampler : A callable or instance with a "fit_transform" or "transform" method.
+          The callable takes arguments X and **kw, where X is an iterable
+          of arguments that make 1 sample, e.g.
+          ``('file_1.nc', 'file_2.nc', 'file_3.nc')``
 score_weights : None if doing single objective minimization or a sequence of
     weights to use for flipping minimization to maximization, e.g.
     [1, -1, 1] would minimize the 1st and 3rd objectives and maximize the second
@@ -85,12 +90,15 @@ model_selection : A callable that is called after each generation [TODO docs],
       'mu':    4,
       'k':     4,
       'early_stop': None
-
     }
 model_selection_kwargs : Keyword arguments passed to the model selection
     callable (if given) otherwise ignored
 select_with_test : Select / sort models based on test batch scores(True is default)
-avoid_repeated_params : Avoid repeated parameters (True by default)
+refit_Xy : If using ``refit=True``, then ``refit_Xy`` is either ``(X, y)`` for
+           refitting the best estimator, or ``X`` (array-like)
+ngen : Number of generations (each generation uses
+    dask_searchcv.model_selection.RandomizedSearchCV)
+
 """
 _ea_example = """\
 >>> from sklearn import svm, datasets
@@ -125,7 +133,10 @@ EaSearchCV(avoid_repeated_params=True, cache_cv=True, cv=None,
  'std_fit_time', 'std_score_time', 'std_test_score', 'std_train_score'...]\
 """
 
-class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
+def passthrough_sampler(X, y=None, **kw):
+    return X, y
+
+class EaSearchCV(RandomizedSearchCV, SerializeMixin):
 
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,
@@ -136,17 +147,21 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
     def __init__(self, estimator, param_distributions,
                  n_iter=10,
                  random_state=None,
-                 ngen=3, score_weights=None,
+                 ngen=3,
+                 avoid_repeated_params=True,
+                 scoring=None,
+                 iid=True, refit=True, refit_Xy=None,
+                 cv=None, error_score='raise', return_train_score=True,
+                 scheduler=None, n_jobs=-1, cache_cv=True,
+                 sampler=None,
+                 score_weights=None,
                  sort_fitness=pareto_front,
                  model_selection=None,
                  model_selection_kwargs=None,
-                 select_with_test=True,
-                 avoid_repeated_params=True,
-                 scoring=None,
-                 iid=True, refit=True,
-                 cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=None):
+                 select_with_test=True):
         filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
+        self.sampler = sampler
+        self.refit_Xy = refit_Xy
         self.ngen = ngen
         self.select_with_test = select_with_test
         self.model_selection = model_selection
@@ -154,6 +169,14 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         self.score_weights = score_weights
         self.avoid_repeated_params = avoid_repeated_params
         self.cv_results_all_gen_ = {}
+
+    def _get_cv_split_refit_Xy(self):
+        if self.sampler:
+            sampler = self.sampler
+        else:
+            sampler = passthrough_sampler
+        cv_split = partial(cv_split_sampler, sampler)
+        return cv_split, self.refit_Xy
 
     def _close(self):
         self.cv_results_ = getattr(self, 'cv_results_all_gen_', self.cv_results_)
@@ -269,7 +292,6 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         if not self.get_params('sampler'):
             X, y = self._as_dask_array(X, y=y)
         for self._gen in range(self.ngen):
-            print('Generation', self._gen)
             RandomizedSearchCV.fit(self, X, y, groups=groups, **fit_params)
             fitnesses = self._get_cv_scores()
             self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,

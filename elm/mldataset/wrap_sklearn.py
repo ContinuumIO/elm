@@ -142,6 +142,7 @@ class SklearnMixin:
         return d[0]
 
     def fit(self, X, y=None, **kw):
+        X, y = _split_transformer_result(X, y)
         self._call_sk_method('fit', X, y=y, **kw)
         return self
 
@@ -149,6 +150,11 @@ class SklearnMixin:
         '''This private method is expected by some sklearn
         models and must take X, y as numpy arrays'''
         return self._call_sk_method('_fit', X, y=y, do_split=False, **kw)
+
+    def partial_fit(self, X, y=None, **kw):
+        X, y = _split_transformer_result(X, y)
+        self._call_sk_method('partial_fit', X, y=y, **kw)
+        return self
 
     def transform(self, X, y=None, **kw):
         if hasattr(self._cls, 'transform'):
