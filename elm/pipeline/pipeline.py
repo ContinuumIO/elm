@@ -132,7 +132,6 @@ class Pipeline(sk_Pipeline):
         self : Pipeline
             This estimator
         """
-
         Xt, y, fit_params = self._fit(X, y, **fit_params)
         if self._final_estimator is not None:
             Xt, y = self._astype(self._final_estimator, Xt, y=y)
@@ -342,13 +341,19 @@ class Pipeline(sk_Pipeline):
             has_ft = hasattr(last_step._cls, 'fit_transform')
         else:
             has_ft = hasattr(last_step, 'fit_transform')
-        #skip = getattr(self, '_run_generic_only', False)
-        #if skip:
-        #    return X, y
         if last_step is None:
             return Xt
         elif has_ft:
             return last_step.fit_transform(Xt, y, **fit_params)
         else:
-            return last_step.fit(Xt, y, **fit_params).transform(Xt)
+            out = last_step.fit(Xt, y, **fit_params)
+            if isinstance(out, (tuple, list)) and len(out) == 2:
+                Xt, y = out
+            else:
+                Xt = out
+            return last_step.transform(Xt, y=y)
 
+    def transform(self, X, y=None, **fit_params):
+        last_step = self._final_estimator
+        Xt, y, fit_params = self._fit(X, y, **fit_params)
+        return last_step.transform(Xt, y, **fit_params)

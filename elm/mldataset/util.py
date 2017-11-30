@@ -30,12 +30,16 @@ def is_arr(arr, raise_err=False):
     return _is_arr
 
 
-def _split_transformer_result(Xt, y):
-    if isinstance(Xt, Sequence) and len(Xt) == 2 and (Xt[1] is None or is_arr(Xt[1])):
-        Xt, new_y = Xt
-    else:
-        new_y = y
-    if y is None and new_y is not None:
-        y = new_y
-    assert not isinstance(y, tuple), repr((Xt, y, new_y))
-    return Xt, y
+def _is_xy_tuple(result, typ=tuple):
+    if typ and not isinstance(typ, tuple):
+        typ = (typ,)
+    typ = typ + (tuple,)
+    return isinstance(result, typ) and len(result) == 2
+
+
+def _split_transformer_result(X, y, typ=tuple):
+    if _is_xy_tuple(X, typ=typ):
+        X, y2 = X
+        if y2 is not None and y is None:
+            y = y2
+    return X, y
