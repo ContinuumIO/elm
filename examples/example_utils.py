@@ -12,38 +12,54 @@ from functools import partial
 
 import requests
 from six.moves.urllib.parse import urlparse
-from six.moves import range
+from six.moves import range, input
 from lxml import etree, html
 from ipywidgets import widgets, Layout
 from IPython.display import display, Javascript
-from pydap.cas.urs import setup_session
 
 
-session = setup_session(
-    os.environ.get('NLDAS_USERNAME') or raw_input('NLDAS Username: '),
-    os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: ')
-)
+PYCURL = True
 
-def get_request(url):
-    import pycurl
-    from io import BytesIO
-    buffer = BytesIO()
-    c = pycurl.Curl()
-    c.setopt(c.URL, url)
-    c.setopt(c.WRITEDATA, buffer)
-    c.perform()
-    c.close()
-    return buffer.getvalue()
+if not PYCURL:
+    from pydap.cas.urs import setup_session
+    session = setup_session(
+        os.environ.get('NLDAS_USERNAME') or input('NLDAS Username: '),
+        os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: ')
+    )
+
+def get_request(url, outfpath=None):
+    global PYCURL
+    if PYCURL:
+        # outfpath must be set
+        import pycurl
+        from io import BytesIO
+        buffer = BytesIO()
+        c = pycurl.Curl()
+        c.setopt(c.URL, url)
+        c.setopt(c.WRITEDATA, buffer)
+        c.setopt(c.COOKIEJAR, '/tmp/cookie.jar')
+        c.setopt(c.NETRC, True)
+        c.setopt(c.FOLLOWLOCATION, True)
+        #c.setopt(c.REMOTE_NAME, outfpath)
+        c.perform()
+        c.close()
+        return buffer.getvalue()
+    resp = requests.get(url)
+    return resp.text
 
 def dl_file(url):
     data_fpath = urlparse(url).path.lstrip(os.sep)
     data_dpath = os.path.dirname(data_fpath)
     if not os.path.exists(data_fpath):
-        resp = session.get(url)
         if not os.path.isdir(data_dpath):
             os.makedirs(data_dpath)
-        with open(data_fpath, 'w') as outfp:
-            outfp.write(resp.content)
+        if PYCURL:
+            with open(data_fpath, 'w') as outfp:
+                outfp.write(get_request(url))
+        else:
+            resp = session.get(url)
+            with open(data_fpath, 'w') as outfp:
+                outfp.write(resp.content)
     return data_fpath
 
 def dups_to_indexes(field_names):
