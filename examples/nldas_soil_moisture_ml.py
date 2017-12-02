@@ -102,21 +102,21 @@ class AddSoilPhysicalChemical(Step):
         return MLDataset(xr.merge(soils, X))
 
 SCALERS = [preprocessing.StandardScaler()] + [preprocessing.MinMaxScaler()] * 10
-
+np.random.shuffle(SCALERS)
 param_distributions = {
-    'scaler___estimator': SCALERS,
+    'scaler___estimator': SCALERS[:2],
     'scaler___trans': [log_trans_only_positive],
     'pca__n_components': [6, 7, 8, 10, 14, 18],
     'pca__estimator': [decomposition.PCA(),
-                      decomposition.FastICA(),
-                      decomposition.KernelPCA()],
+                      decomposition.FastICA(),],
+                      #decomposition.KernelPCA()],
     'pca__run': [True, True, False],
-    'time__hours_back': list(np.linspace(1, DEFAULT_MAX_STEPS, 12).astype(np.int32)),
+    'time__hours_back': [1],#list(np.linspace(1, DEFAULT_MAX_STEPS, 12).astype(np.int32)),
     'time__last_bin_width': [1,],
     'time__num_bins': [4,],
-    'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'],
+    'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'][:2],
     'time__bin_shrink': ['linear', 'log'],
-    'time__reducers': REDUCERS,
+    'time__reducers': REDUCERS[:2],
     'soil_phys__add': [True, True, True, False],
 }
 
@@ -196,6 +196,7 @@ pipe = Pipeline([
 ])
 
 ea = EaSearchCV(pipe,
+                n_iter=10,
                 param_distributions=param_distributions,
                 sampler=Sampler(),
                 ngen=NGEN,
