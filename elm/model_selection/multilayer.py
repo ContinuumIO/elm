@@ -10,7 +10,7 @@ Documentation is needed on similarities / differences / limitations.
 
 TODO: docs / tests / docstrings
 '''
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 from functools import partial
 import numpy as np
 from sklearn.base import BaseEstimator
