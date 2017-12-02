@@ -106,10 +106,11 @@ def slice_nldas_forcing_a(date, X_time_steps=144, feature_layers=None, **kw):
         file_time = date - datetime.timedelta(hours=hours_ago)
         dates.append(file_time)
     paths = [get_file(date, name=FORA) for date in dates]
-    print('paths', paths)
-    fora = xr.open_mfdataset(paths, engine='pynio')
+    print('paths', paths, [getattr(arr, 'dims', arr) for arr in paths],
+          xr.open_dataset(paths[0], engine='pynio'))
+    fora = xr.open_mfdataset(paths, concat_dim='time', engine='pynio')
     path = get_file(date, name=VIC)
-    vic  = xr.open_dataset(date, engine='pynio')
+    vic  = xr.open_dataset(path, engine='pynio')
     return MLDataset(xr.merge((vic, fora)))
 
 

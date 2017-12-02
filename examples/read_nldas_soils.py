@@ -130,18 +130,20 @@ def read_ascii_groups(ascii_groups=None):
     dsets = OrderedDict()
     to_concat_names = set()
     for name in (ascii_groups or sorted(COS_HYD_FILES)):
+        print('name', name, ascii_groups, COS_HYD_FILES)
         fs = COS_HYD_FILES[name]
         if name.startswith(('COS_', 'HYD_',)):
             names = SOIL_META['COS_HYD']
         elif name.startswith(('TXDM', 'STEX', 'pcnts')):
             names = SOIL_META['SOIL_LAYERS']
-            if name.startswith(('TXDM', 'pcnts')):
-                read_ascii_grid(fs, *grid, name=name, dsets=dsets)
-                continue
+            #if name.startswith(('TXDM', 'pcnts')):
+             #   read_ascii_grid(fs, *grid, name=name, dsets=dsets)
+              #  continue
         col_headers = [x[0] for x in names]
         exts = [_get_layer_num(x) for x in fs]
         fs = sorted(fs)
         for idx, f in enumerate(fs, 1):
+            print(fs, idx, f)
             df = read_one_ascii(f, col_headers)
             arrs = dataframe_to_rasters(df,
                                         col_attrs=dict(names),
@@ -149,6 +151,7 @@ def read_ascii_groups(ascii_groups=None):
                                         new_dim='layer',
                                         new_dim_values=[idx])
             for column, v in arrs.items():
+                print('column', column)
                 column = '{}_{}'.format(name, column)
                 dsets[(column, idx)] = v
                 to_concat_names.add(column)
