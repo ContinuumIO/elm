@@ -39,7 +39,6 @@ def concat_features(method):
     '''Decorator to run an estimator method on
     predictions of estimators'''
     def new_func(self, X, y=None, **kw):
-        nonlocal method
         X, y = MultiLayer._concat_features(self, X, y=y)
         func = getattr(self.estimator, method)
         if 'predict' in method:

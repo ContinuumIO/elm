@@ -1,5 +1,6 @@
 from __future__ import (absolute_import, division, print_function,)
 import dill
+
 class SerializeMixin:
     '''A mixin for serialization of estimators via dill'''
     def dumps(self, protocol=None, byref=None, fmode=None, recurse=None):

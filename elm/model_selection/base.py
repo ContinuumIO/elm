@@ -17,7 +17,6 @@ import inspect
 import numpy as np
 import pandas as pd
 from sklearn.cluster import MiniBatchKMeans
-from elm.config import import_callable
 
 from elm.model_selection.sorting import pareto_front
 

@@ -51,7 +51,7 @@ def tst_bad_config(bad_config):
     return ok_config
 
 def test_bad_train_config():
-
+    pytest.skip('Deprecated (temporarily) elm.config')
     bad_config = copy.deepcopy(DEFAULTS)
     name = tuple(bad_config['train'].keys())[0]
     for item in NOT_DICT + (None,):
@@ -82,6 +82,7 @@ def test_bad_train_config():
 
 
 def test_bad_pipeline():
+    pytest.skip('Deprecated (temporarily) elm.config')
     bad_config = copy.deepcopy(DEFAULTS)
     for item in NOT_LIST:
         bad_config['run'] = item

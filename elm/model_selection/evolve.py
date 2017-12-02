@@ -23,11 +23,9 @@ import numpy as np
 from sklearn.model_selection import ParameterGrid
 
 from xarray_filters.func_signatures import get_args_kwargs_defaults
-from elm.config import (import_callable,
-                        ElmConfigError,
+from elm.config import (ElmConfigError,
                         ConfigParser)
 
-logger = logging.getLogger(__name__)
 
 DEFAULT_PERCENTILES = (0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
 
@@ -468,8 +466,6 @@ def evo_init_func(evo_params):
     '''From ea parameters return the initial population'''
     toolbox = evo_params['toolbox']
     pop = toolbox.population_guess()
-    logger.info('Initialize population of {} solutions (param_grid: '
-                '{})'.format(len(pop), evo_params['param_grid_name']))
     return pop
 
 
@@ -665,7 +661,6 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
                 del ind1.fitness.values, ind2.fitness.values
 
         except ParamsSamplingError:
-            logger.info('Evolutionary algorithm exited early (cannot find parameter set that has not been tried yet)')
             break
         # Evaluate the individuals with an invalid fitness
 
@@ -684,16 +679,13 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
         break_outer = False
         for fitness in fitnesses:
             if eval_stop(fitness):
-                logger.info('Stopping: early_stop: {}'.format(evo_params['early_stop']))
                 break_outer = True
                 break
         if break_outer:
             break
         # Select the next generation population
         pop = toolbox.select(pop + offspring, len(pop))
-        #logger.info(logbook.stream)
     # Yield finally the record and logbook
     # The caller knows when not to .send again
     # based on the None in 2nd position below
-    logger.info('Evolutionary algorithm finished')
     yield (pop, None, param_history)
