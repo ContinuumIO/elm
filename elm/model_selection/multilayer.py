@@ -10,7 +10,7 @@ Documentation is needed on similarities / differences / limitations.
 
 TODO: docs / tests / docstrings
 '''
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 from functools import partial
 import numpy as np
 from sklearn.base import BaseEstimator
@@ -39,7 +39,6 @@ def concat_features(method):
     '''Decorator to run an estimator method on
     predictions of estimators'''
     def new_func(self, X, y=None, **kw):
-        nonlocal method
         X, y = MultiLayer._concat_features(self, X, y=y)
         func = getattr(self.estimator, method)
         if 'predict' in method:
