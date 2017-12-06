@@ -106,63 +106,16 @@ def slice_nldas_forcing_a(date, X_time_steps=144, feature_layers=None, **kw):
         file_time = date - datetime.timedelta(hours=hours_ago)
         dates.append(file_time)
     paths = [get_file(date, name=FORA) for date in dates]
-    print('paths', paths, [getattr(arr, 'dims', arr) for arr in paths],
-          xr.open_dataset(paths[0], engine='pynio'))
-    fora = xr.open_mfdataset(paths, concat_dim='time', engine='pynio')
+   # print('paths', paths, [getattr(arr, 'dims', arr) for arr in paths],
+          #xr.open_dataset(paths[0], engine='pynio'))
+    print('Paths', len(paths), paths[0])
+    fora = xr.open_mfdataset(paths[:1], concat_dim='time', engine='pynio')
     path = get_file(date, name=VIC)
     vic  = xr.open_dataset(path, engine='pynio')
-    return MLDataset(xr.merge((vic, fora)))
-
-
-def sslice_nldas_forcing_a(date, X_time_steps=144, feature_layers=None, **kw):
-    '''Sample the NLDAS Forcing A GriB file(s) for X_time_steps
-    and get a VIC data array from GriB for the current step to use
-    as Y data
-
-    Parameters:
-        date: Datetime object on an integer hour - VIC and FORA are
-              retrieved for this date
-        soil_features_kw: keywords passed to soil_features.soil_features
-        X_time_steps: Number of preceding hours to include in sample
-        **kw:  Ignored
-
-    Returns:
-        this_hour_data: xarray.Dataset
-    '''
-    year, month, day, hour = date.year, date.month, date.day, date.hour
-    print('date', date, feature_layers)
-    data_arrs = OrderedDict()
-    forecast_time = datetime.datetime(year, month, day, hour, 0, 0)
-    data_arrs = get_nldas_fora_X_and_vic_y(year, month,
-                                           day, hour,
-                                           VIC,
-                                           prefix=None,
-                                           data_arrs=data_arrs,
-                                           keep_layers=[SOIL_MOISTURE])
-    if feature_layers is None:
-        feature_layers = FEATURE_LAYERS
-    layers = [SOIL_MOISTURE] + feature_layers
-    time_arrs = OrderedDict(zip(layers, [[]] * len(layers)))
-    times = [date]
-    for hours_ago in range(X_time_steps):
-        file_time = forecast_time - datetime.timedelta(hours=hours_ago)
-        y, m = file_time.year, file_time.month
-        d, h = file_time.day, file_time.hour
-        time_arrs = get_nldas_fora_X_and_vic_y(y, m,
-                                               d, h,
-                                               FORA,
-                                               data_arrs=time_arrs,
-                                               keep_layers=layers)
-    data_arrs.update(time_arrs)
-    for layer, v in data_arrs.items():
-        if isinstance(v, list):
-            times = [date - datetime.timedelta(hours=hr)
-                     for hr in range(X_time_steps)]
-            data_arrs[layer] = xr.concat(v, dim=xr.DataArray(times))
-        else:
-            data_arrs[layer] = v
-    forcing_a = MLDataset(data_arrs)
-    return forcing_a
+    vic  = MLDataset([(SOIL_MOISTURE, vic[SOIL_MOISTURE])])
+    dset = MLDataset(xr.merge((vic, fora)))
+    print(dset)
+    return dset
 
 
 def get_y(y_field, X, y=None, sample_weight=None, **kw):
