@@ -1,0 +1,24 @@
+diff --git a/environment.yml b/environment.yml
+index 0d06475..7fa1f47 100644
+--- a/environment.yml
++++ b/environment.yml
+@@ -1,6 +1,4 @@
+ name: elm-env
+-channels:
+- - conda-forge # essential for rasterio on osx
+ dependencies:
+  - attrs
+  - bokeh
+@@ -17,8 +15,11 @@ dependencies:
+  - pandas
+  - pyproj
+  - pytest
+- - python
++ - python=2
+  - rasterio
++ - pynio
++ - lxml
++ - pycurl
+  - requests
+  - scikit-image
+  - scikit-learn
