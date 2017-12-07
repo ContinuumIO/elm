@@ -50,7 +50,7 @@ REDUCERS = [('mean', x) for x in TIME_OPERATIONS if x != 'mean']
 
 np.random.seed(42)  # TODO remove
 
-def log_trans_only_positive(X, y, **kw):
+def log_trans_only_positive(self, X, y=None, **kw):
     Xnew = OrderedDict()
     for j in range(X.features.shape[1]):
         minn = X.features[:, j].min().values
@@ -99,7 +99,7 @@ class AddSoilPhysicalChemical(Step):
         if hsh in SOIL_PHYS_CHEM:
             soils = SOIL_PHYS_CHEM[hsh]
         else:
-            soils = soil_features(**params)
+            soils = nldas_soil_features(**params)
             if len(SOIL_PHYS_CHEM) < 3:
                 SOIL_PHYS_CHEM[hsh] = soils
         return MLDataset(xr.merge(soils, X))
@@ -109,8 +109,9 @@ class AddSoilPhysicalChemical(Step):
 SCALERS = [preprocessing.StandardScaler()] + [preprocessing.MinMaxScaler()] * 10
 np.random.shuffle(SCALERS)
 param_distributions = {
-    'scaler__estimator': SCALERS[:2],
-    'scaler__trans_if': [log_trans_only_positive],
+    'log__kw_args': [dict(trans_if=log_trans_only_positive),
+                     dict(trans_if=None)],
+    'scaler__feature_range': [(x, x * 2) for x in np.linspace(0, 1, 10)],
     'pca__n_components': [6, 7, 8, 10, 14, 18],
     'pca__estimator': [decomposition.PCA(),
                       decomposition.FastICA(),],
@@ -119,9 +120,9 @@ param_distributions = {
     'time__hours_back': [1],#list(np.linspace(1, DEFAULT_MAX_STEPS, 12).astype(np.int32)),
     'time__last_bin_width': [1,],
     'time__num_bins': [4,],
-    'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'][:2],
+    'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'],
     'time__weight_type': ['linear', 'log'],
-    'time__reducers': REDUCERS[:2],
+    'time__reducers': REDUCERS,
     'soil_phys__add': [True, True, True, False],
 }
 
@@ -150,29 +151,6 @@ def dump(obj, tag, date):
     return getattr(obj, 'dump', getattr(obj, 'to_netcdf'))(fname)
 
 
-def main(date=START_DATE, cv=DEFAULT_CV):
-    '''
-    Beginning on START_DATE, step forward hourly, training on last
-    hour's NLDAS FORA dataset with transformers in a 2-layer hierarchical
-    ensemble, training on the last hour of data and making
-    out-of-training-sample predictions for the current hour.  Makes
-    a dill dump file for each hour run. Runs fro NSTEPS hour steps.
-    '''
-    estimators = []
-    for step in range(NSTEPS):
-        out = train_one_time_step(date,
-                                  cv=DEFAULT_CV,
-                                  estimators=estimators)
-        ea, X, second_layer, pred, pred_layer_2, pred_avg = out
-        scores = pd.DataFrame(ea.cv_results_)
-        scores.to_pickle(get_file_name('scores', date))
-        pred.to_netcdf(get_file_name('pred_layer_1', date))
-        pred_layer_2 = second_layer.predict(X)
-        pred_layer_2.to_netcdf(get_file_name('pred_layer_2', date))
-        pred_avg = (pred + pred_layer_2) / 2.
-        pred_avg.to_netcdf(get_file_name('pred_avg', date))
-    return ea, X, second_layer, pred, pred_layer_2, pred_avg
-
 class Sampler(Step):
     date = None
     def transform(self, dates, y=None, **kw):
@@ -193,7 +171,8 @@ pipe = Pipeline([
     ('flatten', Flatten()),
     ('soil_phys', AddSoilPhysicalChemical()),
     ('get_y', GetY(SOIL_MOISTURE)),
-    ('scaler', ChooseWithPreproc(trans_if=log_trans_only_positive)),
+    ('log', preprocessing.FunctionTransformer(func=log_trans_only_positive)),
+    ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
     ('pca', ChooseWithPreproc()),
     ('estimator', linear_model.LinearRegression(n_jobs=-1)),
 ])

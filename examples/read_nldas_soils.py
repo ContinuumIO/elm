@@ -163,7 +163,7 @@ def read_ascii_groups(ascii_groups=None):
 
 def read_nldas_soils(ascii_groups=None, bin_files=None):
     if ascii_groups == False:
-        dset_ascii = read_ascii_groups(sorted(COS_HYD_FILES)[:1])
+        dset_ascii = read_ascii_groups(sorted(COS_HYD_FILES))
     else:
         for a in (ascii_groups or []):
             if not a in COS_HYD_FILES:
