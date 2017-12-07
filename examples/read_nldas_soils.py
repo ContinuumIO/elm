@@ -87,9 +87,10 @@ def read_one_ascii(f, names=None):
 
 def _get_layer_num(fname):
     ext = os.path.basename(fname).split('.')
+    print(ext)
     if ext[-1].isdigit():
         return int(ext[-1])
-    return int(x[ext].split('_')[-1])
+    return int(ext[0].split('_')[-1])
 
 
 def read_binary_files(y, x, attrs=None, bin_files=None):
@@ -134,6 +135,10 @@ def read_ascii_groups(ascii_groups=None):
             names = SOIL_META['COS_HYD']
         elif name.startswith(('TXDM', 'STEX', 'pcnts')):
             names = SOIL_META['SOIL_LAYERS']
+            if name.startswith(('TXDM', 'pcnts')):
+                read_ascii_grid(fs, *grid, name=name, dsets=dsets)
+                continue
+        col_headers = [x[0] for x in names]
         col_headers = [x[0] for x in names]
         exts = [_get_layer_num(x) for x in fs]
         fs = sorted(fs)
@@ -178,7 +183,7 @@ def read_nldas_soils(ascii_groups=None, bin_files=None):
 
 def download_data(session=None):
     if session is None:
-        from nldas_soil_moisture_ml import SESSION as session
+        from read_nldas_forcing import SESSION as session
     base_url, basename = os.path.split(SOIL_URL)
     fname = os.path.join(SOIL_DIR, basename.replace('.php', '.html'))
     if not os.path.exists(fname):

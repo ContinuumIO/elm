@@ -26,6 +26,7 @@ from xarray_filters.pipeline import Generic, Step
 from read_nldas_forcing import (slice_nldas_forcing_a,
                                 GetY, FEATURE_LAYERS,
                                 SOIL_MOISTURE)
+from read_nldas_soils import download_data
 from nldas_soil_features import nldas_soil_features
 from ts_raster_steps import differencing_integrating
 from changing_structure import ChooseWithPreproc
