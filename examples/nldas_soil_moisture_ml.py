@@ -109,8 +109,8 @@ class AddSoilPhysicalChemical(Step):
 SCALERS = [preprocessing.StandardScaler()] + [preprocessing.MinMaxScaler()] * 10
 np.random.shuffle(SCALERS)
 param_distributions = {
-    'scaler___estimator': SCALERS[:2],
-    'scaler___trans': [log_trans_only_positive],
+    'scaler__estimator': SCALERS[:2],
+    'scaler__trans_if': [log_trans_only_positive],
     'pca__n_components': [6, 7, 8, 10, 14, 18],
     'pca__estimator': [decomposition.PCA(),
                       decomposition.FastICA(),],

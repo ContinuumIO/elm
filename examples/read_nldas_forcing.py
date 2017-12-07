@@ -116,8 +116,10 @@ def slice_nldas_forcing_a(date, X_time_steps=144, feature_layers=None, **kw):
 def get_y(y_field, X, y=None, sample_weight=None, **kw):
     '''Get the VIC Y column out of a flattened Dataset
     of FORA and VIC DataArrays'''
-    y = X.features[:, X.features.layer == y_field].values
-    features = X.features[:, X.features.layer != y_field]
+    print('X', X.data_vars.keys(), X.features.layer)
+    y = X.features.sel(layer=y_field)
+    features = X.features.sel(layer=[x for x in X.features.layer.values
+                                     if x != y_field])
     X2 = MLDataset(OrderedDict([('features', features)]),
                    attrs=X.attrs)
     return X2, y
@@ -126,5 +128,6 @@ def get_y(y_field, X, y=None, sample_weight=None, **kw):
 class GetY(Step):
     column = SOIL_MOISTURE
     def transform(self, X, y=None, **kw):
+        X, y = X
         return get_y(self.column, X, **self.get_params())
 
