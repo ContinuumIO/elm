@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 import numpy as np
+import xarray as xr
 
 from read_nldas_soils import SOIL_META, read_nldas_soils
 
@@ -7,7 +8,7 @@ _endswith = lambda x, end: x.endswith('_{}'.format(end))
 
 def _avg_cos_hyd_params(soils_dset, attrs=None):
     from ts_raster_steps import reduce_series
-    attrs = attrs or soils_dset.attrs.copy(deep=True)
+    attrs = attrs or soils_dset.attrs.copy()
     skip = ('i', 'j', 'x', 'y', 'unknown')
     keep = [x[0] for x in SOIL_META['COS_HYD']
             if x[0] not in skip]
@@ -20,14 +21,17 @@ def _avg_cos_hyd_params(soils_dset, attrs=None):
                             tuple(soils_dset[k] for k in keys))
         arrs[array_label] = arr
     for array_label, arr in soils_dset.data_vars.items():
-        if not any(_endswith(array_label, keep2) in x for x in keep):
-            arrs[array_label] = arr
+        if not any(_endswith(array_label, x) for x in keep):
+            if 'layer' in arr.dims:
+                arrs[array_label] = arr.mean(dim='layer')
+            else:
+                arrs[array_label] = arr
     return xr.Dataset(arrs, attrs=attrs)
 
 
-def flatten_layers(soils_dset, attrs=None):
+def flatten_layers(soils_dset, attrs=None, to_raster=True):
     arrs = {}
-    attrs = attrs or soils_dset.attrs.copy(deep=True)
+    attrs = attrs or soils_dset.attrs.copy()
     for k, v in soils_dset.data_vars.items():
         if 'layer' in v.dims and to_raster:
             which_dim = v.dims.index('layer')
@@ -50,8 +54,9 @@ def nldas_soil_features(soils_dset=None,
         soils_dset = read_nldas_soils(**kw)
     if avg_cos_hyd_params:
         soils_dset = _avg_cos_hyd_params(soils_dset)
+    print('soils_dset', soils_dset)
     if to_raster:
-        soils_dset = flatten_layers(soils_dset)
+        soils_dset = flatten_layers(soils_dset, to_raster=to_raster)
     meta = dict(to_raster=to_raster, avg_cos_hyd_params=avg_cos_hyd_params)
     soils_dset.attrs['soil_features_kw'] = meta
     return soils_dset

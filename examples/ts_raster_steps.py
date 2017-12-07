@@ -8,6 +8,8 @@ def reduce_series(reducer, weights, arrs):
     arrs = (arr * w for arr, w in zip(arrs, weights))
     arr = xr.concat(arrs)
     arr = getattr(arr, reducer)(axis=0)
+    if 'layer' in arr.dims:
+        arr = arr.mean(dim='layer')
     dset = MLDataset(OrderedDict([('features', arr)]))
     return dset
 

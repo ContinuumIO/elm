@@ -87,7 +87,6 @@ def read_one_ascii(f, names=None):
 
 def _get_layer_num(fname):
     ext = os.path.basename(fname).split('.')
-    print(ext)
     if ext[-1].isdigit():
         return int(ext[-1])
     return int(ext[0].split('_')[-1])

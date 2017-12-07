@@ -89,7 +89,7 @@ class AddSoilPhysicalChemical(Step):
     add = True
     soils_dset = None
     to_raster = True
-    avg_cos_hyd_params = True
+    avg_cos_hyd_params = False
 
     def transform(self, X, y=None, **kw):
         global SOIL_PHYS_CHEM
