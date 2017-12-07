@@ -82,7 +82,6 @@ def get_file(date, name, **kw):
     '''
     year, month, day, hour = date.year, date.month, date.day, date.hour
     url, rel = make_url(year, month, day, hour, name, **kw)
-    print('url', url, rel)
     path, basename = os.path.split(rel)
     if not os.path.exists(rel):
         if not os.path.exists(path):
@@ -106,22 +105,17 @@ def slice_nldas_forcing_a(date, X_time_steps=144, feature_layers=None, **kw):
         file_time = date - datetime.timedelta(hours=hours_ago)
         dates.append(file_time)
     paths = [get_file(date, name=FORA) for date in dates]
-   # print('paths', paths, [getattr(arr, 'dims', arr) for arr in paths],
-          #xr.open_dataset(paths[0], engine='pynio'))
-    print('Paths', len(paths), paths[0])
     fora = xr.open_mfdataset(paths[:1], concat_dim='time', engine='pynio')
     path = get_file(date, name=VIC)
     vic  = xr.open_dataset(path, engine='pynio')
-    vic  = MLDataset([(SOIL_MOISTURE, vic[SOIL_MOISTURE])])
+    vic  = MLDataset(OrderedDict([(SOIL_MOISTURE, vic[SOIL_MOISTURE])]))
     dset = MLDataset(xr.merge((vic, fora)))
-    print(dset)
     return dset
 
 
 def get_y(y_field, X, y=None, sample_weight=None, **kw):
     '''Get the VIC Y column out of a flattened Dataset
     of FORA and VIC DataArrays'''
-    assert X.has_features()
     y = X.features[:, X.features.layer == y_field].values
     features = X.features[:, X.features.layer != y_field]
     X2 = MLDataset(OrderedDict([('features', features)]),
@@ -131,6 +125,6 @@ def get_y(y_field, X, y=None, sample_weight=None, **kw):
 
 class GetY(Step):
     column = SOIL_MOISTURE
-    def transform(self, X, **kw):
-        return get_y(X, **self.get_params())
+    def transform(self, X, y=None, **kw):
+        return get_y(self.column, X, **self.get_params())
 

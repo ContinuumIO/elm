@@ -1,5 +1,6 @@
 from __future__ import print_function, division
 import dask
+dask.set_options(get=dask.local.get_sync)
 
 from collections import OrderedDict
 import datetime
@@ -28,6 +29,7 @@ from read_nldas_forcing import (slice_nldas_forcing_a,
 from nldas_soil_features import nldas_soil_features
 from ts_raster_steps import differencing_integrating
 from changing_structure import ChooseWithPreproc
+import xarray as xr
 
 NGEN = 3
 NSTEPS = 1
@@ -59,13 +61,11 @@ def log_trans_only_positive(X, y, **kw):
 
 
 class Flatten(Step):
+
     def transform(self, X, y=None, **kw):
         return X.to_features(), y
 
-
-class DropNaRows(Step):
-    def transform(self, X, y=None, **kw):
-        return X, y
+    fit_transform = transform
 
 
 class Differencing(Step):
@@ -73,12 +73,14 @@ class Differencing(Step):
     first_bin_width = 12
     last_bin_width = 1
     num_bins = 12
-    bin_shrink = 'linear'
+    weight_type = 'linear'
     reducers = 'mean'
     layers = None
 
     def transform(self, X, y=None, **kw):
         return differencing_integrating(X, **self.get_params())
+
+    fit_transform = transform
 
 
 SOIL_PHYS_CHEM = {}
@@ -87,11 +89,12 @@ class AddSoilPhysicalChemical(Step):
     soils_dset = None
     to_raster = True
     avg_cos_hyd_params = True
-    def transform(self, X, y, **kw):
+
+    def transform(self, X, y=None, **kw):
         global SOIL_PHYS_CHEM
         params = self.get_params().copy()
         if not params.pop('add'):
-            return X, y
+            return X
         hsh = hash(repr(params))
         if hsh in SOIL_PHYS_CHEM:
             soils = SOIL_PHYS_CHEM[hsh]
@@ -100,6 +103,8 @@ class AddSoilPhysicalChemical(Step):
             if len(SOIL_PHYS_CHEM) < 3:
                 SOIL_PHYS_CHEM[hsh] = soils
         return MLDataset(xr.merge(soils, X))
+
+    fit_transform = transform
 
 SCALERS = [preprocessing.StandardScaler()] + [preprocessing.MinMaxScaler()] * 10
 np.random.shuffle(SCALERS)
@@ -115,7 +120,7 @@ param_distributions = {
     'time__last_bin_width': [1,],
     'time__num_bins': [4,],
     'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'][:2],
-    'time__bin_shrink': ['linear', 'log'],
+    'time__weight_type': ['linear', 'log'],
     'time__reducers': REDUCERS[:2],
     'soil_phys__add': [True, True, True, False],
 }
@@ -171,12 +176,11 @@ def main(date=START_DATE, cv=DEFAULT_CV):
 class Sampler(Step):
     date = None
     def transform(self, dates, y=None, **kw):
-        print('transform', dates, y, kw)
         dsets = [slice_nldas_forcing_a(date, X_time_steps=max_time_steps)
                  for date in dates[:1]]
         feats = [dset.to_features().features for dset in dsets]
         return MLDataset(OrderedDict([('features', xr.concat(feats))]))
-
+    fit_transform = transform
 
 
 max_time_steps = DEFAULT_MAX_STEPS // 2
@@ -188,7 +192,6 @@ pipe = Pipeline([
     ('time', Differencing(layers=FEATURE_LAYERS)),
     ('flatten', Flatten()),
     ('soil_phys', AddSoilPhysicalChemical()),
-    ('drop_null', DropNaRows()),
     ('get_y', GetY(SOIL_MOISTURE)),
     ('scaler', ChooseWithPreproc(trans_if=log_trans_only_positive)),
     ('pca', ChooseWithPreproc()),
@@ -202,10 +205,11 @@ ea = EaSearchCV(pipe,
                 ngen=NGEN,
                 model_selection=model_selection,
                 scheduler=None,
+                refit=True,
                 refit_Xy=Sampler().fit_transform([START_DATE]),
                 cv=KFold(3))
-print(ea.get_params())
-ea.fit(dates)
+if __name__ == "__main__":
+    ea.fit(dates)
 '''
 date += ONE_HR
 current_file = get_file_name('fit_model', date)

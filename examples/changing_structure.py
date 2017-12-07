@@ -14,18 +14,18 @@ class ChooseWithPreproc(Step):
 
     def transform(self, X, y=None, **kw):
         if not self.run:
-            return X
+            return X,y
         X = self._pre_trans(X)
         return self.estimator.transform(X, y=y, **kw)
 
     def fit_transform(self, X, y=None, **kw):
         if not self.run:
-            return X
+            return X,y
         X = self._pre_trans(X)
-        return self.estimator.fit_transform(X, y=y, **kw)
+        return self.estimator.fit_transform(X, y=y, **kw), y
 
     def fit(self, X, y=None, **kw):
         if not self.run:
-            return X
+            return X,y
         X = self._pre_trans(X)
-        return self.estimator.fit(X, y=y, **kw)
+        return self.estimator.fit(X, y=y, **kw), y
