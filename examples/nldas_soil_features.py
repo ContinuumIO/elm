@@ -22,24 +22,24 @@ def _avg_cos_hyd_params(soils_dset, attrs=None):
         arrs[array_label] = arr
     for array_label, arr in soils_dset.data_vars.items():
         if not any(_endswith(array_label, x) for x in keep):
-            if 'layer' in arr.dims:
-                arrs[array_label] = arr.mean(dim='layer')
+            if 'horizon' in arr.dims:
+                arrs[array_label] = arr.mean(dim='horizon')
             else:
                 arrs[array_label] = arr
     return xr.Dataset(arrs, attrs=attrs)
 
 
-def flatten_layers(soils_dset, attrs=None, to_raster=True):
+def flatten_horizons(soils_dset, attrs=None):
     arrs = {}
     attrs = attrs or soils_dset.attrs.copy()
     for k, v in soils_dset.data_vars.items():
-        if 'layer' in v.dims and to_raster:
-            which_dim = v.dims.index('layer')
-            for idx, layer in enumerate(v.layer):
-                slc = [slice(None)] * 3
-                array_label = '{}_{}'.format(k, layer)
+        if 'horizon' in v.dims:
+            which_dim = v.dims.index('horizon')
+            for idx, horizon in enumerate(v.horizon):
+                slc = (slice(None),) * 3
+                array_label = '{}_{}'.format(k, horizon)
                 arrs[array_label] = v[slc]
-                arrs[array_label].attrs['layer'] = layer
+                arrs[array_label].attrs['horizon'] = horizon
         else:
             arrs[k] = v
     return xr.Dataset(arrs, attrs=attrs)
@@ -47,16 +47,15 @@ def flatten_layers(soils_dset, attrs=None, to_raster=True):
 
 def nldas_soil_features(soils_dset=None,
                         to_raster=True,
-                        avg_cos_hyd_params=True,
+                        avg_cos_hyd_params=False,
                         **kw):
 
     if soils_dset is None:
         soils_dset = read_nldas_soils(**kw)
     if avg_cos_hyd_params:
         soils_dset = _avg_cos_hyd_params(soils_dset)
-    print('soils_dset', soils_dset)
     if to_raster:
-        soils_dset = flatten_layers(soils_dset, to_raster=to_raster)
+        soils_dset = flatten_horizons(soils_dset)
     meta = dict(to_raster=to_raster, avg_cos_hyd_params=avg_cos_hyd_params)
     soils_dset.attrs['soil_features_kw'] = meta
     return soils_dset

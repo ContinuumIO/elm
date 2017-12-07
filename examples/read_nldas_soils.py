@@ -52,7 +52,7 @@ def dataframe_to_rasters(df,
     i_pts, j_pts = np.max(i), np.max(j)
     coords = dict(y=np.unique(y), x=np.unique(x))
     coords[new_dim] = new_dim_values
-    dims = ('y', 'x', 'layer',)
+    dims = ('y', 'x', 'horizon',)
     for col in df.columns:
         if col in ('i', 'j', 'x', 'y',):
             continue
@@ -70,8 +70,8 @@ def dataframe_to_rasters(df,
 def read_ascii_grid(filenames, y, x, name, dsets=None):
     dsets = dsets or OrderedDict()
     template = np.empty((y.size, x.size, len(filenames)))
-    coords = dict(y=y, x=x, layer=list(range(1, 1 + len(filenames))))
-    dims = ('y', 'x', 'layer')
+    coords = dict(y=y, x=x, horizon=list(range(1, 1 + len(filenames))))
+    dims = ('y', 'x', 'horizon')
     attrs = dict(filenames=filenames)
     for idx, f in enumerate(filenames):
         template[:, :, idx] = np.loadtxt(f)
@@ -85,7 +85,7 @@ def read_one_ascii(f, names=None):
     return df
 
 
-def _get_layer_num(fname):
+def _get_horizon_num(fname):
     ext = os.path.basename(fname).split('.')
     if ext[-1].isdigit():
         return int(ext[-1])
@@ -139,14 +139,14 @@ def read_ascii_groups(ascii_groups=None):
                 continue
         col_headers = [x[0] for x in names]
         col_headers = [x[0] for x in names]
-        exts = [_get_layer_num(x) for x in fs]
+        exts = [_get_horizon_num(x) for x in fs]
         fs = sorted(fs)
         for idx, f in enumerate(fs, 1):
             df = read_one_ascii(f, col_headers)
             arrs = dataframe_to_rasters(df,
                                         col_attrs=dict(names),
                                         drop_cols=['i', 'j'],
-                                        new_dim='layer',
+                                        new_dim='horizon',
                                         new_dim_values=[idx])
             for column, v in arrs.items():
                 column = '{}_{}'.format(name, column)
@@ -156,7 +156,7 @@ def read_ascii_groups(ascii_groups=None):
                     grid = v.y, v.x
     for name in to_concat_names:
         ks = [k for k in sorted(dsets) if k[0] == name]
-        arr = xr.concat(tuple(dsets[k] for k in ks), dim='layer')
+        arr = xr.concat(tuple(dsets[k] for k in ks), dim='horizon')
         dsets[name] = arr
         for k in ks:
             dsets.pop(k)
@@ -173,10 +173,12 @@ def read_nldas_soils(ascii_groups=None, bin_files=None):
             if not a in COS_HYD_FILES:
                 raise ValueErrror('ascii_groups contains {} not in {}'.format(a, set(COS_HYD_FILES)))
         dset_ascii = read_ascii_groups(ascii_groups)
+    print('dset_ascii', dset_ascii)
     example = tuple(dset_ascii.data_vars.keys())[0]
     example = dset_ascii[example]
     y, x, dims = example.y, example.x, example.dims
     dset_bin = read_binary_files(y, x, bin_files=bin_files)
+    print('dset_bin', dset_bin)
     return xr.merge((dset_bin, dset_ascii))
 
 

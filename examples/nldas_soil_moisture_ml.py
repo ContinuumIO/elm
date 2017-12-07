@@ -26,7 +26,7 @@ from xarray_filters.pipeline import Generic, Step
 from read_nldas_forcing import (slice_nldas_forcing_a,
                                 GetY, FEATURE_LAYERS,
                                 SOIL_MOISTURE)
-from read_nldas_soils import download_data
+from read_nldas_soils import download_data, read_nldas_soils
 from nldas_soil_features import nldas_soil_features
 from ts_raster_steps import differencing_integrating
 from changing_structure import ChooseWithPreproc
@@ -84,6 +84,7 @@ class Differencing(Step):
     fit_transform = transform
 
 
+
 SOIL_PHYS_CHEM = {}
 class AddSoilPhysicalChemical(Step):
     add = True
@@ -101,9 +102,10 @@ class AddSoilPhysicalChemical(Step):
             soils = SOIL_PHYS_CHEM[hsh]
         else:
             soils = nldas_soil_features(**params)
+            soils = MLDataset(soils).to_features()
             if len(SOIL_PHYS_CHEM) < 3:
                 SOIL_PHYS_CHEM[hsh] = soils
-        return MLDataset(xr.merge(soils, X))
+        return X[0].concat_ml_features()
 
     fit_transform = transform
 
@@ -167,28 +169,30 @@ date = START_DATE
 dates = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(max_time_steps)])
 
-pipe = Pipeline([
-    ('time', Differencing(layers=FEATURE_LAYERS)),
-    ('flatten', Flatten()),
-    ('soil_phys', AddSoilPhysicalChemical()),
-    ('get_y', GetY(SOIL_MOISTURE)),
-    ('log', preprocessing.FunctionTransformer(func=log_trans_only_positive)),
-    ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
-    ('pca', ChooseWithPreproc()),
-    ('estimator', linear_model.LinearRegression(n_jobs=-1)),
-])
-
-ea = EaSearchCV(pipe,
-                n_iter=10,
-                param_distributions=param_distributions,
-                sampler=Sampler(),
-                ngen=NGEN,
-                model_selection=model_selection,
-                scheduler=None,
-                refit=True,
-                refit_Xy=Sampler().fit_transform([START_DATE]),
-                cv=KFold(3))
 if __name__ == "__main__":
+
+    pipe = Pipeline([
+        ('time', Differencing(layers=FEATURE_LAYERS)),
+        ('flatten', Flatten()),
+        ('soil_phys', AddSoilPhysicalChemical(soils_dset=read_nldas_soils())),
+        ('get_y', GetY(SOIL_MOISTURE)),
+        ('log', preprocessing.FunctionTransformer(func=log_trans_only_positive)),
+        ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
+        ('pca', ChooseWithPreproc()),
+        ('estimator', linear_model.LinearRegression(n_jobs=-1)),
+    ])
+
+    ea = EaSearchCV(pipe,
+                    n_iter=10,
+                    param_distributions=param_distributions,
+                    sampler=Sampler(),
+                    ngen=NGEN,
+                    model_selection=model_selection,
+                    scheduler=None,
+                    refit=True,
+                    refit_Xy=Sampler().fit_transform([START_DATE]),
+                    cv=KFold(3))
+    download_data()
     ea.fit(dates)
 '''
 date += ONE_HR
