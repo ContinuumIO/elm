@@ -99,7 +99,6 @@ def read_binary_files(y, x, attrs=None, bin_files=None):
     attrs = attrs or {}
     coords = dict(y=y, x=x)
     for f in bin_files:
-        print('Reading', f)
         basename = os.path.basename(f)
         name_token = basename.split('_')[1].split('predom')[0]
         dtype = BIN_FILE_META.get(basename)
@@ -130,20 +129,15 @@ def read_ascii_groups(ascii_groups=None):
     dsets = OrderedDict()
     to_concat_names = set()
     for name in (ascii_groups or sorted(COS_HYD_FILES)):
-        print('name', name, ascii_groups, COS_HYD_FILES)
         fs = COS_HYD_FILES[name]
         if name.startswith(('COS_', 'HYD_',)):
             names = SOIL_META['COS_HYD']
         elif name.startswith(('TXDM', 'STEX', 'pcnts')):
             names = SOIL_META['SOIL_LAYERS']
-            #if name.startswith(('TXDM', 'pcnts')):
-             #   read_ascii_grid(fs, *grid, name=name, dsets=dsets)
-              #  continue
         col_headers = [x[0] for x in names]
         exts = [_get_layer_num(x) for x in fs]
         fs = sorted(fs)
         for idx, f in enumerate(fs, 1):
-            print(fs, idx, f)
             df = read_one_ascii(f, col_headers)
             arrs = dataframe_to_rasters(df,
                                         col_attrs=dict(names),
@@ -151,7 +145,6 @@ def read_ascii_groups(ascii_groups=None):
                                         new_dim='layer',
                                         new_dim_values=[idx])
             for column, v in arrs.items():
-                print('column', column)
                 column = '{}_{}'.format(name, column)
                 dsets[(column, idx)] = v
                 to_concat_names.add(column)
@@ -186,7 +179,6 @@ def read_nldas_soils(ascii_groups=None, bin_files=None):
 def download_data(session=None):
     if session is None:
         from nldas_soil_moisture_ml import SESSION as session
-    print('Read:', SOIL_URL)
     base_url, basename = os.path.split(SOIL_URL)
     fname = os.path.join(SOIL_DIR, basename.replace('.php', '.html'))
     if not os.path.exists(fname):
@@ -208,7 +200,6 @@ def download_data(session=None):
         if not os.path.exists(fname):
             if not os.path.exists(os.path.dirname(fname)):
                 os.makedirs(os.path.dirname(fname))
-            print('Downloading:', url, 'to:', fname)
             content = session.get(url).content
             with open(fname, 'wb') as f:
                 f.write(content)

@@ -72,11 +72,11 @@ class SklearnMixin:
         X, y, row_idx = self._as_numpy_arrs(X, y=y)
         if row_idx is not None:
             self._temp_row_idx = row_idx
-        kw.update(dict(self=self, X=X))
+        kw.update(dict(X=X))
         if y is not None:
             kw['y'] = y
         kw = filter_args_kwargs(func, **kw)
-        Xt = func(**kw)
+        Xt = func(self, **kw)
         if do_split:
             Xt, y = _split_transformer_result(Xt, y)
             return Xt, y

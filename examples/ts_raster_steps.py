@@ -29,7 +29,6 @@ def differencing_integrating(X,
                              last_bin_width=1,
                              hours_back=144,
                              num_bins=12,
-                             bin_shrink='linear',
                              time_operation=None,
                              weight_type='uniform',
                              reducers=None):
@@ -38,7 +37,7 @@ def differencing_integrating(X,
         reducers = ('mean',)
     if not isinstance(reducers, (tuple, list)):
         reducers = (reducers,)
-    if bin_shrink == 'linear':
+    if weight_type == 'linear':
         func = np.linspace
         end = hours_back
         start = last_bin_width
@@ -49,8 +48,7 @@ def differencing_integrating(X,
     bins = func(start, end, num_bins)
     bins = np.unique(np.round(bins).astype(np.int32))
     weights = get_weights_for_bins(end, bins.size, weight_type)
-    print('bw', bins, weights)
-    X = X.copy(deep=True)
+    X = X.copy()
     new_X = OrderedDict(X.data_vars)
     running_fields = []
     running_diffs = []

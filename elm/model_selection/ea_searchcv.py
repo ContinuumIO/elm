@@ -159,9 +159,23 @@ class EaSearchCV(RandomizedSearchCV, SerializeMixin):
                  model_selection=None,
                  model_selection_kwargs=None,
                  select_with_test=True):
-        filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
-        self.sampler = sampler
+
+        RandomizedSearchCV.__init__(self,
+                   estimator,
+                   param_distributions,
+                   n_iter=n_iter,
+                   random_state=random_state,
+                   scoring=scoring,
+                   iid=iid,
+                   refit=refit,
+                   cv=cv,
+                   error_score='raise',
+                   return_train_score=return_train_score,
+                   scheduler=scheduler,
+                   n_jobs=n_jobs,
+                   cache_cv=cache_cv)
         self.refit_Xy = refit_Xy
+        self.sampler = sampler
         self.ngen = ngen
         self.select_with_test = select_with_test
         self.model_selection = model_selection
