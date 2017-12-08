@@ -7,6 +7,7 @@ import os
 import numpy as np
 import pandas as pd
 import xarray as xr
+from xarray_filters import MLDataset
 import yaml
 
 SOIL_URL = 'https://ldas.gsfc.nasa.gov/nldas/NLDASsoils.php'
@@ -122,7 +123,7 @@ def read_binary_files(y, x, attrs=None, bin_files=None):
             att.update(attrs.copy())
             arrs[name_token] = xr.DataArray(arr, coords=coords,
                                             dims=dims, attrs=att)
-    return xr.Dataset(arrs)
+    return MLDataset(arrs)
 
 
 def read_ascii_groups(ascii_groups=None):
@@ -162,7 +163,7 @@ def read_ascii_groups(ascii_groups=None):
             dsets.pop(k)
     for v in dsets.values():
         v.values[v.values == NO_DATA] = np.NaN
-    return xr.Dataset(dsets)
+    return MLDataset(dsets)
 
 
 def read_nldas_soils(ascii_groups=None, bin_files=None):
@@ -173,13 +174,11 @@ def read_nldas_soils(ascii_groups=None, bin_files=None):
             if not a in COS_HYD_FILES:
                 raise ValueErrror('ascii_groups contains {} not in {}'.format(a, set(COS_HYD_FILES)))
         dset_ascii = read_ascii_groups(ascii_groups)
-    print('dset_ascii', dset_ascii)
     example = tuple(dset_ascii.data_vars.keys())[0]
     example = dset_ascii[example]
     y, x, dims = example.y, example.x, example.dims
     dset_bin = read_binary_files(y, x, bin_files=bin_files)
-    print('dset_bin', dset_bin)
-    return xr.merge((dset_bin, dset_ascii))
+    return MLDataset(xr.merge((dset_bin, dset_ascii)))
 
 
 def download_data(session=None):

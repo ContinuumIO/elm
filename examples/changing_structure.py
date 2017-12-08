@@ -3,13 +3,13 @@ from xarray_filters.pipeline import Generic, Step
 class ChooseWithPreproc(Step):
 
     estimator = None
-    trans_if = None
+    use_transform = None
     run = True
 
     def _pre_trans(self, X):
         X, y = X
-        if self.trans_if:
-            return self.trans_if(X, y=y)
+        if self.use_transform:
+            return self.use_transform(X, y=y)
         return X
 
     def transform(self, X, y=None, **kw):

@@ -40,6 +40,9 @@ DEFAULT_MAX_STEPS = 12
 
 START_DATE = datetime.datetime(2000, 1, 1, 1, 0, 0)
 
+print('nldas_soil_features')
+SOIL_PHYS_CHEM = nldas_soil_features().to_features()
+print('post_features')
 ONE_HR = datetime.timedelta(hours=1)
 TIME_OPERATIONS = ('mean',
                    'std',
@@ -51,20 +54,28 @@ REDUCERS = [('mean', x) for x in TIME_OPERATIONS if x != 'mean']
 
 np.random.seed(42)  # TODO remove
 
-def log_trans_only_positive(self, X, y=None, **kw):
-    Xnew = OrderedDict()
-    for j in range(X.features.shape[1]):
-        minn = X.features[:, j].min().values
-        if minn <= 0:
-            continue
-        X.features.values[:, j] = np.log10(X.features.values[:, j])
-    return X, y
+class LogOnlyPositive(Step):
+    use_transform = False
+    def transform(self, X, y=None, **kw):
+        print('LOP,', X, y)
+        X, y = X
+        assert y is not None
+        if not self.get_params()['use_transform']:
+            return X, y
+        for j in range(X.features.shape[1]):
+            minn = X.features[:, j].min().values
+            if minn <= 0:
+                continue
+            X.features.values[:, j] = np.log10(X.features.values[:, j])
+        return X, y
+    fit_transform = transform
 
 
 class Flatten(Step):
 
     def transform(self, X, y=None, **kw):
-        return X.to_features(), y
+        feat = X.to_features().features.dropna(dim='space', how='any')
+        return MLDataset(OrderedDict([('features', feat)]), attrs=X.attrs)
 
     fit_transform = transform
 
@@ -88,36 +99,22 @@ class Differencing(Step):
 SOIL_PHYS_CHEM = {}
 class AddSoilPhysicalChemical(Step):
     add = True
-    soils_dset = None
     to_raster = True
     avg_cos_hyd_params = False
 
     def transform(self, X, y=None, **kw):
         global SOIL_PHYS_CHEM
-        params = self.get_params().copy()
-        if not params.pop('add'):
-            return X
-        hsh = hash(repr(params))
-        if hsh in SOIL_PHYS_CHEM:
-            soils = SOIL_PHYS_CHEM[hsh]
-        else:
-            soils = nldas_soil_features(**params)
-            soils = MLDataset(soils).to_features()
-            if len(SOIL_PHYS_CHEM) < 3:
-                SOIL_PHYS_CHEM[hsh] = soils
-        return X[0].concat_ml_features()
+        soils = SOIL_PHYS_CHEM.copy()
+        return X.concat_ml_features()
 
     fit_transform = transform
 
-SCALERS = [preprocessing.StandardScaler()] + [preprocessing.MinMaxScaler()] * 10
-np.random.shuffle(SCALERS)
 param_distributions = {
-    'log__kw_args': [dict(trans_if=log_trans_only_positive),
-                     dict(trans_if=None)],
+    'log__use_transform': [True, False],
     'scaler__feature_range': [(x, x * 2) for x in np.linspace(0, 1, 10)],
-    'pca__n_components': [6, 7, 8, 10, 14, 18],
-    'pca__estimator': [decomposition.PCA(),
-                      decomposition.FastICA(),],
+    'pca__estimator__n_components': [6, 7, 8, 10, 14, 18],
+    'pca__estimator': [decomposition.PCA(),],
+                       #decomposition.FastICA(),],
                       #decomposition.KernelPCA()],
     'pca__run': [True, True, False],
     'time__hours_back': [1],#list(np.linspace(1, DEFAULT_MAX_STEPS, 12).astype(np.int32)),
@@ -141,7 +138,7 @@ model_selection = {
     'ngen':  2,
     'mu':    16,
     'k':     8, # TODO ensure that k is not ignored - make elm issue if it is
-    'early_stop': None
+    'early_stop': None,
 }
 
 def get_file_name(tag, date):
@@ -157,10 +154,11 @@ def dump(obj, tag, date):
 class Sampler(Step):
     date = None
     def transform(self, dates, y=None, **kw):
+        print('Sampler Called')
         dsets = [slice_nldas_forcing_a(date, X_time_steps=max_time_steps)
                  for date in dates[:1]]
         feats = [dset.to_features().features for dset in dsets]
-        return MLDataset(OrderedDict([('features', xr.concat(feats))]))
+        return MLDataset(OrderedDict([('features', xr.concat(feats, dim=feats[0].dims[1]))]))
     fit_transform = transform
 
 
@@ -169,31 +167,50 @@ date = START_DATE
 dates = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(max_time_steps)])
 
-if __name__ == "__main__":
+diff = Differencing(layers=FEATURE_LAYERS)
+flat = Flatten()
+soil_phys = AddSoilPhysicalChemical()
+get_y = GetY(SOIL_MOISTURE)
+pipe = Pipeline([
+    ('time', diff),
+    ('flatten', flat),
+    ('soil_phys', soil_phys),
+    ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
+    ('get_y', get_y),
+    ('log', LogOnlyPositive(use_transform=True)),
+    ('pca', decomposition.PCA()),
+    ('estimator', linear_model.LinearRegression(n_jobs=-1)),
+])
 
-    pipe = Pipeline([
-        ('time', Differencing(layers=FEATURE_LAYERS)),
-        ('flatten', Flatten()),
-        ('soil_phys', AddSoilPhysicalChemical(soils_dset=read_nldas_soils())),
-        ('get_y', GetY(SOIL_MOISTURE)),
-        ('log', preprocessing.FunctionTransformer(func=log_trans_only_positive)),
-        ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
-        ('pca', ChooseWithPreproc()),
-        ('estimator', linear_model.LinearRegression(n_jobs=-1)),
-    ])
+sampler = Sampler()
+ea = EaSearchCV(pipe,
+                n_iter=4,
+                param_distributions=param_distributions,
+                sampler=sampler,
+                ngen=2,
+                model_selection=model_selection,
+                scheduler=None,
+                refit=True,
+                refit_Xy=sampler.fit_transform([START_DATE]),
+                cv=KFold(3))
 
-    ea = EaSearchCV(pipe,
-                    n_iter=10,
-                    param_distributions=param_distributions,
-                    sampler=Sampler(),
-                    ngen=NGEN,
-                    model_selection=model_selection,
-                    scheduler=None,
-                    refit=True,
-                    refit_Xy=Sampler().fit_transform([START_DATE]),
-                    cv=KFold(3))
+
+
+def main():
+    print('Download')
     download_data()
+    print('Downloaded')
+    print('Fit')
     ea.fit(dates)
+    print('Done')
+    return ea
+
+
+if __name__ == "__main__":
+    import warnings
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore')
+        ea = main()
 '''
 date += ONE_HR
 current_file = get_file_name('fit_model', date)

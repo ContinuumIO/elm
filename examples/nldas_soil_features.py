@@ -1,8 +1,10 @@
 from __future__ import print_function, division
+from collections import OrderedDict
 import numpy as np
 import xarray as xr
 
 from read_nldas_soils import SOIL_META, read_nldas_soils
+from xarray_filters import MLDataset
 
 _endswith = lambda x, end: x.endswith('_{}'.format(end))
 
@@ -30,19 +32,14 @@ def _avg_cos_hyd_params(soils_dset, attrs=None):
 
 
 def flatten_horizons(soils_dset, attrs=None):
-    arrs = {}
+    arrs = OrderedDict()
     attrs = attrs or soils_dset.attrs.copy()
     for k, v in soils_dset.data_vars.items():
         if 'horizon' in v.dims:
-            which_dim = v.dims.index('horizon')
-            for idx, horizon in enumerate(v.horizon):
-                slc = (slice(None),) * 3
-                array_label = '{}_{}'.format(k, horizon)
-                arrs[array_label] = v[slc]
-                arrs[array_label].attrs['horizon'] = horizon
+            arrs[k] = v.mean(dim='horizon')
         else:
             arrs[k] = v
-    return xr.Dataset(arrs, attrs=attrs)
+    return MLDataset(arrs, attrs=attrs)
 
 
 def nldas_soil_features(soils_dset=None,
