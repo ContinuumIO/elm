@@ -1,13 +1,14 @@
 from __future__ import print_function, division
+
 from collections import OrderedDict
 import glob
 import json
 import os
 
+from xarray_filters import MLDataset
 import numpy as np
 import pandas as pd
 import xarray as xr
-from xarray_filters import MLDataset
 import yaml
 
 SOIL_URL = 'https://ldas.gsfc.nasa.gov/nldas/NLDASsoils.php'
@@ -30,6 +31,95 @@ BIN_FILE_META = {'NLDAS_Mosaic_soilparms.bin': '>f4',
                  'NLDAS_STATSGOpredomsoil.bin': '>i4',
                  'NLDAS_Noah_soilparms.bin': '>f4',
                 }
+
+SOIL_PHYS_FEATURES = ('STATSGO',
+ 'Noah',
+ 'Mosaic_smcwlt',
+ 'Mosaic_psisat',
+ 'Mosaic_smcrf3',
+ 'Mosaic_smcrf2',
+ 'Mosaic_smcrf1',
+ 'Mosaic_smcmx2',
+ 'Mosaic_smcmx3',
+ 'Mosaic_smcmx1',
+ 'Mosaic_shcsat',
+ 'Mosaic_smcbee',
+ 'TXDM1',
+ 'STEX_TAB_class_3',
+ 'HYD_RAWL_porosity',
+ 'COS_RAWL_hy_cond',
+ 'SOILTEXT_b',
+ 'HYD_COSB_matric_potential',
+ 'SOILTEXT_fc',
+ 'COS_RAWL_wp',
+ 'HYD_RAWL_matric_potential',
+ 'STEX_TAB_class_6',
+ 'STEX_TAB_class_7',
+ 'STEX_TAB_class_4',
+ 'COS_RAWL_porosity',
+ 'HYD_COSB_fc',
+ 'HYD_CLAP_b',
+ 'HYD_COSB_hy_cond',
+ 'HYD_RAWL_unknown',
+ 'HYD_CLAP_unknown',
+ 'STEX_TAB_class_8',
+ 'STEX_TAB_class_9',
+ 'HYD_COSB_porosity',
+ 'STEX_TAB_class_14',
+ 'SOILTEXT_hy_cond',
+ 'HYD_RAWL_b',
+ 'SOILTEXT_wp',
+ 'STEX_TAB_class_10',
+ 'STEX_TAB_class_1',
+ 'STEX_TAB_class_11',
+ 'COS_RAWL_matric_potential',
+ 'HYD_CLAP_porosity',
+ 'HYD_CLAP_matric_potential',
+ 'COS_RAWL_b',
+ 'SOILTEXT_matric_potential',
+ 'SOILTEXT_porosity',
+ 'HYD_COSB_b',
+ 'SOILTEXT_unknown',
+ 'HYD_RAWL_hy_cond',
+ 'HYD_CLAP_hy_cond',
+ 'STEX_TAB_class_2',
+ 'HYD_CLAP_wp',
+ 'COS_RAWL_fc',
+ 'HYD_COSB_unknown',
+ 'HYD_RAWL_wp',
+ 'STEX_TAB_class_16',
+ 'STEX_TAB_class_5',
+ 'HYD_COSB_wp',
+ 'COS_RAWL_unknown',
+ 'STEX_TAB_class_12',
+ 'STEX_TAB_class_13',
+ 'HYD_CLAP_fc',
+ 'STEX_TAB_class_15',
+ 'HYD_RAWL_fc')
+
+
+SOIL_MEASURES_FOR_AVG = ('matric_potential', 'porosity',
+                         'wp', 'fc', 'hy_cond', 'b')
+
+STEX_TOP_2 = ['STEX_TAB_class_1', 'STEX_TAB_class_2']
+COS_HYD = [f for f in SOIL_PHYS_FEATURES if 'COS_HYD' in f]
+HYD_RAWL = [f for f in SOIL_PHYS_FEATURES if 'HYD_RAWL' in f]
+NOAH = ['Noah']
+MOSAIC = [f for f in SOIL_PHYS_FEATURES if f.startswith('Mosaic_')]
+SOIL_FEAUTURES_CHOICES = {
+    'HYD_RAWL': HYD_RAWL,
+    'COS_HYD':  COS_HYD,
+    'STEX_TOP_2': STEX_TOP_2,
+    'COS_STEX': COS_HYD + STEX_TOP_2,
+    'HYD_STEX': HYD_RAWL + STEX_TOP_2,
+    'MOSAIC': MOSAIC,
+    'NOAH': NOAH,
+    'MOSAIC_NOAH': MOSAIC + NOAH,
+    'MOSAIC_NOAH_HYD': MOSAIC + NOAH + HYD_RAWL,
+    'MOSAIC_NOAH_COS': MOSAIC + NOAH + COS_HYD,
+    'MOSAIC_NOAH_HYD_STEX': MOSAIC + NOAH + HYD_RAWL + STEX_TOP_2,
+    'MOSAIC_NOAH_COS_STEX': MOSAIC + NOAH + COS_HYD + STEX_TOP_2,
+}
 SOIL_DIR = os.environ.get('SOIL_DATA', os.path.abspath('nldas_soil_inputs'))
 if not os.path.exists(SOIL_DIR):
     os.mkdir(SOIL_DIR)
@@ -209,6 +299,20 @@ def download_data(session=None):
             with open(fname, 'wb') as f:
                 f.write(content)
     return paths2
+
+
+_endswith = lambda x, end: x.endswith('_{}'.format(end))
+
+
+def flatten_horizons(soils_dset, attrs=None):
+    arrs = OrderedDict()
+    attrs = attrs or soils_dset.attrs.copy()
+    for k, v in soils_dset.data_vars.items():
+        if 'horizon' in v.dims:
+            arrs[k] = v.mean(dim='horizon')
+        else:
+            arrs[k] = v
+    return MLDataset(arrs, attrs=attrs)
 
 
 if __name__ == '__main__':

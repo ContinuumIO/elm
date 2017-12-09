@@ -25,9 +25,11 @@ from xarray_filters.pipeline import Generic, Step
 
 from read_nldas_forcing import (slice_nldas_forcing_a,
                                 GetY, FEATURE_LAYERS,
+                                FEATURE_LAYERS_CHOICES,
                                 SOIL_MOISTURE)
-from read_nldas_soils import download_data, read_nldas_soils
-from nldas_soil_features import nldas_soil_features
+from read_nldas_soils import (download_data, read_nldas_soils,
+                              flatten_horizons,
+                              SOIL_FEAUTURES_CHOICES)
 from ts_raster_steps import differencing_integrating
 from changing_structure import ChooseWithPreproc
 import xarray as xr
@@ -41,7 +43,7 @@ DEFAULT_MAX_STEPS = 12
 START_DATE = datetime.datetime(2000, 1, 1, 1, 0, 0)
 
 print('nldas_soil_features')
-SOIL_PHYS_CHEM = nldas_soil_features().to_features()
+SOIL_PHYS_CHEM = flatten_horizons(read_nldas_soils())
 print('post_features')
 ONE_HR = datetime.timedelta(hours=1)
 TIME_OPERATIONS = ('mean',
@@ -58,72 +60,61 @@ class LogOnlyPositive(Step):
     use_transform = False
     def transform(self, X, y=None, **kw):
         print('LOP,', X, y)
-        X, y = X
+        if len(X) == 2 and isinstance(X, tuple):
+            X, y = X
         assert y is not None
         if not self.get_params()['use_transform']:
             return X, y
-        for j in range(X.features.shape[1]):
-            minn = X.features[:, j].min().values
+        for j in range(X.shape[1]):
+            minn = X[:, j].min()
             if minn <= 0:
                 continue
-            X.features.values[:, j] = np.log10(X.features.values[:, j])
+            X[:, j] = np.log10(X[:, j])
         return X, y
     fit_transform = transform
 
 
-class Flatten(Step):
-
-    def transform(self, X, y=None, **kw):
-        feat = X.to_features().features.dropna(dim='space', how='any')
-        return MLDataset(OrderedDict([('features', feat)]), attrs=X.attrs)
-
-    fit_transform = transform
-
-
-class Differencing(Step):
-    hours_back = 144
-    first_bin_width = 12
-    last_bin_width = 1
-    num_bins = 12
-    weight_type = 'linear'
-    reducers = 'mean'
-    layers = None
-
-    def transform(self, X, y=None, **kw):
-        return differencing_integrating(X, **self.get_params())
-
-    fit_transform = transform
-
-
-
-SOIL_PHYS_CHEM = {}
 class AddSoilPhysicalChemical(Step):
     add = True
-    to_raster = True
-    avg_cos_hyd_params = False
+    subset = None
 
     def transform(self, X, y=None, **kw):
         global SOIL_PHYS_CHEM
+        if not self.add:
+            return X
         soils = SOIL_PHYS_CHEM.copy()
-        return X.concat_ml_features()
+        if self.subset:
+            choices = SOIL_FEAUTURES_CHOICES[self.subset]
+            soils = OrderedDict([(layer, arr)
+                                 for layer, arr in soils.data_vars.items()
+                                 if layer in choices])
+            soils = MLDataset(soils)
+        print('soils.dims', X.dims, soils.dims)
+        for k in X.data_vars:
+            print(k, 'shape', X.data_vars[k].shape)
+        for k in soils.data_vars:
+            print(k, ' soils shape', soils.data_vars[k].shape)
+        renamed = soils.rename(dict(zip(('y', 'x'),
+                                        ('lat_110', 'lon_110'))))
+
+        print('renamed', renamed, renamed.data_vars, X, X.data_vars)
+        dset = renamed.merge(X, compat='broadcast_equals')
+        dset2 = renamed.merge(X, compat='broadcast_equals', join='inner')
+        print('merged', dset, dset.data_vars)
+        print('merged2', dset2, dset2.data_vars)
+        return dset
 
     fit_transform = transform
 
 param_distributions = {
     'log__use_transform': [True, False],
     'scaler__feature_range': [(x, x * 2) for x in np.linspace(0, 1, 10)],
-    'pca__estimator__n_components': [6, 7, 8, 10, 14, 18],
-    'pca__estimator': [decomposition.PCA(),],
-                       #decomposition.FastICA(),],
-                      #decomposition.KernelPCA()],
-    'pca__run': [True, True, False],
-    'time__hours_back': [1],#list(np.linspace(1, DEFAULT_MAX_STEPS, 12).astype(np.int32)),
-    'time__last_bin_width': [1,],
-    'time__num_bins': [4,],
-    'time__weight_type': ['uniform', 'log', 'log', 'linear', 'linear'],
-    'time__weight_type': ['linear', 'log'],
-    'time__reducers': REDUCERS,
-    'soil_phys__add': [True, True, True, False],
+    'time__hours_back': [1, 4],
+    'time__weight_a': [2, 3,],
+    'time__weight_b': [2, 3,],
+    'subset__include': FEATURE_LAYERS_CHOICES[-2:],
+    'soil_phys__add': [True, False],
+    'soil_phys__subset': tuple(x for x in SOIL_FEAUTURES_CHOICES if 'MOSAIC' not in x),
 }
 
 model_selection = {
@@ -151,14 +142,72 @@ def dump(obj, tag, date):
     return getattr(obj, 'dump', getattr(obj, 'to_netcdf'))(fname)
 
 
+class TimeAvg(Step):
+    hours_back = 4
+    weight_a = 1.0
+    weight_b = 0.   # a, b = 1, 0 is uniform weighting (ax + b where x is hours)
+    reducer = 'sum'
+    reduce_dim = 'time'
+
+    def transform(self, X, y=None, **kw):
+        dset = OrderedDict()
+        a, b = self.weight_a, self.weight_b
+        if a is None:
+            a = 1.
+        if b is None:
+            b = 0.
+        weights = None
+        for layer, arr in X.data_vars.items():
+            if not 'time' in arr.dims:
+                continue
+            tidx = arr.dims.index('time')
+            siz = [1] * len(arr.dims)
+            siz[tidx] = arr.time.values.size
+            if weights is None:
+                time = np.arange(siz[tidx])
+                weights = a * time + b
+                weights /= weights.sum()
+                weights.resize(tuple(siz))
+
+            if arr.source == 'FORA':
+                weighted = (arr * weights)
+                reducer_func = getattr(weighted, self.reducer)
+                dset[layer] = reducer_func(dim=self.reduce_dim)
+            else:
+                dset[layer] = arr.isel(time=siz[tidx] - 1)
+        return MLDataset(dset)
+
+    fit_transform = transform
+
+
+class ChooseFeatures(Step):
+    include = None
+    exclude = None
+    def transform(self, X, y=None, **kw):
+        subset = OrderedDict()
+        include = list(self.include or X.data_vars)
+        if SOIL_MOISTURE not in include:
+            include += [SOIL_MOISTURE]
+        for layer, arr in X.data_vars.items():
+            if layer in include:
+                if self.exclude and layer in self.exclude:
+                    continue
+                subset[layer] = arr
+        return MLDataset(subset)
+
+    fit_transform = transform
+
+
 class Sampler(Step):
-    date = None
+
+    hours_back = DEFAULT_MAX_STEPS
+
     def transform(self, dates, y=None, **kw):
         print('Sampler Called')
-        dsets = [slice_nldas_forcing_a(date, X_time_steps=max_time_steps)
-                 for date in dates[:1]]
-        feats = [dset.to_features().features for dset in dsets]
-        return MLDataset(OrderedDict([('features', xr.concat(feats, dim=feats[0].dims[1]))]))
+        dset = slice_nldas_forcing_a(dates[0],
+                                     hours_back=self.hours_back)
+        return dset
+
     fit_transform = transform
 
 
@@ -166,23 +215,44 @@ max_time_steps = DEFAULT_MAX_STEPS // 2
 date = START_DATE
 dates = np.array([START_DATE - datetime.timedelta(hours=hr)
                  for hr in range(max_time_steps)])
-
-diff = Differencing(layers=FEATURE_LAYERS)
-flat = Flatten()
-soil_phys = AddSoilPhysicalChemical()
-get_y = GetY(SOIL_MOISTURE)
+time_avg = TimeAvg()
+soil_phys = AddSoilPhysicalChemical(subset='COS_STEX')
+feature_select = ChooseFeatures(include=FEATURE_LAYERS_CHOICES[-1])
+get_y = GetY(column=SOIL_MOISTURE)
+scaler = preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))
+log = LogOnlyPositive(use_transform=True)
+pca = decomposition.PCA()
+reg = linear_model.LinearRegression(n_jobs=-1)
 pipe = Pipeline([
-    ('time', diff),
-    ('flatten', flat),
+    ('subset', feature_select),
+    ('time', time_avg),
     ('soil_phys', soil_phys),
-    ('scaler', preprocessing.MinMaxScaler(feature_range=(1e-2, 1e-2 + 1))),
     ('get_y', get_y),
-    ('log', LogOnlyPositive(use_transform=True)),
-    ('pca', decomposition.PCA()),
-    ('estimator', linear_model.LinearRegression(n_jobs=-1)),
+    ('scaler', scaler),
+    ('log', log),
+    #('pca', pca),
+    ('estimator', reg),
 ])
 
 sampler = Sampler()
+X = sampler.fit_transform(dates[:1])
+outputs = [(X,)]
+y = None
+for label, step in pipe.steps[:-1]:
+    out = step.fit_transform(X, y=y)
+    if len(out) == 2 and isinstance(out, tuple):
+        X, y = out
+        was_2 = True
+    else:
+        X = out
+        was_2 = False
+    outputs.append((type(X), type(y), label, X, y))
+    print('output for label {} is of type {} and {} - {}'.format(label, type(X), type(y), was_2))
+
+fitted = pipe.steps[-1][1].fit(X, y=y)
+
+
+
 ea = EaSearchCV(pipe,
                 n_iter=4,
                 param_distributions=param_distributions,
@@ -201,9 +271,9 @@ def main():
     download_data()
     print('Downloaded')
     print('Fit')
-    ea.fit(dates)
+    fitted = ea.fit(dates)
     print('Done')
-    return ea
+    return fitted
 
 
 if __name__ == "__main__":
@@ -211,6 +281,7 @@ if __name__ == "__main__":
     with warnings.catch_warnings():
         warnings.simplefilter('ignore')
         ea = main()
+        ea.dump('soil_moisture_regression_saved.pkl')
 '''
 date += ONE_HR
 current_file = get_file_name('fit_model', date)
