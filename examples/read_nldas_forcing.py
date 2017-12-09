@@ -178,7 +178,7 @@ def get_file(date, name, **kw):
 
 def nan_mask_water(arr, mask_value=WATER_MASK):
     # TODO is this function needed?
-    arr.values[arr.values == mask_value] = np.NaN
+    arr.values[np.isclose(arr.values, mask_value)] = np.NaN
     return arr
 
 
@@ -201,8 +201,8 @@ def _preprocess_fora(arr):
     time = pd.Timestamp(t.replace(')','').replace('(', ''))
     attrs['time'] = time
     attrs['source'] = 'FORA'
-    arr = arr.copy()
     arr.attrs.update(attrs)
+    arr = nan_mask_water(arr)
     return arr
 
 
@@ -237,7 +237,7 @@ class GetY(Step):
         idx = np.where(feat.features.layer.values == self.column)
         idx2 = np.where(feat.features.layer.values != self.column)[0]
         X = MLDataset(OrderedDict([('features', feat.features.isel(layer=idx2))]))
-        y = feat.features.values[:, idx]
+        y = feat.features.values[:, idx].squeeze()
         return X, y
 
     fit_transform = transform

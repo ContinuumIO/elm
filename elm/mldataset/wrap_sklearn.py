@@ -149,6 +149,7 @@ class SklearnMixin:
     def _fit(self, X, y=None, **kw):
         '''This private method is expected by some sklearn
         models and must take X, y as numpy arrays'''
+        X, y = _split_transformer_result(X, y)
         return self._call_sk_method('_fit', X, y=y, do_split=False, **kw)
 
     def partial_fit(self, X, y=None, **kw):
@@ -157,6 +158,7 @@ class SklearnMixin:
         return self
 
     def transform(self, X, y=None, **kw):
+        X, y = _split_transformer_result(X, y)
         if hasattr(self._cls, 'transform'):
             return self._call_sk_method('transform', X, y=y, **kw)
         if hasattr(self._cls, 'fit_transform'):
@@ -165,6 +167,7 @@ class SklearnMixin:
                          '"fit_transform" methods'.format(self))
 
     def fit_transform(self, X, y=None, **kw):
+        X, y = _split_transformer_result(X, y)
         args = (X,)
         if y is not None:
             args = args + (y,)
@@ -174,9 +177,11 @@ class SklearnMixin:
         return self._call_sk_method('transform', *args, **kw)
 
     def fit_predict(self, X, y=None, **kw):
+        X, y = _split_transformer_result(X, y)
         return self.fit(X, y=y, **kw).predict(X)
 
     def score(self, X, y=None, sample_weight=None, row_idx=None, **kw):
+        X, y = _split_transformer_result(X, y)
         self._predict_as_np = True
         kw['sample_weight'] = sample_weight
         score, row_idx = self._predict_steps(X, row_idx=row_idx, y=y,

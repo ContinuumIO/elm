@@ -38,7 +38,7 @@ NGEN = 3
 NSTEPS = 1
 WATER_MASK = -9999
 DEFAULT_CV = 3
-DEFAULT_MAX_STEPS = 12
+DEFAULT_MAX_STEPS = 144
 
 START_DATE = datetime.datetime(2000, 1, 1, 1, 0, 0)
 
@@ -89,31 +89,19 @@ class AddSoilPhysicalChemical(Step):
                                  for layer, arr in soils.data_vars.items()
                                  if layer in choices])
             soils = MLDataset(soils)
-        print('soils.dims', X.dims, soils.dims)
-        for k in X.data_vars:
-            print(k, 'shape', X.data_vars[k].shape)
-        for k in soils.data_vars:
-            print(k, ' soils shape', soils.data_vars[k].shape)
-        renamed = soils.rename(dict(zip(('y', 'x'),
-                                        ('lat_110', 'lon_110'))))
-
-        print('renamed', renamed, renamed.data_vars, X, X.data_vars)
-        dset = renamed.merge(X, compat='broadcast_equals')
-        dset2 = renamed.merge(X, compat='broadcast_equals', join='inner')
-        print('merged', dset, dset.data_vars)
-        print('merged2', dset2, dset2.data_vars)
-        return dset
+        renamed = X.rename(dict(lon_110='x', lat_110='y'))
+        return soils.reindex_like(renamed, method='nearest').merge(renamed, compat='broadcast_equals')
 
     fit_transform = transform
 
 param_distributions = {
-    'log__use_transform': [True, False],
+    'log__use_transform': [False],
     'scaler__feature_range': [(x, x * 2) for x in np.linspace(0, 1, 10)],
-    'time__hours_back': [1, 4],
-    'time__weight_a': [2, 3,],
-    'time__weight_b': [2, 3,],
+    'time__hours_back': [144],
+    'time__weight_a': [1, 2, 5, 10],
+    'time__weight_b': [0, 0.5],
     'subset__include': FEATURE_LAYERS_CHOICES[-2:],
-    'soil_phys__add': [True, False],
+    'soil_phys__add': [False],
     'soil_phys__subset': tuple(x for x in SOIL_FEAUTURES_CHOICES if 'MOSAIC' not in x),
 }
 
@@ -143,7 +131,7 @@ def dump(obj, tag, date):
 
 
 class TimeAvg(Step):
-    hours_back = 4
+    hours_back = 144
     weight_a = 1.0
     weight_b = 0.   # a, b = 1, 0 is uniform weighting (ax + b where x is hours)
     reducer = 'sum'
@@ -164,7 +152,7 @@ class TimeAvg(Step):
             siz = [1] * len(arr.dims)
             siz[tidx] = arr.time.values.size
             if weights is None:
-                time = np.arange(siz[tidx])
+                time = np.linspace(0, siz[tidx], siz[tidx])
                 weights = a * time + b
                 weights /= weights.sum()
                 weights.resize(tuple(siz))
@@ -175,6 +163,7 @@ class TimeAvg(Step):
                 dset[layer] = reducer_func(dim=self.reduce_dim)
             else:
                 dset[layer] = arr.isel(time=siz[tidx] - 1)
+        print('dset tt', dset)
         return MLDataset(dset)
 
     fit_transform = transform
