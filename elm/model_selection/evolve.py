@@ -41,24 +41,6 @@ DEFAULT_MAX_PARAM_RETRIES = 1000
 
 LAST_TAG_IDX = 0
 
-DEFAULT_CONTROL = {
-      'select_method': 'selNSGA2',
-      'crossover_method': 'cxTwoPoint',
-      'mutate_method': 'mutUniformInt',
-      'init_pop': 'random',
-      'indpb': 0.5,
-      'mutpb': 0.9,
-      'cxpb':  0.3,
-      'eta':   20,
-      'ngen':  2,
-      'mu':    4,
-      'k':     4,
-      'early_stop': None
-      # {'abs_change': [10], 'agg': all},
-      # alternatively 'early_stop': {'percent_change': [10], 'agg': all}
-      # alternatively 'early_stop': {'threshold': [10], 'agg': any}
-    }
-
 REQUIRED_CONTROL_KEYS_TYPES = {
     'select_method': str,
     'crossover_method': str,
@@ -86,6 +68,7 @@ DEFAULT_EVO_PARAMS = dict(
     early_stop=None,
     toolbox=None
 )
+
 
 def _call_rvs(choice):
     param = choice.rvs()
@@ -436,9 +419,9 @@ def fit_ea(score_weights,
            toolbox=None):
     if score_weights is None:
         score_weights = (1,)
-    control_defaults = {k: v for k, v in copy.deepcopy(DEFAULT_CONTROL).items()
-                        if control.get(k, None) is None}
-    control.update(control_defaults)
+    control2 = DEFAULT_EVO_PARAMS.copy()
+    control2.update(control)
+    control = control2
     deap_params = check_format_param_grid(param_grid, control)
     if toolbox is None:
         control['toolbox'] = toolbox = base.Toolbox()

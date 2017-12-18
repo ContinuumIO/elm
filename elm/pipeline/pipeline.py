@@ -84,6 +84,9 @@ class Pipeline(sk_Pipeline):
         Xt = X
         for step_idx, (name, transformer) in enumerate(self.steps[:-1]):
             Xt, y = self._astype(transformer, Xt, y=y)
+            if hasattr(Xt, 'has_features') and Xt.has_features(raise_err=False):
+                arr = tuple(Xt.data_vars.values())[0]
+                self.row_idx = getattr(val, arr.dims[0])
             if transformer is None:
                 pass
             else:
@@ -279,7 +282,7 @@ class Pipeline(sk_Pipeline):
         return self._as_dataset(as_dataset, log_proba, self.row_idx, features_layer='log_proba')
 
     @if_delegate_has_method(delegate='_final_estimator')
-    def score(self, X, y=None, sample_weight=None):
+    def score(self, X, y=None, sample_weight=None, **fit_params):
         """Apply transforms, and score with the final estimator
 
         Parameters

@@ -8,7 +8,7 @@ dependencies:
  - attrs
  - bokeh
  - dask
- - dask-searchcv
+ - elm/label/dev::dask-searchcv
  - datashader
  - dill
  - distributed
@@ -44,4 +44,4 @@ dependencies:
    - zict
    - pytest-rerunfailures
    - dask-glm
-   - dask-searchcv
+#   - dask-searchcv

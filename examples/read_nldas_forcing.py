@@ -23,7 +23,10 @@ META_URL = 'https://cmr.earthdata.nasa.gov/search/granules.json?echo_collection_
 VIC, FORA = ('NLDAS_VIC0125_H', 'NLDAS_FORA0125_H',)
 
 SOIL_MOISTURE = 'SOIL_M_110_DBLY'
-FEATURE_LAYERS = [  # FORA DataArray's that may be differenced
+
+# These are the NLDAS Forcing A fields
+# that can be used as the meteorological features
+FEATURE_LAYERS = [
     'A_PCP_110_SFC_acc1h',
     'PEVAP_110_SFC_acc1h',
     'TMP_110_HTGL',
@@ -123,13 +126,16 @@ WATER_MASK = -9999
 BASE_URL = 'https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/{}/{:04d}/{:03d}/{}'
 BASE_URL = 'https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/{}/{:04d}/{:03d}/{}'
 
+SESSION = None
 def get_session():
+    global SESSION
+    if SESSION:
+        return SESSION
     username = os.environ.get('NLDAS_USERNAME') or raw_input('NLDAS Username: ')
     password = os.environ.get('NLDAS_PASSWORD') or getpass.getpass('Password: ')
     session = setup_session(username, password)
+    SESSION = session
     return session
-
-SESSION = get_session()
 
 
 def make_url(year, month, day, hour, name, nldas_ver='002'):
@@ -170,51 +176,59 @@ def get_file(date, name, **kw):
         if not os.path.exists(path):
             os.makedirs(path)
         print('Downloading', url, 'to', rel)
-        r = SESSION.get(url)
+        r = get_session().get(url)
         with open(rel, 'wb') as f:
             f.write(r.content)
     return rel
 
 
 def nan_mask_water(arr, mask_value=WATER_MASK):
-    # TODO is this function needed?
+    '''Replace -9999 with Nan'''
     arr.values[np.isclose(arr.values, mask_value)] = np.NaN
     return arr
 
 
 def wind_magnitude(fora):
+    '''From an NLDAS Forcing A Dataset, return wind magitude'''
     v, u = WIND_YX
     v, u = fora[v], fora[u]
     return (v ** 2 + u ** 2) ** (1 / 2.)
 
 
 def _preprocess_vic(dset, field=SOIL_MOISTURE):
-    arr = nan_mask_water(dset.data_vars[field])
-    arr.attrs['source'] = 'VIC'
+    '''When reading a VIC file extract the soil moisture only'''
+    dset.load()
+    arr = dset.data_vars[field]
+    del dset
     return MLDataset(OrderedDict([(field, arr)]))
 
 
 @for_each_array
 def _preprocess_fora(arr):
-    attrs = arr.attrs.copy()
-    t = attrs.pop('initial_time')
+    '''With each FORA DataArray convert the "initial_time"
+    attribute to a TimeStamp.  TODO - this should actually
+    put the "time" in the dims'''
+    arr.load()
+    t = arr.attrs.pop('initial_time')
     time = pd.Timestamp(t.replace(')','').replace('(', ''))
-    attrs['time'] = time
-    attrs['source'] = 'FORA'
-    arr.attrs.update(attrs)
-    arr = nan_mask_water(arr)
+    arr.attrs['time'] = time
     return arr
 
 
-def slice_nldas_forcing_a(date, hours_back=4, **kw):
+def slice_nldas_forcing_a(date, hours_back=None, **kw):
+    '''Read all Forcing A arrays plus the VIC soil moisture
+    for a given date, as well as Forcing A data for all hours
+    from "hours_back" to date, add the wind magitude, and
+    replace -9999 with NaN'''
     dates = [date]
-    for hours_back in range(1, hours_back):
-        file_time = date - datetime.timedelta(hours=hours_back)
+    for hours_back in range(hours_back):
+        file_time = date - datetime.timedelta(hours=int(hours_back))
         dates.append(file_time)
     paths = [get_file(date, name=FORA) for date in dates]
     fora = xr.open_mfdataset(paths, concat_dim='time',
                              engine='pynio', chunks={},
-                             preprocess=_preprocess_fora)
+                             preprocess=_preprocess_fora,
+                             lock=True)
     fora = OrderedDict(fora.data_vars)
     fora['WIND_MAGNITUDE'] = wind_magnitude(fora)
     for layer, arr in fora.items():
@@ -222,7 +236,8 @@ def slice_nldas_forcing_a(date, hours_back=4, **kw):
     paths = [get_file(date, name=VIC) for date in dates]
     vic  = xr.open_mfdataset(paths, engine='pynio',
                              concat_dim='time', chunks={},
-                             preprocess=_preprocess_vic)
+                             preprocess=_preprocess_vic,
+                             lock=True)
     nan_mask_water(vic.data_vars[SOIL_MOISTURE])
     fora[SOIL_MOISTURE] = vic.data_vars[SOIL_MOISTURE]
     dset = MLDataset(fora)
@@ -230,14 +245,15 @@ def slice_nldas_forcing_a(date, hours_back=4, **kw):
     return dset
 
 
-class GetY(Step):
-    column = SOIL_MOISTURE
-    def transform(self, X, y=None, **kw):
-        feat = X.to_features().dropna(dim='space', how='any')
-        idx = np.where(feat.features.layer.values == self.column)
-        idx2 = np.where(feat.features.layer.values != self.column)[0]
-        X = MLDataset(OrderedDict([('features', feat.features.isel(layer=idx2))]))
-        y = feat.features.values[:, idx].squeeze()
-        return X, y
+def extract_soil_moisture_column(X, y=None, column=SOIL_MOISTURE, **kw):
+    '''From MLDataset X, extract the soil moisture Y data
+    after dropping NaN rows'''
+    feat = X.to_features().dropna(dim='space', how='any')
+    idx = np.where(feat.features.layer.values == column)[0]
+    idx2 = np.where(feat.features.layer.values != column)[0]
+    X = feat.features.isel(layer=idx2).values
+    y = feat.features.isel(layer=idx).values
+    return X, y.squeeze()
 
-    fit_transform = transform
+
+

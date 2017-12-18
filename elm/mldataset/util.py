@@ -31,15 +31,12 @@ def is_arr(arr, raise_err=False):
 
 
 def _is_xy_tuple(result, typ=tuple):
-    if typ and not isinstance(typ, tuple):
-        typ = (typ,)
-    typ = typ + (tuple,)
     return isinstance(result, typ) and len(result) == 2
 
 
 def _split_transformer_result(X, y, typ=tuple):
     if _is_xy_tuple(X, typ=typ):
         X, y2 = X
-        if y2 is not None and y is None:
+        if y2 is not None:
             y = y2
     return X, y
