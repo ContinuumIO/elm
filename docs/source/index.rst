@@ -2,6 +2,9 @@
 NASA SBIR Phase I & II - Open Source Parallel Image Analysis and Machine Learning Pipeline
 ==========================================================================================
 
+This website documents the archived prototype ELM software developed in NASA SBIR Phase I and II from 2016 to January 2018.  Current versions of this code are available at `EarthML.pyviz.org <https://EarthML.pyviz.org>`_; the code documented here is primarily of historical interest.
+
+
 **Getting Started**
 
 * :doc:`about`
