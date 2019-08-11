@@ -1,6 +1,6 @@
-#!/usr/bin/env python
+#######!/usr/bin/env python
 
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 import json
 import copy
@@ -110,6 +110,109 @@ def get_metadata(url):
     return get_xml_data({}, root, root.tag)
 
 class GRBSelector(object):
+    def __init__(self, base_url='https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/', **layout_kwargs):
+        self.base_url = base_url
+        self.selected_url = None
+        if 'min_width' not in layout_kwargs:
+            layout_kwargs['min_width'] = '30%'
+        self.label_layout = Layout(**layout_kwargs)
+
+        dd = widgets.Select(
+            options=self.get_links(
+                base_url,
+                href_filter=self.dir_and_not_data,
+            ),
+            description='', #urlparse(base_url).path,
+        )
+
+        dd.observe(partial(self.on_value_change, url=self.base_url), names='value')
+        lbl = widgets.Label(urlparse(self.base_url).path, layout=self.label_layout)
+        hbox = widgets.HBox([lbl, dd])
+        self.elts = [hbox, lbl, dd]
+        display(hbox)
+
+    def on_value_change(self, change, url):
+        next_url = change['new']
+        if next_url is None: # 'Select...' chosen
+            return
+        if next_url.endswith('.grb'): # File reached
+            return self.select_url(next_url)
+        [w.close() for w in self.elts]
+        links = self.get_links(next_url,
+                               href_filter=(self.dir_and_not_data
+                                            if next_url == self.base_url
+                                            else self.dir_or_grib))
+        if not links:
+            return
+        next_dd = widgets.Select(
+            options=links,
+            description='', #urlparse(url).path,
+        )
+        next_dd.observe(partial(self.on_value_change, url=next_url), names='value')
+        lbl = widgets.Label(urlparse(next_url).path, layout=self.label_layout)
+        hbox = widgets.HBox([lbl, next_dd])
+        self.elts = [hbox, lbl, next_dd]
+        display(hbox)
+
+    def get_links(self, url, href_filter=None):
+        progress = widgets.IntProgress(value=0, min=0, max=10, description='Loading:')
+        display(progress)
+
+        links = OrderedDict()
+        links['Select an endpoint...'] = None
+        if url != self.base_url:
+            up_url = os.path.dirname(url.rstrip(os.sep))
+            up_path = os.path.dirname(urlparse(url).path.rstrip(os.sep))
+            if not up_url.endswith(os.sep):
+                up_url += os.sep
+            links['Up to {}...'.format(up_path)] = up_url
+        if 0:
+            resp = requests.get(url); progress.value += 1
+            root = html.fromstring(resp.text); progress.value += 1
+        else:
+            contents = get_request(url); progress.value += 1
+            root = html.fromstring(contents); progress.value += 1
+        hrefs = root.xpath('body/table//tr/td/a/@href'); progress.value += 1
+        parent_path = os.path.dirname(urlparse(url).path.rstrip(os.sep))
+        for hrefct, href in enumerate(sorted(hrefs)):
+            if hrefct % int(11 - progress.value) == 0:
+                progress.value += 1
+            if ((href_filter is not None and
+                    not href_filter(href)) or
+                urlparse(href).path.rstrip(os.sep).endswith(parent_path)):
+                #print('filtered {} with {}'.format(href, href_filter))
+                continue
+            link_name = urlparse(href).path
+            links[link_name] = url + href
+        if len(links) <= 2:
+            links = OrderedDict()
+
+        progress.close()
+
+        return links
+
+    def dir_and_not_data(self, href):
+        return href.endswith(os.sep) and not href.endswith('data/')
+
+    def dir_or_grib(self, href):
+        return href.endswith(os.sep) or href.endswith('.grb')
+
+    def select_url(self, url):
+        self.selected_url = url
+        display(Javascript("""
+            var run = false, current = $(this)[0];
+            $.each(IPython.notebook.get_cells(), function (idx, cell) {
+                if (!run && (cell.output_area === current)) {
+                    run = true;
+                } else if (cell.cell_type == 'code') {
+                    cell.execute();
+                }
+            });
+        """))
+
+
+class PipelineSelector(object):
+    pipes = {}
     def __init__(self, base_url='https://hydro1.gesdisc.eosdis.nasa.gov/data/NLDAS/', **layout_kwargs):
         self.base_url = base_url
         self.selected_url = None

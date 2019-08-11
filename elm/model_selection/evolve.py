@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 '''
 ----------------------------
@@ -23,11 +23,9 @@ import numpy as np
 from sklearn.model_selection import ParameterGrid
 
 from xarray_filters.func_signatures import get_args_kwargs_defaults
-from elm.config import (import_callable,
-                        ElmConfigError,
+from elm.config import (ElmConfigError,
                         ConfigParser)
 
-logger = logging.getLogger(__name__)
 
 DEFAULT_PERCENTILES = (0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975)
 
@@ -42,24 +40,6 @@ EVO_FIELDS = ['toolbox',
 DEFAULT_MAX_PARAM_RETRIES = 1000
 
 LAST_TAG_IDX = 0
-
-DEFAULT_CONTROL = {
-      'select_method': 'selNSGA2',
-      'crossover_method': 'cxTwoPoint',
-      'mutate_method': 'mutUniformInt',
-      'init_pop': 'random',
-      'indpb': 0.5,
-      'mutpb': 0.9,
-      'cxpb':  0.3,
-      'eta':   20,
-      'ngen':  2,
-      'mu':    4,
-      'k':     4,
-      'early_stop': None
-      # {'abs_change': [10], 'agg': all},
-      # alternatively 'early_stop': {'percent_change': [10], 'agg': all}
-      # alternatively 'early_stop': {'threshold': [10], 'agg': any}
-    }
 
 REQUIRED_CONTROL_KEYS_TYPES = {
     'select_method': str,
@@ -88,6 +68,7 @@ DEFAULT_EVO_PARAMS = dict(
     early_stop=None,
     toolbox=None
 )
+
 
 def _call_rvs(choice):
     param = choice.rvs()
@@ -438,9 +419,9 @@ def fit_ea(score_weights,
            toolbox=None):
     if score_weights is None:
         score_weights = (1,)
-    control_defaults = {k: v for k, v in copy.deepcopy(DEFAULT_CONTROL).items()
-                        if control.get(k, None) is None}
-    control.update(control_defaults)
+    control2 = DEFAULT_EVO_PARAMS.copy()
+    control2.update(control)
+    control = control2
     deap_params = check_format_param_grid(param_grid, control)
     if toolbox is None:
         control['toolbox'] = toolbox = base.Toolbox()
@@ -468,8 +449,6 @@ def evo_init_func(evo_params):
     '''From ea parameters return the initial population'''
     toolbox = evo_params['toolbox']
     pop = toolbox.population_guess()
-    logger.info('Initialize population of {} solutions (param_grid: '
-                '{})'.format(len(pop), evo_params['param_grid_name']))
     return pop
 
 
@@ -665,7 +644,6 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
                 del ind1.fitness.values, ind2.fitness.values
 
         except ParamsSamplingError:
-            logger.info('Evolutionary algorithm exited early (cannot find parameter set that has not been tried yet)')
             break
         # Evaluate the individuals with an invalid fitness
 
@@ -684,16 +662,13 @@ def ea_general(evo_params, cxpb, mutpb, ngen, k, **kw):
         break_outer = False
         for fitness in fitnesses:
             if eval_stop(fitness):
-                logger.info('Stopping: early_stop: {}'.format(evo_params['early_stop']))
                 break_outer = True
                 break
         if break_outer:
             break
         # Select the next generation population
         pop = toolbox.select(pop + offspring, len(pop))
-        #logger.info(logbook.stream)
     # Yield finally the record and logbook
     # The caller knows when not to .send again
     # based on the None in 2nd position below
-    logger.info('Evolutionary algorithm finished')
     yield (pop, None, param_history)

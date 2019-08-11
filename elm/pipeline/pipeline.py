@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 
 from abc import ABCMeta, abstractmethod
 from collections import defaultdict
@@ -21,7 +21,8 @@ from sklearn.pipeline import (Pipeline as sk_Pipeline,
 from elm.mldataset.wrap_sklearn import (_as_numpy_arrs,
                                         _from_numpy_arrs,
                                         get_row_index,
-                                        SklearnMixin)
+                                        SklearnMixin,)
+from elm.mldataset.util import _split_transformer_result
 
 from sklearn.utils.metaestimators import _BaseComposition
 from xarray_filters.pipeline import Step
@@ -44,37 +45,12 @@ class Pipeline(sk_Pipeline):
     def _astype(self, step, X, y=None):
         astype = 'numpy'
         if not isinstance(step, Step):
-            print('Numpy')
             X, y, row_idx = self._as_numpy_arrs(X, y)
             if row_idx is not None:
                 self.row_idx = row_idx
-        return X, y
-
-    #def _validate_steps(self):
-     #   return True
-
-    def _do_this_step(self, step_idx):
-        name, est = self.steps[step_idx]
-        self._generic = {}
-        for name, est in self.steps:
-            if isinstance(est, Step):
-                self._generic[name] = True
-            else:
-                self._generic[name] = False
-        print('GEn', self._generic, name)
-        do_step = True
-        if getattr(self, '_run_generic_only', None) is None:
-            pass
-        else:
-            if self._run_generic_only and not name in self._generic:
-                do_step = False
-        if getattr(self, '_skip_generic', None) is None:
-            pass
-        else:
-            if self._skip_generic and name in self._generic:
-                do_step = False
-        print('do_step', name, do_step)
-        return do_step
+        # Check to see if Xt is actually an (Xt, y) tuple
+        Xt, y = _split_transformer_result(X, y)
+        return Xt, y
 
     def _fit_generic_only(self, X, y, **fit_params):
         self._generic = {}
@@ -83,7 +59,6 @@ class Pipeline(sk_Pipeline):
                 self._generic[name] = True
             else:
                 self._generic[name] = False
-
 
     def _fit(self, X, y=None, **fit_params):
 
@@ -108,9 +83,10 @@ class Pipeline(sk_Pipeline):
             fit_params_steps[step][param] = pval
         Xt = X
         for step_idx, (name, transformer) in enumerate(self.steps[:-1]):
-            #if self._do_this_step(step_idx):
             Xt, y = self._astype(transformer, Xt, y=y)
-            print('Types', step_idx, [type(_) for _ in (Xt, y)])
+            if hasattr(Xt, 'has_features') and Xt.has_features(raise_err=False):
+                arr = tuple(Xt.data_vars.values())[0]
+                self.row_idx = getattr(val, arr.dims[0])
             if transformer is None:
                 pass
             else:
@@ -159,7 +135,6 @@ class Pipeline(sk_Pipeline):
         self : Pipeline
             This estimator
         """
-
         Xt, y, fit_params = self._fit(X, y, **fit_params)
         if self._final_estimator is not None:
             Xt, y = self._astype(self._final_estimator, Xt, y=y)
@@ -177,13 +152,12 @@ class Pipeline(sk_Pipeline):
         Xt = X
         for step_idx, (name, transform) in enumerate(self.steps[:-1]):
             if transform is not None:
-                #if not self._do_this_step(step_idx):
-                 #   continue
                 Xt, y = self._astype(transform, Xt, y=y)
                 Xt = transform.transform(Xt)
-            row_idx = self.row_idx
+                Xt, y = _split_transformer_result(Xt, y)
+            row_idx = getattr(self, 'row_idx', fit_params.get('row_idx'))
         else:
-            row_idx = getattr(self, 'row_idx', None)
+            row_idx = getattr(self, 'row_idx', fit_params.get('row_idx'))
         final_estimator = self.steps[-1][-1]
         fit_params = dict(row_idx=row_idx, **fit_params)
         if y is not None:
@@ -308,7 +282,7 @@ class Pipeline(sk_Pipeline):
         return self._as_dataset(as_dataset, log_proba, self.row_idx, features_layer='log_proba')
 
     @if_delegate_has_method(delegate='_final_estimator')
-    def score(self, X, y=None, sample_weight=None):
+    def score(self, X, y=None, sample_weight=None, **fit_params):
         """Apply transforms, and score with the final estimator
 
         Parameters
@@ -370,13 +344,19 @@ class Pipeline(sk_Pipeline):
             has_ft = hasattr(last_step._cls, 'fit_transform')
         else:
             has_ft = hasattr(last_step, 'fit_transform')
-        #skip = getattr(self, '_run_generic_only', False)
-        #if skip:
-        #    return X, y
         if last_step is None:
             return Xt
         elif has_ft:
             return last_step.fit_transform(Xt, y, **fit_params)
         else:
-            return last_step.fit(Xt, y, **fit_params).transform(Xt)
+            out = last_step.fit(Xt, y, **fit_params)
+            if isinstance(out, (tuple, list)) and len(out) == 2:
+                Xt, y = out
+            else:
+                Xt = out
+            return last_step.transform(Xt, y=y)
 
+    def transform(self, X, y=None, **fit_params):
+        last_step = self._final_estimator
+        Xt, y, fit_params = self._fit(X, y, **fit_params)
+        return last_step.transform(Xt, y, **fit_params)

@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 from argparse import Namespace
 from collections import OrderedDict
 from functools import wraps
@@ -26,12 +26,20 @@ YAML_TEST_CONFIG = os.path.join(os.path.dirname(__file__), 'test_config.yaml')
 with open(YAML_TEST_CONFIG) as f:
     contents = f.read()
 TEST_CONFIG = yaml.safe_load(contents)
-
-ALL_STEPS = steps.ALL_STEPS
+SKIP = ('SearchCV', 'ParameterGrid', 'ParameterSampler',
+        'BaseEstimator', 'KERNEL_PARAMS', 'Pipeline',
+        'Parallel', 'RegressorMixin', 'ClassifierMixin', 'ABCMeta',
+        'TransformerMixin', 'VBGMM', 'RandomizedPCA', 'GMM',
+        'MultiOutputEstimator','SklearnMixin')
+ALL_STEPS = {(m, a): getattr(getattr(steps, m), a)
+             for m in dir(steps) if m[0] != '_'
+             for a in dir(getattr(steps, m)) if a[0].isupper()
+             if m not in SKIP and a not in SKIP}
 
 REQUIRES_1D = ['IsotonicRegression']
 
 SKIP = TEST_CONFIG['SKIP'] # TODO - See related skip_transformer_estimator_combo notes
+SKIP_CV = TEST_CONFIG['SKIP_CV']
 TESTED_ESTIMATORS = OrderedDict(sorted((k, v) for k, v in ALL_STEPS.items()
                      if hasattr(v, '_cls') and
                      'fit' in dir(v._cls) and
@@ -43,7 +51,7 @@ PREPROC = ['decomposition',
 
 TRANSFORMERS = OrderedDict(sorted((k,v) for k, v in ALL_STEPS.items() if k[0] in PREPROC))
 
-SLOW = ('DictionaryLearning', 'MiniBatchDictionaryLearning')
+SLOW = ('DictionaryLearning', 'MiniBatchDictionaryLearning', 'TheilSenRegressor')
 
 USES_COUNTS = ('LatentDirichletAllocation', 'NMF')
 
@@ -53,7 +61,8 @@ def catch_warnings(func):
     @wraps(func)
     def new_func(*args, **kw):
         skipped_warnings = (FutureWarning, UserWarning,
-                            DeprecationWarning, ConvergenceWarning)
+                            DeprecationWarning, ConvergenceWarning,
+                            RuntimeWarning)
         with warnings.catch_warnings():
             warnings.simplefilter(action="ignore",
                                   category=skipped_warnings)
@@ -152,7 +161,7 @@ def skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
     Returns
     -------
 
-    None or raises pytest.skip - TODO - Note we need to review each combo
+    Returns True/False - TODO - Note we need to review each combo
     of transformer / estimator being skipped here and see if that is
     1) elm/xarray_filters library code deficiency,
     2) a test harness problem, e.g. the transformer needs an initalization
@@ -191,5 +200,4 @@ def skip_transformer_estimator_combo(module1, cls_name1, module2, cls_name2):
         skip = True
     elif module1 in ('manifold', 'preprocessing', 'feature_selection', 'decomposition') and 'ensemble' == module2:
         skip = True
-    if skip:
-        pytest.skip('{} - {}'.format(cls_name1, cls_name2))
+    return skip

@@ -1,4 +1,4 @@
-from __future__ import absolute_import, division, print_function, unicode_literals
+from __future__ import absolute_import, division, print_function
 from collections import OrderedDict
 import copy
 from functools import partial
@@ -10,14 +10,14 @@ from dask_searchcv.model_selection import (_DOC_TEMPLATE,
                                            _randomized_parameters)
 import numpy as np
 from elm.model_selection.evolve import (fit_ea,
-                                        DEFAULT_CONTROL,
                                         ind_to_new_params,
                                         DEFAULT_EVO_PARAMS,)
 from elm.mldataset.serialize_mixin import SerializeMixin
 from elm.mldataset.wrap_sklearn import SklearnMixin
+from elm.mldataset.util import is_arr
 from elm.model_selection.sorting import pareto_front
 from elm.model_selection.base import base_selection
-from elm.pipeline import Pipeline
+from elm.model_selection.cross_validation import cv_split_sampler
 from xarray_filters.func_signatures import filter_kw_and_run_init
 from xarray_filters.constants import DASK_CHUNK_N
 from xarray_filters import MLDataset
@@ -60,8 +60,11 @@ The parameters of the estimator used to apply these methods are optimized
 by cross-validated evolutionary algorithm search over a parameter grid.\
 """
 _ea_parameters = _randomized_parameters + """\
-ngen : Number of generations (each generation uses
-    dask_searchcv.model_selection.RandomizedSearchCV)
+
+sampler : A callable or instance with a "fit_transform" or "transform" method.
+          The callable takes arguments X and **kw, where X is an iterable
+          of arguments that make 1 sample, e.g.
+          ``('file_1.nc', 'file_2.nc', 'file_3.nc')``
 score_weights : None if doing single objective minimization or a sequence of
     weights to use for flipping minimization to maximization, e.g.
     [1, -1, 1] would minimize the 1st and 3rd objectives and maximize the second
@@ -84,12 +87,15 @@ model_selection : A callable that is called after each generation [TODO docs],
       'mu':    4,
       'k':     4,
       'early_stop': None
-
     }
 model_selection_kwargs : Keyword arguments passed to the model selection
     callable (if given) otherwise ignored
 select_with_test : Select / sort models based on test batch scores(True is default)
-avoid_repeated_params : Avoid repeated parameters (True by default)
+refit_Xy : If using ``refit=True``, then ``refit_Xy`` is either ``(X, y)`` for
+           refitting the best estimator, or ``X`` (array-like)
+ngen : Number of generations (each generation uses
+    dask_searchcv.model_selection.RandomizedSearchCV)
+
 """
 _ea_example = """\
 >>> from sklearn import svm, datasets
@@ -124,7 +130,10 @@ EaSearchCV(avoid_repeated_params=True, cache_cv=True, cv=None,
  'std_fit_time', 'std_score_time', 'std_test_score', 'std_train_score'...]\
 """
 
-class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
+def passthrough_sampler(X, y=None, **kw):
+    return X, y
+
+class EaSearchCV(RandomizedSearchCV, SerializeMixin):
 
     __doc__ = _DOC_TEMPLATE.format(name="EaSearchCV",
                                    oneliner=_ea_oneliner,
@@ -132,19 +141,38 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                                    parameters=_ea_parameters,
                                    example=_ea_example)
 
-    def __init__(self, estimator, param_distributions, n_iter=10,
+    def __init__(self, estimator, param_distributions,
+                 n_iter=10,
                  random_state=None,
-                 ngen=3, score_weights=None,
+                 ngen=3,
+                 avoid_repeated_params=True,
+                 scoring=None,
+                 iid=True, refit=True, refit_Xy=None,
+                 cv=None, error_score='raise', return_train_score=True,
+                 scheduler=None, n_jobs=-1, cache_cv=True,
+                 sampler=None,
+                 score_weights=None,
                  sort_fitness=pareto_front,
                  model_selection=None,
                  model_selection_kwargs=None,
-                 select_with_test=True,
-                 avoid_repeated_params=True,
-                 scoring=None,
-                 iid=True, refit=True,
-                 cv=None, error_score='raise', return_train_score=True,
-                 scheduler=None, n_jobs=-1, cache_cv=True):
-        filter_kw_and_run_init(RandomizedSearchCV.__init__, **locals())
+                 select_with_test=True):
+
+        RandomizedSearchCV.__init__(self,
+                   estimator,
+                   param_distributions,
+                   n_iter=n_iter,
+                   random_state=random_state,
+                   scoring=scoring,
+                   iid=iid,
+                   refit=refit,
+                   cv=cv,
+                   error_score='raise',
+                   return_train_score=return_train_score,
+                   scheduler=scheduler,
+                   n_jobs=n_jobs,
+                   cache_cv=cache_cv)
+        self.refit_Xy = refit_Xy
+        self.sampler = sampler
         self.ngen = ngen
         self.select_with_test = select_with_test
         self.model_selection = model_selection
@@ -152,6 +180,12 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         self.score_weights = score_weights
         self.avoid_repeated_params = avoid_repeated_params
         self.cv_results_all_gen_ = {}
+
+    def _get_cv_split_refit_Xy(self):
+        if not self.sampler:
+            return None, None
+        cv_split = partial(cv_split_sampler, sampler)
+        return cv_split, self.refit_Xy
 
     def _close(self):
         self.cv_results_ = getattr(self, 'cv_results_all_gen_', self.cv_results_)
@@ -177,14 +211,14 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
     def _model_selection(self):
         params = self.get_params()
         model_selection = params['model_selection']
-        if not model_selection:
-            model_selection = {}
-        if isinstance(model_selection, dict):
-            model_selection = model_selection.copy()
-            for k, v in DEFAULT_EVO_PARAMS.items():
-                if k not in model_selection:
-                    model_selection[k] = v
-            return model_selection
+        if not callable(model_selection):
+            params = DEFAULT_EVO_PARAMS.copy()
+            params.update(model_selection.copy())
+            if self.n_iter != params['mu']:
+                raise ValueError('For the time being, n_iter must be set to "mu" in model_selection')
+            params['ngen'] = self.ngen
+            print('Evolutionary params', params)
+            return params
         kw = params['model_selection_kwargs'] or {}
         sort_fitness = params['sort_fitness'] or pareto_front
         score_weights = params.get('score_weights', (1,))
@@ -197,7 +231,9 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
 
     def _within_gen_param_iter(self, gen=0):
         if not self._is_ea:
-            for params in getattr(self, 'next_params_', []):
+            to_yield = getattr(self, 'next_params_', [])
+            print('The batch of models has {} members'.format(len(to_yield)))
+            for params in to_yield:
                 yield params
             return
         deap_params = self._evo_params['deap_params']
@@ -205,6 +241,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
             invalid_ind = self._pop
         else:
             invalid_ind = self._invalid_ind
+        print('The batch of models has {} members'.format(len(invalid_ind)))
         for idx, ind in enumerate(invalid_ind):
             yield ind_to_new_params(deap_params, ind)
 
@@ -227,21 +264,18 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         return self._fitnesses_to_deap(cv_results[score_field])
 
     def _open(self):
-        if callable(self._model_selection):
+        if callable(self.model_selection):
+            return
+        if hasattr(self, '_pop'):
             return
         out = fit_ea(self.score_weights,
                      self._model_selection,
                      self.param_distributions,
-                     early_stop=self._model_selection['early_stop'],
-                     toolbox=self._model_selection['toolbox'])
+                     early_stop=self.model_selection.get('early_stop', None),
+                     toolbox=self.model_selection.get('toolbox', None))
         self._pop, self._toolbox, self._ea_gen, self._evo_params = out
 
     def _as_dask_array(self, X, y=None, **kw):
-        #if isinstance(self.estimator, Pipeline):
-         #   self.estimator._run_generic_only = True
-          #  X, y = self.estimator.fit_transform(X, y)
-           # delattr(self.estimator, '_run_generic_only')
-            #self.estimator._skip_generic = True
         if isinstance(X, np.ndarray):
             return X, y
         if isinstance(X, (xr.Dataset, MLDataset)):
@@ -263,11 +297,9 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         return X, y
 
     def fit(self, X, y=None, groups=None, **fit_params):
-        self._open()
-        X, y = self._as_dask_array(X, y=y)
         for self._gen in range(self.ngen):
-            print('Generation', self._gen)
-            RandomizedSearchCV.fit(self, X, y, groups, **fit_params)
+            print('Generation: {}'.format(self._gen))
+            RandomizedSearchCV.fit(self, X, y, groups=groups, **fit_params)
             fitnesses = self._get_cv_scores()
             self.cv_results_all_gen_ = _concat_cv_results(self.cv_results_all_gen_,
                                                           self.cv_results_,
@@ -276,6 +308,7 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
                 out = self._ea_gen.send(fitnesses)
                 self._pop, self._invalid_ind, self._param_history = out
                 if not self._invalid_ind:
+                    print('EaSearchCV ending on generation {}'.format(self._gen))
                     break
             else:
                 self.next_params_ = self._model_selection(self.next_params_,
@@ -289,10 +322,12 @@ class EaSearchCV(RandomizedSearchCV, SklearnMixin, SerializeMixin):
         return self
 
     def _get_param_iterator(self):
-        if self._is_ea and not getattr(self, '_invalid_ind', None):
+        if self._gen != 0 and self._is_ea and not getattr(self, '_invalid_ind', None):
             return iter(())
         if not self._is_ea and self._gen == 0:
             self.next_params_ = tuple(RandomizedSearchCV._get_param_iterator(self))
+        if self._is_ea:
+            self._open()
         return self._within_gen_param_iter(gen=self._gen)
 
     set_params = RandomizedSearchCV.set_params

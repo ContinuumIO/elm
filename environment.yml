@@ -1,10 +1,14 @@
 name: elm-env
 channels:
  - conda-forge # essential for rasterio on osx
+ - elm
+ - elm/label/dev
+
 dependencies:
  - attrs
  - bokeh
  - dask
+ - elm/label/dev::dask-searchcv
  - datashader
  - dill
  - distributed
@@ -27,6 +31,7 @@ dependencies:
  - statsmodels
  - tblib
  - xarray
+ - xarray_filters
  - yaml
  - six
  - bioconda::deap
@@ -39,4 +44,4 @@ dependencies:
    - zict
    - pytest-rerunfailures
    - dask-glm
-   - dask-searchcv
+#   - dask-searchcv
